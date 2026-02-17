@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<xmi:XMI xmi:version="2.1" xmlns:uml="http://schema.omg.org/spec/UML/2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1">
+	<xmi:Documentation exporter="Enterprise Architect" exporterVersion="6.5"/>
+	<uml:Model xmi:type="uml:Model" name="EA_Model" visibility="public">
+		<packagedElement xmi:type="uml:Package" xmi:id="EAPK_8F1BB624_3807_47b4_8D6E_8674A44A3564" name="test" visibility="public">
+		</packagedElement>
+	</uml:Model>
+	<xmi:Extension extender="Enterprise Architect" extenderID="6.5">
+		<elements>
+			<element xmi:idref="EAPK_8F1BB624_3807_47b4_8D6E_8674A44A3564" xmi:type="uml:Package" name="test" scope="public">
+				<model package2="EAID_8F1BB624_3807_47b4_8D6E_8674A44A3564" package="EAPK_FB2B13C6_0F10_4993_8820_E2207B6FBD9E" tpos="0" ea_localid="5" ea_eleType="package"/>
+				<properties isSpecification="false" sType="Package" nType="0" scope="public" 
+				  documentation="Something import to know about this package." />
+				<project author="test" version="1.0" phase="1.0" created="2017-12-17 19:03:22" modified="2017-12-17 19:03:22" complexity="1" status="Proposed"/>
+				<code gentype="Java"/>
+				<style appearance="BackColor=-1;BorderColor=-1;BorderWidth=-1;FontColor=-1;VSwimLanes=1;HSwimLanes=1;BorderStyle=0;"/>
+				<modelDocument/>
+				<tags/>
+				<xrefs/>
+				<extendedProperties tagged="0" package_name="Class Model"/>
+				<packageproperties version="1.0"/>
+				<paths/>
+				<times created="2012-12-17 19:03:22" modified="2012-12-17 19:03:22"/>
+				<flags iscontrolled="FALSE" isprotected="FALSE" usedtd="FALSE" logxml="FALSE"/>
+			</element>
+		</elements>
+	</xmi:Extension>
+</xmi:XMI>
