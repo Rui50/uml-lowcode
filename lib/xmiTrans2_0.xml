@@ -88,6 +88,19 @@ other part of SDMetrics.
 <trigger name="role" type="xmi2assoc" attr="role" />
 </xmitransformation>
 
+<!-- multiplicidade -->
+<xmitransformation modelelement="literalstring" xmipattern="uml:LiteralString" recurse="true">
+	<trigger name="value" type="attrval" attr="value" />
+</xmitransformation>
+
+<xmitransformation modelelement="literalunlimitednatural" xmipattern="uml:LiteralUnlimitedNatural" recurse="true">
+	<trigger name="value" type="attrval" attr="value" />
+</xmitransformation>
+
+<xmitransformation modelelement="literalinteger" xmipattern="uml:LiteralInteger" recurse="true">
+	<trigger name="value" type="attrval" attr="value" />
+</xmitransformation>
+
 <xmitransformation modelelement="property" xmipattern="uml:Property" recurse="true">
 <trigger name="visibility" type="attrval" attr="visibility" />
 <trigger name="visibility" type="ctext" src="visibility" />
@@ -98,6 +111,12 @@ other part of SDMetrics.
 <trigger name="aggregation" type="attrval" attr="aggregation"/>
 <trigger name="aggregation" type="ctext" src="aggregation" />
 <trigger name="qualifiers" type="xmi2assoc" src="uml:Property" attr="qualifier" />
+<!-- para a multiplicidade -->
+<trigger name="lowervalue" type="xmi2assoc" src="uml:LiteralString" attr="lowerValue" />
+<trigger name="lowervalue" type="xmi2assoc" src="uml:LiteralInteger" attr="lowerValue" />
+<trigger name="uppervalue" type="xmi2assoc" src="uml:LiteralString" attr="upperValue" />
+<trigger name="uppervalue" type="xmi2assoc" src="uml:LiteralUnlimitedNatural" attr="upperValue" />
+
 </xmitransformation>
 
 <xmitransformation modelelement="port" xmipattern="uml:Port" recurse="true" />

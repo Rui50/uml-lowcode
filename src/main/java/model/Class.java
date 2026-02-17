@@ -3,6 +3,16 @@ package model;
 import java.util.ArrayList;
 import java.util.List;
 
+// para o vp e o que tem
+//https://www.visual-paradigm.com/guide/uml-unified-modeling-language/uml-class-diagram-tutorial/
+
+/*
+* TODO
+* para as associações - Generalizations (Herança), Dependencies, Realizations
+*
+* */
+
+
 /**
  * Representa uma classe UML.
  */
@@ -15,7 +25,7 @@ public class Class {
     private List<Attribute> attributes;
     private List<Operation> operations;
 
-    // associaºoes
+    // relações
     private List<Association> associations;
 
     public Class(String name, String visibility) {
@@ -73,7 +83,7 @@ public class Class {
                 ", visibility:'" + visibility + '\'' +
                 ", attributes:" + attributes +
                 ", operations:" + operations +
-                ", associations:" + associations +
+                ", relationships:" + associations +
                 '}';
     }
 }

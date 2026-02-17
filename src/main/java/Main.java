@@ -36,15 +36,15 @@ public class Main {
         }
 
         // relações
-        System.out.println("Parsing associations...");
-        List<model.Association> associations = parser.getAssociations();
-        System.out.println("Associations extracted: " + associations.size());
+        System.out.println("Parsing relationships...");
+        List<model.Relationship> relationships = parser.getRelationships();
+        System.out.println("Relationships extracted: " + relationships.size());
 
-        if (associations.isEmpty()) {
-            System.out.println("No associations found");
+        if (relationships.isEmpty()) {
+            System.out.println("No relationships found");
         } else {
-            for (model.Association a : associations) {
-                System.out.println(a);
+            for (model.Relationship relationship : relationships) {
+                System.out.println(relationship);
             }
         }
     }

@@ -12,10 +12,12 @@ import com.sdmetrics.model.XMIReader;
 import com.sdmetrics.model.XMITransformations;
 import com.sdmetrics.util.XMLParser;
 
-import model.*;
+import model.Association;
+import model.Attribute;
 import model.Class;
-
-import javax.management.relation.Relation;
+import model.Operation;
+import model.Parameter;
+import model.Relationship;
 
 public class XMIParser {
     private Model model;
@@ -167,12 +169,12 @@ public class XMIParser {
         return parameter;
     }
 
-    public List<Association> getAssociations() {
-        List<Association> associations = new ArrayList<>();
+    public List<Relationship> getRelationships() {
+        List<Relationship> relationships = new ArrayList<>();
 
-        associations.addAll(parseAssociations());
+        relationships.addAll(parseAssociations());
 
-        return associations;
+        return relationships;
     }
 
     private List<Association> parseAssociations() {
@@ -201,8 +203,6 @@ public class XMIParser {
 
                 if (sourceType != null && targetType != null) {
                     Association association = new Association();
-
-                    association.setType("association");
                     association.setSourceClass(sourceType.getName());
                     association.setTargetClass(targetType.getName());
 
@@ -210,21 +210,33 @@ public class XMIParser {
                     association.setSourceRole(sourceEnd.getName());
                     association.setTargetRole(targetEnd.getName());
 
-                    // multiplicidades (ver isto melhor)
-                    //String sourceMultiplicity = sourceEnd.getPlainAttribute("multiplicity");
-                    //String targetMultiplicity = targetEnd.getPlainAttribute("multiplicity");
-
+                    // agregação
                     String aggregation = sourceEnd.getPlainAttribute("aggregation");
                     if (aggregation != null) {
-                        association.setAggregation(aggregation);
+                        association.setAggregationType(aggregation);
                     }
+
+                    // multiplicidade source
+                    ModelElement sourceLower = (ModelElement) sourceEnd.getRefAttribute("lowervalue");
+                    ModelElement sourceUpper = (ModelElement) sourceEnd.getRefAttribute("uppervalue");
+
+                    String sourceLowerValue = sourceLower != null ? sourceLower.getPlainAttribute("value") : null;
+                    String sourceUpperValue = sourceUpper != null ? sourceUpper.getPlainAttribute("value") : null;
+                    association.setSourceMultiplicity(buildMultiplicity(sourceLowerValue, sourceUpperValue));
+
+                    // Multiplicidade target
+                    ModelElement targetLower = (ModelElement) targetEnd.getRefAttribute("lowervalue");
+                    ModelElement targetUpper = (ModelElement) targetEnd.getRefAttribute("uppervalue");
+                    String targetLowerValue = targetLower != null ? targetLower.getPlainAttribute("value") : null;
+                    String targetUpperValue = targetUpper != null ? targetUpper.getPlainAttribute("value") : null;
+                    association.setTargetMultiplicity(buildMultiplicity(targetLowerValue, targetUpperValue));
+
                     associations.add(association);
 
                 }
             }
         }
         return associations;
-
     }
 
 
@@ -234,6 +246,31 @@ public class XMIParser {
 
     public MetaModel getMetaModel() {
         return metaModel;
+    }
+
+    private String buildMultiplicity(String lower, String upper) {
+        // ambos null -> sem multiplicidade
+        if (lower == null && upper == null) {
+            return null;
+        }
+
+        // só lower
+        if (upper == null) {
+            return lower;
+        }
+
+        // só upper
+        if (lower == null) {
+            return upper;
+        }
+
+        // ambos iguais -> simplifica "1..1" -> "1"
+        if (lower.equals(upper)) {
+            return lower;
+        }
+
+        // ambos diferentes -> "lower..upper"
+        return lower + ".." + upper;
     }
 
 }

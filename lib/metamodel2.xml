@@ -78,6 +78,19 @@ other part of SDMetrics.
   <attribute name="role" type="ref">The element that is attached at this connector end.</attribute>
 </modelelement>
 
+<!-- para a multiplicidade  -->
+<modelelement name="literalstring">
+    <attribute name="value">The literal value.</attribute>
+</modelelement>
+
+<modelelement name="literalunlimitednatural">
+    <attribute name="value">The literal value.</attribute>
+</modelelement>
+
+<modelelement name="literalinteger">
+    <attribute name="value">The literal value.</attribute>
+</modelelement>
+
 <modelelement name="property">
 	<attribute name="visibility">Visibility of the feature (public, private, protected, package).</attribute>
 	<attribute name="propertytype" type="ref">Reference to the feature type (class, data type etc).</attribute>
@@ -85,6 +98,9 @@ other part of SDMetrics.
   <attribute name="association" type="ref">Reference to association if this is an association end.</attribute>
 	<attribute name="aggregation">The aggregation kind of the property: shared, composite, or none (default).</attribute>
 	<attribute name="qualifiers" type="ref" multiplicity="many">The qualifier attributes of the property.</attribute>
+    <!-- para a multiplicidade -->
+    <attribute name="lowervalue" type="ref">Lower value of multiplicity.</attribute>
+    <attribute name="uppervalue" type="ref">Upper value of multiplicity.</attribute>
 </modelelement>
 
 <modelelement name="port" parent="property" />
@@ -307,10 +323,13 @@ other part of SDMetrics.
 <modelelement name="opaqueexpression"/>
 <modelelement name="instancevalue"/>
 <modelelement name="literalboolean"/>
-<modelelement name="literalinteger"/>
+<!--<modelelement name="literalinteger"/> -->
 <modelelement name="literalreal"/>
+<!-- estas duas estao a colidir com as novas adicionadas para a multiplicidade
+
 <modelelement name="literalstring"/>
 <modelelement name="literalunlimitednatural"/>
+-->
 <modelelement name="literalnull"/>
 
 

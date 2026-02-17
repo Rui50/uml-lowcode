@@ -1,79 +1,30 @@
 package model;
 
-import javax.management.relation.Relation;
+public class Association extends Relationship {
+    private String sourceRole;
+    private String targetRole;
 
-public class Association {
+    private String sourceMultiplicity;
+    private String targetMultiplicity;
 
-    private String type; // tipo de associação "association" ...
-    private String sourceClass; // classe de origem
-    private String targetClass; // classe de destino
+    private String aggregationType; // "none", "shared", "composite"
 
-
-    private String sourceMultiplicity; // multiplicidade na origem
-    private String targetMultiplicity; // multiplicidade no destino
-    private String sourceRole; // opcional
-    private String targetRole; // opcional
-    private String aggregation; // pode ser shared, composite
-
-    public Association(){
-        this.type = "";
-        this.sourceClass = "";
-        this.targetClass = "";
-        this.sourceMultiplicity = "";
-        this.targetMultiplicity = "";
+    public Association() {
+        super();
         this.sourceRole = "";
         this.targetRole = "";
+        this.sourceMultiplicity = "";
+        this.targetMultiplicity = "";
+        this.aggregationType = "none";
     }
 
-    public Association(String type, String sourceClass, String targetClass, String sourceMultiplicity, String targetMultiplicity, String sourceRole, String targetRole, String aggregation) {
-        this.type = type;
-        this.sourceClass = sourceClass;
-        this.targetClass = targetClass;
-        this.sourceMultiplicity = sourceMultiplicity;
-        this.targetMultiplicity = targetMultiplicity;
-        this.sourceRole = sourceRole;
-        this.targetRole = targetRole;
-        this.aggregation = aggregation;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getSourceClass() {
-        return sourceClass;
-    }
-
-    public void setSourceClass(String sourceClass) {
-        this.sourceClass = sourceClass;
-    }
-
-    public String getTargetClass() {
-        return targetClass;
-    }
-
-    public void setTargetClass(String targetClass) {
-        this.targetClass = targetClass;
-    }
-
-    public String getSourceMultiplicity() {
-        return sourceMultiplicity;
-    }
-
-    public void setSourceMultiplicity(String sourceMultiplicity) {
-        this.sourceMultiplicity = sourceMultiplicity;
-    }
-
-    public String getTargetMultiplicity() {
-        return targetMultiplicity;
-    }
-
-    public void setTargetMultiplicity(String targetMultiplicity) {
-        this.targetMultiplicity = targetMultiplicity;
+    public Association(String sourceClass, String targetClass) {
+        super(sourceClass, targetClass);
+        this.sourceRole = "";
+        this.targetRole = "";
+        this.sourceMultiplicity = "";
+        this.targetMultiplicity = "";
+        this.aggregationType = "none";
     }
 
     public String getSourceRole() {
@@ -92,25 +43,40 @@ public class Association {
         this.targetRole = targetRole;
     }
 
-    public String getAggregation() {
-        return aggregation;
+    public String getSourceMultiplicity() {
+        return sourceMultiplicity;
     }
 
-    public void setAggregation(String aggregation) {
-        this.aggregation = aggregation;
+    public void setSourceMultiplicity(String sourceMultiplicity) {
+        this.sourceMultiplicity = sourceMultiplicity;
+    }
+
+    public String getTargetMultiplicity() {
+        return targetMultiplicity;
+    }
+
+    public void setTargetMultiplicity(String targetMultiplicity) {
+        this.targetMultiplicity = targetMultiplicity;
+    }
+
+    public String getAggregationType() {
+        return aggregationType;
+    }
+
+    public void setAggregationType(String aggregationType) {
+        this.aggregationType = aggregationType;
     }
 
     @Override
     public String toString() {
         return "Association {" +
-                "type:'" + type + '\'' +
-                ", sourceClass:'" + sourceClass + '\'' +
-                ", targetClass:'" + targetClass + '\'' +
-                ", sourceMultiplicity:'" + sourceMultiplicity + '\'' +
-                ", targetMultiplicity:'" + targetMultiplicity + '\'' +
+                "sourceClass:'" + getSourceClass() + '\'' +
+                ", targetClass:'" + getTargetClass() + '\'' +
                 ", sourceRole:'" + sourceRole + '\'' +
                 ", targetRole:'" + targetRole + '\'' +
-                ", aggregation:'" + aggregation + '\'' +
+                ", sourceMultiplicity:'" + sourceMultiplicity + '\'' +
+                ", targetMultiplicity:'" + targetMultiplicity + '\'' +
+                ", aggregationType:'" + aggregationType + '\'' +
                 '}';
     }
 }
