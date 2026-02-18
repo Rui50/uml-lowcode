@@ -116,7 +116,9 @@ other part of SDMetrics.
 <trigger name="lowervalue" type="xmi2assoc" src="uml:LiteralInteger" attr="lowerValue" />
 <trigger name="uppervalue" type="xmi2assoc" src="uml:LiteralString" attr="upperValue" />
 <trigger name="uppervalue" type="xmi2assoc" src="uml:LiteralUnlimitedNatural" attr="upperValue" />
-
+<!-- para navegaibilidade -->
+<trigger name="isnavigable" type="attrval" attr="isNavigable" />
+<trigger name="isnavigable" type="ctext" src="isNavigable" />
 </xmitransformation>
 
 <xmitransformation modelelement="port" xmipattern="uml:Port" recurse="true" />

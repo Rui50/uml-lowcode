@@ -1,4 +1,6 @@
+import model.Association;
 import parser.XMIParser;
+import generator.CodeGenerator;
 
 import java.util.List;
 
@@ -37,15 +39,21 @@ public class Main {
 
         // relações
         System.out.println("Parsing relationships...");
-        List<model.Relationship> relationships = parser.getRelationships();
-        System.out.println("Relationships extracted: " + relationships.size());
+        List<Association> associations = parser.getAssociations();
+        System.out.println("Relationships extracted: " + associations.size());
 
-        if (relationships.isEmpty()) {
+        if (associations.isEmpty()) {
             System.out.println("No relationships found");
         } else {
-            for (model.Relationship relationship : relationships) {
-                System.out.println(relationship);
+            for (Association as : associations) {
+                System.out.println(as);
             }
         }
+
+
+        // gerar código
+        String outputDir = "output";
+        CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
+        codeGenerator.generate();
     }
 }

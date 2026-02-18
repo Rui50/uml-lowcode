@@ -177,6 +177,10 @@ public class XMIParser {
         return relationships;
     }
 
+    public List<Association> getAssociations() {
+        return parseAssociations();
+    }
+
     private List<Association> parseAssociations() {
         List<Association> associations =  new ArrayList<>();
 
@@ -230,6 +234,12 @@ public class XMIParser {
                     String targetLowerValue = targetLower != null ? targetLower.getPlainAttribute("value") : null;
                     String targetUpperValue = targetUpper != null ? targetUpper.getPlainAttribute("value") : null;
                     association.setTargetMultiplicity(buildMultiplicity(targetLowerValue, targetUpperValue));
+
+                    // navegability
+                    String sourceNavigable = sourceEnd.getPlainAttribute("isnavigable");
+                    String targetNavigable = targetEnd.getPlainAttribute("isnavigable");
+                    association.setSourceNavigable(sourceNavigable == null || Boolean.parseBoolean(sourceNavigable));
+                    association.setTargetNavigable(targetNavigable == null || Boolean.parseBoolean(targetNavigable));
 
                     associations.add(association);
 

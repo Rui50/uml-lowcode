@@ -101,6 +101,9 @@ other part of SDMetrics.
     <!-- para a multiplicidade -->
     <attribute name="lowervalue" type="ref">Lower value of multiplicity.</attribute>
     <attribute name="uppervalue" type="ref">Upper value of multiplicity.</attribute>
+    <!-- para navegabilidade -->
+    <attribute name="isnavigable">Indicates if this association end is navigable.</attribute>
+
 </modelelement>
 
 <modelelement name="port" parent="property" />

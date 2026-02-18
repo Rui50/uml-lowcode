@@ -9,6 +9,9 @@ public class Association extends Relationship {
 
     private String aggregationType; // "none", "shared", "composite"
 
+    private boolean sourceNavigable;
+    private boolean targetNavigable;
+
     public Association() {
         super();
         this.sourceRole = "";
@@ -16,6 +19,8 @@ public class Association extends Relationship {
         this.sourceMultiplicity = "";
         this.targetMultiplicity = "";
         this.aggregationType = "none";
+        this.sourceNavigable = true;
+        this.targetNavigable = true;
     }
 
     public Association(String sourceClass, String targetClass) {
@@ -25,6 +30,8 @@ public class Association extends Relationship {
         this.sourceMultiplicity = "";
         this.targetMultiplicity = "";
         this.aggregationType = "none";
+        this.sourceNavigable = true;
+        this.targetNavigable = true;
     }
 
     public String getSourceRole() {
@@ -67,6 +74,22 @@ public class Association extends Relationship {
         this.aggregationType = aggregationType;
     }
 
+    public boolean isSourceNavigable() {
+        return sourceNavigable;
+    }
+
+    public void setSourceNavigable(boolean sourceNavigable) {
+        this.sourceNavigable = sourceNavigable;
+    }
+
+    public boolean isTargetNavigable() {
+        return targetNavigable;
+    }
+
+    public void setTargetNavigable(boolean targetNavigable) {
+        this.targetNavigable = targetNavigable;
+    }
+
     @Override
     public String toString() {
         return "Association {" +
@@ -77,6 +100,8 @@ public class Association extends Relationship {
                 ", sourceMultiplicity:'" + sourceMultiplicity + '\'' +
                 ", targetMultiplicity:'" + targetMultiplicity + '\'' +
                 ", aggregationType:'" + aggregationType + '\'' +
+                ", sourceNavigable:" + sourceNavigable +
+                ", targetNavigable:" + targetNavigable +
                 '}';
     }
 }
