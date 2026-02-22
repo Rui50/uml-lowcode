@@ -15,7 +15,7 @@ public class Operation {
 
     public Operation() {
         this.name = "";
-        this.returnType = "";
+        this.returnType = "void";
         this.visibility = "";
         this.parameters = new ArrayList<>();
     }

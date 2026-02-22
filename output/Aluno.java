@@ -3,9 +3,9 @@ import java.util.*;
 public class Aluno {
 
     // Attributes
-    private string email;
     private int numero;
     private String nome;
+    private string email;
 
     // Associations
     private Turma turma;
@@ -15,14 +15,6 @@ public class Aluno {
     }
 
     // Getters and Setters
-
-    public string getEmail() {
-        return email;
-    }
-
-    public void setEmail(string email) {
-        this.email = email;
-    }
 
     public int getNumero() {
         return numero;
@@ -40,6 +32,14 @@ public class Aluno {
         this.nome = nome;
     }
 
+    public string getEmail() {
+        return email;
+    }
+
+    public void setEmail(string email) {
+        this.email = email;
+    }
+
 
     public Turma getTurma() {
         return this.turma;
@@ -47,6 +47,13 @@ public class Aluno {
 
     public void setTurma(Turma turma) {
         this.turma = turma;
+    }
+
+    // Operations
+    public List<String> validar(
+    ) {
+        // TODO: implement this method
+        return null;
     }
 
 }

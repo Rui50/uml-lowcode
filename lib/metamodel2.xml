@@ -40,6 +40,16 @@ other part of SDMetrics.
   <attribute name="name">Name of the element in UML model.</attribute>
   <attribute name="comments" type="ref" multiplicity="many">The comments for the model element.</attribute>
 </modelelement>
+    <!--
+    <modelelement name="vpextension">
+        salva extender no caso de suportar mais do que um mas nao deve ser preciso
+    <attribute name="extender" type="data" multiplicity="one"/>
+</modelelement>-->
+
+<!--
+<modelelement name="visualParadigm">
+    <attribute name="generictype" type="data" multiplicity="one"/>
+</modelelement>-->
 
 <!-- classes, interfaces, attributes, operations -->
 <modelelement name="class">
@@ -117,6 +127,10 @@ other part of SDMetrics.
 <modelelement name="parameter">
 	<attribute name="kind">The direction of the parameter: in (default), out, inout, return.</attribute>
 	<attribute name="parametertype" type="ref">Reference to the parameter type (class, data type etc).</attribute>
+
+    <!-- para conseguir ter coisas como List&lt;String&gt;-->
+    <attribute name="vpextender">VP extender string</attribute>
+    <attribute name="generictype">Generic type string</attribute>
 </modelelement>
 <modelelement name="method"/>
 

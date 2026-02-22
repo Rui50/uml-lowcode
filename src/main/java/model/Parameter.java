@@ -7,15 +7,18 @@ package model;
 public class Parameter {
     private String name;
     private String type;
+    private String direction; // in, out, inout
 
     public Parameter() {
         this.name = "";
         this.type = "";
+        this.direction = "in";
     }
 
-    public Parameter(String name, String type) {
+    public Parameter(String name, String type, String direction) {
         this.name = name;
         this.type = type;
+        this.direction = direction;
     }
 
     public String getName() {
@@ -34,11 +37,20 @@ public class Parameter {
         this.type = type;
     }
 
+    public String getDirection() {
+        return direction;
+    }
+
+    public void setDirection(String direction) {
+        this.direction = direction;
+    }
+
     @Override
     public String toString() {
         return "Parameter {" +
                 "name:'" + name + '\'' +
                 ", type:'" + type + '\'' +
+                ", direction:'" + direction + '\'' +
                 '}';
     }
 }

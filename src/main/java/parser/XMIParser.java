@@ -131,17 +131,25 @@ public class XMIParser {
             for(Object paramObj : parameters) {
 
                 ModelElement paramElement = (ModelElement) paramObj;
-                String direction = paramElement.getPlainAttribute("direction");
+                String direction = paramElement.getPlainAttribute("kind");
 
                 if (direction.equals("return")){
                     // é um tipo de retorno
-                    ModelElement type = (ModelElement) paramElement.getRefAttribute("propertytype");
-                    if (type != null){
-                        operation.setReturnType(type.getName());
+
+                    String genericType = paramElement.getPlainAttribute("generictype");
+                    System.out.println("Generic type for return: " + genericType);
+                    if (genericType != null && !genericType.trim().isEmpty()) {
+                        operation.setReturnType(genericType);
+                    } else {
+                        // fallback
+                        ModelElement type = (ModelElement) paramElement.getRefAttribute("parametertype");
+                        if (type != null) {
+                            operation.setReturnType(type.getName());
+                        }
                     }
                 } else {
-                    // é um parâmetro de entrada
-                    Parameter parameter = parseParameter(paramElement);
+                    // Parâmetro normal
+                    Parameter parameter = parseParameter(paramElement, direction);
                     operation.addParameter(parameter);
                 }
             }
@@ -154,16 +162,28 @@ public class XMIParser {
         return operation;
     }
 
-    private Parameter parseParameter(ModelElement element) {
+    private Parameter parseParameter(ModelElement element, String direction) {
         Parameter parameter = new Parameter();
 
         parameter.setName(element.getName());
 
-        ModelElement type = (ModelElement) element.getRefAttribute("propertytype");
-        if (type != null) {
-            parameter.setType(type.getName());
+        // direction
+        parameter.setDirection(direction != null ? direction : "in");
+
+        String genericType = element.getPlainAttribute("generictype");
+
+        System.out.println("Generic type for parameter " + parameter.getName() + ": " + genericType);
+
+        if (genericType != null && !genericType.trim().isEmpty()) {
+            parameter.setType(genericType);
         } else {
-            parameter.setType("Object");
+            // fallback
+            ModelElement type = (ModelElement) element.getRefAttribute("parametertype");
+            if (type != null) {
+                parameter.setType(type.getName());
+            } else {
+                parameter.setType("Object");
+            }
         }
 
         return parameter;
@@ -240,6 +260,25 @@ public class XMIParser {
                     String targetNavigable = targetEnd.getPlainAttribute("isnavigable");
                     association.setSourceNavigable(sourceNavigable == null || Boolean.parseBoolean(sourceNavigable));
                     association.setTargetNavigable(targetNavigable == null || Boolean.parseBoolean(targetNavigable));
+
+                    // qualifiers para caso de maps
+                    // tem de ser collection porque é o que o SDMetrics tem
+                    Collection<?> qualifiers = sourceEnd.getSetAttribute("qualifiers");
+                    System.out.println("these are the qualifiers: " + qualifiers);
+                    if (qualifiers != null && !qualifiers.isEmpty()) {
+                        // para já só um qualifier para maps
+                        ModelElement qualifier = (ModelElement) qualifiers.iterator().next();
+                        if (qualifiers.size() > 1){
+                            System.out.println("Has more then 1 qualifir in this assoc");
+                        }
+
+                        String qualifierName = qualifier.getName();
+                        ModelElement qualifierType = (ModelElement) qualifier.getRefAttribute("propertytype");
+                        String qualifierTypeName = qualifierType != null ? qualifierType.getName() : "Object";
+
+                        association.setQualifierName(qualifierName);
+                        association.setQualifierType(qualifierTypeName);
+                    }
 
                     associations.add(association);
 

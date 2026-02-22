@@ -6,11 +6,19 @@ import java.util.List;
 
 import model.Class;
 
+/**
+ * TODO
+ * - fix em coisas como List<Aluno> porque fica como Teste.Aluno (nome do proj)
+ * - decidir como fazer os maps, "Qualifiers?"
+ */
+
 public class Main {
     public static void main(String[] args) throws Exception {
 
         // File paths for the parser
-        String xmiFilePath = "test-models/test_classe_1_2.uml";
+        //String xmiFilePath = "test-models/test_classe_1_2.uml";
+        String xmiFilePath = "test-models/aluno_turma_op2.uml";
+
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 
@@ -18,6 +26,7 @@ public class Main {
         XMIParser parser = new XMIParser();
         System.out.println("Loading model...");
         parser.loadModel(xmiFilePath);
+
 
         // Extrair classes
         System.out.println("Extracting classes...");
@@ -37,7 +46,7 @@ public class Main {
             }
         }
 
-        // relações
+        // relações (ainda so associações)
         System.out.println("Parsing relationships...");
         List<Association> associations = parser.getAssociations();
         System.out.println("Relationships extracted: " + associations.size());

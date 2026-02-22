@@ -25,15 +25,15 @@ public class Class {
     private List<Attribute> attributes;
     private List<Operation> operations;
 
-    // relações
-    private List<Association> associations;
+    private Class parentClass; // para herança
+
 
     public Class(String name, String visibility) {
         this.name = name;
         this.visibility = visibility;
         this.attributes = new ArrayList<>();
         this.operations = new ArrayList<>();
-        this.associations = new ArrayList<>();
+        this.parentClass = null;
     }
 
     public String getName() {
@@ -68,13 +68,14 @@ public class Class {
         this.operations.add(operation);
     }
 
-    public List<Association> getAssociations() {
-        return associations;
+    public Class getParentClass() {
+        return parentClass;
     }
 
-    public void addAssociation(Association association) {
-        this.associations.add(association);
+    public void setParentClass(Class parentClass) {
+        this.parentClass = parentClass;
     }
+
 
     @Override
     public String toString() {
@@ -83,7 +84,7 @@ public class Class {
                 ", visibility:'" + visibility + '\'' +
                 ", attributes:" + attributes +
                 ", operations:" + operations +
-                ", relationships:" + associations +
+                ", parentClass:'" + parentClass + '\'' +
                 '}';
     }
 }

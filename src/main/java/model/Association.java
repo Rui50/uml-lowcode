@@ -12,6 +12,10 @@ public class Association extends Relationship {
     private boolean sourceNavigable;
     private boolean targetNavigable;
 
+    // para os maps
+    private String qualifierName;
+    private String qualifierType;
+
     public Association() {
         super();
         this.sourceRole = "";
@@ -21,6 +25,8 @@ public class Association extends Relationship {
         this.aggregationType = "none";
         this.sourceNavigable = true;
         this.targetNavigable = true;
+        this.qualifierName = "";
+        this.qualifierType = "";
     }
 
     public Association(String sourceClass, String targetClass) {
@@ -32,6 +38,8 @@ public class Association extends Relationship {
         this.aggregationType = "none";
         this.sourceNavigable = true;
         this.targetNavigable = true;
+        this.qualifierName = "";
+        this.qualifierType = "";
     }
 
     public String getSourceRole() {
@@ -90,6 +98,22 @@ public class Association extends Relationship {
         this.targetNavigable = targetNavigable;
     }
 
+    public String getQualifierName() {
+        return qualifierName;
+    }
+
+    public void setQualifierName(String qualifierName) {
+        this.qualifierName = qualifierName;
+    }
+
+    public String getQualifierType() {
+        return qualifierType;
+    }
+
+    public void setQualifierType(String qualifierType) {
+        this.qualifierType = qualifierType;
+    }
+
     @Override
     public String toString() {
         return "Association {" +
@@ -102,6 +126,8 @@ public class Association extends Relationship {
                 ", aggregationType:'" + aggregationType + '\'' +
                 ", sourceNavigable:" + sourceNavigable +
                 ", targetNavigable:" + targetNavigable +
+                ", qualifierName:'" + qualifierName + '\'' +
+                ", qualifierType:'" + qualifierType + '\'' +
                 '}';
     }
 }

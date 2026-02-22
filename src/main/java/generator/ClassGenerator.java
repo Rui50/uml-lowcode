@@ -58,6 +58,10 @@ public class ClassGenerator {
             generateAssociationMethods(writer, cls, associations);
             writer.println();
 
+            // generate operations
+            generateOperations(writer, cls);
+            writer.println();
+
             writer.println("}");
         }
 
@@ -242,5 +246,81 @@ public class ClassGenerator {
         if (multiplicity == null) return false;
         return multiplicity.contains("*") ||
                 (multiplicity.contains("..") && !multiplicity.equals("0..1"));
+    }
+
+    private void generateOperations(PrintWriter writer, Class cls){
+        if (cls.getOperations().isEmpty()){
+            return;
+        }
+
+        writer.println("    // Operations");
+
+        for (Operation op : cls.getOperations()) {
+            // assinatura
+            String visibility = op.getVisibility();
+            String returnType = removePackageNames(op.getReturnType());
+            String name = op.getName();
+            writer.println("    " + visibility + " " + returnType + " " + name + "(");
+
+            // parâmetros
+            List<Parameter> parameters = op.getParameters();
+            for (int i = 0; i < parameters.size(); i++) {
+                Parameter param = parameters.get(i);
+                String paramType = removePackageNames(param.getType());
+                String paramName = param.getName();
+                writer.print("        " + paramType + " " + paramName);
+                if (i < parameters.size() - 1) {
+                    writer.println(",");
+                } else {
+                    writer.println();
+                }
+            }
+
+            writer.println("    ) {");
+
+            // corpo vazio por enquanto
+            writer.println("        // TODO: implement this method");
+
+            // return padrão
+            if (!op.getReturnType().equals("void") &&
+                    !op.getReturnType().equals("Int")) {  // Int do VP
+                writer.println("        return " + getPlaceholderReturn(op.getReturnType()) + ";");
+            } else if (op.getReturnType().equals("Int")) {
+                writer.println("        return 0;");
+            }
+
+            writer.println("    }");
+        }
+    }
+
+    private String getPlaceholderReturn(String type) {
+        if (type == null ||
+                type.startsWith("List") ||
+                type.startsWith("Set") ||
+                type.startsWith("Map") ||
+                type.startsWith("Collection") ||
+                type.equals("String") ||
+                Character.isUpperCase(type.charAt(0))) {
+            return "null";
+        }
+
+        switch (type.toLowerCase()) {
+            case "int":
+                return "0";
+            case "boolean":
+                return "false";
+            case "string":
+                return "\"\"";
+            default:
+                return type + ";";
+        }
+    }
+
+    private String removePackageNames(String type) {
+        if (type == null) return null;
+
+        //List<Teste.Aluno> -> List<Aluno>
+
+        return type.replaceAll("\\b([A-Za-z_$][\\w$]*\\.)+([A-Za-z_$][\\w$]*)\\b", "$2");
     }
 }

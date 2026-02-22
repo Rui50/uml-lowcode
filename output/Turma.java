@@ -36,4 +36,23 @@ public class Turma {
         return this.alunos;
     }
 
+    // Operations
+    public Int totalAlunos(
+    ) {
+        // TODO: implement this method
+        return 0;
+    }
+    public boolean transferirAluno(
+        int numero,
+        Turma destino
+    ) {
+        // TODO: implement this method
+        return false;
+    }
+    public void inicializarAlunosParaTeste(
+        List<Aluno> alunos
+    ) {
+        // TODO: implement this method
+    }
+
 }

@@ -44,6 +44,19 @@ other part of SDMetrics.
 <trigger name="comments" type="xmi2assoc" attr="ownedComment" src="uml:Comment" />
 </xmitransformation>
 
+<!-- para reconhecer extensoes do visual paradigm
+<xmitransformation modelelement="vpextension" xmipattern="xmi:Extension" recurse="true"
+	requirexmiid="false"
+> nao tem id, e o sdmetrics tava a dar skip por causa disso
+
+</xmitransformation>-->
+
+<!-- no return dos metodos, se for coisas como List<String> fica dentro de uma coisa
+especifica do visual paradigm
+<xmitransformation modelelement="visualParadigm" xmipattern="genericType">
+	<trigger name="generictype" type="attrval" attr="xmi:value"/>
+</xmitransformation>-->
+
 <!-- classes, interfaces, attributes, operations -->
 <xmitransformation modelelement="class" xmipattern="uml:Class" recurse="true">
 <trigger name="visibility" type="attrval" attr="visibility" />
@@ -133,9 +146,18 @@ other part of SDMetrics.
 <trigger name="ownedparameters" type="xmi2assoc" src="uml:Parameter" attr="ownedParameter" />
 </xmitransformation>
 
-<xmitransformation modelelement="parameter" xmipattern="uml:Parameter">
+<xmitransformation modelelement="parameter" xmipattern="uml:Parameter" recurse="true">
+<!-- returns -->
 <trigger name="kind" type="attrval" attr="direction"/>
 <trigger name="kind" type="ctext" src="direction" />
+
+<!-- parametros -->
+<trigger name="kind" type="attrval" attr="kind" />
+<trigger name="kind" type="ctext" src="kind" />
+
+<!-- para listas nos params e assim-->
+<trigger name="generictype" type="gcattrval" src="xmi:Extension" attr="xmi:value" />
+
 <trigger name="parametertype" type="xmi2assoc" attr="type"/>
 </xmitransformation>
 
