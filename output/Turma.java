@@ -6,12 +6,11 @@ public class Turma {
     private String nome;
 
     // Associations
-    private List<Aluno> alunoss;
+    private Aluno alunoss;
     private List<Turno> turnos;
 
     // Constructor
     public Turma() {
-        this.alunoss = new ArrayList<>();
         this.turnos = new ArrayList<>();
     }
 
@@ -25,16 +24,12 @@ public class Turma {
     }
 
 
-    public void addAluno(Aluno alunoss) {
-        this.alunoss.add(alunoss);
-    }
-
-    public void removeAluno(Aluno alunoss) {
-        this.alunoss.remove(alunoss);
-    }
-
-    public List<Aluno> getAlunos() {
+    public Aluno getAluno() {
         return this.alunoss;
+    }
+
+    public void setAluno(Aluno alunoss) {
+        this.alunoss = alunoss;
     }
 
     public void addTurno(Turno turnos) {
