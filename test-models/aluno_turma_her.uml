@@ -13402,58 +13402,6 @@
 			<subdiagram xmi:value="YTqXhjmGAqACRwXJ"/>
 		</xmi:Extension>
 		<packagedElement isAbstract="false" isDerived="false" isLeaf="false" memberEnd="g3bxRjmGAqACRwjg g3bxRjmGAqACRwjj" xmi:id="vXbxRjmGAqACRwje" xmi:type="uml:Association">
-			<ownedEnd aggregation="none" association="vXbxRjmGAqACRwje" isDerived="false" isDerivedUnion="false" isLeaf="false" isNavigable="true" isReadOnly="false" isStatic="false" type="oErXhjmGAqACRwX4" xmi:id="g3bxRjmGAqACRwjg" xmi:type="uml:Property">
-				<xmi:Extension extender="Visual Paradigm">
-					<associationEnd/>
-					<qualifier>
-						<xmi:Extension extender="Visual Paradigm">
-							<vpumlChildModels>
-								<vpumlModel id="g3bxRjmGAqACRwji" modelType="Qualifier">
-									<properties>
-										<property name="name" type="string" value=""/>
-										<property name="modelType" type="string" value="Qualifier"/>
-										<property name="documentation" type="htmlString" value=""/>
-										<property name="pmAuthor" type="string" value="nonam"/>
-										<property name="pmCreateDateTime" type="string" value="1771180093121"/>
-										<property name="userIDLastNumericValue" type="int" value="0"/>
-										<property name="backlogActivityId" type="int" value="0"/>
-										<property name="qualityScore" type="int" value="-1"/>
-									</properties>
-								</vpumlModel>
-							</vpumlChildModels>
-						</xmi:Extension>
-					</qualifier>
-					<qualityScore value="-1"/>
-				</xmi:Extension>
-				<lowerValue value="1" xmi:id="g3bxRjmGAqACRwjg_multiplicity_lowerValue" xmi:type="uml:LiteralString"/>
-				<upperValue value="1" xmi:id="g3bxRjmGAqACRwjg_multiplicity_upperValue" xmi:type="uml:LiteralString"/>
-			</ownedEnd>
-			<ownedEnd aggregation="none" association="vXbxRjmGAqACRwje" isDerived="false" isDerivedUnion="false" isLeaf="false" isNavigable="true" isReadOnly="false" isStatic="false" type="mfdXhjmGAqACRwXf" xmi:id="g3bxRjmGAqACRwjj" xmi:type="uml:Property">
-				<xmi:Extension extender="Visual Paradigm">
-					<associationEnd/>
-					<qualifier>
-						<xmi:Extension extender="Visual Paradigm">
-							<vpumlChildModels>
-								<vpumlModel id="g3bxRjmGAqACRwjk" modelType="Qualifier">
-									<properties>
-										<property name="name" type="string" value=""/>
-										<property name="modelType" type="string" value="Qualifier"/>
-										<property name="documentation" type="htmlString" value=""/>
-										<property name="pmAuthor" type="string" value="nonam"/>
-										<property name="pmCreateDateTime" type="string" value="1771180093121"/>
-										<property name="userIDLastNumericValue" type="int" value="0"/>
-										<property name="backlogActivityId" type="int" value="0"/>
-										<property name="qualityScore" type="int" value="-1"/>
-									</properties>
-								</vpumlModel>
-							</vpumlChildModels>
-						</xmi:Extension>
-					</qualifier>
-					<qualityScore value="-1"/>
-				</xmi:Extension>
-				<lowerValue value="0" xmi:id="g3bxRjmGAqACRwjj_multiplicity_lowerValue" xmi:type="uml:LiteralString"/>
-				<upperValue value="*" xmi:id="g3bxRjmGAqACRwjj_multiplicity_upperValue" xmi:type="uml:LiteralString"/>
-			</ownedEnd>
 			<xmi:Extension extender="Visual Paradigm">
 				<qualityScore value="-1"/>
 			</xmi:Extension>
@@ -13563,6 +13511,32 @@
 					<qualityScore value="-1"/>
 				</xmi:Extension>
 			</ownedOperation>
+			<ownedAttribute aggregation="none" association="vXbxRjmGAqACRwje" isDerived="false" isDerivedUnion="false" isLeaf="false" isNavigable="true" isReadOnly="false" isStatic="false" name="turmaa" type="oErXhjmGAqACRwX4" xmi:id="g3bxRjmGAqACRwjg" xmi:type="uml:Property">
+				<xmi:Extension extender="Visual Paradigm">
+					<associationEnd/>
+					<qualifier>
+						<xmi:Extension extender="Visual Paradigm">
+							<vpumlChildModels>
+								<vpumlModel id="g3bxRjmGAqACRwji" modelType="Qualifier">
+									<properties>
+										<property name="name" type="string" value=""/>
+										<property name="modelType" type="string" value="Qualifier"/>
+										<property name="documentation" type="htmlString" value=""/>
+										<property name="pmAuthor" type="string" value="nonam"/>
+										<property name="pmCreateDateTime" type="string" value="1771180093121"/>
+										<property name="userIDLastNumericValue" type="int" value="0"/>
+										<property name="backlogActivityId" type="int" value="0"/>
+										<property name="qualityScore" type="int" value="-1"/>
+									</properties>
+								</vpumlModel>
+							</vpumlChildModels>
+						</xmi:Extension>
+					</qualifier>
+					<qualityScore value="-1"/>
+				</xmi:Extension>
+				<lowerValue value="1" xmi:id="g3bxRjmGAqACRwjg_multiplicity_lowerValue" xmi:type="uml:LiteralString"/>
+				<upperValue value="1" xmi:id="g3bxRjmGAqACRwjg_multiplicity_upperValue" xmi:type="uml:LiteralString"/>
+			</ownedAttribute>
 		</packagedElement>
 		<packagedElement isAbstract="false" isActive="false" isLeaf="false" name="Turma" visibility="public" xmi:id="oErXhjmGAqACRwX4" xmi:type="uml:Class">
 			<xmi:Extension extender="Visual Paradigm">
@@ -13669,6 +13643,32 @@
 					<qualityScore value="-1"/>
 				</xmi:Extension>
 			</ownedOperation>
+			<ownedAttribute aggregation="none" association="vXbxRjmGAqACRwje" isDerived="false" isDerivedUnion="false" isLeaf="false" isNavigable="true" isReadOnly="false" isStatic="false" name="alunoss" type="mfdXhjmGAqACRwXf" xmi:id="g3bxRjmGAqACRwjj" xmi:type="uml:Property">
+				<xmi:Extension extender="Visual Paradigm">
+					<associationEnd/>
+					<qualifier>
+						<xmi:Extension extender="Visual Paradigm">
+							<vpumlChildModels>
+								<vpumlModel id="g3bxRjmGAqACRwjk" modelType="Qualifier">
+									<properties>
+										<property name="name" type="string" value=""/>
+										<property name="modelType" type="string" value="Qualifier"/>
+										<property name="documentation" type="htmlString" value=""/>
+										<property name="pmAuthor" type="string" value="nonam"/>
+										<property name="pmCreateDateTime" type="string" value="1771180093121"/>
+										<property name="userIDLastNumericValue" type="int" value="0"/>
+										<property name="backlogActivityId" type="int" value="0"/>
+										<property name="qualityScore" type="int" value="-1"/>
+									</properties>
+								</vpumlModel>
+							</vpumlChildModels>
+						</xmi:Extension>
+					</qualifier>
+					<qualityScore value="-1"/>
+				</xmi:Extension>
+				<lowerValue value="0" xmi:id="g3bxRjmGAqACRwjj_multiplicity_lowerValue" xmi:type="uml:LiteralString"/>
+				<upperValue value="*" xmi:id="g3bxRjmGAqACRwjj_multiplicity_upperValue" xmi:type="uml:LiteralString"/>
+			</ownedAttribute>
 		</packagedElement>
 		<packagedElement isAbstract="false" isActive="false" isLeaf="false" name="AlunoTE" visibility="public" xmi:id="Jv7u4TmGAqACRwop" xmi:type="uml:Class">
 			<xmi:Extension extender="Visual Paradigm">
@@ -13709,7 +13709,7 @@
 					<properties>
 						<property name="pmAuthor" type="string" value="nonam"/>
 						<property name="pmCreateDateTime" type="string" value="1771800236468"/>
-						<property name="pmLastModified" type="string" value="1771800256716"/>
+						<property name="pmLastModified" type="string" value="1771802914007"/>
 						<property name="userIDLastNumericValue" type="int" value="0"/>
 						<property name="backlogActivityId" type="int" value="0"/>
 						<property name="static" type="boolean" value="false"/>
@@ -13737,7 +13737,7 @@
 				<afilterByViewpointLegend value="true"/>
 				<apmAuthor value="nonam"/>
 				<apmCreateDateTime value="1771169209477"/>
-				<apmLastModified value="1771800246704"/>
+				<apmLastModified value="1771802928592"/>
 				<ateamworkCreateDateTime value="0"/>
 				<ashowShapeLegend value="false"/>
 				<ashowConnectorLegend value="false"/>
@@ -13979,8 +13979,8 @@
 					<captionInternalHeight value="-2147483648"/>
 					<captionVisible value="true"/>
 					<captionSide value="1"/>
-					<roleA multiplicity="480,138,27,15"/>
-					<roleB multiplicity="332,121,37,15"/>
+					<roleA multiplicity="480,138,27,15" roleName="451,122,55,15"/>
+					<roleB multiplicity="332,121,37,15" roleName="330,138,58,15"/>
 					<properties>
 						<azOrder value="8"/>
 						<abackground value="Cr:122,207,245,255"/>
@@ -14009,9 +14009,11 @@
 						<arequestRebuildToEnd value="false"/>
 						<ashowConnectorName value="2"/>
 						<apaintThroughLabel value="2"/>
-						<ahasRoleAShape value="false"/>
-						<ahasRoleBShape value="false"/>
+						<ahasRoleAShape value="true"/>
+						<ahasRoleBShape value="true"/>
 						<ashowMultiplicityConstraints value="false"/>
+						<aroleARectangle value="Re:451.0,122.0,55.0,15.0"/>
+						<aroleBRectangle value="Re:330.0,138.0,58.0,15.0"/>
 						<amultiplicityBRectangle value="Re:332.0,121.0,37.0,15.0"/>
 						<amultiplicityARectangle value="Re:480.0,138.0,27.0,15.0"/>
 						<ahasMultiplicityAShape value="true"/>

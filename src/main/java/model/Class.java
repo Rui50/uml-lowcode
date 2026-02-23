@@ -25,8 +25,7 @@ public class Class {
     private List<Attribute> attributes;
     private List<Operation> operations;
 
-    private Class parentClass; // para herança
-
+    private Class parentClass; // para herança, facilitar geração
 
     public Class(String name, String visibility) {
         this.name = name;
@@ -74,6 +73,23 @@ public class Class {
 
     public void setParentClass(Class parentClass) {
         this.parentClass = parentClass;
+    }
+
+    // caso de ser uma classe filha, trazer os atributos e operações da classe pai
+    public List<Attribute> getAllAttributes() {
+        List<Attribute> allAttributes = new ArrayList<>(attributes);
+        if (parentClass != null) {
+            allAttributes.addAll(parentClass.getAllAttributes());
+        }
+        return allAttributes;
+    }
+
+    public List<Operation> getAllOperations() {
+        List<Operation> allOperations = new ArrayList<>(operations);
+        if (parentClass != null) {
+            allOperations.addAll(parentClass.getAllOperations());
+        }
+        return allOperations;
     }
 
 

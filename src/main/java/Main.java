@@ -1,10 +1,11 @@
-import model.Association;
 import parser.XMIParser;
 import generator.CodeGenerator;
 
 import java.util.List;
 
 import model.Class;
+import model.Association;
+import model.Generalization;
 
 /**
  * TODO
@@ -17,7 +18,7 @@ public class Main {
 
         // File paths for the parser
         //String xmiFilePath = "test-models/test_classe_1_2.uml";
-        String xmiFilePath = "test-models/aluno_turma_op2.uml";
+        String xmiFilePath = "test-models/aluno_turma_her_full.uml";
 
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
@@ -59,10 +60,49 @@ public class Main {
             }
         }
 
+        // heranças
+        System.out.println("Parsing generalizations...");
+        List<Generalization> generalizations = parser.getGeneralizations();
+        System.out.println("Generalizations extracted: " + generalizations.size());
+
+        if (generalizations.isEmpty()) {
+            System.out.println("No generalizations found");
+        } else {
+            for (Generalization gen : generalizations) {
+                System.out.println(gen);
+            }
+        }
+
+        if (!generalizations.isEmpty()) {
+            System.out.println("\nResolving inheritance references...");
+            fillGeneralizations(classes, generalizations);
+        }
 
         // gerar código
         String outputDir = "output";
         CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
         codeGenerator.generate();
+    }
+
+
+    // para ja fica aqui, depois meter num parser helper
+    private static void fillGeneralizations(List<Class> classes, List<Generalization> generalizations){
+        for (Generalization gen : generalizations) {
+            Class child = findClassByName(classes, gen.getChildClass());
+            Class parent = findClassByName(classes, gen.getParentClass());
+
+            if (child != null && parent != null) {
+                child.setParentClass(parent);
+            }
+        }
+    }
+
+    private static Class findClassByName(List<Class> classes, String name) {
+        for (Class c : classes) {
+            if (c.getName().equals(name)) {
+                return c;
+            }
+        }
+        return null;
     }
 }

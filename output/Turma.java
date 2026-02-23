@@ -6,15 +6,16 @@ public class Turma {
     private String nome;
 
     // Associations
-    private List<Aluno> alunos;
+    private List<Aluno> alunoss;
+    private List<Turno> turnos;
 
     // Constructor
     public Turma() {
-        this.alunos = new ArrayList<>();
+        this.alunoss = new ArrayList<>();
+        this.turnos = new ArrayList<>();
     }
 
     // Getters and Setters
-
     public String getNome() {
         return nome;
     }
@@ -24,35 +25,47 @@ public class Turma {
     }
 
 
-    public void addAluno(Aluno alunos) {
-        this.alunos.add(alunos);
+    public void addAluno(Aluno alunoss) {
+        this.alunoss.add(alunoss);
     }
 
-    public void removeAluno(Aluno alunos) {
-        this.alunos.remove(alunos);
+    public void removeAluno(Aluno alunoss) {
+        this.alunoss.remove(alunoss);
     }
 
     public List<Aluno> getAlunos() {
-        return this.alunos;
+        return this.alunoss;
+    }
+
+    public void addTurno(Turno turnos) {
+        this.turnos.add(turnos);
+    }
+
+    public void removeTurno(Turno turnos) {
+        this.turnos.remove(turnos);
+    }
+
+    public List<Turno> getTurnos() {
+        return this.turnos;
     }
 
     // Operations
-    public Int totalAlunos(
-    ) {
-        // TODO: implement this method
-        return 0;
-    }
-    public boolean transferirAluno(
-        int numero,
-        Turma destino
-    ) {
-        // TODO: implement this method
-        return false;
-    }
     public void inicializarAlunosParaTeste(
         List<Aluno> alunos
     ) {
         // TODO: implement this method
+    }
+    public boolean transferirAluno(
+        Turma destino,
+        int numero
+    ) {
+        // TODO: implement this method
+        return false;
+    }
+    public Int totalAlunos(
+    ) {
+        // TODO: implement this method
+        return 0;
     }
 
 }

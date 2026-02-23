@@ -3,27 +3,18 @@ import java.util.*;
 public class Aluno {
 
     // Attributes
-    private int numero;
     private String nome;
     private string email;
+    private int numero;
 
     // Associations
-    private Turma turma;
+    private Turno turno;
 
     // Constructor
     public Aluno() {
     }
 
     // Getters and Setters
-
-    public int getNumero() {
-        return numero;
-    }
-
-    public void setNumero(int numero) {
-        this.numero = numero;
-    }
-
     public String getNome() {
         return nome;
     }
@@ -40,13 +31,21 @@ public class Aluno {
         this.email = email;
     }
 
-
-    public Turma getTurma() {
-        return this.turma;
+    public int getNumero() {
+        return numero;
     }
 
-    public void setTurma(Turma turma) {
-        this.turma = turma;
+    public void setNumero(int numero) {
+        this.numero = numero;
+    }
+
+
+    public Turno getTurno() {
+        return this.turno;
+    }
+
+    public void setTurno(Turno turno) {
+        this.turno = turno;
     }
 
     // Operations

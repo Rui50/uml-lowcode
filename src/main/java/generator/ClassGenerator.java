@@ -35,7 +35,12 @@ public class ClassGenerator {
             writer.println();
 
             // class
-            writer.println("public class " + cls.getName() + " {");
+            writer.print("public class " + cls.getName());
+
+            if (cls.getParentClass() != null){
+                writer.print("  extends " + cls.getParentClass().getName());
+            }
+            writer.println(" {");
             writer.println();
 
             // attributes
@@ -84,11 +89,12 @@ public class ClassGenerator {
         for (Association association : associations){
 
             // where class is source and navigable
-            if (association.getSourceClass().equals(cls.getName()) && association.isSourceNavigable()){
+            if (association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()){
                 String targetClass = association.getTargetClass();
                 String multiplicity = association.getTargetMultiplicity();
+                String roleName = association.getTargetRole();
                 // get the attribute name based on the target class and multiplicity
-                String attributeName = generateAssociationAttributeName(targetClass, multiplicity);
+                String attributeName = generateAssociationAttributeName(targetClass, multiplicity, roleName);
 
                 if (!generatedAttributes.contains(attributeName)){
                     if (checkMultiplicity(multiplicity)){
@@ -101,10 +107,11 @@ public class ClassGenerator {
             }
 
             // where class is target and navigable
-            if (association.getTargetClass().equals(cls.getName()) && association.isTargetNavigable()){
+            if (association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()){
                 String sourceClass = association.getSourceClass();
                 String multiplicity = association.getSourceMultiplicity();
-                String attributeName = generateAssociationAttributeName(sourceClass, multiplicity);
+                String roleName = association.getSourceRole();
+                String attributeName = generateAssociationAttributeName(sourceClass, multiplicity, roleName);
 
                 if (!generatedAttributes.contains(attributeName)){
                     if (checkMultiplicity(multiplicity)){
@@ -123,24 +130,30 @@ public class ClassGenerator {
         // only the default for now at least
         writer.println("    public " + cls.getName() + "() {");
 
+        if (cls.getParentClass() != null){
+            writer.println("        super();");
+        }
+
         for (Association association : associations) {
             // where class is source and nav
-            if (association.getSourceClass().equals(cls.getName()) && association.isSourceNavigable()) {
+            if (association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()) {
                 String multiplicity = association.getTargetMultiplicity();
 
                 if (checkMultiplicity(multiplicity)) {
                     String targetClass = association.getTargetClass();
-                    String attributeName = generateAssociationAttributeName(targetClass, multiplicity);
+                    String roleName = association.getTargetRole();
+                    String attributeName = generateAssociationAttributeName(targetClass, multiplicity, roleName);
                     writer.println("        this." + attributeName + " = new ArrayList<>();");
                 }
             }
 
             // where class is target and nav
-            if (association.getTargetClass().equals(cls.getName()) && association.isTargetNavigable()) {
+            if (association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()) {
                 String multiplicity = association.getSourceMultiplicity();
                 if (checkMultiplicity(multiplicity)) {
                     String sourceClass = association.getSourceClass();
-                    String attributeName = generateAssociationAttributeName(sourceClass, multiplicity);
+                    String roleName = association.getSourceRole();
+                    String attributeName = generateAssociationAttributeName(sourceClass, multiplicity, roleName);
                     writer.println("        this." + attributeName + " = new ArrayList<>();");
                 }
             }
@@ -150,7 +163,7 @@ public class ClassGenerator {
     }
 
     private void generateGettersSetters(PrintWriter writer, Class cls){
-        writer.println("    // Getters and Setters");
+        writer.print("    // Getters and Setters");
 
         for (Attribute attribute : cls.getAttributes()) {
             String name = attribute.getName();
@@ -175,10 +188,11 @@ public class ClassGenerator {
         for (Association association: associations) {
 
             // where class is the source
-            if (association.getSourceClass().equals(cls.getName()) && association.isSourceNavigable()) {
+            if (association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()) {
                 String targetClass = association.getTargetClass();
                 String multiplicity = association.getTargetMultiplicity();
-                String attributeName = generateAssociationAttributeName(targetClass, multiplicity);
+                String roleName = association.getTargetRole();
+                String attributeName = generateAssociationAttributeName(targetClass, multiplicity, roleName);
 
                 if(checkMultiplicity(multiplicity)) {
                     generateListAssociationMethods(writer, targetClass, attributeName);
@@ -187,10 +201,11 @@ public class ClassGenerator {
                 }
             }
 
-            if (association.getTargetClass().equals(cls.getName()) && association.isTargetNavigable()) {
+            if (association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()) {
                 String sourceClass = association.getSourceClass();
                 String multiplicity = association.getSourceMultiplicity();
-                String attributeName = generateAssociationAttributeName(sourceClass, multiplicity);
+                String roleName = association.getSourceRole();
+                String attributeName = generateAssociationAttributeName(sourceClass, multiplicity, roleName);
 
                 if (checkMultiplicity(multiplicity)) {
                     generateListAssociationMethods(writer, sourceClass, attributeName);
@@ -235,10 +250,15 @@ public class ClassGenerator {
         wrriter.println("    }");
     }
 
-    private String generateAssociationAttributeName(String targetClass, String multiplicity) {
+    private String generateAssociationAttributeName(String targetClass, String multiplicity, String roleName) {
         // make first letter lowercase
-        String base = targetClass.substring(0, 1).toLowerCase() + targetClass.substring(1);
+        //String base = targetClass.substring(0, 1).toLowerCase() + targetClass.substring(1);
 
+        if (roleName != null && !roleName.trim().isEmpty()) {
+            return roleName.trim(); // role is field name
+        }
+
+        String base = targetClass.substring(0, 1).toLowerCase() + targetClass.substring(1);
         return checkMultiplicity(multiplicity) ? base + "s" : base;
     }
 

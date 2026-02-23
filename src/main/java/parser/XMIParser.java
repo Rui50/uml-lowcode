@@ -18,6 +18,7 @@ import model.Class;
 import model.Operation;
 import model.Parameter;
 import model.Relationship;
+import model.Generalization;
 
 public class XMIParser {
     private Model model;
@@ -81,6 +82,14 @@ public class XMIParser {
         if (attributes != null) {
             for (Object attributeObj : attributes){
                 ModelElement attributeElement = (ModelElement) attributeObj;
+
+                // as associações também aparecem como atributos se tiverem role
+                // tirar porque são tratados depois
+                ModelElement associationRef = (ModelElement) attributeElement.getRefAttribute("association");
+                if (associationRef != null) {
+                    continue;
+                }
+
                 Attribute attribute = parseAttribute(attributeElement);
                 cl.addAttribute(attribute);
             }
@@ -286,6 +295,41 @@ public class XMIParser {
             }
         }
         return associations;
+    }
+
+    public List<Generalization> getGeneralizations() {
+        return parseGeneralizations();
+    }
+
+    private List<Generalization> parseGeneralizations() {
+        List<Generalization> generalizations = new ArrayList<>();
+
+        List<ModelElement> generalizationElements = model.getAcceptedElements(metaModel.getType("generalization"));
+
+        System.out.println(generalizationElements.size() + " generalization(s)");
+
+        for (ModelElement generalizationElement : generalizationElements) {
+            // classe que herda
+            ModelElement subclassElement = (ModelElement) generalizationElement.getRefAttribute("context");
+
+            // classe pai
+            ModelElement parentclassElement = (ModelElement) generalizationElement.getRefAttribute("general");
+
+            if (subclassElement != null && parentclassElement != null) {
+                String childClassName = subclassElement.getName();
+                String parentClassName = parentclassElement.getName();
+
+                Generalization generalization = new Generalization(childClassName, parentClassName);
+                generalizations.add(generalization);
+
+                System.out.println("Generalization found: " + childClassName + " -> " + parentClassName);
+            }
+            else {
+                System.out.println("Generalization element with missing references: " + generalizationElement.getName());
+            }
+        }
+
+        return generalizations;
     }
 
 
