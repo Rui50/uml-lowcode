@@ -114,6 +114,10 @@ public class Association extends Relationship {
         this.qualifierType = qualifierType;
     }
 
+    public boolean hasQualifier() {
+        return qualifierName != null && !qualifierName.isEmpty();
+    }
+
     @Override
     public String toString() {
         return "Association {" +

@@ -6,11 +6,12 @@ public class Turma {
     private String nome;
 
     // Associations
-    private Aluno alunoss;
+   private Map<int, Aluno> alunoss;
     private List<Turno> turnos;
 
     // Constructor
     public Turma() {
+        this.alunoss = new HashMap<>();
         this.turnos = new ArrayList<>();
     }
 
@@ -24,12 +25,20 @@ public class Turma {
     }
 
 
-    public Aluno getAluno() {
-        return this.alunoss;
+    public void putAluno(int key, Aluno value) {
+        this.alunoss.put(key, value);
     }
 
-    public void setAluno(Aluno alunoss) {
-        this.alunoss = alunoss;
+    public Aluno getAluno(int key) {
+        return this.alunoss.get(key);
+    }
+
+    public void removeAluno(int key) {
+        this.alunoss.remove(key);
+    }
+
+    public Map<int, Aluno> getAllAlunos() {
+        return this.alunoss;
     }
 
     public void addTurno(Turno turnos) {

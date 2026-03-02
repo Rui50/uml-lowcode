@@ -4,6 +4,7 @@ package parser;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import com.sdmetrics.model.MetaModel;
 import com.sdmetrics.model.Model;
@@ -20,9 +21,14 @@ import model.Parameter;
 import model.Relationship;
 import model.Generalization;
 
+import parser.VpParser;
+import parser.VpParser.Qualifier;
+
 public class XMIParser {
     private Model model;
     private MetaModel metaModel;
+
+    private Map<String, Qualifier> qualifiers;
 
     public void loadModel(String xmiFile) throws Exception{
 
@@ -50,6 +56,9 @@ public class XMIParser {
         parser.parse(xmiFile, xmiReader);
 
         System.out.println("Model loaded successfully!");
+
+        System.out.println();
+        qualifiers = VpParser.parseQualifiers(xmiFile, model);
     }
 
 
@@ -146,7 +155,7 @@ public class XMIParser {
                     // é um tipo de retorno
 
                     String genericType = paramElement.getPlainAttribute("generictype");
-                    System.out.println("Generic type for return: " + genericType);
+                    //System.out.println("Generic type for return: " + genericType);
                     if (genericType != null && !genericType.trim().isEmpty()) {
                         operation.setReturnType(genericType);
                     } else {
@@ -181,7 +190,7 @@ public class XMIParser {
 
         String genericType = element.getPlainAttribute("generictype");
 
-        System.out.println("Generic type for parameter " + parameter.getName() + ": " + genericType);
+        //System.out.println("Generic type for parameter " + parameter.getName() + ": " + genericType);
 
         if (genericType != null && !genericType.trim().isEmpty()) {
             parameter.setType(genericType);
@@ -234,6 +243,13 @@ public class XMIParser {
                 ModelElement targetEnd = ends.get(1);
                 ModelElement targetType = (ModelElement) targetEnd.getRefAttribute("propertytype");
 
+                VpParser.Qualifier sourceQualifier = qualifiers.get(sourceEnd.getXMIID());
+                VpParser.Qualifier targetQualifier = qualifiers.get(targetEnd.getXMIID());
+
+                // para obter os qualifiers do parsing Manual do vp
+                String sourceEndId = sourceEnd.getXMIID();
+                String targetEndId = targetEnd.getXMIID();
+
                 if (sourceType != null && targetType != null) {
                     Association association = new Association();
                     association.setSourceClass(sourceType.getName());
@@ -270,6 +286,7 @@ public class XMIParser {
                     association.setSourceNavigable(sourceNavigable == null || Boolean.parseBoolean(sourceNavigable));
                     association.setTargetNavigable(targetNavigable == null || Boolean.parseBoolean(targetNavigable));
 
+                    /*
                     // qualifiers para caso de maps
                     // tem de ser collection porque é o que o SDMetrics tem
                     Collection<?> qualifiers = sourceEnd.getSetAttribute("qualifiers");
@@ -277,7 +294,7 @@ public class XMIParser {
                     if (qualifiers != null && !qualifiers.isEmpty()) {
                         // para já só um qualifier para maps
                         ModelElement qualifier = (ModelElement) qualifiers.iterator().next();
-                        if (qualifiers.size() > 1){
+                        if (qualifiers.size() > 1) {
                             System.out.println("Has more then 1 qualifir in this assoc");
                         }
 
@@ -287,6 +304,16 @@ public class XMIParser {
 
                         association.setQualifierName(qualifierName);
                         association.setQualifierType(qualifierTypeName);
+                    }*/
+
+                    if(sourceQualifier != null) {
+                        association.setQualifierName(sourceQualifier.name);
+                        association.setQualifierType(sourceQualifier.type);
+                        System.out.println("Association " + association.getSourceClass() + " -> " + association.getTargetClass() + " has qualifier: " + sourceQualifier);
+                    } else if (targetQualifier != null) {
+                        association.setQualifierName(targetQualifier.name);
+                        association.setQualifierType(targetQualifier.type);
+                        System.out.println("Association " + association.getSourceClass() + " -> " + association.getTargetClass() + " has qualifier: " + targetQualifier);
                     }
 
                     associations.add(association);
