@@ -1,10 +1,7 @@
 package parser;
 // https://www.sdmetrics.com/javadoc/com/sdmetrics/model/package-summary.html
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.sdmetrics.model.MetaModel;
 import com.sdmetrics.model.Model;
@@ -21,14 +18,20 @@ import model.Parameter;
 import model.Relationship;
 import model.Generalization;
 
+import model.annotations.Invariant;
 import parser.VpParser;
 import parser.VpParser.Qualifier;
+import parser.VpAnnotationsParser;
+
 
 public class XMIParser {
     private Model model;
     private MetaModel metaModel;
 
     private Map<String, Qualifier> qualifiers;
+
+    private Map<String, List<Invariant>> invariantsCache = new HashMap<>();
+
 
     public void loadModel(String xmiFile) throws Exception{
 
@@ -59,6 +62,10 @@ public class XMIParser {
 
         System.out.println();
         qualifiers = VpParser.parseQualifiers(xmiFile, model);
+
+        System.out.println();
+        loadAnnotationsFromComments();
+
     }
 
 
@@ -111,6 +118,16 @@ public class XMIParser {
                 Operation operation = parseOperation(operationElement);
                 cl.addOperation(operation);
             }
+        }
+
+        String classId = element.getXMIID();
+        List<Invariant> invariants = invariantsCache.get(classId);
+
+        if (invariants != null) {
+            for (Invariant invariant : invariants) {
+                cl.addInvariant(invariant);
+            }
+            System.out.println("Class " + cl.getName() + " has " + invariants.size() + " invariant(s) from comments.");
         }
 
         return cl;
@@ -392,5 +409,53 @@ public class XMIParser {
         // ambos diferentes -> "lower..upper"
         return lower + ".." + upper;
     }
+
+
+    private void loadAnnotationsFromComments(){
+        System.out.println("loading ocl annotation");
+
+        List<ModelElement> comments = model.getAcceptedElements(
+            metaModel.getType("comment")
+        );
+
+        System.out.println("Found " + comments.size() + " comments.");
+
+        for  (ModelElement comment : comments) {
+            String body = comment.getPlainAttribute("body");
+
+            if (body == null){
+                continue;
+            }
+
+            Invariant invariant = VpAnnotationsParser.parseInvariant(body);
+
+            if (invariant == null) {
+                continue;
+            }
+
+            // obter elementos anotados
+            Collection<?> annotatedElements = comment.getSetAttribute("annotatedelement");
+
+            if (annotatedElements == null || annotatedElements.isEmpty()) {
+                System.out.println("Invariant '" + invariant.getName() + "' has no annotated elements.");
+                continue;
+            }
+
+            for (Object annotatedElementObj : annotatedElements) {
+                ModelElement annotatedElement = (ModelElement) annotatedElementObj;
+
+                // guardar associação, temp num map
+
+                String elementId = annotatedElement.getXMIID();
+
+                if(!invariantsCache.containsKey(elementId)){
+                    invariantsCache.put(elementId, new ArrayList<>());
+                }
+                invariantsCache.get(elementId).add(invariant);
+            }
+
+        }
+    }
+
 
 }

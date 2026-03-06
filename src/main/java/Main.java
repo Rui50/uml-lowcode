@@ -1,11 +1,16 @@
+import generator.spring.SpringEntityGenerator;
 import parser.XMIParser;
 import generator.CodeGenerator;
+import generator.spring.SpringProjectGenerator;
 
 import java.util.List;
 
 import model.Class;
 import model.Association;
 import model.Generalization;
+
+import javax.swing.*;
+
 
 /**
  * TODO
@@ -18,7 +23,7 @@ public class Main {
 
         // File paths for the parser
         //String xmiFilePath = "test-models/test_classe_1_2.uml";
-        String xmiFilePath = "test-models/aluno_turma_map.uml";
+        String xmiFilePath = "test-models/aluno_turma_ocl.uml";
 
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
@@ -80,8 +85,22 @@ public class Main {
 
         // gerar código
         String outputDir = "output";
-        CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
-        codeGenerator.generate();
+        String templateDir = "templates/spring-boot-template";
+        //CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
+        //codeGenerator.generate();
+
+        SpringProjectGenerator project = new SpringProjectGenerator(
+            templateDir,
+            outputDir
+        );
+
+        project.generateProjectStructure();
+
+        // gerar entidades
+        SpringEntityGenerator entityGenerator = new SpringEntityGenerator(outputDir);
+        entityGenerator.generateEntities(classes, associations);
+
+
     }
 
 

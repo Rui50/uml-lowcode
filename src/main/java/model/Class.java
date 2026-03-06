@@ -1,5 +1,7 @@
 package model;
 
+import model.annotations.Invariant;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,12 +29,15 @@ public class Class {
 
     private Class parentClass; // para herança, facilitar geração
 
+    private List<Invariant> invariants;
+
     public Class(String name, String visibility) {
         this.name = name;
         this.visibility = visibility;
         this.attributes = new ArrayList<>();
         this.operations = new ArrayList<>();
         this.parentClass = null;
+        this.invariants = new ArrayList<>();
     }
 
     public String getName() {
@@ -92,6 +97,13 @@ public class Class {
         return allOperations;
     }
 
+    public List<Invariant> getInvariants() {
+        return invariants;
+    }
+
+    public void addInvariant(Invariant invariant) {
+        this.invariants.add(invariant);
+    }
 
     @Override
     public String toString() {

@@ -784,6 +784,8 @@ especifica do visual paradigm
 <xmitransformation modelelement="comment" xmipattern="uml:Comment">
 <trigger name="body" type="attrval" attr="body" />
 <trigger name="body" type="ctext" src="body" />
+	<!-- para saber classes anotadas-->
+	<trigger name="annotatedelement" type="attrval" attr="annotatedElement" />
 </xmitransformation>
 
 <!-- UML Diagram Information as saved by older versions of Rose, Together, Enterprise Architect,
