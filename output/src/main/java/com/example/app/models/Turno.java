@@ -23,6 +23,7 @@ public class Turno{
 
     // relationship: Turno -> Aluno
     @OneToMany(mappedBy = "turno")
+    @Builder.Default
     private List<Aluno> alunos = new ArrayList<>();
 
 }

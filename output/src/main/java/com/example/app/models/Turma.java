@@ -24,12 +24,13 @@ public class Turma{
     // relationship: Turma -> Aluno
     @OneToMany
     @JoinColumn(name = "aluno_id")
-    @MapKey(name = "aluno_num")
+    @MapKey(name = "numero")
     private Map<Integer, Aluno> alunoss = new HashMap<>();
 
     // relationship: Turma -> Turno
     @OneToMany
     @JoinColumn(name = "turma_id")
+    @Builder.Default
     private List<Turno> turnos = new ArrayList<>();
 
 }
