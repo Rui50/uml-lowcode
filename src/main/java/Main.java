@@ -23,7 +23,7 @@ public class Main {
 
         // File paths for the parser
         //String xmiFilePath = "test-models/test_classe_1_2.uml";
-        String xmiFilePath = "test-models/aluno_turma_ocl.uml";
+        String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
 
 
         System.out.println("Parsing UML model from: " + xmiFilePath);

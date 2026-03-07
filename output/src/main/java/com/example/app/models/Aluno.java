@@ -1,8 +1,15 @@
-package output.models;
+package com.example.app.models;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
+import lombok.*;
 import java.util.*;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "aluno")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
@@ -19,7 +26,7 @@ public class Aluno{
     private String nome;
 
     @Column(name = "email")
-    private string email;
+    private String email;
 
     @Column(name = "numero")
     private int numero;

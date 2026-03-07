@@ -1,8 +1,14 @@
-package output.models;
+package com.example.app.models;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
+import lombok.*;
 import java.util.*;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "turma")
 public class Turma{
@@ -19,7 +25,7 @@ public class Turma{
     @OneToMany
     @JoinColumn(name = "aluno_id")
     @MapKey(name = "aluno_num")
-    private Map<int, Aluno> alunoss = new HashMap<>();
+    private Map<Integer, Aluno> alunoss = new HashMap<>();
 
     // relationship: Turma -> Turno
     @OneToMany

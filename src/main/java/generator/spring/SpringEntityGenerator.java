@@ -45,12 +45,16 @@ public class SpringEntityGenerator {
 
         try (PrintWriter writer = new PrintWriter(new File(filename))) {
             // package
-            writer.println("package " + baseOutputPath + ".models;");
+            writer.println("package " + "com.example.app" + ".models;");
             writer.println();
 
             // imports
-            writer.println("import javax.persistence.*;");
+            writer.println("import jakarta.persistence.*;");
+            writer.println("import lombok.*;");
             writer.println("import java.util.*;");
+            if (cls.getParentClass() != null || isParent(cls, allClasses)) {
+                writer.println("import lombok.experimental.SuperBuilder;");
+            }
             writer.println();
 
             // anotações base da classe
@@ -76,10 +80,32 @@ public class SpringEntityGenerator {
             generateRelationships(writer, cls, associations, allClasses);
 
             writer.println("}");
+
+            System.out.println("Generated: " + cls.getName() + ".java");
         }
     }
 
     private void generateClassBaseAnnotations(PrintWriter writer, Class cls, List<Class> allClasses) {
+        // Lombok para nao termos que gerar construtores, getters e setters
+        writer.println("@Getter");
+        writer.println("@Setter");
+        writer.println("@NoArgsConstructor");
+        writer.println("@AllArgsConstructor");
+        // need superbuilder se for de herança
+        if (cls.getParentClass() != null || isParent(cls, allClasses)) {
+            writer.println("@SuperBuilder");
+        } else {
+            /***
+
+             * ver isto depois
+             *   @Builder.Default
+             *   private List<Aluno> alunos = new ArrayList<>();
+             *
+             *   Without @Builder.Default, Lombok ignores new ArrayList<>() during build and that field can end up null.
+             */
+            writer.println("@Builder");
+        };
+
         // @Entity
         writer.println("@Entity");
         // @Table , para ja normalizar so para minusculas, depois pensar melhor
