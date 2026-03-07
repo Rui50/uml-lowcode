@@ -34,7 +34,8 @@ build/
 
 /templates
 /out
-
+.templates
+.out
 ### VS Code ###
 .vscode/
 

@@ -103,26 +103,37 @@ public class SpringEntityGenerator {
              *
              *   Without @Builder.Default, Lombok ignores new ArrayList<>() during build and that field can end up null.
              */
+
             writer.println("@Builder");
         };
 
         // @Entity
         writer.println("@Entity");
-        // @Table , para ja normalizar so para minusculas, depois pensar melhor
-        writer.println("@Table(name = \"" + cls.getName().toLowerCase() + "\")");
+
+        if (inheritanceStrategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
+            // para herança single table, só a classe pai tem @Table
+            // os têm @DiscriminatorValue
+            return;
+        } else {
+            // @Table , para ja normalizar so para minusculas, depois pensar melhor
+            writer.println("@Table(name = \"" + cls.getName().toLowerCase() + "\")");
+        }
 
         // caso seja parent, gerar @Inheritance
         if (cls.getParentClass() == null && isParent(cls, allClasses)) {
+            // pai
             if (inheritanceStrategy.equals("SINGLE_TABLE")) {
                 writer.println("@Inheritance(strategy = InheritanceType.SINGLE_TABLE)");
                 writer.println("@DiscriminatorColumn(name = \"type\")");
+                writer.println("@DiscriminatorValue(\"" + cls.getName() + "\")");
             } else if (inheritanceStrategy.equals("JOINED")) {
                 writer.println("@Inheritance(strategy = InheritanceType.JOINED)");
             }
+        } else if (cls.getParentClass() != null) {
+            // filho
             if (inheritanceStrategy.equals("SINGLE_TABLE")) {
                 writer.println("@DiscriminatorValue(\"" + cls.getName() + "\")");
-            } else if (inheritanceStrategy.equals("JOINED") && cls.getParentClass() != null) {
-                // outra que fica lowercase para ja
+            } else if (inheritanceStrategy.equals("JOINED")) {
                 writer.println("@PrimaryKeyJoinColumn(name = \"" + cls.getParentClass().getName().toLowerCase() + "_id\")");
             }
         }
@@ -262,11 +273,13 @@ public class SpringEntityGenerator {
         }
 
         if (assoc.hasQualifier()) {
+            writer.println("    @Builder.Default");
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
                     fieldName + " = new HashMap<>();");
         } else {
+            writer.println("    @Builder.Default");
             writer.println("    private List<" + otherClass + "> " + fieldName +
                     " = new ArrayList<>();");
         }
@@ -289,11 +302,13 @@ public class SpringEntityGenerator {
         }
 
         if (assoc.hasQualifier()) {
+            writer.println("    @Builder.Default");
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
                     fieldName + " = new HashMap<>();");
         } else {
+            writer.println("    @Builder.Default");
             writer.println("    private List<" + otherClass + "> " + fieldName +
                     " = new ArrayList<>();");
         }
@@ -307,7 +322,6 @@ public class SpringEntityGenerator {
         writer.println("    @ManyToOne");
         writer.println("    @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
 
-        // ✅ CHECK QUALIFIER
         if (assoc.hasQualifier()) {
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();

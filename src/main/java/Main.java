@@ -1,7 +1,9 @@
-import generator.spring.SpringEntityGenerator;
 import parser.XMIParser;
 import generator.CodeGenerator;
 import generator.spring.SpringProjectGenerator;
+import generator.spring.SpringEntityGenerator;
+import generator.spring.SpringRepositoryGenerator;
+import generator.spring.SpringServiceGenerator;
 
 import java.util.List;
 
@@ -85,7 +87,7 @@ public class Main {
 
         // gerar código
         String outputDir = "output";
-        String templateDir = "templates/spring-boot-template";
+        String templateDir = "templates/spring-boot-template-h2";
         //CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
         //codeGenerator.generate();
 
@@ -99,6 +101,13 @@ public class Main {
         // gerar entidades
         SpringEntityGenerator entityGenerator = new SpringEntityGenerator(outputDir);
         entityGenerator.generateEntities(classes, associations);
+
+        // gerar repositórios
+        SpringRepositoryGenerator repositoryGenerator = new SpringRepositoryGenerator(outputDir);
+        repositoryGenerator.generateRepositories(classes);
+
+        SpringServiceGenerator serviceGenerator = new SpringServiceGenerator(outputDir);
+        serviceGenerator.generateServices(classes, associations);
 
 
     }
