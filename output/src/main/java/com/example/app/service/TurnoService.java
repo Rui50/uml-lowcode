@@ -56,4 +56,15 @@ public class TurnoService {
         return turnoRepository.existsById(id);
     }
 
+    // Custom operations from class diagram (TODO: implement)
+    /**
+     * @return boolean
+     * @throws UnsupportedOperationException until implemented with Sequence Diagram
+     */
+    public boolean temVaga(Long id) {
+        throw new UnsupportedOperationException(
+            "Method 'temVaga' not yet implemented. "
+        );
+    }
+
 }

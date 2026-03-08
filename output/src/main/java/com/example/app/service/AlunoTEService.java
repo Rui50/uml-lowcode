@@ -56,4 +56,34 @@ public class AlunoTEService {
         return alunoteRepository.existsById(id);
     }
 
+    // Simple query methods for strings
+    /**
+     * Find AlunoTE by empresa
+     * @param empresa to search by
+     * @return list of matching entities
+     */
+    public List<AlunoTE> findByEmpresa(String empresa) {
+        return alunoteRepository.findByEmpresa(empresa);
+    }
+
+    /**
+     * Find AlunoTE by empresa containing text
+     * @param empresa to search
+     * @return list of matching entities
+     */
+    public List<AlunoTE> findByEmpresaContaining(String empresa) {
+        return alunoteRepository.findByEmpresaContaining(empresa);
+    }
+
+    // Custom operations from class diagram (TODO: implement)
+    /**
+     * @return boolean
+     * @throws UnsupportedOperationException until implemented with Sequence Diagram
+     */
+    public boolean comprovativo(Long id) {
+        throw new UnsupportedOperationException(
+            "Method 'comprovativo' not yet implemented. "
+        );
+    }
+
 }

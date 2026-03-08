@@ -56,4 +56,52 @@ public class AlunoService {
         return alunoRepository.existsById(id);
     }
 
+    // Simple query methods for strings
+    /**
+     * Find Aluno by nome
+     * @param nome to search by
+     * @return list of matching entities
+     */
+    public List<Aluno> findByNome(String nome) {
+        return alunoRepository.findByNome(nome);
+    }
+
+    /**
+     * Find Aluno by nome containing text
+     * @param nome to search
+     * @return list of matching entities
+     */
+    public List<Aluno> findByNomeContaining(String nome) {
+        return alunoRepository.findByNomeContaining(nome);
+    }
+
+    /**
+     * Find Aluno by email
+     * @param email to search by
+     * @return list of matching entities
+     */
+    public List<Aluno> findByEmail(String email) {
+        return alunoRepository.findByEmail(email);
+    }
+
+    /**
+     * Find Aluno by email containing text
+     * @param email to search
+     * @return list of matching entities
+     */
+    public List<Aluno> findByEmailContaining(String email) {
+        return alunoRepository.findByEmailContaining(email);
+    }
+
+    // Custom operations from class diagram (TODO: implement)
+    /**
+     * @return List<String>
+     * @throws UnsupportedOperationException until implemented with Sequence Diagram
+     */
+    public List<String> validar(Long id) {
+        throw new UnsupportedOperationException(
+            "Method 'validar' not yet implemented. "
+        );
+    }
+
 }

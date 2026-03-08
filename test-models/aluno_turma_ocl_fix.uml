@@ -13716,13 +13716,13 @@
 				</xmi:Extension>
 			</ownedAttribute>
 			<ownedOperation isAbstract="false" isLeaf="false" isOrdered="false" isQuery="false" isStatic="false" isUnique="true" name="totalAlunos" visibility="public" xmi:id="pcsZgTmGAqACRwtN" xmi:type="uml:Operation">
-				<ownedParameter direction="return" type="Int_id" xmi:id="pcsZgTmGAqACRwtN_return" xmi:type="uml:Parameter"/>
+				<ownedParameter direction="return" type="int_id" xmi:id="pcsZgTmGAqACRwtN_return" xmi:type="uml:Parameter"/>
 				<xmi:Extension extender="Visual Paradigm">
 					<returnTypeDocumentation xmi:value=""/>
 					<properties>
 						<property name="pmAuthor" type="string" value="nonam"/>
 						<property name="pmCreateDateTime" type="string" value="1771700802469"/>
-						<property name="pmLastModified" type="string" value="1771700822923"/>
+						<property name="pmLastModified" type="string" value="1773003100702"/>
 						<property name="userIDLastNumericValue" type="int" value="0"/>
 						<property name="backlogActivityId" type="int" value="0"/>
 						<property name="static" type="boolean" value="false"/>
@@ -13939,7 +13939,7 @@
 				<afilterByViewpointLegend value="true"/>
 				<apmAuthor value="nonam"/>
 				<apmCreateDateTime value="1771169209477"/>
-				<apmLastModified value="1772896908607"/>
+				<apmLastModified value="1773003090690"/>
 				<ateamworkCreateDateTime value="0"/>
 				<ashowShapeLegend value="false"/>
 				<ashowConnectorLegend value="false"/>
@@ -13987,7 +13987,7 @@
 				<ax value="0"/>
 				<ay value="0"/>
 				<awidth value="1445"/>
-				<aheight value="816"/>
+				<aheight value="809"/>
 				<aqualityScore value="-1"/>
 				<aparentModel value="vwSXhjmGAqACRwXB"/>
 				<a_globalPaletteOption value="true"/>
@@ -14059,7 +14059,7 @@
 			</uml:DiagramElement>
 			<uml:DiagramElement geometry="565,26,330,49" preferredShapeType="NOTE" subject="1H5rfTmGAqACRwfp" xmi:id="VH5rfTmGAqACRwfo">
 				<xmi:Extension extender="Visual Paradigm">
-					<captionBounds value="0,0,316,0"/>
+					<captionBounds value="0,0,315,0"/>
 					<captionInternalWidth value="-2147483648"/>
 					<captionInternalHeight value="-2147483648"/>
 					<captionVisible value="true"/>
@@ -14296,9 +14296,9 @@
 				<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
 				<CompartmentFont value="none"/>
 			</uml:DiagramElement>
-			<uml:DiagramElement geometry="566,109,281,85" preferredShapeType="Class" subject="oErXhjmGAqACRwX4" xmi:id="IErXhjmGAqACRwX3">
+			<uml:DiagramElement geometry="566,109,281,86" preferredShapeType="Class" subject="oErXhjmGAqACRwX4" xmi:id="IErXhjmGAqACRwX3">
 				<xmi:Extension extender="Visual Paradigm">
-					<captionBounds value="0,0,281,15"/>
+					<captionBounds value="0,0,282,15"/>
 					<captionInternalWidth value="-2147483648"/>
 					<captionInternalHeight value="-2147483648"/>
 					<captionVisible value="true"/>
@@ -14454,15 +14454,15 @@
 				<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
 				<CompartmentFont value="none"/>
 			</uml:DiagramElement>
-			<uml:DiagramElement fromDiagramElement="aaXpMTmGAqACRwje" geometry="460,135;329,135;" preferredShapeType="Association" subject="vXbxRjmGAqACRwje" toDiagramElement="qfdXhjmGAqACRwXe" xmi:id="S3bxRjmGAqACRwjs">
+			<uml:DiagramElement fromDiagramElement="aaXpMTmGAqACRwje" geometry="459,135;329,135;" preferredShapeType="Association" subject="vXbxRjmGAqACRwje" toDiagramElement="qfdXhjmGAqACRwXe" xmi:id="S3bxRjmGAqACRwjs">
 				<xmi:Extension extender="Visual Paradigm">
 					<captionBounds value="385,135,20,0"/>
 					<captionInternalWidth value="-2147483648"/>
 					<captionInternalHeight value="-2147483648"/>
 					<captionVisible value="true"/>
 					<captionSide value="1"/>
-					<roleA multiplicity="468,149,27,15"/>
-					<roleB multiplicity="331,119,40,15" roleName="327,145,58,15"/>
+					<roleA multiplicity="466,149,27,15"/>
+					<roleB multiplicity="331,119,40,15" roleName="327,144,58,15"/>
 					<properties>
 						<azOrder value="16"/>
 						<abackground value="Cr:122,207,245,255"/>
@@ -14495,9 +14495,9 @@
 						<ahasRoleBShape value="true"/>
 						<ashowMultiplicityConstraints value="false"/>
 						<aroleARectangle value="Re:445.0,101.0,55.0,15.0"/>
-						<aroleBRectangle value="Re:327.0,145.0,58.0,15.0"/>
+						<aroleBRectangle value="Re:327.0,144.0,58.0,15.0"/>
 						<amultiplicityBRectangle value="Re:331.0,119.0,40.0,15.0"/>
-						<amultiplicityARectangle value="Re:468.0,149.0,27.0,15.0"/>
+						<amultiplicityARectangle value="Re:466.0,149.0,27.0,15.0"/>
 						<ahasMultiplicityAShape value="true"/>
 						<ahasMultiplicityBShape value="true"/>
 						<ashowOrderedMultiplicityConstraint value="true"/>
@@ -14648,15 +14648,15 @@
 				<elementFont bold="false" color="Cr:0,0,0,255" italic="false" name="Dialog" size="11" style="0"/>
 				<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
 			</uml:DiagramElement>
-			<uml:DiagramElement fromDiagramElement="IErXhjmGAqACRwX3" geometry="701,195;701,318;" preferredShapeType="Association" subject="7d1n0TmGAqACRwfn" toDiagramElement="0tpn0TmGAqACRwfF" xmi:id="I91n0TmGAqACRwfs">
+			<uml:DiagramElement fromDiagramElement="IErXhjmGAqACRwX3" geometry="701,195;701,316;" preferredShapeType="Association" subject="7d1n0TmGAqACRwfn" toDiagramElement="0tpn0TmGAqACRwfF" xmi:id="I91n0TmGAqACRwfs">
 				<xmi:Extension extender="Visual Paradigm">
-					<captionBounds value="702,256,20,0"/>
+					<captionBounds value="701,255,20,0"/>
 					<captionInternalWidth value="-2147483648"/>
 					<captionInternalHeight value="-2147483648"/>
 					<captionVisible value="true"/>
 					<captionSide value="1"/>
-					<roleA multiplicity="701,195,27,15"/>
-					<roleB multiplicity="667,300,38,15"/>
+					<roleA multiplicity="700,200,27,15"/>
+					<roleB multiplicity="667,297,38,15"/>
 					<properties>
 						<azOrder value="22"/>
 						<abackground value="Cr:122,207,245,255"/>
@@ -14688,8 +14688,8 @@
 						<ahasRoleAShape value="false"/>
 						<ahasRoleBShape value="false"/>
 						<ashowMultiplicityConstraints value="false"/>
-						<amultiplicityBRectangle value="Re:667.0,300.0,38.0,15.0"/>
-						<amultiplicityARectangle value="Re:701.0,195.0,27.0,15.0"/>
+						<amultiplicityBRectangle value="Re:667.0,297.0,38.0,15.0"/>
+						<amultiplicityARectangle value="Re:700.0,200.0,27.0,15.0"/>
 						<ahasMultiplicityAShape value="true"/>
 						<ahasMultiplicityBShape value="true"/>
 						<ashowOrderedMultiplicityConstraint value="true"/>
@@ -14764,7 +14764,7 @@
 				<elementFont bold="false" color="Cr:0,0,0,255" italic="false" name="Dialog" size="11" style="0"/>
 				<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
 			</uml:DiagramElement>
-			<uml:DiagramElement fromDiagramElement="VH5rfTmGAqACRwfo" geometry="709,75;709,108;" preferredShapeType="Anchor" subject="dc3rfTmGAqACRwhu" toDiagramElement="IErXhjmGAqACRwX3" xmi:id="bc3rfTmGAqACRwhv">
+			<uml:DiagramElement fromDiagramElement="VH5rfTmGAqACRwfo" geometry="709,75;709,109;" preferredShapeType="Anchor" subject="dc3rfTmGAqACRwhu" toDiagramElement="IErXhjmGAqACRwX3" xmi:id="bc3rfTmGAqACRwhv">
 				<xmi:Extension extender="Visual Paradigm">
 					<captionBounds value="710,92,20,0"/>
 					<captionInternalWidth value="-2147483648"/>
@@ -14811,5 +14811,4 @@
 	<packagedElement name="List" visibility="public" xmi:id="List_id" xmi:type="uml:DataType"/>
 	<packagedElement name="String" visibility="public" xmi:id="String_id" xmi:type="uml:DataType"/>
 	<packagedElement name="int" visibility="public" xmi:id="int_id" xmi:type="uml:DataType"/>
-	<packagedElement name="Int" visibility="public" xmi:id="Int_id" xmi:type="uml:DataType"/>
 </uml:Model>

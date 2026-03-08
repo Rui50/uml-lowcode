@@ -4,6 +4,7 @@ import generator.spring.SpringProjectGenerator;
 import generator.spring.SpringEntityGenerator;
 import generator.spring.SpringRepositoryGenerator;
 import generator.spring.SpringServiceGenerator;
+import generator.spring.SpringControllerGenerator;
 
 import java.util.List;
 
@@ -106,10 +107,13 @@ public class Main {
         SpringRepositoryGenerator repositoryGenerator = new SpringRepositoryGenerator(outputDir);
         repositoryGenerator.generateRepositories(classes);
 
+        // gerar serviços
         SpringServiceGenerator serviceGenerator = new SpringServiceGenerator(outputDir);
         serviceGenerator.generateServices(classes, associations);
 
-
+        // gerar controllers
+        SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir);
+        controllerGenerator.generateControllers(classes);
     }
 
 

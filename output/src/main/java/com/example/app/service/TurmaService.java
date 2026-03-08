@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+
+import com.example.app.models.Aluno;
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -54,6 +56,58 @@ public class TurmaService {
      */
     public boolean existsById(Long id) {
         return turmaRepository.existsById(id);
+    }
+
+    // Simple query methods for strings
+    /**
+     * Find Turma by nome
+     * @param nome to search by
+     * @return list of matching entities
+     */
+    public List<Turma> findByNome(String nome) {
+        return turmaRepository.findByNome(nome);
+    }
+
+    /**
+     * Find Turma by nome containing text
+     * @param nome to search
+     * @return list of matching entities
+     */
+    public List<Turma> findByNomeContaining(String nome) {
+        return turmaRepository.findByNomeContaining(nome);
+    }
+
+    // Custom operations from class diagram (TODO: implement)
+    /**
+     * @param alunos List<Aluno>
+     * @throws UnsupportedOperationException until implemented with Sequence Diagram
+     */
+    public void inicializarAlunosParaTeste(Long id, List<Aluno> alunos) {
+        throw new UnsupportedOperationException(
+            "Method 'inicializarAlunosParaTeste' not yet implemented. "
+        );
+    }
+
+    /**
+     * @param destino Turma
+     * @param numero int
+     * @return boolean
+     * @throws UnsupportedOperationException until implemented with Sequence Diagram
+     */
+    public boolean transferirAluno(Long id, Turma destino, int numero) {
+        throw new UnsupportedOperationException(
+            "Method 'transferirAluno' not yet implemented. "
+        );
+    }
+
+    /**
+     * @return int
+     * @throws UnsupportedOperationException until implemented with Sequence Diagram
+     */
+    public int totalAlunos(Long id) {
+        throw new UnsupportedOperationException(
+            "Method 'totalAlunos' not yet implemented. "
+        );
     }
 
 }
