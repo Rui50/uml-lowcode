@@ -23,14 +23,37 @@ public class Turma{
 
     // relationship: Turma -> Aluno
     @OneToMany
-    @JoinColumn(name = "aluno_id")
+    @JoinColumn(name = "turma_id")
+    @Builder.Default
     @MapKey(name = "numero")
-    private Map<Integer, Aluno> alunoss = new HashMap<>();
+    private Map<Integer, Aluno> alunos = new HashMap<>();
 
     // relationship: Turma -> Turno
     @OneToMany
     @JoinColumn(name = "turma_id")
     @Builder.Default
     private List<Turno> turnos = new ArrayList<>();
+
+    // ========================================================================
+    // Validation (para ja so invariantes OCL simples
+    // ========================================================================
+
+    /**
+     * Validate entity against OCL invariants
+     * 
+     * - MaxAlunos: self.alunos -> size() <= 30
+     * 
+     * @return list of validation errors (empty if valid)
+     */
+    public List<String> validate() {
+       List<String> errors = new ArrayList<>();
+
+        // Invariant: MaxAlunos
+        if (!(alunos.size() <= 30)) {
+            errors.add("Invariant 'MaxAlunos' violated.");
+        }
+
+        return errors;
+    }
 
 }

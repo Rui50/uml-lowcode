@@ -58,6 +58,10 @@ public class TurmaController {
      */
     @PostMapping
     public ResponseEntity<Turma> create(@RequestBody Turma turma) {
+        System.out.println("CONTROLLER - nome=" + turma.getNome());
+        System.out.println("CONTROLLER - alunos=" + turma.getAlunos());
+        System.out.println("CONTROLLER - turnos=" + turma.getTurnos());
+        System.out.println("CONTROLLER - alunos null? " + (turma.getAlunos() == null));
         Turma saved = turmaService.save(turma);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }

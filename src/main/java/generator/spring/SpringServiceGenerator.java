@@ -61,7 +61,7 @@ public class SpringServiceGenerator {
             generateDependencies(writer, className, associations, classes);
 
             // crud methods
-            generateCrudMethods(writer, className);
+            generateCrudMethods(writer, className, cls);
 
             // queries base para strings
             generateQueryMethods(writer, cls);
@@ -140,7 +140,7 @@ public class SpringServiceGenerator {
         writer.println();
     }
 
-    private void generateCrudMethods(PrintWriter writer, String className) {
+    private void generateCrudMethods(PrintWriter writer, String className, Class cls) {
         String varName = className.toLowerCase();
         String repoName = varName + "Repository";
 
@@ -163,16 +163,39 @@ public class SpringServiceGenerator {
         writer.println("    }");
         writer.println();
 
-        // save()
-        writer.println("    /**");
-        writer.println("     * @param " + varName + " the entity to save");
-        writer.println("     * @return the saved entity");
-        writer.println("     */");
-        writer.println("    public " + className + " save(" + className + " " + varName + ") {");
-        writer.println("        // TODO: Add validation logic here (OCL constraints)");
-        writer.println("        return " + repoName + ".save(" + varName + ");");
-        writer.println("    }");
-        writer.println();
+        // para ja if gigante
+        if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
+
+            // save()
+            writer.println("    /**");
+            writer.println("     * @param " + varName + " the entity to save");
+            writer.println("     * @return the saved entity");
+            writer.println("     */");
+            writer.println("    public " + className + " save(" + className + " " + varName + ") {");
+            writer.println("        // ocl validation");
+            writer.println("        List<String> errors = " + varName + ".validate();");
+            writer.println("        if (!errors.isEmpty()) {");
+            writer.println("            throw new IllegalArgumentException(");
+            writer.println("                \"Validation failed: \" + String.join(\", \", errors)");
+            writer.println("            );");
+            writer.println("        }");
+            writer.println();
+            writer.println("        return " + repoName + ".save(" + varName + ");");
+            writer.println("    }");
+            writer.println();
+        }
+        else {
+            // save()
+            writer.println("    /**");
+            writer.println("     * @param " + varName + " the entity to save");
+            writer.println("     * @return the saved entity");
+            writer.println("     */");
+            writer.println("    public " + className + " save(" + className + " " + varName + ") {");
+            writer.println("        // TODO: Add validation logic here (OCL constraints)");
+            writer.println("        return " + repoName + ".save(" + varName + ");");
+            writer.println("    }");
+            writer.println();
+        }
 
         // deleteById()
         writer.println("    /**");

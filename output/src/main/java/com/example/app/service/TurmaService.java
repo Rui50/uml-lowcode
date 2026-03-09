@@ -39,7 +39,19 @@ public class TurmaService {
      * @return the saved entity
      */
     public Turma save(Turma turma) {
-        // TODO: Add validation logic here (OCL constraints)
+        System.out.println("SERVICE - nome=" + turma.getNome());
+        System.out.println("SERVICE - alunos=" + turma.getAlunos());
+        System.out.println("SERVICE - turnos=" + turma.getTurnos());
+        System.out.println("SERVICE - alunos null? " + (turma.getAlunos() == null));
+        
+        // ocl validation
+        List<String> errors = turma.validate();
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Validation failed: " + String.join(", ", errors)
+            );
+        }
+
         return turmaRepository.save(turma);
     }
 

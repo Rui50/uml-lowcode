@@ -13788,7 +13788,7 @@
 					<qualityScore value="-1"/>
 				</xmi:Extension>
 			</ownedOperation>
-			<ownedAttribute aggregation="none" association="vXbxRjmGAqACRwje" isDerived="false" isDerivedUnion="false" isLeaf="false" isNavigable="true" isReadOnly="false" isStatic="false" name="alunoss" type="mfdXhjmGAqACRwXf" xmi:id="g3bxRjmGAqACRwjj" xmi:type="uml:Property">
+			<ownedAttribute aggregation="none" association="vXbxRjmGAqACRwje" isDerived="false" isDerivedUnion="false" isLeaf="false" isNavigable="true" isReadOnly="false" isStatic="false" name="alunos" type="mfdXhjmGAqACRwXf" xmi:id="g3bxRjmGAqACRwjj" xmi:type="uml:Property">
 				<xmi:Extension extender="Visual Paradigm">
 					<associationEnd/>
 					<qualifier>
@@ -13939,7 +13939,7 @@
 				<afilterByViewpointLegend value="true"/>
 				<apmAuthor value="nonam"/>
 				<apmCreateDateTime value="1771169209477"/>
-				<apmLastModified value="1773003090690"/>
+				<apmLastModified value="1773079974409"/>
 				<ateamworkCreateDateTime value="0"/>
 				<ashowShapeLegend value="false"/>
 				<ashowConnectorLegend value="false"/>
@@ -13987,7 +13987,7 @@
 				<ax value="0"/>
 				<ay value="0"/>
 				<awidth value="1445"/>
-				<aheight value="809"/>
+				<aheight value="669"/>
 				<aqualityScore value="-1"/>
 				<aparentModel value="vwSXhjmGAqACRwXB"/>
 				<a_globalPaletteOption value="true"/>
@@ -14462,7 +14462,7 @@
 					<captionVisible value="true"/>
 					<captionSide value="1"/>
 					<roleA multiplicity="466,149,27,15"/>
-					<roleB multiplicity="331,119,40,15" roleName="327,144,58,15"/>
+					<roleB multiplicity="331,119,40,15" roleName="329,144,54,15"/>
 					<properties>
 						<azOrder value="16"/>
 						<abackground value="Cr:122,207,245,255"/>
@@ -14495,7 +14495,7 @@
 						<ahasRoleBShape value="true"/>
 						<ashowMultiplicityConstraints value="false"/>
 						<aroleARectangle value="Re:445.0,101.0,55.0,15.0"/>
-						<aroleBRectangle value="Re:327.0,144.0,58.0,15.0"/>
+						<aroleBRectangle value="Re:329.0,144.0,54.0,15.0"/>
 						<amultiplicityBRectangle value="Re:331.0,119.0,40.0,15.0"/>
 						<amultiplicityARectangle value="Re:466.0,149.0,27.0,15.0"/>
 						<ahasMultiplicityAShape value="true"/>

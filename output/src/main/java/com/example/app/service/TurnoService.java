@@ -37,7 +37,14 @@ public class TurnoService {
      * @return the saved entity
      */
     public Turno save(Turno turno) {
-        // TODO: Add validation logic here (OCL constraints)
+        // ocl validation
+        List<String> errors = turno.validate();
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Validation failed: " + String.join(", ", errors)
+            );
+        }
+
         return turnoRepository.save(turno);
     }
 

@@ -1,3 +1,5 @@
+import model.annotations.Invariant;
+import ocl.OCLTranslator;
 import parser.XMIParser;
 import generator.CodeGenerator;
 import generator.spring.SpringProjectGenerator;
@@ -114,6 +116,16 @@ public class Main {
         // gerar controllers
         SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir);
         controllerGenerator.generateControllers(classes);
+
+        // ver as operações OCL (invariantes para ja)
+        OCLTranslator translator = new OCLTranslator();
+        for (Class c : classes) {
+            for(Invariant i : c.getInvariants()){
+                String java = translator.translateToJava(i.getOclExpression());
+                System.out.println("OCL: " + i.getOclExpression());
+                System.out.println("Java: " + java);
+            }
+        }
     }
 
 

@@ -1,5 +1,6 @@
 package generator.spring;
 
+import generator.ValidationGenerator;
 import model.Association;
 
 import java.io.File;
@@ -18,8 +19,11 @@ public class SpringEntityGenerator {
     // para o tipo de herança, para já user SINGLE_TABLE, depois podemos configurar
     private String inheritanceStrategy = "SINGLE_TABLE";
 
+    private ValidationGenerator validationGenerator;
+
     public SpringEntityGenerator(String baseOutputPath) {
         this.baseOutputPath = baseOutputPath;
+        this.validationGenerator = new ValidationGenerator();
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations) throws IOException {
@@ -78,6 +82,10 @@ public class SpringEntityGenerator {
 
             // relações
             generateRelationships(writer, cls, associations, allClasses);
+
+            if (!cls.getInvariants().isEmpty()) {
+                validationGenerator.generateValidateMethod(writer, cls);
+            }
 
             writer.println("}");
 
@@ -235,7 +243,7 @@ public class SpringEntityGenerator {
 
         // One to one
         else {
-            generateOneToOne(writer, otherClass, fieldName, assoc, side, isBidirectional);
+            generateOneToOne(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
         }
 
         writer.println();
@@ -333,6 +341,7 @@ public class SpringEntityGenerator {
     }
 
     private void generateOneToOne(PrintWriter writer,
+                                  String thisClass,
                                   String otherClass,
                                   String fieldName,
                                   Association assoc,
@@ -346,9 +355,10 @@ public class SpringEntityGenerator {
                         getOtherSideAttributeName(assoc, side) + "\")");
             } else {
                 writer.println("    @OneToMany");
-                writer.println("    @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
+                writer.println("    @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\")");
             }
 
+            writer.println("    @Builder.Default");
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
