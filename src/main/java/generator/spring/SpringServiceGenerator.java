@@ -61,7 +61,7 @@ public class SpringServiceGenerator {
             generateDependencies(writer, className, associations, classes);
 
             // crud methods
-            generateCrudMethods(writer, className, cls);
+            generateCrudMethods(writer, className, cls, associations);
 
             // queries base para strings
             generateQueryMethods(writer, cls);
@@ -83,7 +83,7 @@ public class SpringServiceGenerator {
         writer.println("import org.springframework.stereotype.Service;");
         writer.println("import org.springframework.transaction.annotation.Transactional;");
         writer.println();
-        writer.println("import java.util.List;");
+        writer.println("import java.util.*;");
         writer.println("import java.util.Optional;");
         writer.println();
 
@@ -140,7 +140,7 @@ public class SpringServiceGenerator {
         writer.println();
     }
 
-    private void generateCrudMethods(PrintWriter writer, String className, Class cls) {
+    private void generateCrudMethods(PrintWriter writer, String className, Class cls, List<Association> associations) {
         String varName = className.toLowerCase();
         String repoName = varName + "Repository";
 
@@ -163,39 +163,11 @@ public class SpringServiceGenerator {
         writer.println("    }");
         writer.println();
 
-        // para ja if gigante
-        if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
+        // create()
+        generateCreateMethod(writer, className, cls, associations);
 
-            // save()
-            writer.println("    /**");
-            writer.println("     * @param " + varName + " the entity to save");
-            writer.println("     * @return the saved entity");
-            writer.println("     */");
-            writer.println("    public " + className + " save(" + className + " " + varName + ") {");
-            writer.println("        // ocl validation");
-            writer.println("        List<String> errors = " + varName + ".validate();");
-            writer.println("        if (!errors.isEmpty()) {");
-            writer.println("            throw new IllegalArgumentException(");
-            writer.println("                \"Validation failed: \" + String.join(\", \", errors)");
-            writer.println("            );");
-            writer.println("        }");
-            writer.println();
-            writer.println("        return " + repoName + ".save(" + varName + ");");
-            writer.println("    }");
-            writer.println();
-        }
-        else {
-            // save()
-            writer.println("    /**");
-            writer.println("     * @param " + varName + " the entity to save");
-            writer.println("     * @return the saved entity");
-            writer.println("     */");
-            writer.println("    public " + className + " save(" + className + " " + varName + ") {");
-            writer.println("        // TODO: Add validation logic here (OCL constraints)");
-            writer.println("        return " + repoName + ".save(" + varName + ");");
-            writer.println("    }");
-            writer.println();
-        }
+        // update()
+        generateUpdateMethod(writer, className, cls);
 
         // deleteById()
         writer.println("    /**");
@@ -261,6 +233,76 @@ public class SpringServiceGenerator {
             writer.println();
         }
     }
+
+    private void generateCreateMethod(PrintWriter writer, String className, Class cls, List<Association> associations){
+        String varName = className.toLowerCase();
+        String repoName = varName + "Repository";
+
+        // create()
+        writer.println("    /**");
+        writer.println("     * @param " + varName + " the entity to create");
+        writer.println("     * @return the created entity");
+        writer.println("     */");
+        writer.println("    public " + className + " create(" + className + " " + varName + ") {");
+
+        // Inicializar coleções if null
+        boolean hasCollections = false; // isto simplesmente é para apenas comentar uma vez
+        for (Association assoc : associations) {
+            // ver na source
+            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
+                String targetMultiplicity = assoc.getTargetMultiplicity();
+                if (targetMultiplicity != null && (targetMultiplicity.equals("*") || targetMultiplicity.contains(".."))) {
+                    String fieldName = makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), targetMultiplicity);
+
+                    String should_init = assoc.hasQualifier() ? "new HashMap<>()" : "new ArrayList<>()";
+
+                    if (!hasCollections) {
+                        writer.println("        // init collections for associations");
+                        hasCollections = true;
+                    }
+
+                    writer.println("        if (" + varName + ".get" + capitalizeFirstLetter(fieldName) +
+                            "() == null) " + varName + ".set" + capitalizeFirstLetter(fieldName) +
+                            "(" + should_init + ");");
+                }
+            }
+            // agora target mesma coisa
+            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()){
+                String sourceMultiplicity = assoc.getSourceMultiplicity();
+                if (sourceMultiplicity != null && (sourceMultiplicity.equals("*") || sourceMultiplicity.contains(".."))) {
+                    String fieldName = makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), sourceMultiplicity);
+
+                    String should_init = assoc.hasQualifier() ? "new HashMap<>()" : "new ArrayList<>()";
+
+                    if (!hasCollections) {
+                        writer.println("        // Initialize collections for associations");
+                        hasCollections = true;
+                    }
+
+                    writer.println("        if (" + varName + ".get" + capitalizeFirstLetter(fieldName) +
+                            "() == null) " + varName + ".set" + capitalizeFirstLetter(fieldName) +
+                            "(" + should_init + ");");
+                }
+            }
+        }
+
+        // validações OCL
+        if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
+            writer.println("        // Validate OCL invariants");
+            writer.println("        List<String> errors = " + varName + ".validate();");
+            writer.println("        if (!errors.isEmpty()) {");
+            writer.println("            throw new IllegalArgumentException(");
+            writer.println("                \"Validation failed: \" + String.join(\", \", errors)");
+            writer.println("            );");
+            writer.println("        }");
+            writer.println();
+        }
+
+        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("    }");
+        writer.println();
+    }
+
     private void generateCustomOperations(PrintWriter writer, Class cls) {
         if (cls.getOperations().isEmpty()) {
             return;
@@ -271,6 +313,69 @@ public class SpringServiceGenerator {
         for (Operation op : cls.getOperations()) {
             generateCustomOperation(writer, cls, op);
         }
+    }
+
+    private void generateUpdateMethod(PrintWriter writer, String className, Class cls) {
+        String varName = className.toLowerCase();
+        String repoName = varName + "Repository";
+
+        writer.println("    /**");
+        writer.println("     * @param id the entity id");
+        writer.println("     * @param " + varName + " the entity data to update");
+        writer.println("     * @return the updated entity");
+        writer.println("     */");
+        writer.println("    public " + className + " update(Long id, " + className + " " + varName + ") {");
+        writer.println("        // Find existing entity");
+        writer.println("        " + className + " existing = " + repoName + ".findById(id)");
+        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found: \" + id));");
+        writer.println();
+
+        // merge atributos , para ja verificamos todos, enquanto nao temos DTOS TODO
+        // TODO tipos primitivos nao da para verificar null, vou assumir so o int para ja para testes
+        // TODO basicamente o update vai assumir nada null, e depois um PATCH assumo que pode tar null?
+        /*writer.println("        // Update attributes");
+        for (Attribute attr : cls.getAttributes()) {
+            if (attr.getType().equals("int")) continue; // para tipos primitivos, teriamos de usar um wrapper ou outra abordagem para verificar se foi atualizado ou nao
+            String attrName = attr.getName();
+            String getter = "get" + capitalizeFirstLetter(attrName);
+            String setter = "set" + capitalizeFirstLetter(attrName);
+
+            writer.println("        if (" + varName + "." + getter + "() != null) {");
+            writer.println("            existing." + setter + "(" + varName + "." + getter + "());");
+            writer.println("        }");
+        }*/
+
+        if (!cls.getAttributes().isEmpty()) {
+            writer.println("        // Update all attributes");
+            for (Attribute attr : cls.getAttributes()) {
+                String attrName = attr.getName();
+                String getter = "get" + capitalizeFirstLetter(attrName);
+                String setter = "set" + capitalizeFirstLetter(attrName);
+
+                writer.println("        existing." + setter + "(" + varName + "." + getter + "());");
+            }
+            writer.println();
+        }
+
+        writer.println();
+        writer.println("        // para ja coleções nao sao updated aqui");
+        writer.println();
+
+        // validações OCL
+        if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
+            writer.println("        // Validate OCL invariants");
+            writer.println("        List<String> errors = existing.validate();");
+            writer.println("        if (!errors.isEmpty()) {");
+            writer.println("            throw new IllegalArgumentException(");
+            writer.println("                \"Validation failed: \" + String.join(\", \", errors)");
+            writer.println("            );");
+            writer.println("        }");
+            writer.println();
+        }
+
+        writer.println("        return " + repoName + ".save(existing);");
+        writer.println("    }");
+        writer.println();
     }
 
     private void generateCustomOperation(PrintWriter writer, Class cls, Operation op) {
@@ -351,5 +456,26 @@ public class SpringServiceGenerator {
 
         return type;
     }
+
+    private String makeAttributeName(String className, String role, String multiplicity) {
+        if (role != null && !role.trim().isEmpty()) {
+            return role.trim();
+        }
+
+        String base = className.substring(0, 1).toLowerCase() + className.substring(1);
+        return checkMultiplicity(multiplicity) ? base + "s" : base;
+    }
+
+    private boolean checkMultiplicity(String multiplicity) {
+        if (multiplicity == null) return false;
+        return multiplicity.contains("*") ||
+                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
+    }
+
+    private String capitalizeFirstLetter(String str) {
+        if (str == null || str.isEmpty()) return str;
+        return str.substring(0, 1).toUpperCase() + str.substring(1);
+    }
+
 
 }

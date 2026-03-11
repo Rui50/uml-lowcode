@@ -54,36 +54,19 @@ public class TurmaController {
      * POST /api/Turmas
      * Create new Turma
      * @param turma entity data
-     * @return created entity with 201 status
+     * @return created entity
      */
     @PostMapping
     public ResponseEntity<Turma> create(@RequestBody Turma turma) {
-        System.out.println("CONTROLLER - nome=" + turma.getNome());
-        System.out.println("CONTROLLER - alunos=" + turma.getAlunos());
-        System.out.println("CONTROLLER - turnos=" + turma.getTurnos());
-        System.out.println("CONTROLLER - alunos null? " + (turma.getAlunos() == null));
-        Turma saved = turmaService.save(turma);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        Turma created = turmaService.create(turma);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    /**
-     * PUT /api/Turmas/{id}
-     * Update existing Turma
-     * @param id entity id
-     * @param turma updated data
-     * @return updated entity if found, 404 if not
-     */
     @PutMapping("/{id}")
     public ResponseEntity<Turma> update(
             @PathVariable Long id,
             @RequestBody Turma turma) {
-
-        if (!turmaService.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-
-        turma.setId(id);
-        Turma updated = turmaService.save(turma);
+        Turma updated = turmaService.update(id, turma);
         return ResponseEntity.ok(updated);
     }
 

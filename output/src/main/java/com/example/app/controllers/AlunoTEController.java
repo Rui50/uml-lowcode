@@ -52,32 +52,19 @@ public class AlunoTEController {
      * POST /api/AlunoTEs
      * Create new AlunoTE
      * @param alunoTE entity data
-     * @return created entity with 201 status
+     * @return created entity
      */
     @PostMapping
     public ResponseEntity<AlunoTE> create(@RequestBody AlunoTE alunoTE) {
-        AlunoTE saved = alunoTEService.save(alunoTE);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        AlunoTE created = alunoTEService.create(alunoTE);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    /**
-     * PUT /api/AlunoTEs/{id}
-     * Update existing AlunoTE
-     * @param id entity id
-     * @param alunoTE updated data
-     * @return updated entity if found, 404 if not
-     */
     @PutMapping("/{id}")
     public ResponseEntity<AlunoTE> update(
             @PathVariable Long id,
             @RequestBody AlunoTE alunoTE) {
-
-        if (!alunoTEService.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-
-        alunoTE.setId(id);
-        AlunoTE updated = alunoTEService.save(alunoTE);
+        AlunoTE updated = alunoTEService.update(id, alunoTE);
         return ResponseEntity.ok(updated);
     }
 

@@ -52,32 +52,19 @@ public class TurnoController {
      * POST /api/Turnos
      * Create new Turno
      * @param turno entity data
-     * @return created entity with 201 status
+     * @return created entity
      */
     @PostMapping
     public ResponseEntity<Turno> create(@RequestBody Turno turno) {
-        Turno saved = turnoService.save(turno);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        Turno created = turnoService.create(turno);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    /**
-     * PUT /api/Turnos/{id}
-     * Update existing Turno
-     * @param id entity id
-     * @param turno updated data
-     * @return updated entity if found, 404 if not
-     */
     @PutMapping("/{id}")
     public ResponseEntity<Turno> update(
             @PathVariable Long id,
             @RequestBody Turno turno) {
-
-        if (!turnoService.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-
-        turno.setId(id);
-        Turno updated = turnoService.save(turno);
+        Turno updated = turnoService.update(id, turno);
         return ResponseEntity.ok(updated);
     }
 

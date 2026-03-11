@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 import java.util.Optional;
 
 
@@ -35,16 +35,14 @@ public class TurmaService {
     }
 
     /**
-     * @param turma the entity to save
-     * @return the saved entity
+     * @param turma the entity to create
+     * @return the created entity
      */
-    public Turma save(Turma turma) {
-        System.out.println("SERVICE - nome=" + turma.getNome());
-        System.out.println("SERVICE - alunos=" + turma.getAlunos());
-        System.out.println("SERVICE - turnos=" + turma.getTurnos());
-        System.out.println("SERVICE - alunos null? " + (turma.getAlunos() == null));
-        
-        // ocl validation
+    public Turma create(Turma turma) {
+        // init collections for associations
+        if (turma.getAlunos() == null) turma.setAlunos(new HashMap<>());
+        if (turma.getTurnos() == null) turma.setTurnos(new ArrayList<>());
+        // Validate OCL invariants
         List<String> errors = turma.validate();
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(
@@ -53,6 +51,32 @@ public class TurmaService {
         }
 
         return turmaRepository.save(turma);
+    }
+
+    /**
+     * @param id the entity id
+     * @param turma the entity data to update
+     * @return the updated entity
+     */
+    public Turma update(Long id, Turma turma) {
+        // Find existing entity
+        Turma existing = turmaRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Turma not found: " + id));
+
+        // Update all attributes
+        existing.setNome(turma.getNome());
+
+        // para ja coleções nao sao updated aqui
+
+        // Validate OCL invariants
+        List<String> errors = existing.validate();
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Validation failed: " + String.join(", ", errors)
+            );
+        }
+
+        return turmaRepository.save(existing);
     }
 
     /**

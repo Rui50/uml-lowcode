@@ -122,8 +122,32 @@ public class SpringControllerGenerator {
         writer.println("     * POST /api/" + pluralPath);
         writer.println("     * Create new " + className);
         writer.println("     * @param " + varName + " entity data");
-        writer.println("     * @return created entity with 201 status");
+        writer.println("     * @return created entity");
         writer.println("     */");
+        writer.println("    @PostMapping");
+        writer.println("    public ResponseEntity<" + className + "> create(@RequestBody " + className + " " + varName + ") {");
+        writer.println("        " + className + " created = " + serviceName + ".create(" + varName + ");");
+        writer.println("        return ResponseEntity.status(HttpStatus.CREATED).body(created);");
+        writer.println("    }");
+        writer.println();
+
+        // PUT /api/entities/{id} - Update
+        writer.println("    @PutMapping(\"/{id}\")");
+        writer.println("    public ResponseEntity<" + className + "> update(");
+        writer.println("            @PathVariable Long id,");
+        writer.println("            @RequestBody " + className + " " + varName + ") {");
+        writer.println("        " + className + " updated = " + serviceName + ".update(id, " + varName + ");");
+        writer.println("        return ResponseEntity.ok(updated);");
+        writer.println("    }");
+        writer.println();
+
+        /* POST /api/entities - Create
+        writer.println("    /**");
+        writer.println("     * POST /api/" + pluralPath);
+        writer.println("     * Create new " + className);
+        writer.println("     * @param " + varName + " entity data");
+        writer.println("     * @return created entity with 201 status");
+        writer.println("     ");
         writer.println("    @PostMapping");
         //writer.println("    public ResponseEntity<" + className + "> create(@Valid @RequestBody " +
         //        className + " " + varName + ") {");
@@ -141,7 +165,7 @@ public class SpringControllerGenerator {
         writer.println("     * @param id entity id");
         writer.println("     * @param " + varName + " updated data");
         writer.println("     * @return updated entity if found, 404 if not");
-        writer.println("     */");
+        writer.println("     ");
         writer.println("    @PutMapping(\"/{id}\")");
         //writer.println("    public ResponseEntity<" + className + "> update(");
         //writer.println("            @PathVariable Long id,");
@@ -158,7 +182,7 @@ public class SpringControllerGenerator {
         writer.println("        " + className + " updated = " + serviceName + ".save(" + varName + ");");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
-        writer.println();
+        writer.println();*/
 
         // DELETE /api/entities/{id} - Delete
         writer.println("    /**");

@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 import java.util.Optional;
 
 @Service
@@ -33,11 +33,13 @@ public class TurnoService {
     }
 
     /**
-     * @param turno the entity to save
-     * @return the saved entity
+     * @param turno the entity to create
+     * @return the created entity
      */
-    public Turno save(Turno turno) {
-        // ocl validation
+    public Turno create(Turno turno) {
+        // init collections for associations
+        if (turno.getAlunos() == null) turno.setAlunos(new ArrayList<>());
+        // Validate OCL invariants
         List<String> errors = turno.validate();
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(
@@ -46,6 +48,33 @@ public class TurnoService {
         }
 
         return turnoRepository.save(turno);
+    }
+
+    /**
+     * @param id the entity id
+     * @param turno the entity data to update
+     * @return the updated entity
+     */
+    public Turno update(Long id, Turno turno) {
+        // Find existing entity
+        Turno existing = turnoRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Turno not found: " + id));
+
+        // Update all attributes
+        existing.setCapacidade(turno.getCapacidade());
+
+
+        // para ja coleções nao sao updated aqui
+
+        // Validate OCL invariants
+        List<String> errors = existing.validate();
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Validation failed: " + String.join(", ", errors)
+            );
+        }
+
+        return turnoRepository.save(existing);
     }
 
     /**

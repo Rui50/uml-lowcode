@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 import java.util.Optional;
 
 @Service
@@ -33,12 +33,30 @@ public class AlunoTEService {
     }
 
     /**
-     * @param alunote the entity to save
-     * @return the saved entity
+     * @param alunote the entity to create
+     * @return the created entity
      */
-    public AlunoTE save(AlunoTE alunote) {
-        // TODO: Add validation logic here (OCL constraints)
+    public AlunoTE create(AlunoTE alunote) {
         return alunoteRepository.save(alunote);
+    }
+
+    /**
+     * @param id the entity id
+     * @param alunote the entity data to update
+     * @return the updated entity
+     */
+    public AlunoTE update(Long id, AlunoTE alunote) {
+        // Find existing entity
+        AlunoTE existing = alunoteRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("AlunoTE not found: " + id));
+
+        // Update all attributes
+        existing.setEmpresa(alunote.getEmpresa());
+
+
+        // para ja coleções nao sao updated aqui
+
+        return alunoteRepository.save(existing);
     }
 
     /**

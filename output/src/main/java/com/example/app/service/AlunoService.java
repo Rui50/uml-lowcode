@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 import java.util.Optional;
 
 @Service
@@ -33,12 +33,32 @@ public class AlunoService {
     }
 
     /**
-     * @param aluno the entity to save
-     * @return the saved entity
+     * @param aluno the entity to create
+     * @return the created entity
      */
-    public Aluno save(Aluno aluno) {
-        // TODO: Add validation logic here (OCL constraints)
+    public Aluno create(Aluno aluno) {
         return alunoRepository.save(aluno);
+    }
+
+    /**
+     * @param id the entity id
+     * @param aluno the entity data to update
+     * @return the updated entity
+     */
+    public Aluno update(Long id, Aluno aluno) {
+        // Find existing entity
+        Aluno existing = alunoRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Aluno not found: " + id));
+
+        // Update all attributes
+        existing.setNome(aluno.getNome());
+        existing.setEmail(aluno.getEmail());
+        existing.setNumero(aluno.getNumero());
+
+
+        // para ja coleções nao sao updated aqui
+
+        return alunoRepository.save(existing);
     }
 
     /**
