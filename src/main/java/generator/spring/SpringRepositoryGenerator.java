@@ -85,7 +85,7 @@ public class SpringRepositoryGenerator {
         // gerar query methods para atributos String
         boolean hasStringAttributes = false;
 
-        for (Attribute attr : cls.getAttributes()) {
+        for (Attribute attr : cls.getAllAttributes()) {
             if (attr.getType().equals("String")) {
                 if (!hasStringAttributes) {
                     writer.println("    // Query methods (Spring generates implementation):");
