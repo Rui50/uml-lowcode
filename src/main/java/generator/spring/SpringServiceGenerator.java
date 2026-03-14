@@ -650,6 +650,23 @@ public class SpringServiceGenerator {
         return type;
     }
 
+
+    private String getOtherSideAttributeName(Association assoc, boolean isSource, String className) {
+        if (isSource) {
+            String sourceRole = assoc.getSourceRole();
+            if (sourceRole != null && !sourceRole.trim().isEmpty()) {
+                return sourceRole.trim();
+            }
+            return lowercaseFirstLetter(className);
+        } else {
+            String targetClass = assoc.getTargetClass();
+            String targetRole = assoc.getTargetRole();
+            String targetMult = assoc.getTargetMultiplicity();
+
+            return makeAttributeName(targetClass, targetRole, targetMult);
+        }
+    }
+
     private String makeAttributeName(String className, String role, String multiplicity) {
         if (role != null && !role.trim().isEmpty()) {
             return role.trim();
@@ -657,6 +674,16 @@ public class SpringServiceGenerator {
 
         String base = className.substring(0, 1).toLowerCase() + className.substring(1);
         return checkMultiplicity(multiplicity) ? base + "s" : base;
+    }
+
+    private boolean isOtherSideCollection(Association assoc, boolean isSource) {
+        String inverseMult;
+        if (isSource){
+            inverseMult = assoc.getSourceMultiplicity();
+        } else {
+            inverseMult = assoc.getTargetMultiplicity();
+        }
+        return checkMultiplicity(inverseMult);
     }
 
     private boolean checkMultiplicity(String multiplicity) {
@@ -670,6 +697,11 @@ public class SpringServiceGenerator {
         return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 
+    private String lowercaseFirstLetter(String str) {
+        if (str == null || str.isEmpty()) return str;
+        return str.substring(0, 1).toLowerCase() + str.substring(1);
+    }
+
     private Class findClassByName(String name, List<Class> classes) {
         for (Class cls : classes) {
             if (cls.getName().equals(name)) {
@@ -678,5 +710,6 @@ public class SpringServiceGenerator {
         }
         return null;
     }
+
 
 }

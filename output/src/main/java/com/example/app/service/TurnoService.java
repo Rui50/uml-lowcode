@@ -1,6 +1,7 @@
 package com.example.app.service;
 
 import com.example.app.models.Turno;
+import com.example.app.repository.AlunoRepository;
 import com.example.app.repository.TurnoRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class TurnoService {
 
     // Dependencies
     private final TurnoRepository turnoRepository;
+    private final AlunoRepository alunoRepository;
 
    // CRUD methods
     /**
@@ -100,19 +102,17 @@ public class TurnoService {
     /**
      * Add a alunos to Turno
      * @param id the Turno id
-     * @param alunos list of Aluno to add
+     * @param alunoIds list of Aluno ids to add
      * @return the updated Turno
      */
-    public Turno addAlunos(Long id, List<Aluno> alunos) {
-        Turno turno = turnoRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Turno not found: " + id));
+    public Turno addAlunos(Long id, List<Long> alunoIds) {
+        Turno turno = findTurnoOrThrow(id);
+        List<Aluno> alunos = findAlunosOrThrow(alunoIds);
 
-        // Add all (so it works for batch operation)
         for (Aluno aluno : alunos) {
-            turno.getAlunos().add(aluno);
+            assignAluno(turno, aluno);
         }
 
-        // Validate parent entity after adding
         List<String> errors = turno.validate();
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(
@@ -130,13 +130,91 @@ public class TurnoService {
      * @return the updated Turno
      */
     public Turno removeAlunos(Long id, List<Long> alunoIds) {
-        Turno turno = turnoRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Turno not found: " + id));
+        Turno turno = findTurnoOrThrow(id);
+        List<Aluno> alunos = findAlunosOrThrow(alunoIds);
 
-        // Remove all (batch operation)
-        turno.getAlunos().removeIf(aluno -> alunoIds.contains(aluno.getId()));
+        for (Aluno aluno : alunos) {
+            if (isAssignedToTurno(turno, aluno)) {
+                turno.getAlunos().removeIf(existing ->
+                    Objects.equals(existing.getId(), aluno.getId())
+                );
+                aluno.setTurno(null);
+            }
+        }
 
         return turnoRepository.save(turno);
+    }
+
+    private Turno findTurnoOrThrow(Long id) {
+        return turnoRepository.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("Turno not found: " + id));
+    }
+
+    private List<Aluno> findAlunosOrThrow(List<Long> alunoIds) {
+        if (alunoIds == null) {
+            throw new IllegalArgumentException("Aluno IDs are required.");
+        }
+
+        Set<Long> uniqueIds = new LinkedHashSet<>(alunoIds);
+        if (uniqueIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<Aluno> alunos = alunoRepository.findAllById(uniqueIds);
+        Set<Long> foundIds = new HashSet<>();
+        for (Aluno aluno : alunos) {
+            foundIds.add(aluno.getId());
+        }
+
+        List<Long> missingIds = new ArrayList<>();
+        for (Long alunoId : uniqueIds) {
+            if (!foundIds.contains(alunoId)) {
+                missingIds.add(alunoId);
+            }
+        }
+
+        if (!missingIds.isEmpty()) {
+            throw new NoSuchElementException("Aluno not found: " + missingIds);
+        }
+
+        Map<Long, Integer> positions = new HashMap<>();
+        int index = 0;
+        for (Long alunoId : uniqueIds) {
+            positions.put(alunoId, index++);
+        }
+
+        alunos.sort(Comparator.comparingInt(aluno -> positions.get(aluno.getId())));
+        return alunos;
+    }
+
+    private void assignAluno(Turno turno, Aluno aluno) {
+        if (isAssignedToTurno(turno, aluno)) {
+            ensureAlunoInTurnoCollection(turno, aluno);
+            return;
+        }
+
+        Turno previousTurno = aluno.getTurno();
+        if (previousTurno != null) {
+            previousTurno.getAlunos().removeIf(existing ->
+                Objects.equals(existing.getId(), aluno.getId())
+            );
+        }
+
+        aluno.setTurno(turno);
+        ensureAlunoInTurnoCollection(turno, aluno);
+    }
+
+    private boolean isAssignedToTurno(Turno turno, Aluno aluno) {
+        return aluno.getTurno() != null
+            && Objects.equals(aluno.getTurno().getId(), turno.getId());
+    }
+
+    private void ensureAlunoInTurnoCollection(Turno turno, Aluno aluno) {
+        boolean alreadyPresent = turno.getAlunos().stream()
+            .anyMatch(existing -> Objects.equals(existing.getId(), aluno.getId()));
+        if (!alreadyPresent) {
+            turno.getAlunos().add(aluno);
+        }
     }
 
     // Custom operations from class diagram (TODO: implement)

@@ -1,5 +1,6 @@
 package com.example.app.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.*;
@@ -34,6 +35,7 @@ public class Aluno{
     // relationship: Aluno -> Turno
     @ManyToOne
     @JoinColumn(name = "turno_id")
+    @JsonIgnoreProperties("alunos")
     private Turno turno;
 
 }
