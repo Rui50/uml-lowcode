@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import com.example.app.models.Turno;
 import com.example.app.models.Aluno;
 
 /**
@@ -84,6 +85,33 @@ public class TurmaController {
 
         turmaService.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Relationship management stuff
+    /**
+     * Add Alunos (batch operation)
+     */
+    @PostMapping("/{id}/Alunos")
+    public ResponseEntity<?> addAlunos(
+            @PathVariable Long id,
+            @RequestBody List<Aluno> Alunos) {
+        try {
+            var result = turmaService.addAlunos(id, Alunos);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Remove alunos (batch operation)
+     */
+    @DeleteMapping("/{id}/alunos")
+    public ResponseEntity<?> removeAlunos(
+            @PathVariable Long id,
+            @RequestBody List<Integer> alunosIds) {
+        var result = turmaService.removeAlunos(id, alunosIds);
+        return ResponseEntity.ok(result);
     }
 
 }

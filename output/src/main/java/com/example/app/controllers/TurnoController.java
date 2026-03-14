@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import com.example.app.models.Aluno;
+
 /**
  * REST Controller for Turno
  */
@@ -82,6 +84,33 @@ public class TurnoController {
 
         turnoService.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Relationship management stuff
+    /**
+     * Add Alunos (batch operation)
+     */
+    @PostMapping("/{id}/Alunos")
+    public ResponseEntity<?> addAlunos(
+            @PathVariable Long id,
+            @RequestBody List<Aluno> Alunos) {
+        try {
+            var result = turnoService.addAlunos(id, Alunos);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Remove alunos (batch operation)
+     */
+    @DeleteMapping("/{id}/alunos")
+    public ResponseEntity<?> removeAlunos(
+            @PathVariable Long id,
+            @RequestBody List<Long> alunosIds) {
+        var result = turnoService.removeAlunos(id, alunosIds);
+        return ResponseEntity.ok(result);
     }
 
 }

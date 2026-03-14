@@ -2,6 +2,7 @@ package com.example.app.service;
 
 import com.example.app.models.Aluno;
 import com.example.app.repository.AlunoRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.Optional;
 
+
+import com.example.app.models.Turno;
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -17,6 +20,7 @@ public class AlunoService {
     // Dependencies
     private final AlunoRepository alunoRepository;
 
+   // CRUD methods
     /**
      * @return list of all entities
      */

@@ -2,6 +2,7 @@ package com.example.app.service;
 
 import com.example.app.models.AlunoTE;
 import com.example.app.repository.AlunoTERepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ public class AlunoTEService {
     // Dependencies
     private final AlunoTERepository alunoteRepository;
 
+   // CRUD methods
     /**
      * @return list of all entities
      */

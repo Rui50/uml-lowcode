@@ -115,7 +115,7 @@ public class Main {
 
         // gerar controllers
         SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir);
-        controllerGenerator.generateControllers(classes);
+        controllerGenerator.generateControllers(classes, associations);
 
         // ver as operações OCL (invariantes para ja)
         OCLTranslator translator = new OCLTranslator();
@@ -127,7 +127,6 @@ public class Main {
             }
         }
     }
-
 
     // para ja fica aqui, depois meter num parser helper
     private static void fillGeneralizations(List<Class> classes, List<Generalization> generalizations){

@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import com.example.app.models.Turno;
+
 /**
  * REST Controller for Aluno
  */

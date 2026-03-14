@@ -1,9 +1,7 @@
 package generator.spring;
 
+import model.*;
 import model.Class;
-import model.Attribute;
-import model.Operation;
-import model.Parameter;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -22,20 +20,20 @@ public class SpringControllerGenerator {
     }
 
     // gera todos os controladores
-    public void generateControllers(List<Class> classes) throws IOException {
+    public void generateControllers(List<Class> classes, List<Association> associations) throws IOException {
         System.out.println("Generating Spring REST controllers...");
 
         String controllerDir = outputDirectory + "/src/main/java/com/example/app/controllers";
         new java.io.File(controllerDir).mkdirs();
 
         for (Class cls : classes) {
-            generateController(cls, classes,controllerDir);
+            generateController(cls, classes, associations, controllerDir);
         }
 
         System.out.println("Generation of controllers completed.");
     }
 
-    private void generateController(Class cls, List<Class> allClasses, String outputDir) throws IOException {
+    private void generateController(Class cls, List<Class> allClasses, List<Association> associations, String outputDir) throws IOException {
         String className = cls.getName();
         String filename = outputDir + "/" + className + "Controller.java";
 
@@ -44,7 +42,7 @@ public class SpringControllerGenerator {
             writer.println("package " + basePackage + ".controller;");
             writer.println();
 
-            generateImports(writer, className, cls, allClasses);
+            generateImports(writer, className, cls, allClasses, associations);
 
             // class declaration
             writer.println("/**");
@@ -67,6 +65,9 @@ public class SpringControllerGenerator {
 
             // CRUD endpoints
             generateCrudEndpoints(writer, cls);
+
+            // endpoints para as relações
+            generateRelationEndpoints(writer, cls, associations);
 
             writer.println("}");
         }
@@ -203,8 +204,73 @@ public class SpringControllerGenerator {
         writer.println();
     }
 
+    private void generateRelationEndpoints(PrintWriter writer, Class cls, List<Association> associations) {
+        String serviceName = cls.getName().toLowerCase() + "Service";
+        boolean hasRelationships = false;
+
+        for (Association assoc : associations) {
+            // source side
+            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
+                String targetMul = assoc.getTargetMultiplicity();
+
+                // se for multiplicidade muitos ou for um qualifier(map)
+                if (targetMul != null && ( (targetMul.equals("*") || targetMul.contains("..")) || assoc.hasQualifier())) {
+                    if (!hasRelationships) {
+                        writer.println("    // Relationship management stuff");
+                        hasRelationships = true;
+                    }
+
+                    String relatedClass = assoc.getTargetClass();
+                    generateAddRelationEndpoint(writer, cls.getName(), relatedClass, serviceName);
+                    generateRemoveRelationEndpoint(writer, cls.getName(), relatedClass, serviceName, assoc);
+
+                }
+            }
+        }
+    }
+
+    private void generateAddRelationEndpoint(PrintWriter writer, String className, String relatedClass, String serviceName) {
+        String relatedPlural = relatedClass + "s";
+
+        writer.println("    /**");
+        writer.println("     * Add " + relatedPlural + " (batch operation)");
+        writer.println("     */");
+        writer.println("    @PostMapping(\"/{id}/" + relatedPlural + "\")");
+        writer.println("    public ResponseEntity<?> add" + capitalizeFirstLetter(relatedPlural) + "(");
+        writer.println("            @PathVariable Long id,");
+        writer.println("            @RequestBody List<" + relatedClass + "> " + relatedPlural + ") {");
+        writer.println("        try {");
+        writer.println("            var result = " + serviceName + ".add" + capitalizeFirstLetter(relatedPlural) +
+                "(id, " + relatedPlural + ");");
+        writer.println("            return ResponseEntity.ok(result);");
+        writer.println("        } catch (IllegalArgumentException e) {");
+        writer.println("            return ResponseEntity.badRequest().body(e.getMessage());");
+        writer.println("        }");
+        writer.println("    }");
+        writer.println();
+    }
+
+    private void generateRemoveRelationEndpoint(PrintWriter writer, String className, String relatedClass, String serviceName, Association assoc) {
+        String relatedPlural = relatedClass.toLowerCase() + "s";
+        String idType = assoc.hasQualifier() ? assoc.getQualifierType() : "Long";
+        String idsParam = relatedPlural + "Ids";
+
+        writer.println("    /**");
+        writer.println("     * Remove " + relatedPlural + " (batch operation)");
+        writer.println("     */");
+        writer.println("    @DeleteMapping(\"/{id}/" + relatedPlural + "\")");
+        writer.println("    public ResponseEntity<?> remove" + capitalizeFirstLetter(relatedPlural) + "(");
+        writer.println("            @PathVariable Long id,");
+        writer.println("            @RequestBody List<" + idType + "> " + idsParam + ") {");
+        writer.println("        var result = " + serviceName + ".remove" + capitalizeFirstLetter(relatedPlural) +
+                "(id, " + idsParam + ");");
+        writer.println("        return ResponseEntity.ok(result);");
+        writer.println("    }");
+        writer.println();
+    }
+
     private void generateImports(PrintWriter writer, String className, Class cls,
-                                 List<Class> allClasses) {
+                                 List<Class> allClasses, List<Association> associations) {
 
         writer.println("import " + basePackage + ".models." + className + ";");
         writer.println("import " + basePackage + ".service." + className + "Service;");
@@ -217,11 +283,15 @@ public class SpringControllerGenerator {
         writer.println("import java.util.List;");
 
         // Imports de entidades usadas nas Operations
-        List<String> entitiesToImport = getModelsToImportFromOperations(cls, allClasses);
+        List<String> modelsToImport = getModelsToImportFromOperations(cls, allClasses);
+        List<String> modelsToImportFromAssociations = getModelsToImportFromAssociations(cls, associations);
+        Set<String> allModelsToImport = new HashSet<>();
+        allModelsToImport.addAll(modelsToImport);
+        allModelsToImport.addAll(modelsToImportFromAssociations);
 
-        if (!entitiesToImport.isEmpty()) {
+        if (!allModelsToImport.isEmpty()) {
             writer.println();
-            for (String entityName : entitiesToImport) {
+            for (String entityName : allModelsToImport) {
                 writer.println("import " + basePackage + ".models." + entityName + ";");
             }
         }
@@ -257,6 +327,28 @@ public class SpringControllerGenerator {
             String returnType = extractBaseType(op.getReturnType());
             if (returnType != null && entityNames.contains(returnType) && !returnType.equals(cls.getName())) {
                 entitiesToImport.add(returnType);
+            }
+        }
+
+        return new ArrayList<>(entitiesToImport);
+    }
+
+    private List<String> getModelsToImportFromAssociations(Class cls, List<Association> associations) {
+        Set<String> entitiesToImport = new HashSet<>();
+
+        for (Association assoc : associations) {
+            if (assoc.getSourceClass().equals(cls.getName())  && assoc.isTargetNavigable()) {
+                String relatedClass = assoc.getTargetClass();
+                if (!relatedClass.equals(cls.getName())) {
+                    entitiesToImport.add(relatedClass);
+                }
+            }
+
+            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
+                String relatedClass = assoc.getSourceClass();
+                if (!relatedClass.equals(cls.getName())) {
+                    entitiesToImport.add(relatedClass);
+                }
             }
         }
 
@@ -303,6 +395,11 @@ public class SpringControllerGenerator {
     private String toLowerCaseFirst(String s) {
         if (s == null || s.isEmpty()) return s;
         return Character.toLowerCase(s.charAt(0)) + s.substring(1);
+    }
+
+    private String capitalizeFirstLetter(String str) {
+        if (str == null || str.isEmpty()) return str;
+        return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 
 }
