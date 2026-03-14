@@ -53,6 +53,7 @@ public class SpringEntityGenerator {
             writer.println();
 
             // imports
+            writer.println("import com.fasterxml.jackson.annotation.JsonIgnoreProperties;");
             writer.println("import jakarta.persistence.*;");
             writer.println("import lombok.*;");
             writer.println("import java.util.*;");
@@ -227,22 +228,36 @@ public class SpringEntityGenerator {
         boolean otherMultiple = checkMultiplicity(otherMultiplicity);
         boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
+        // is bidirectional, gerar @JsonIgnoreProperties para evitar loop infinito na serialização JSON
+
         // Many to Many
         if (thisMultiple && otherMultiple) {
+            if (isBidirectional) {
+                writer.println("    @JsonIgnoreProperties(\"" + getOtherSideAttributeName(assoc, side) + "\")");
+            }
             generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
         }
 
         // One to many
         else if (thisMultiple) {
+            if (isBidirectional) {
+                writer.println("    @JsonIgnoreProperties(\"" + getOtherSideAttributeName(assoc, side) + "\")");
+            }
             generateOneToMany(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
         }
         // Many to one
         else if (otherMultiple) {
+            if (isBidirectional) {
+                writer.println("    @JsonIgnoreProperties(\"" + getOtherSideAttributeName(assoc, side) + "\")");
+            }
             generateManyToOne(writer, otherClass, fieldName, assoc);
         }
 
         // One to one
         else {
+            if (isBidirectional) {
+                writer.println("    @JsonIgnoreProperties(\"" + getOtherSideAttributeName(assoc, side) + "\")");
+            }
             generateOneToOne(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
         }
 
