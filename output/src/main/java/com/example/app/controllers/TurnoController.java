@@ -8,7 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+
+import com.example.app.models.Aluno;
 
 /**
  * REST Controller for Turno
@@ -92,12 +93,10 @@ public class TurnoController {
     @PostMapping("/{id}/Alunos")
     public ResponseEntity<?> addAlunos(
             @PathVariable Long id,
-            @RequestBody List<Long> alunoIds) {
+            @RequestBody List<Aluno> Alunos) {
         try {
-            var result = turnoService.addAlunos(id, alunoIds);
+            var result = turnoService.addAlunos(id, Alunos);
             return ResponseEntity.ok(result);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -110,14 +109,8 @@ public class TurnoController {
     public ResponseEntity<?> removeAlunos(
             @PathVariable Long id,
             @RequestBody List<Long> alunosIds) {
-        try {
-            var result = turnoService.removeAlunos(id, alunosIds);
-            return ResponseEntity.ok(result);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        var result = turnoService.removeAlunos(id, alunosIds);
+        return ResponseEntity.ok(result);
     }
 
 }

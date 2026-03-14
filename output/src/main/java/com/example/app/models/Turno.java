@@ -1,5 +1,6 @@
 package com.example.app.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.*;
@@ -22,6 +23,7 @@ public class Turno{
     private int capacidade;
 
     // relationship: Turno -> Aluno
+    @JsonIgnoreProperties("turno")
     @OneToMany(mappedBy = "turno")
     @Builder.Default
     private List<Aluno> alunos = new ArrayList<>();

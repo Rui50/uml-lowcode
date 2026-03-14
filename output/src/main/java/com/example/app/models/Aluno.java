@@ -33,9 +33,9 @@ public class Aluno{
     private int numero;
 
     // relationship: Aluno -> Turno
+    @JsonIgnoreProperties("alunos")
     @ManyToOne
     @JoinColumn(name = "turno_id")
-    @JsonIgnoreProperties("alunos")
     private Turno turno;
 
 }

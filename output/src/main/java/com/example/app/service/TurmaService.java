@@ -12,7 +12,9 @@ import java.util.Optional;
 
 
 import com.example.app.models.Turno;
+import com.example.app.repository.TurnoRepository;
 import com.example.app.models.Aluno;
+import com.example.app.repository.AlunoRepository;
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -20,6 +22,8 @@ public class TurmaService {
 
     // Dependencies
     private final TurmaRepository turmaRepository;
+    private final AlunoRepository alunoRepository;
+    private final TurnoRepository turnoRepository;
 
    // CRUD methods
     /**

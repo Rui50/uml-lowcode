@@ -67,7 +67,7 @@ public class SpringServiceGenerator {
             generateRelationShipMethods(writer, cls, associations, classes);
 
             // queries base para strings
-            generateQueryMethods(writer, cls);
+            //generateQueryMethods(writer, cls);
 
             // operações do diagrama de classe (TODO: implementar)
             generateCustomOperations(writer, cls);
@@ -102,6 +102,7 @@ public class SpringServiceGenerator {
             writer.println();
             for (String entityName : allModelsToImport) {
                 writer.println("import " + basePackage + ".models." + entityName + ";");
+                writer.println("import " + basePackage + ".repository." + entityName + "Repository;");
             }
         }
 
@@ -159,13 +160,28 @@ public class SpringServiceGenerator {
 
 
     private void generateDependencies(PrintWriter writer, String className, List<Association> associations, List<Class> classes) {
-        // gerar a dependência do repositório
         writer.println("    // Dependencies");
         writer.println("    private final " + className + "Repository " +
                 className.toLowerCase() + "Repository;");
 
-        // TODO: Adicionar repositories de associações se necessário
-        // Por agora, só o repository principal
+        // repositories das entidades relacionadas
+        Set<String> addedRepos = new HashSet<>();
+        for (Association assoc : associations) {
+            if (assoc.getSourceClass().equals(className) && assoc.isTargetNavigable()) {
+                String related = assoc.getTargetClass();
+                if (!related.equals(className) && addedRepos.add(related)) {
+                    writer.println("    private final " + related + "Repository " +
+                            related.toLowerCase() + "Repository;");
+                }
+            }
+            if (assoc.getTargetClass().equals(className) && assoc.isSourceNavigable()) {
+                String related = assoc.getSourceClass();
+                if (!related.equals(className) && addedRepos.add(related)) {
+                    writer.println("    private final " + related + "Repository " +
+                            related.toLowerCase() + "Repository;");
+                }
+            }
+        }
 
         writer.println();
     }
