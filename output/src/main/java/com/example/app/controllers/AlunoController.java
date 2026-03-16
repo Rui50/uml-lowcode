@@ -15,19 +15,16 @@ import com.example.app.models.Turno;
  * REST Controller for Aluno
  */
 @RestController
-@RequestMapping("/api/Alunos")
+@RequestMapping("/api/alunos")
 @RequiredArgsConstructor
 public class AlunoController {
 
     private final AlunoService alunoService;
 
-    // ========================================================================
     // CRUD Endpoints
-    // Generated from Class Diagram - Fully functional
-    // ========================================================================
 
     /**
-     * GET /api/Alunos
+     * GET /api/alunos
      * Retrieve all Aluno entities
      * @return list of all entities
      */
@@ -38,7 +35,7 @@ public class AlunoController {
     }
 
     /**
-     * GET /api/Alunos/{id}
+     * GET /api/alunos/{id}
      * Retrieve Aluno by ID
      * @param id entity id
      * @return entity if found, 404 if not
@@ -51,7 +48,7 @@ public class AlunoController {
     }
 
     /**
-     * POST /api/Alunos
+     * POST /api/alunos
      * Create new Aluno
      * @param aluno entity data
      * @return created entity
@@ -71,7 +68,7 @@ public class AlunoController {
     }
 
     /**
-     * DELETE /api/Alunos/{id}
+     * DELETE /api/alunos/{id}
      * Delete Aluno
      * @param id entity id
      * @return 204 No Content if deleted, 404 if not found
@@ -84,6 +81,31 @@ public class AlunoController {
 
         alunoService.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ========================================================================
+    // Relationship Endpoints
+    // ========================================================================
+
+    /**
+     * ManyToOne: Assign a Turno to Aluno
+     */
+    @PutMapping("/{id}/turno/{turnoId}")
+    public ResponseEntity<Aluno> assignTurno(
+            @PathVariable Long id,
+            @PathVariable Long turnoId) {
+        Aluno updated = alunoService.assignTurno(id, turnoId);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * ManyToOne: Remove the Turno from Aluno
+     */
+    @DeleteMapping("/{id}/turno")
+    public ResponseEntity<Aluno> removeTurno(
+            @PathVariable Long id) {
+        Aluno updated = alunoService.removeTurno(id);
+        return ResponseEntity.ok(updated);
     }
 
 }

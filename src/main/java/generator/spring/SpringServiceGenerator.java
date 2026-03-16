@@ -238,156 +238,243 @@ public class SpringServiceGenerator {
     }
 
     private void generateRelationShipMethods(PrintWriter writer, Class cls, List<Association> associations, List<Class> classes) {
-        // para o write do comment inicial
         boolean hasRelationships = false;
 
         for (Association assoc : associations) {
-            // se estivermos na source e for navegável para o target
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()){
-                String targetMul = assoc.getTargetMultiplicity();
+            boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
-                // se for multiplicidade muitos ou for um qualifier(map)
-                if (targetMul != null && ( (targetMul.equals("*") || targetMul.contains("..")) || assoc.hasQualifier())) {
-                    if (!hasRelationships) {
-                        writer.println("    // Relationship management stuff");
-                        hasRelationships = true;
-                    }
+            // determinar se esta classe é source ou target na associação
+            boolean isSource = assoc.getSourceClass().equals(cls.getName());
+            boolean isTarget = assoc.getTargetClass().equals(cls.getName());
 
-                    String relatedClass = assoc.getTargetClass();
-                    String fieldName = makeAttributeName(relatedClass, assoc.getTargetRole(), targetMul);
+            if (!isSource && !isTarget) continue;
 
-                    generateAddRelationMethod(writer, cls, findClassByName(relatedClass, classes), fieldName, assoc);
-                    generateRemoveRelationMethod(writer, cls.getName(), relatedClass, fieldName, assoc);
+            // multiplicidades do ponto de vista desta classe
+            String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+            String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
+            boolean thisMultiple = checkMultiplicity(thisMul);
+            boolean otherMultiple = checkMultiplicity(otherMul);
+
+            // navegabilidade: esta classe precisa de ter navegabilidade para o outro lado
+            boolean navigableToOther = isSource ? assoc.isTargetNavigable() : assoc.isSourceNavigable();
+            if (!navigableToOther) continue;
+
+            String otherClass = isSource ? assoc.getTargetClass() : assoc.getSourceClass();
+
+            // ========================================
+            // ManyToOne: esta classe tem o FK (lado owner)
+            // thisMultiple = muitos de "mim" (o outro tem coleção de mim)
+            // !otherMultiple = eu tenho uma referência singular ao outro
+            // Gerar assignX e removeX nesta classe
+            // ========================================
+            if (thisMultiple && !otherMultiple) {
+                if (!hasRelationships) {
+                    writer.println("    // Relationship stuff");
+                    hasRelationships = true;
                 }
+
+                String fieldName = makeAttributeName(otherClass,
+                        isSource ? assoc.getTargetRole() : assoc.getSourceRole(), "0..1");
+
+                generateAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource);
+                generateRemoveAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource);
             }
 
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String sourceMul = assoc.getSourceMultiplicity();
-
-                if (sourceMul != null && ((sourceMul.equals("*") || sourceMul.contains("..")) || assoc.hasQualifier())) {
-                    if (!hasRelationships) {
-                        writer.println("    // Relationship management stuff");
-                        hasRelationships = true;
-                    }
-
-                    String relatedClass = assoc.getSourceClass();
-                    String fieldName = makeAttributeName(relatedClass, assoc.getSourceRole(), sourceMul);
-
-                    generateAddRelationMethod(writer, cls, findClassByName(relatedClass, classes), fieldName, assoc);
-                    generateRemoveRelationMethod(writer, cls.getName(), relatedClass, fieldName, assoc);
+            // ========================================
+            // ManyToMany: gerar addX e removeX no lado owner (@JoinTable)
+            // No entity generator, o source é o owner
+            // ========================================
+            if (thisMultiple && otherMultiple && isSource) {
+                if (!hasRelationships) {
+                    writer.println("    // Relationship stuff");
+                    hasRelationships = true;
                 }
+
+                String fieldName = makeAttributeName(otherClass, assoc.getTargetRole(), otherMul);
+
+                generateManyToManyAddMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional);
+                generateManyToManyRemoveMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional);
+            }
+
+            // ========================================
+            // OneToMany unidirectional: esta classe tem a coleção
+            // sem back-reference no outro lado
+            // Gerar addX e removeX nesta classe
+            // ========================================
+            if ((!thisMultiple || assoc.hasQualifier()) && otherMultiple && !isBidirectional) {
+                if (!hasRelationships) {
+                    writer.println("    // Relationship stuff");
+                    hasRelationships = true;
+                }
+
+                String fieldName = makeAttributeName(otherClass,
+                        isSource ? assoc.getTargetRole() : assoc.getSourceRole(), otherMul);
+
+                generateOneToManyUniAddMethod(writer, cls, otherClass, fieldName, assoc);
+                generateOneToManyUniRemoveMethod(writer, cls, otherClass, fieldName, assoc);
             }
         }
     }
 
-    private void generateAddRelationMethod(PrintWriter writer, Class cls, Class relatedCls, String fieldName, Association assoc) {
+    /**
+     * ManyToOne - assign: este lado tem o FK
+     * Ex: AlunoService.assignTurno(Long alunoId, Long turnoId)
+     * - Procura ambas entidades por ID
+     * - Se bidirectional, sincroniza ambos os lados
+     */
+    private void generateAssignMethod(PrintWriter writer, Class cls, String otherClass,
+                                       String fieldName, Association assoc,
+                                       boolean isBidirectional, boolean isSource) {
         String className = cls.getName();
         String varName = className.toLowerCase();
         String repoName = varName + "Repository";
+        String otherVar = otherClass.toLowerCase();
+        String otherRepoName = otherVar + "Repository";
+        String capitalizedField = capitalizeFirstLetter(fieldName);
 
-        String relatedClass = relatedCls.getName();
-        String relatedVar = relatedClass.toLowerCase();
-        String relatedPlural = relatedClass.toLowerCase() + "s"; // simplificação, para pluralizar o nome da variável
-
+        writer.println();
         writer.println("    /**");
-        writer.println("     * Add a " + relatedPlural + " to " + className);
-        writer.println("     * @param id the " + className + " id");
-        writer.println("     * @param " + relatedPlural + " list of " + relatedClass + " to add");
+        writer.println("     * ManyToOne: Assign a " + otherClass + " to " + className);
+        writer.println("     * @param " + varName + "Id the " + className + " id");
+        writer.println("     * @param " + otherVar + "Id the " + otherClass + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + " add" + capitalizeFirstLetter(relatedPlural) +
-                "(Long id, List<" + relatedClass + "> " + relatedPlural + ") {");
-        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(id)");
+        writer.println("    public " + className + " assign" + capitalizeFirstLetter(otherClass) +
+                "(Long " + varName + "Id, Long " + otherVar + "Id) {");
+        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
-                " not found: \" + id));");
+                " not found: \" + " + varName + "Id));");
+        writer.println("        " + otherClass + " " + otherVar + " = " + otherRepoName + ".findById(" + otherVar + "Id)");
+        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + otherClass +
+                " not found: \" + " + otherVar + "Id));");
         writer.println();
 
-        writer.println("        // Add all (so it works for batch operation)");
-        writer.println("        for (" + relatedClass + " " + relatedVar + " : " + relatedPlural + ") {");
+        if (isBidirectional) {
+            // determinar o nome do campo coleção no outro lado
+            String otherSideMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+            String otherSideField = makeAttributeName(className,
+                    isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
+            String capitalizedOtherField = capitalizeFirstLetter(otherSideField);
 
-        // verificar se tem OCL
-        if (relatedCls.getInvariants() != null && !relatedCls.getInvariants().isEmpty()) {
-            // validar entidade
-            writer.println("            // Validate related entity");
-            writer.println("            List<String> errors = " + relatedVar + ".validate();");
-            writer.println("            if (!errors.isEmpty()) {");
-            writer.println("                throw new IllegalArgumentException(");
-            writer.println("                    \"Validation failed for " + relatedClass + ": \" + errors");
-            writer.println("                );");
-            writer.println("            }");
-            writer.println();
-        }
-
-        // add na coleção
-        String getter = "get" + capitalizeFirstLetter(fieldName);
-        if (assoc.hasQualifier()) {
-            // Map - precisa da chava
-            String qualifierName = assoc.getQualifierName();
-            String qualifierGetter = "get" + capitalizeFirstLetter(qualifierName);
-            writer.println("            " + varName + "." + getter + "().put(" +
-                    relatedVar + "." + qualifierGetter + "(), " + relatedVar + ");");
-        } else {
-            // List
-            writer.println("            " + varName + "." + getter + "().add(" + relatedVar + ");");
-        }
-
-
-        writer.println("        }");
-        writer.println();
-        if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
-            writer.println("        // Validate parent entity after adding");
-            writer.println("        List<String> errors = " + varName + ".validate();");
-            writer.println("        if (!errors.isEmpty()) {");
-            writer.println("            throw new IllegalArgumentException(");
-            writer.println("                \"Validation failed: \" + String.join(\", \", errors)");
-            writer.println("            );");
+            writer.println("        // Remove from previous " + otherClass + " if exists");
+            writer.println("        if (" + varName + ".get" + capitalizedField + "() != null) {");
+            writer.println("            " + varName + ".get" + capitalizedField + "().get" +
+                    capitalizedOtherField + "().remove(" + varName + ");");
             writer.println("        }");
             writer.println();
+            writer.println("        // Set both sides of the relationship");
+            writer.println("        " + varName + ".set" + capitalizedField + "(" + otherVar + ");");
+            writer.println("        " + otherVar + ".get" + capitalizedOtherField + "().add(" + varName + ");");
+        } else {
+            writer.println("        " + varName + ".set" + capitalizedField + "(" + otherVar + ");");
         }
+
+        writer.println();
         writer.println("        return " + repoName + ".save(" + varName + ");");
         writer.println("    }");
         writer.println();
     }
 
-    private void generateRemoveRelationMethod(PrintWriter writer, String className, String relatedClass, String fieldName, Association assoc) {
+    /**
+     * ManyToOne - remove: limpar o FK nesta classe
+     * Ex: AlunoService.removeTurno(Long alunoId)
+     * - Se bidirectional, remove de ambos os lados
+     */
+    private void generateRemoveAssignMethod(PrintWriter writer, Class cls, String otherClass,
+                                             String fieldName, Association assoc,
+                                             boolean isBidirectional, boolean isSource) {
+        String className = cls.getName();
         String varName = className.toLowerCase();
         String repoName = varName + "Repository";
-
-        String relatedVar = relatedClass.toLowerCase();
-        String relatedPlural = relatedClass.toLowerCase() + "s"; // simplificação,
-
-        String idType = assoc.hasQualifier() ? assoc.getQualifierType() : "Long";
-        String idsParam = relatedVar + "Ids";
+        String capitalizedField = capitalizeFirstLetter(fieldName);
 
         writer.println("    /**");
-        writer.println("     * Remove a " + relatedClass + " from " + className);
-        writer.println("     * @param id the " + className + " id");
-        writer.println("     * @param " + idsParam + " the ids of the " + relatedClass + " to remove");
+        writer.println("     * ManyToOne: Remove the " + otherClass + " from " + className);
+        writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + " remove" + capitalizeFirstLetter(relatedPlural) +
-                "(Long id, List<" + idType + "> " + idsParam + ") {");
-        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(id)");
+        writer.println("    public " + className + " remove" + capitalizeFirstLetter(otherClass) +
+                "(Long " + varName + "Id) {");
+        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
-                " not found: \" + id));");
+                " not found: \" + " + varName + "Id));");
         writer.println();
-        writer.println("        // Remove all (batch operation)");
 
-        String getter = "get" + capitalizeFirstLetter(fieldName);
+        if (isBidirectional) {
+            String otherSideMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+            String otherSideField = makeAttributeName(className,
+                    isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
+            String capitalizedOtherField = capitalizeFirstLetter(otherSideField);
+
+            writer.println("        // Remove from both sides");
+            writer.println("        if (" + varName + ".get" + capitalizedField + "() != null) {");
+            writer.println("            " + varName + ".get" + capitalizedField + "().get" +
+                    capitalizedOtherField + "().remove(" + varName + ");");
+            writer.println("        }");
+        }
+
+        writer.println("        " + varName + ".set" + capitalizedField + "(null);");
+        writer.println();
+        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("    }");
+        writer.println();
+    }
+
+
+
+    /**
+     * ManyToMany - add: adicionar entidades relacionadas por IDs
+     * Ex: TurmaService.addAlunos(Long turmaId, List<Long> alunoIds)
+     * - Procura todas as entidades por ID
+     * - Adiciona à coleção, se bidirectional sincroniza ambos os lados
+     */
+    private void generateManyToManyAddMethod(PrintWriter writer, Class cls, String otherClass,
+                                              String fieldName, Association assoc,
+                                              boolean isBidirectional) {
+        String className = cls.getName();
+        String varName = className.toLowerCase();
+        String repoName = varName + "Repository";
+        String otherVar = otherClass.toLowerCase();
+        String otherRepoName = otherVar + "Repository";
+        String capitalizedField = capitalizeFirstLetter(fieldName);
+        String otherPlural = otherVar + "s";
+
+        writer.println();
+        writer.println("    /**");
+        writer.println("     * ManyToMany: Add " + otherClass + " entities to " + className);
+        writer.println("     * @param " + varName + "Id the " + className + " id");
+        writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
+        writer.println("     * @return the updated " + className);
+        writer.println("     */");
+        writer.println("    public " + className + " add" + capitalizeFirstLetter(otherPlural) +
+                "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
+        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
+        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
+                " not found: \" + " + varName + "Id));");
+        writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
+        writer.println();
+
         if (assoc.hasQualifier()) {
-            // map - remove by key
-            writer.println("        for (" + idType + " " + relatedVar + "Id : " + idsParam + ") {");
-            writer.println("            " + varName + "." + getter + "().remove(" + relatedVar + "Id);");
+            String qualifierGetter = "get" + capitalizeFirstLetter(assoc.getQualifierName());
+            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
+            writer.println("            " + varName + ".get" + capitalizedField + "().put(" +
+                    otherVar + "." + qualifierGetter + "(), " + otherVar + ");");
+            if (isBidirectional) {
+                String inverseMul = assoc.getSourceMultiplicity();
+                String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                writer.println("            " + otherVar + ".get" + capitalizeFirstLetter(inverseField) + "().put(" +
+                        varName + "." + qualifierGetter + "(), " + varName + ");");
+            }
             writer.println("        }");
         } else {
-            // list - remove by entity
-            /*writer.println("        for (" + idType + " " + relatedVar + "Id : " + idsParam + ") {");
-            writer.println("            " + varName + "." + getter + "().removeIf(" +
-                    relatedVar + " -> " + relatedVar + ".getId().equals(" + relatedVar + "Id));");
-            writer.println("        }");*/
-            writer.println("        " + varName + "." + getter + "().removeIf(" +
-                    relatedClass.toLowerCase() + " -> " + idsParam + ".contains(" +
-                    relatedClass.toLowerCase() + ".getId()));");
+            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
+            writer.println("            " + varName + ".get" + capitalizedField + "().add(" + otherVar + ");");
+            if (isBidirectional) {
+                String inverseMul = assoc.getSourceMultiplicity();
+                String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                writer.println("            " + otherVar + ".get" + capitalizeFirstLetter(inverseField) + "().add(" + varName + ");");
+            }
+            writer.println("        }");
         }
 
         writer.println();
@@ -396,7 +483,155 @@ public class SpringServiceGenerator {
         writer.println();
     }
 
+    /**
+     * ManyToMany - remove: remover entidades relacionadas por IDs
+     * Ex: TurmaService.removeAlunos(Long turmaId, List<Long> alunoIds)
+     * - Procura as entidades, remove da coleção e sincroniza se bidirectional
+     */
+    private void generateManyToManyRemoveMethod(PrintWriter writer, Class cls, String otherClass,
+                                                 String fieldName, Association assoc,
+                                                 boolean isBidirectional) {
+        String className = cls.getName();
+        String varName = className.toLowerCase();
+        String repoName = varName + "Repository";
+        String otherVar = otherClass.toLowerCase();
+        String otherRepoName = otherVar + "Repository";
+        String capitalizedField = capitalizeFirstLetter(fieldName);
+        String otherPlural = otherVar + "s";
 
+        writer.println("    /**");
+        writer.println("     * ManyToMany: Remove " + otherClass + " entities from " + className);
+        writer.println("     * @param " + varName + "Id the " + className + " id");
+        writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
+        writer.println("     * @return the updated " + className);
+        writer.println("     */");
+        writer.println("    public " + className + " remove" + capitalizeFirstLetter(otherPlural) +
+                "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
+        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
+        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
+                " not found: \" + " + varName + "Id));");
+        writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
+        writer.println();
+
+        if (assoc.hasQualifier()) {
+            String qualifierGetter = "get" + capitalizeFirstLetter(assoc.getQualifierName());
+            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
+            writer.println("            " + varName + ".get" + capitalizedField + "().remove(" +
+                    otherVar + "." + qualifierGetter + "());");
+            if (isBidirectional) {
+                String inverseMul = assoc.getSourceMultiplicity();
+                String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                writer.println("            " + otherVar + ".get" + capitalizeFirstLetter(inverseField) + "().remove(" +
+                        varName + "." + qualifierGetter + "());");
+            }
+            writer.println("        }");
+        } else {
+            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
+            writer.println("            " + varName + ".get" + capitalizedField + "().remove(" + otherVar + ");");
+            if (isBidirectional) {
+                String inverseMul = assoc.getSourceMultiplicity();
+                String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                writer.println("            " + otherVar + ".get" + capitalizeFirstLetter(inverseField) + "().remove(" + varName + ");");
+            }
+            writer.println("        }");
+        }
+
+        writer.println();
+        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("    }");
+        writer.println();
+    }
+
+    /**
+     * OneToMany unidirectional - add: esta classe tem a coleção, sem back-reference
+     * Ex: TurmaService.addTurnos(Long turmaId, List<Long> turnoIds)
+     * - Procura as entidades por ID e adiciona à coleção
+     */
+    private void generateOneToManyUniAddMethod(PrintWriter writer, Class cls, String otherClass,
+                                                String fieldName, Association assoc) {
+        String className = cls.getName();
+        String varName = className.toLowerCase();
+        String repoName = varName + "Repository";
+        String otherVar = otherClass.toLowerCase();
+        String otherRepoName = otherVar + "Repository";
+        String capitalizedField = capitalizeFirstLetter(fieldName);
+        String otherPlural = otherVar + "s";
+
+        writer.println();
+        writer.println("    /**");
+        writer.println("     * OneToMany (unidirectional): Add " + otherClass + " entities to " + className);
+        writer.println("     * @param " + varName + "Id the " + className + " id");
+        writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
+        writer.println("     * @return the updated " + className);
+        writer.println("     */");
+        writer.println("    public " + className + " add" + capitalizeFirstLetter(otherPlural) +
+                "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
+        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
+        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
+                " not found: \" + " + varName + "Id));");
+        writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
+        writer.println();
+
+        if (assoc.hasQualifier()) {
+            String qualifierGetter = "get" + capitalizeFirstLetter(assoc.getQualifierName());
+            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
+            writer.println("            " + varName + ".get" + capitalizedField + "().put(" +
+                    otherVar + "." + qualifierGetter + "(), " + otherVar + ");");
+            writer.println("        }");
+        } else {
+            writer.println("        " + varName + ".get" + capitalizedField + "().addAll(" + otherPlural + ");");
+        }
+
+        writer.println();
+        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("    }");
+        writer.println();
+    }
+
+    /**
+     * OneToMany unidirectional - remove: remover da coleção por IDs
+     * Ex: TurmaService.removeTurnos(Long turmaId, List<Long> turnoIds)
+     */
+    private void generateOneToManyUniRemoveMethod(PrintWriter writer, Class cls, String otherClass,
+                                                   String fieldName, Association assoc) {
+        String className = cls.getName();
+        String varName = className.toLowerCase();
+        String repoName = varName + "Repository";
+        String otherVar = otherClass.toLowerCase();
+        String otherRepoName = otherVar + "Repository";
+        String capitalizedField = capitalizeFirstLetter(fieldName);
+        String otherPlural = otherVar + "s";
+
+        writer.println("    /**");
+        writer.println("     * OneToMany (unidirectional): Remove " + otherClass + " entities from " + className);
+        writer.println("     * @param " + varName + "Id the " + className + " id");
+        writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
+        writer.println("     * @return the updated " + className);
+        writer.println("     */");
+        writer.println("    public " + className + " remove" + capitalizeFirstLetter(otherPlural) +
+                "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
+        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
+        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
+                " not found: \" + " + varName + "Id));");
+        writer.println();
+
+        if (assoc.hasQualifier()) {
+            String qualifierGetter = "get" + capitalizeFirstLetter(assoc.getQualifierName());
+            writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
+            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
+            writer.println("            " + varName + ".get" + capitalizedField + "().remove(" +
+                    otherVar + "." + qualifierGetter + "());");
+            writer.println("        }");
+        } else {
+            writer.println("        " + varName + ".get" + capitalizedField + "().removeIf(" +
+                    otherVar + " -> " + otherVar + "Ids.contains(" + otherVar + ".getId()));");
+        }
+
+        writer.println();
+        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("    }");
+        writer.println();
+    }
 
     private void generateQueryMethods(PrintWriter writer, Class cls) {
         List<Attribute> stringAttributes = cls.getAttributes().stream()
@@ -447,53 +682,11 @@ public class SpringServiceGenerator {
         String varName = className.toLowerCase();
         String repoName = varName + "Repository";
 
-        // create()
         writer.println("    /**");
         writer.println("     * @param " + varName + " the entity to create");
         writer.println("     * @return the created entity");
         writer.println("     */");
         writer.println("    public " + className + " create(" + className + " " + varName + ") {");
-
-        // Inicializar coleções if null
-        boolean hasCollections = false; // isto simplesmente é para apenas comentar uma vez
-        for (Association assoc : associations) {
-            // ver na source
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
-                String targetMultiplicity = assoc.getTargetMultiplicity();
-                if (targetMultiplicity != null && (targetMultiplicity.equals("*") || targetMultiplicity.contains(".."))) {
-                    String fieldName = makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), targetMultiplicity);
-
-                    String should_init = assoc.hasQualifier() ? "new HashMap<>()" : "new ArrayList<>()";
-
-                    if (!hasCollections) {
-                        writer.println("        // init collections for associations");
-                        hasCollections = true;
-                    }
-
-                    writer.println("        if (" + varName + ".get" + capitalizeFirstLetter(fieldName) +
-                            "() == null) " + varName + ".set" + capitalizeFirstLetter(fieldName) +
-                            "(" + should_init + ");");
-                }
-            }
-            // agora target mesma coisa
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()){
-                String sourceMultiplicity = assoc.getSourceMultiplicity();
-                if (sourceMultiplicity != null && (sourceMultiplicity.equals("*") || sourceMultiplicity.contains(".."))) {
-                    String fieldName = makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), sourceMultiplicity);
-
-                    String should_init = assoc.hasQualifier() ? "new HashMap<>()" : "new ArrayList<>()";
-
-                    if (!hasCollections) {
-                        writer.println("        // Initialize collections for associations");
-                        hasCollections = true;
-                    }
-
-                    writer.println("        if (" + varName + ".get" + capitalizeFirstLetter(fieldName) +
-                            "() == null) " + varName + ".set" + capitalizeFirstLetter(fieldName) +
-                            "(" + should_init + ");");
-                }
-            }
-        }
 
         // validações OCL
         if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {

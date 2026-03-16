@@ -16,19 +16,16 @@ import com.example.app.models.Aluno;
  * REST Controller for Turma
  */
 @RestController
-@RequestMapping("/api/Turmas")
+@RequestMapping("/api/turmas")
 @RequiredArgsConstructor
 public class TurmaController {
 
     private final TurmaService turmaService;
 
-    // ========================================================================
     // CRUD Endpoints
-    // Generated from Class Diagram - Fully functional
-    // ========================================================================
 
     /**
-     * GET /api/Turmas
+     * GET /api/turmas
      * Retrieve all Turma entities
      * @return list of all entities
      */
@@ -39,7 +36,7 @@ public class TurmaController {
     }
 
     /**
-     * GET /api/Turmas/{id}
+     * GET /api/turmas/{id}
      * Retrieve Turma by ID
      * @param id entity id
      * @return entity if found, 404 if not
@@ -52,7 +49,7 @@ public class TurmaController {
     }
 
     /**
-     * POST /api/Turmas
+     * POST /api/turmas
      * Create new Turma
      * @param turma entity data
      * @return created entity
@@ -72,7 +69,7 @@ public class TurmaController {
     }
 
     /**
-     * DELETE /api/Turmas/{id}
+     * DELETE /api/turmas/{id}
      * Delete Turma
      * @param id entity id
      * @return 204 No Content if deleted, 404 if not found
@@ -87,31 +84,30 @@ public class TurmaController {
         return ResponseEntity.noContent().build();
     }
 
-    // Relationship management stuff
+    // ========================================================================
+    // Relationship Endpoints
+    // ========================================================================
+
     /**
-     * Add Alunos (batch operation)
+     * Add Turno entities to Turma by IDs
      */
-    @PostMapping("/{id}/Alunos")
-    public ResponseEntity<?> addAlunos(
+    @PostMapping("/{id}/turnos")
+    public ResponseEntity<Turma> addTurnos(
             @PathVariable Long id,
-            @RequestBody List<Aluno> Alunos) {
-        try {
-            var result = turmaService.addAlunos(id, Alunos);
-            return ResponseEntity.ok(result);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+            @RequestBody List<Long> turnoIds) {
+        Turma updated = turmaService.addTurnos(id, turnoIds);
+        return ResponseEntity.ok(updated);
     }
 
     /**
-     * Remove alunos (batch operation)
+     * Remove Turno entities from Turma by IDs
      */
-    @DeleteMapping("/{id}/alunos")
-    public ResponseEntity<?> removeAlunos(
+    @DeleteMapping("/{id}/turnos")
+    public ResponseEntity<Turma> removeTurnos(
             @PathVariable Long id,
-            @RequestBody List<Integer> alunosIds) {
-        var result = turmaService.removeAlunos(id, alunosIds);
-        return ResponseEntity.ok(result);
+            @RequestBody List<Long> turnoIds) {
+        Turma updated = turmaService.removeTurnos(id, turnoIds);
+        return ResponseEntity.ok(updated);
     }
 
 }

@@ -46,9 +46,6 @@ public class TurmaService {
      * @return the created entity
      */
     public Turma create(Turma turma) {
-        // init collections for associations
-        if (turma.getAlunos() == null) turma.setAlunos(new HashMap<>());
-        if (turma.getTurnos() == null) turma.setTurnos(new ArrayList<>());
         // Validate OCL invariants
         List<String> errors = turma.validate();
         if (!errors.isEmpty()) {
@@ -102,118 +99,37 @@ public class TurmaService {
         return turmaRepository.existsById(id);
     }
 
-    // Relationship management stuff
+    // Relationship stuff
+
     /**
-     * Add a alunos to Turma
-     * @param id the Turma id
-     * @param alunos list of Aluno to add
+     * OneToMany (unidirectional): Add Turno entities to Turma
+     * @param turmaId the Turma id
+     * @param turnoIds list of Turno ids to add
      * @return the updated Turma
      */
-    public Turma addAlunos(Long id, List<Aluno> alunos) {
-        Turma turma = turmaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Turma not found: " + id));
+    public Turma addTurnos(Long turmaId, List<Long> turnoIds) {
+        Turma turma = turmaRepository.findById(turmaId)
+            .orElseThrow(() -> new RuntimeException("Turma not found: " + turmaId));
+        List<Turno> turnos = turnoRepository.findAllById(turnoIds);
 
-        // Add all (so it works for batch operation)
-        for (Aluno aluno : alunos) {
-            turma.getAlunos().put(aluno.getNumero(), aluno);
-        }
-
-        // Validate parent entity after adding
-        List<String> errors = turma.validate();
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Validation failed: " + String.join(", ", errors)
-            );
-        }
+        turma.getTurnos().addAll(turnos);
 
         return turmaRepository.save(turma);
     }
 
     /**
-     * Remove a Aluno from Turma
-     * @param id the Turma id
-     * @param alunoIds the ids of the Aluno to remove
+     * OneToMany (unidirectional): Remove Turno entities from Turma
+     * @param turmaId the Turma id
+     * @param turnoIds list of Turno ids to remove
      * @return the updated Turma
      */
-    public Turma removeAlunos(Long id, List<Integer> alunoIds) {
-        Turma turma = turmaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Turma not found: " + id));
+    public Turma removeTurnos(Long turmaId, List<Long> turnoIds) {
+        Turma turma = turmaRepository.findById(turmaId)
+            .orElseThrow(() -> new RuntimeException("Turma not found: " + turmaId));
 
-        // Remove all (batch operation)
-        for (Integer alunoId : alunoIds) {
-            turma.getAlunos().remove(alunoId);
-        }
-
-        return turmaRepository.save(turma);
-    }
-
-    /**
-     * Add a turnos to Turma
-     * @param id the Turma id
-     * @param turnos list of Turno to add
-     * @return the updated Turma
-     */
-    public Turma addTurnos(Long id, List<Turno> turnos) {
-        Turma turma = turmaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Turma not found: " + id));
-
-        // Add all (so it works for batch operation)
-        for (Turno turno : turnos) {
-            // Validate related entity
-            List<String> errors = turno.validate();
-            if (!errors.isEmpty()) {
-                throw new IllegalArgumentException(
-                    "Validation failed for Turno: " + errors
-                );
-            }
-
-            turma.getTurnos().add(turno);
-        }
-
-        // Validate parent entity after adding
-        List<String> errors = turma.validate();
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Validation failed: " + String.join(", ", errors)
-            );
-        }
-
-        return turmaRepository.save(turma);
-    }
-
-    /**
-     * Remove a Turno from Turma
-     * @param id the Turma id
-     * @param turnoIds the ids of the Turno to remove
-     * @return the updated Turma
-     */
-    public Turma removeTurnos(Long id, List<Long> turnoIds) {
-        Turma turma = turmaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Turma not found: " + id));
-
-        // Remove all (batch operation)
         turma.getTurnos().removeIf(turno -> turnoIds.contains(turno.getId()));
 
         return turmaRepository.save(turma);
-    }
-
-    // Simple query methods for strings
-    /**
-     * Find Turma by nome
-     * @param nome to search by
-     * @return list of matching entities
-     */
-    public List<Turma> findByNome(String nome) {
-        return turmaRepository.findByNome(nome);
-    }
-
-    /**
-     * Find Turma by nome containing text
-     * @param nome to search
-     * @return list of matching entities
-     */
-    public List<Turma> findByNomeContaining(String nome) {
-        return turmaRepository.findByNomeContaining(nome);
     }
 
     // Custom operations from class diagram (TODO: implement)

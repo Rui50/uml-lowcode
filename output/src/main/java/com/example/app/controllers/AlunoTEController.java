@@ -13,19 +13,16 @@ import java.util.List;
  * REST Controller for AlunoTE
  */
 @RestController
-@RequestMapping("/api/AlunoTEs")
+@RequestMapping("/api/alunotes")
 @RequiredArgsConstructor
 public class AlunoTEController {
 
     private final AlunoTEService alunoTEService;
 
-    // ========================================================================
     // CRUD Endpoints
-    // Generated from Class Diagram - Fully functional
-    // ========================================================================
 
     /**
-     * GET /api/AlunoTEs
+     * GET /api/alunotes
      * Retrieve all AlunoTE entities
      * @return list of all entities
      */
@@ -36,7 +33,7 @@ public class AlunoTEController {
     }
 
     /**
-     * GET /api/AlunoTEs/{id}
+     * GET /api/alunotes/{id}
      * Retrieve AlunoTE by ID
      * @param id entity id
      * @return entity if found, 404 if not
@@ -49,7 +46,7 @@ public class AlunoTEController {
     }
 
     /**
-     * POST /api/AlunoTEs
+     * POST /api/alunotes
      * Create new AlunoTE
      * @param alunoTE entity data
      * @return created entity
@@ -69,7 +66,7 @@ public class AlunoTEController {
     }
 
     /**
-     * DELETE /api/AlunoTEs/{id}
+     * DELETE /api/alunotes/{id}
      * Delete AlunoTE
      * @param id entity id
      * @return 204 No Content if deleted, 404 if not found

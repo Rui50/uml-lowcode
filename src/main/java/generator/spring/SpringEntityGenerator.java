@@ -99,7 +99,7 @@ public class SpringEntityGenerator {
         writer.println("@Getter");
         writer.println("@Setter");
         writer.println("@NoArgsConstructor");
-        writer.println("@AllArgsConstructor");
+        writer.println("@AllArgsConstructor(access = AccessLevel.PRIVATE)");
         // need superbuilder se for de herança
         if (cls.getParentClass() != null || isParent(cls, allClasses)) {
             writer.println("@SuperBuilder");

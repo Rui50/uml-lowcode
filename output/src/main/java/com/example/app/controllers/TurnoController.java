@@ -15,19 +15,16 @@ import com.example.app.models.Aluno;
  * REST Controller for Turno
  */
 @RestController
-@RequestMapping("/api/Turnos")
+@RequestMapping("/api/turnos")
 @RequiredArgsConstructor
 public class TurnoController {
 
     private final TurnoService turnoService;
 
-    // ========================================================================
     // CRUD Endpoints
-    // Generated from Class Diagram - Fully functional
-    // ========================================================================
 
     /**
-     * GET /api/Turnos
+     * GET /api/turnos
      * Retrieve all Turno entities
      * @return list of all entities
      */
@@ -38,7 +35,7 @@ public class TurnoController {
     }
 
     /**
-     * GET /api/Turnos/{id}
+     * GET /api/turnos/{id}
      * Retrieve Turno by ID
      * @param id entity id
      * @return entity if found, 404 if not
@@ -51,7 +48,7 @@ public class TurnoController {
     }
 
     /**
-     * POST /api/Turnos
+     * POST /api/turnos
      * Create new Turno
      * @param turno entity data
      * @return created entity
@@ -71,7 +68,7 @@ public class TurnoController {
     }
 
     /**
-     * DELETE /api/Turnos/{id}
+     * DELETE /api/turnos/{id}
      * Delete Turno
      * @param id entity id
      * @return 204 No Content if deleted, 404 if not found
@@ -84,33 +81,6 @@ public class TurnoController {
 
         turnoService.deleteById(id);
         return ResponseEntity.noContent().build();
-    }
-
-    // Relationship management stuff
-    /**
-     * Add Alunos (batch operation)
-     */
-    @PostMapping("/{id}/Alunos")
-    public ResponseEntity<?> addAlunos(
-            @PathVariable Long id,
-            @RequestBody List<Aluno> Alunos) {
-        try {
-            var result = turnoService.addAlunos(id, Alunos);
-            return ResponseEntity.ok(result);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    /**
-     * Remove alunos (batch operation)
-     */
-    @DeleteMapping("/{id}/alunos")
-    public ResponseEntity<?> removeAlunos(
-            @PathVariable Long id,
-            @RequestBody List<Long> alunosIds) {
-        var result = turnoService.removeAlunos(id, alunosIds);
-        return ResponseEntity.ok(result);
     }
 
 }

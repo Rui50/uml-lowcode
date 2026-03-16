@@ -50,12 +50,12 @@ public class SpringControllerGenerator {
             writer.println(" */");
             writer.println("@RestController");
 
-            String pluralName = className;
-            if (!className.endsWith("s")){
-                pluralName = className + "s";
+            String pluralPath = className.toLowerCase();
+            if (!pluralPath.endsWith("s")){
+                pluralPath = pluralPath + "s";
             }
 
-            writer.println("@RequestMapping(\"/api/" + pluralName + "\")");
+            writer.println("@RequestMapping(\"/api/" + pluralPath + "\")");
             writer.println("@RequiredArgsConstructor");
             writer.println("public class " + className + "Controller {");
             writer.println();
@@ -80,14 +80,11 @@ public class SpringControllerGenerator {
         String varName = toLowerCaseFirst(className);
         String serviceName = varName + "Service";
         String pluralPath = className.toLowerCase();
-        if (!className.endsWith("s")){
-            pluralPath = className + "s";
+        if (!pluralPath.endsWith("s")){
+            pluralPath = pluralPath + "s";
         }
 
-        writer.println("    // ========================================================================");
         writer.println("    // CRUD Endpoints");
-        writer.println("    // Generated from Class Diagram - Fully functional");
-        writer.println("    // ========================================================================");
         writer.println();
 
         // GET /api/entities - Get all
@@ -142,49 +139,6 @@ public class SpringControllerGenerator {
         writer.println("    }");
         writer.println();
 
-        /* POST /api/entities - Create
-        writer.println("    /**");
-        writer.println("     * POST /api/" + pluralPath);
-        writer.println("     * Create new " + className);
-        writer.println("     * @param " + varName + " entity data");
-        writer.println("     * @return created entity with 201 status");
-        writer.println("     ");
-        writer.println("    @PostMapping");
-        //writer.println("    public ResponseEntity<" + className + "> create(@Valid @RequestBody " +
-        //        className + " " + varName + ") {");
-        writer.println("    public ResponseEntity<" + className + "> create(@RequestBody " +
-                className + " " + varName + ") {");
-        writer.println("        " + className + " saved = " + serviceName + ".save(" + varName + ");");
-        writer.println("        return ResponseEntity.status(HttpStatus.CREATED).body(saved);");
-        writer.println("    }");
-        writer.println();
-
-        // PUT /api/entities/{id} - Update
-        writer.println("    /**");
-        writer.println("     * PUT /api/" + pluralPath + "/{id}");
-        writer.println("     * Update existing " + className);
-        writer.println("     * @param id entity id");
-        writer.println("     * @param " + varName + " updated data");
-        writer.println("     * @return updated entity if found, 404 if not");
-        writer.println("     ");
-        writer.println("    @PutMapping(\"/{id}\")");
-        //writer.println("    public ResponseEntity<" + className + "> update(");
-        //writer.println("            @PathVariable Long id,");
-        //writer.println("            @Valid @RequestBody " + className + " " + varName + ") {");
-        writer.println("    public ResponseEntity<" + className + "> update(");
-        writer.println("            @PathVariable Long id,");
-        writer.println("            @RequestBody " + className + " " + varName + ") {");
-        writer.println();
-        writer.println("        if (!" + serviceName + ".existsById(id)) {");
-        writer.println("            return ResponseEntity.notFound().build();");
-        writer.println("        }");
-        writer.println();
-        writer.println("        " + varName + ".setId(id);");
-        writer.println("        " + className + " updated = " + serviceName + ".save(" + varName + ");");
-        writer.println("        return ResponseEntity.ok(updated);");
-        writer.println("    }");
-        writer.println();*/
-
         // DELETE /api/entities/{id} - Delete
         writer.println("    /**");
         writer.println("     * DELETE /api/" + pluralPath + "/{id}");
@@ -205,66 +159,148 @@ public class SpringControllerGenerator {
     }
 
     private void generateRelationEndpoints(PrintWriter writer, Class cls, List<Association> associations) {
-        String serviceName = cls.getName().toLowerCase() + "Service";
+        String className = cls.getName();
+        String varName = toLowerCaseFirst(className);
+        String serviceName = varName + "Service";
         boolean hasRelationships = false;
 
         for (Association assoc : associations) {
-            // source side
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
-                String targetMul = assoc.getTargetMultiplicity();
+            boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
-                // se for multiplicidade muitos ou for um qualifier(map)
-                if (targetMul != null && ( (targetMul.equals("*") || targetMul.contains("..")) || assoc.hasQualifier())) {
-                    if (!hasRelationships) {
-                        writer.println("    // Relationship management stuff");
-                        hasRelationships = true;
-                    }
+            boolean isSource = assoc.getSourceClass().equals(className);
+            boolean isTarget = assoc.getTargetClass().equals(className);
+            if (!isSource && !isTarget) continue;
 
-                    String relatedClass = assoc.getTargetClass();
-                    generateAddRelationEndpoint(writer, cls.getName(), relatedClass, serviceName);
-                    generateRemoveRelationEndpoint(writer, cls.getName(), relatedClass, serviceName, assoc);
+            String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+            String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
+            boolean thisMultiple = checkMultiplicity(thisMul);
+            boolean otherMultiple = checkMultiplicity(otherMul);
 
+            boolean navigableToOther = isSource ? assoc.isTargetNavigable() : assoc.isSourceNavigable();
+            if (!navigableToOther) continue;
+
+            String otherClass = isSource ? assoc.getTargetClass() : assoc.getSourceClass();
+
+            // ManyToOne: PUT /{id}/{other}/{otherId} e DELETE /{id}/{other}
+            if (thisMultiple && !otherMultiple) {
+                if (!hasRelationships) {
+                    writer.println("    // ========================================================================");
+                    writer.println("    // Relationship Endpoints");
+                    writer.println("    // ========================================================================");
+                    hasRelationships = true;
                 }
+                generateAssignEndpoint(writer, className, otherClass, serviceName);
+                generateRemoveAssignEndpoint(writer, className, otherClass, serviceName);
+            }
+
+            // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others}
+            if (thisMultiple && otherMultiple && isSource) {
+                if (!hasRelationships) {
+                    writer.println("    // ========================================================================");
+                    writer.println("    // Relationship Endpoints");
+                    writer.println("    // ========================================================================");
+                    hasRelationships = true;
+                }
+                generateCollectionAddEndpoint(writer, className, otherClass, serviceName);
+                generateCollectionRemoveEndpoint(writer, className, otherClass, serviceName);
+            }
+
+            // OneToMany unidirectional: POST /{id}/{others} e DELETE /{id}/{others}
+            if ((!thisMultiple || assoc.hasQualifier()) && otherMultiple && !isBidirectional) {
+                if (!hasRelationships) {
+                    writer.println("    // ========================================================================");
+                    writer.println("    // Relationship Endpoints");
+                    writer.println("    // ========================================================================");
+                    hasRelationships = true;
+                }
+                generateCollectionAddEndpoint(writer, className, otherClass, serviceName);
+                generateCollectionRemoveEndpoint(writer, className, otherClass, serviceName);
             }
         }
     }
 
-    private void generateAddRelationEndpoint(PrintWriter writer, String className, String relatedClass, String serviceName) {
-        String relatedPlural = relatedClass + "s";
+    /**
+     * ManyToOne: PUT /{id}/{otherClass}/{otherId}
+     * Ex: PUT /api/alunos/1/turno/3
+     */
+    private void generateAssignEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
+        String otherVar = toLowerCaseFirst(otherClass);
+        String otherPath = otherVar.toLowerCase();
 
+        writer.println();
         writer.println("    /**");
-        writer.println("     * Add " + relatedPlural + " (batch operation)");
+        writer.println("     * ManyToOne: Assign a " + otherClass + " to " + className);
         writer.println("     */");
-        writer.println("    @PostMapping(\"/{id}/" + relatedPlural + "\")");
-        writer.println("    public ResponseEntity<?> add" + capitalizeFirstLetter(relatedPlural) + "(");
+        writer.println("    @PutMapping(\"/{id}/" + otherPath + "/{" + otherVar + "Id}\")");
+        writer.println("    public ResponseEntity<" + className + "> assign" + otherClass + "(");
         writer.println("            @PathVariable Long id,");
-        writer.println("            @RequestBody List<" + relatedClass + "> " + relatedPlural + ") {");
-        writer.println("        try {");
-        writer.println("            var result = " + serviceName + ".add" + capitalizeFirstLetter(relatedPlural) +
-                "(id, " + relatedPlural + ");");
-        writer.println("            return ResponseEntity.ok(result);");
-        writer.println("        } catch (IllegalArgumentException e) {");
-        writer.println("            return ResponseEntity.badRequest().body(e.getMessage());");
-        writer.println("        }");
+        writer.println("            @PathVariable Long " + otherVar + "Id) {");
+        writer.println("        " + className + " updated = " + serviceName + ".assign" + otherClass + "(id, " + otherVar + "Id);");
+        writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
     }
 
-    private void generateRemoveRelationEndpoint(PrintWriter writer, String className, String relatedClass, String serviceName, Association assoc) {
-        String relatedPlural = relatedClass.toLowerCase() + "s";
-        String idType = assoc.hasQualifier() ? assoc.getQualifierType() : "Long";
-        String idsParam = relatedPlural + "Ids";
+    /**
+     * ManyToOne: DELETE /{id}/{otherClass}
+     * Ex: DELETE /api/alunos/1/turno
+     */
+    private void generateRemoveAssignEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
+        String otherPath = otherClass.toLowerCase();
 
         writer.println("    /**");
-        writer.println("     * Remove " + relatedPlural + " (batch operation)");
+        writer.println("     * ManyToOne: Remove the " + otherClass + " from " + className);
         writer.println("     */");
-        writer.println("    @DeleteMapping(\"/{id}/" + relatedPlural + "\")");
-        writer.println("    public ResponseEntity<?> remove" + capitalizeFirstLetter(relatedPlural) + "(");
+        writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
+        writer.println("    public ResponseEntity<" + className + "> remove" + otherClass + "(");
+        writer.println("            @PathVariable Long id) {");
+        writer.println("        " + className + " updated = " + serviceName + ".remove" + otherClass + "(id);");
+        writer.println("        return ResponseEntity.ok(updated);");
+        writer.println("    }");
+        writer.println();
+    }
+
+    /**
+     * Collection (ManyToMany / OneToMany uni): POST /{id}/{others}
+     * Ex: POST /api/turmas/1/alunos  body: [1, 2, 3]
+     */
+    private void generateCollectionAddEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
+        String otherVar = toLowerCaseFirst(otherClass);
+        String otherPlural = otherVar + "s";
+        String otherPath = otherPlural.toLowerCase();
+
+        writer.println();
+        writer.println("    /**");
+        writer.println("     * Add " + otherClass + " entities to " + className + " by IDs");
+        writer.println("     */");
+        writer.println("    @PostMapping(\"/{id}/" + otherPath + "\")");
+        writer.println("    public ResponseEntity<" + className + "> add" + capitalizeFirstLetter(otherPlural) + "(");
         writer.println("            @PathVariable Long id,");
-        writer.println("            @RequestBody List<" + idType + "> " + idsParam + ") {");
-        writer.println("        var result = " + serviceName + ".remove" + capitalizeFirstLetter(relatedPlural) +
-                "(id, " + idsParam + ");");
-        writer.println("        return ResponseEntity.ok(result);");
+        writer.println("            @RequestBody List<Long> " + otherVar + "Ids) {");
+        writer.println("        " + className + " updated = " + serviceName + ".add" + capitalizeFirstLetter(otherPlural) + "(id, " + otherVar + "Ids);");
+        writer.println("        return ResponseEntity.ok(updated);");
+        writer.println("    }");
+        writer.println();
+    }
+
+    /**
+     * Collection (ManyToMany / OneToMany uni): DELETE /{id}/{others}
+     * Ex: DELETE /api/turmas/1/alunos  body: [1, 2, 3]
+     */
+    private void generateCollectionRemoveEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
+        String otherVar = toLowerCaseFirst(otherClass);
+        String otherPlural = otherVar + "s";
+        String otherPath = otherPlural.toLowerCase();
+
+        writer.println("    /**");
+        writer.println("     * Remove " + otherClass + " entities from " + className + " by IDs");
+        writer.println("     */");
+        writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
+        writer.println("    public ResponseEntity<" + className + "> remove" + capitalizeFirstLetter(otherPlural) + "(");
+        writer.println("            @PathVariable Long id,");
+        writer.println("            @RequestBody List<Long> " + otherVar + "Ids) {");
+        writer.println("        " + className + " updated = " + serviceName + ".remove" + capitalizeFirstLetter(otherPlural) + "(id, " + otherVar + "Ids);");
+        writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
     }
@@ -400,6 +436,12 @@ public class SpringControllerGenerator {
     private String capitalizeFirstLetter(String str) {
         if (str == null || str.isEmpty()) return str;
         return str.substring(0, 1).toUpperCase() + str.substring(1);
+    }
+
+    private boolean checkMultiplicity(String multiplicity) {
+        if (multiplicity == null) return false;
+        return multiplicity.contains("*") ||
+                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
     }
 
 }

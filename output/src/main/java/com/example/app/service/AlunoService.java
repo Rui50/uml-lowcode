@@ -82,41 +82,48 @@ public class AlunoService {
         return alunoRepository.existsById(id);
     }
 
-    // Simple query methods for strings
+    // Relationship stuff
+
     /**
-     * Find Aluno by nome
-     * @param nome to search by
-     * @return list of matching entities
+     * ManyToOne: Assign a Turno to Aluno
+     * @param alunoId the Aluno id
+     * @param turnoId the Turno id
+     * @return the updated Aluno
      */
-    public List<Aluno> findByNome(String nome) {
-        return alunoRepository.findByNome(nome);
+    public Aluno assignTurno(Long alunoId, Long turnoId) {
+        Aluno aluno = alunoRepository.findById(alunoId)
+            .orElseThrow(() -> new RuntimeException("Aluno not found: " + alunoId));
+        Turno turno = turnoRepository.findById(turnoId)
+            .orElseThrow(() -> new RuntimeException("Turno not found: " + turnoId));
+
+        // Remove from previous Turno if exists
+        if (aluno.getTurno() != null) {
+            aluno.getTurno().getAlunos().remove(aluno);
+        }
+
+        // Set both sides of the relationship
+        aluno.setTurno(turno);
+        turno.getAlunos().add(aluno);
+
+        return alunoRepository.save(aluno);
     }
 
     /**
-     * Find Aluno by nome containing text
-     * @param nome to search
-     * @return list of matching entities
+     * ManyToOne: Remove the Turno from Aluno
+     * @param alunoId the Aluno id
+     * @return the updated Aluno
      */
-    public List<Aluno> findByNomeContaining(String nome) {
-        return alunoRepository.findByNomeContaining(nome);
-    }
+    public Aluno removeTurno(Long alunoId) {
+        Aluno aluno = alunoRepository.findById(alunoId)
+            .orElseThrow(() -> new RuntimeException("Aluno not found: " + alunoId));
 
-    /**
-     * Find Aluno by email
-     * @param email to search by
-     * @return list of matching entities
-     */
-    public List<Aluno> findByEmail(String email) {
-        return alunoRepository.findByEmail(email);
-    }
+        // Remove from both sides
+        if (aluno.getTurno() != null) {
+            aluno.getTurno().getAlunos().remove(aluno);
+        }
+        aluno.setTurno(null);
 
-    /**
-     * Find Aluno by email containing text
-     * @param email to search
-     * @return list of matching entities
-     */
-    public List<Aluno> findByEmailContaining(String email) {
-        return alunoRepository.findByEmailContaining(email);
+        return alunoRepository.save(aluno);
     }
 
     // Custom operations from class diagram (TODO: implement)
