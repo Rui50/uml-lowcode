@@ -26,11 +26,11 @@ public class Aluno{
     @Column(name = "nome")
     private String nome;
 
-    @Column(name = "email")
-    private String email;
-
     @Column(name = "numero")
     private int numero;
+
+    @Column(name = "email")
+    private String email;
 
     // relationship: Aluno -> Turno
     @JsonIgnoreProperties("alunos")

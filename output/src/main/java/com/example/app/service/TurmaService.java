@@ -134,16 +134,6 @@ public class TurmaService {
 
     // Custom operations from class diagram (TODO: implement)
     /**
-     * @param alunos List<Aluno>
-     * @throws UnsupportedOperationException until implemented with Sequence Diagram
-     */
-    public void inicializarAlunosParaTeste(Long id, List<Aluno> alunos) {
-        throw new UnsupportedOperationException(
-            "Method 'inicializarAlunosParaTeste' not yet implemented. "
-        );
-    }
-
-    /**
      * @param destino Turma
      * @param numero int
      * @return boolean
@@ -152,6 +142,16 @@ public class TurmaService {
     public boolean transferirAluno(Long id, Turma destino, int numero) {
         throw new UnsupportedOperationException(
             "Method 'transferirAluno' not yet implemented. "
+        );
+    }
+
+    /**
+     * @param alunos List<Aluno>
+     * @throws UnsupportedOperationException until implemented with Sequence Diagram
+     */
+    public void inicializarAlunosParaTeste(Long id, List<Aluno> alunos) {
+        throw new UnsupportedOperationException(
+            "Method 'inicializarAlunosParaTeste' not yet implemented. "
         );
     }
 

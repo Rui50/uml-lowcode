@@ -316,11 +316,18 @@ public class SpringEntityGenerator {
                                    String side,
                                    boolean isBidirectional) {
 
+        boolean isComposite = "composite".equals(assoc.getAggregationType());
+        String cascade = isComposite ? ", cascade = CascadeType.ALL, orphanRemoval = true" : "";
+
         if (isBidirectional) {
             writer.println("    @OneToMany(mappedBy = \"" +
-                    getOtherSideAttributeName(assoc, side) + "\")");
+                    getOtherSideAttributeName(assoc, side) + "\"" + cascade + ")");
         } else {
-            writer.println("    @OneToMany");
+            if (isComposite) {
+                writer.println("    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)");
+            } else {
+                writer.println("    @OneToMany");
+            }
             writer.println("    @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\")");
         }
 

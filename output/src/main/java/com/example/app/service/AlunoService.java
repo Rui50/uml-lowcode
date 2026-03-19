@@ -58,8 +58,8 @@ public class AlunoService {
 
         // Update all attributes
         existing.setNome(aluno.getNome());
-        existing.setEmail(aluno.getEmail());
         existing.setNumero(aluno.getNumero());
+        existing.setEmail(aluno.getEmail());
 
 
         // para ja coleções nao sao updated aqui
