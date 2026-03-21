@@ -80,9 +80,15 @@ public class SequenceDiagramParser {
 
         Collection<?> messages = element.getSetAttribute("messages");
         if (messages != null) {
-            int sequenceNumber = 0;
+            // ordenar pela ordem no documento XMI (senao vem a toa)
+            List<ModelElement> sortedMessages = new ArrayList<>();
             for (Object messageObj : messages) {
-                ModelElement messageElement = (ModelElement) messageObj;
+                sortedMessages.add((ModelElement) messageObj);
+            }
+            sortedMessages.sort(ModelElement.getComparator());
+
+            int sequenceNumber = 0;
+            for (ModelElement messageElement : sortedMessages) {
                 Message message = parseMessage(messageElement, interaction);
                 if (message != null) {
                     message.setSequenceNumber(sequenceNumber++);
@@ -91,7 +97,7 @@ public class SequenceDiagramParser {
             }
         }
 
-        // Determinar context class (primeira lifeline)
+        // Determinar a primeira lifeline
         if (!interaction.getLifelines().isEmpty()) {
             Lifeline firstLifeline = interaction.getLifelines().get(0);
             interaction.setContextClass(firstLifeline.getType());
@@ -109,9 +115,20 @@ public class SequenceDiagramParser {
 
         ModelElement represents = (ModelElement) element.getRefAttribute("represents");
         if (represents != null) {
-            lifeline.setType(represents.getName());
-            lifeline.setRepresents(represents.getName().toLowerCase());
-        } else {
+            // represents é um ownedAttribute — o nome é o nome da variável ("u")
+            String varName = represents.getName();
+            lifeline.setRepresents(varName);
+
+            // o tipo da lifeline está no VP extension do ownedAttribute (<type value="User"/>)
+            String vpType = represents.getPlainAttribute("vptype");
+            if (vpType != null && !vpType.isEmpty()) {
+                lifeline.setType(vpType);
+            }
+
+            System.out.println("Parsed lifeline with represents: " + lifeline);
+        }
+        // fallback mas n deve sequer funcionar
+        else {
             // tipo
             String name = lifeline.getName();
             if (name != null) {
@@ -142,7 +159,12 @@ public class SequenceDiagramParser {
         Message message = new Message();
 
         message.setId(element.getXMIID());
-        message.setName(element.getName());
+
+        String rawName = element.getName();
+        message.setRawName(rawName);
+
+        // parse nome, argumentos e return type do nome raw
+        parseMessageSignature(message, rawName);
 
         // messageSort (synchronous, asynchronous, createMessage, reply)
         String messageSort = element.getPlainAttribute("sort");
@@ -154,13 +176,10 @@ public class SequenceDiagramParser {
 
         // encontra e associa as lifelines associadas aos eventos
         if (sendEvent != null) {
-            // send event tem "covered" que aponta para a lifeline
             ModelElement senderLifeline = (ModelElement) sendEvent.getRefAttribute("covered");
             if (senderLifeline != null) {
                 String senderLifelineId = senderLifeline.getXMIID();
                 message.setSource(findLifeline(interaction, senderLifelineId));
-
-                System.out.println("Message " + message.getName() + " source lifeline: " + message.getSource());
             }
         }
 
@@ -172,11 +191,124 @@ public class SequenceDiagramParser {
             }
         }
 
-
-        // parsing dos argumentos
-
+        System.out.println("Parsed message: " + message);
 
         return message;
+    }
+
+    /**
+     * parsing das mensages pelo "raw name" que pode conter nome, argumentos e return type
+     *   getTurma()
+     *   setTurma(novaTurma: Turma)
+     *   get(users: ArrayList<User>) : User
+     */
+    private void parseMessageSignature(Message message, String rawName) {
+        if (rawName == null || rawName.isEmpty()) {
+            message.setName(rawName);
+            return;
+        }
+
+        int parenOpen = rawName.indexOf('(');
+
+        // sem parenteses é nome simples sem argumentos
+        if (parenOpen == -1) {
+            message.setName(rawName.trim());
+            return;
+        }
+
+        // nome do metodo é tudo antes do '('
+        message.setName(rawName.substring(0, parenOpen).trim());
+
+        int parenClose = rawName.lastIndexOf(')');
+        if (parenClose == -1 || parenClose <= parenOpen) {
+            return;
+        }
+
+        // argumentos entre '(' e ')'
+        String argsString = rawName.substring(parenOpen + 1, parenClose).trim();
+        if (!argsString.isEmpty()) {
+            // split por ',' mas respeitando generics como ArrayList<User>
+            List<String> argParts = splitArguments(argsString);
+
+            for (String argPart : argParts) {
+                MessageArgument arg = parseArgument(argPart.trim());
+                if (arg != null) {
+                    message.getArguments().add(arg);
+                }
+            }
+        }
+
+        // return type: tudo depois de ')' com ':' -> " : User"
+        String afterParen = rawName.substring(parenClose + 1).trim();
+        if (afterParen.startsWith(":")) {
+            String returnType = afterParen.substring(1).trim();
+            if (!returnType.isEmpty()) {
+                message.setReturnType(returnType);
+            }
+        }
+
+        System.out.println("Parsed message signature - Name: " + message.getName() + ", Arguments: " + message.getArguments() + ", Return Type: " + message.getReturnType());
+    }
+
+    /**
+     * parsing de um argumento, que pode ser só "name" ou "name: Type"
+     */
+    private MessageArgument parseArgument(String argString) {
+        if (argString == null || argString.isEmpty()) {
+            return null;
+        }
+
+        MessageArgument arg = new MessageArgument();
+
+        // procurar ':' que não esteja dentro de <>
+        int colonIndex = findColonOutsideGenerics(argString);
+
+        if (colonIndex != -1) {
+            // name: Type
+            arg.setName(argString.substring(0, colonIndex).trim());
+            arg.setType(argString.substring(colonIndex + 1).trim());
+        } else {
+            // só nome
+            arg.setName(argString.trim());
+        }
+
+        return arg;
+    }
+
+    /**
+     * Divide uma string por , mas ignora as vírgulas dentro de < > (para listas e maps)
+     */
+    private List<String> splitArguments(String input) {
+        List<String> parts = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (c == '<') depth++;
+            else if (c == '>') depth--;
+            else if (c == ',' && depth == 0) {
+                parts.add(input.substring(start, i));
+                start = i + 1;
+            }
+        }
+        parts.add(input.substring(start));
+
+        return parts;
+    }
+
+    /**
+     * Encontra o primeiro ':' que não esteja dentro de < > (para evitar confundir com generics como List<User>)
+     */
+    private int findColonOutsideGenerics(String input) {
+        int depth = 0;
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (c == '<') depth++;
+            else if (c == '>') depth--;
+            else if (c == ':' && depth == 0) return i;
+        }
+        return -1;
     }
 
     private Lifeline findLifeline(Interaction interaction, String lifelineId) {

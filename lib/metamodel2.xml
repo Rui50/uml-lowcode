@@ -113,6 +113,8 @@ other part of SDMetrics.
     <attribute name="uppervalue" type="ref">Upper value of multiplicity.</attribute>
     <!-- para navegabilidade -->
     <attribute name="isnavigable">Indicates if this association end is navigable.</attribute>
+    <!-- tipo da lifeline (VP extension) -->
+    <attribute name="vptype">Type name from Visual Paradigm extension (for lifeline represents).</attribute>
 
 </modelelement>
 

@@ -132,6 +132,8 @@ especifica do visual paradigm
 <!-- para navegaibilidade -->
 <trigger name="isnavigable" type="attrval" attr="isNavigable" />
 <trigger name="isnavigable" type="ctext" src="isNavigable" />
+<!-- tipo da lifeline (VP extension: <type value="User"/>) -->
+<trigger name="vptype" type="gcattrval" src="xmi:Extension" attr="value" />
 </xmitransformation>
 
 <xmitransformation modelelement="port" xmipattern="uml:Port" recurse="true" />

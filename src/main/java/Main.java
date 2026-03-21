@@ -95,6 +95,18 @@ public class Main {
         sequenceParser.loadModel(xmiFilePath);
         // now sequence diagrams
         List<Interaction> interactions = sequenceParser.parseInteractions();
+/*
+        for (Interaction interaction : interactions) {
+            System.out.println("\n=== Interaction: " + interaction.getName() + " ===");
+            System.out.println("Lifelines:");
+            for (model.sequence.Lifeline ll : interaction.getLifelines()) {
+                System.out.println("  " + ll);
+            }
+            System.out.println("Messages:");
+            for (model.sequence.Message msg : interaction.getMessages()) {
+                System.out.println("  " + msg);
+            }
+        }*/
 
         // gerar código
         String outputDir = "output";

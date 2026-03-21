@@ -5,8 +5,10 @@ import java.util.List;
 
 public class Message {
     private String id;
-    private String name;                    // getTurma, setTurma
+    private String name;                    // getTurma, setTurma (just the method name)
+    private String rawName;                 // full original: "getTurma(a: Aluno) : Turma"
     private String messageSort;             // synchCall, asynchCall, reply
+    private String returnType;              // return type if specified (e.g., "User")
     private Lifeline source;
     private Lifeline target;
     private List<MessageArgument> arguments;
@@ -31,6 +33,22 @@ public class Message {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getRawName() {
+        return rawName;
+    }
+
+    public void setRawName(String rawName) {
+        this.rawName = rawName;
+    }
+
+    public String getReturnType() {
+        return returnType;
+    }
+
+    public void setReturnType(String returnType) {
+        this.returnType = returnType;
     }
 
     public String getMessageSort() {
