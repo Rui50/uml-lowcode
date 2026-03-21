@@ -1,5 +1,7 @@
 import model.annotations.Invariant;
+import model.sequence.Interaction;
 import ocl.OCLTranslator;
+import parser.SequenceDiagramParser;
 import parser.XMIParser;
 import generator.CodeGenerator;
 import generator.spring.SpringProjectGenerator;
@@ -28,7 +30,8 @@ public class Main {
 
         // File paths for the parser
         //String xmiFilePath = "test-models/test_classe_1_2.uml";
-        String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
+        //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
+        String xmiFilePath = "test-models/aluno_turma_class_sequence.uml";
 
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
@@ -88,12 +91,17 @@ public class Main {
             fillGeneralizations(classes, generalizations);
         }
 
+        SequenceDiagramParser sequenceParser = new SequenceDiagramParser();
+        sequenceParser.loadModel(xmiFilePath);
+        // now sequence diagrams
+        List<Interaction> interactions = sequenceParser.parseInteractions();
+
         // gerar código
         String outputDir = "output";
         String templateDir = "templates/spring-boot-template-h2";
         //CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
         //codeGenerator.generate();
-
+        /*
         SpringProjectGenerator project = new SpringProjectGenerator(
             templateDir,
             outputDir
@@ -116,6 +124,8 @@ public class Main {
         // gerar controllers
         SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir);
         controllerGenerator.generateControllers(classes, associations);
+
+         */
 
         // ver as operações OCL (invariantes para ja)
         OCLTranslator translator = new OCLTranslator();

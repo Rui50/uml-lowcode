@@ -347,41 +347,9 @@ public class ClassGenerator {
 
             writer.println("    ) {");
 
-            // corpo vazio por enquanto
-            writer.println("        // TODO: implement this method");
-
-            // return padrão
-            if (!op.getReturnType().equals("void") &&
-                    !op.getReturnType().equals("Int")) {  // Int do VP
-                writer.println("        return " + getPlaceholderReturn(op.getReturnType()) + ";");
-            } else if (op.getReturnType().equals("Int")) {
-                writer.println("        return 0;");
-            }
+            writer.println("        throw new UnsupportedOperationException(\"Not implemented yet\");");
 
             writer.println("    }");
-        }
-    }
-
-    private String getPlaceholderReturn(String type) {
-        if (type == null ||
-                type.startsWith("List") ||
-                type.startsWith("Set") ||
-                type.startsWith("Map") ||
-                type.startsWith("Collection") ||
-                type.equals("String") ||
-                Character.isUpperCase(type.charAt(0))) {
-            return "null";
-        }
-
-        switch (type.toLowerCase()) {
-            case "int":
-                return "0";
-            case "boolean":
-                return "false";
-            case "string":
-                return "\"\"";
-            default:
-                return type + ";";
         }
     }
 

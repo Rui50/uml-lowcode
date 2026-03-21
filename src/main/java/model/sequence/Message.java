@@ -1,0 +1,86 @@
+package model.sequence;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Message {
+    private String id;
+    private String name;                    // getTurma, setTurma
+    private String messageSort;             // synchCall, asynchCall, reply
+    private Lifeline source;
+    private Lifeline target;
+    private List<MessageArgument> arguments;
+    private int sequenceNumber;             // Order
+
+
+    public Message(){
+        this.arguments = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getMessageSort() {
+        return messageSort;
+    }
+
+    public void setMessageSort(String messageSort) {
+        this.messageSort = messageSort;
+    }
+
+    public Lifeline getSource() {
+        return source;
+    }
+
+    public void setSource(Lifeline source) {
+        this.source = source;
+    }
+
+    public Lifeline getTarget() {
+        return target;
+    }
+
+    public void setTarget(Lifeline target) {
+        this.target = target;
+    }
+
+    public List<MessageArgument> getArguments() {
+        return arguments;
+    }
+
+    public void setArguments(List<MessageArgument> arguments) {
+        this.arguments = arguments;
+    }
+
+    public int getSequenceNumber() {
+        return sequenceNumber;
+    }
+
+    public void setSequenceNumber(int sequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
+    }
+
+    @Override
+    public String toString() {
+        return "Message {" +
+                "name:'" + name + '\'' +
+                ", messageSort:'" + messageSort + '\'' +
+                ", source:" + (source != null ? source.getName() : "null") +
+                ", target:" + (target != null ? target.getName() : "null") +
+                ", arguments:" + arguments +
+                '}';
+    }
+}
