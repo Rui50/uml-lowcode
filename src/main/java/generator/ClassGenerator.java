@@ -15,9 +15,11 @@ import java.util.List;
 
 public class ClassGenerator {
     private String outputDirectory;
+    private ValidationGenerator validationGenerator;
 
     public ClassGenerator(String outputDirectory) {
         this.outputDirectory = outputDirectory;
+        this.validationGenerator = new ValidationGenerator();
     }
 
     public void generateClasses(List<Class> classes, List<Association> associations) throws IOException {
@@ -66,6 +68,11 @@ public class ClassGenerator {
             // generate operations
             generateOperations(writer, cls);
             writer.println();
+
+            // validation (OCL invariants)
+            if (!cls.getInvariants().isEmpty()) {
+                validationGenerator.generateValidateMethod(writer, cls);
+            }
 
             writer.println("}");
         }

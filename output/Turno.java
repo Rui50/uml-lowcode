@@ -41,4 +41,24 @@ public class Turno {
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
+    // Validation (para ja so invariantes OCL simples
+
+    /**
+     * Validate entity with OCL
+     * 
+     * - CapacidadePositiva: self.capacidade > 0
+     * 
+     * @return list of validation errors (empty if valid)
+     */
+    public List<String> validate() {
+       List<String> errors = new ArrayList<>();
+
+        // Invariant: CapacidadePositiva
+        if (!(this.capacidade > 0)) {
+            errors.add("Invariant 'CapacidadePositiva' violated.");
+        }
+
+        return errors;
+    }
+
 }

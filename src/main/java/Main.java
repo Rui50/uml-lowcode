@@ -111,8 +111,8 @@ public class Main {
         // gerar código
         String outputDir = "output";
         String templateDir = "templates/spring-boot-template-h2";
-        //CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
-        //codeGenerator.generate();
+        CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
+        codeGenerator.generate();
         /*
         SpringProjectGenerator project = new SpringProjectGenerator(
             templateDir,

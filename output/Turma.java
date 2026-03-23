@@ -6,12 +6,12 @@ public class Turma {
     private String nome;
 
     // Associations
-   private Map<Integer, Aluno> alunos;
+   private Map<Integer, Aluno> alunoss;
     private List<Turno> turnos;
 
     // Constructor
     public Turma() {
-        this.alunos = new HashMap<>();
+        this.alunoss = new HashMap<>();
         this.turnos = new ArrayList<>();
     }
 
@@ -26,19 +26,19 @@ public class Turma {
 
 
     public void putAluno(Integer key, Aluno value) {
-        this.alunos.put(key, value);
+        this.alunoss.put(key, value);
     }
 
     public Aluno getAluno(Integer key) {
-        return this.alunos.get(key);
+        return this.alunoss.get(key);
     }
 
     public void removeAluno(Integer key) {
-        this.alunos.remove(key);
+        this.alunoss.remove(key);
     }
 
     public Map<Integer, Aluno> getAllAlunos() {
-        return this.alunos;
+        return this.alunoss;
     }
 
     public void addTurno(Turno turnos) {
@@ -58,16 +58,36 @@ public class Turma {
     ) {
         throw new UnsupportedOperationException("Not implemented yet");
     }
-    public boolean transferirAluno(
-        int numero,
-        Turma destino
-    ) {
-        throw new UnsupportedOperationException("Not implemented yet");
-    }
     public void inicializarAlunosParaTeste(
         List<Aluno> alunos
     ) {
         throw new UnsupportedOperationException("Not implemented yet");
+    }
+    public boolean transferirAluno(
+        Turma destino,
+        int numero
+    ) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    // Validation (para ja so invariantes OCL simples
+
+    /**
+     * Validate entity with OCL
+     * 
+     * - MaxAlunos: self.alunos -> size() <= 30
+     * 
+     * @return list of validation errors (empty if valid)
+     */
+    public List<String> validate() {
+       List<String> errors = new ArrayList<>();
+
+        // Invariant: MaxAlunos
+        if (!(this.alunos.size() <= 30)) {
+            errors.add("Invariant 'MaxAlunos' violated.");
+        }
+
+        return errors;
     }
 
 }

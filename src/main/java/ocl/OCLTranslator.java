@@ -29,7 +29,7 @@ public class OCLTranslator {
         // transformações base
 
         // para ja, para coisas simples, isto funciona
-        java = java.replaceAll("self\\.(\\w+)", "$1");
+        java = java.replaceAll("self\\.(\\w+)", "this.$1");
         java = translateArrowNotation(java);
         java = translateBooleanOperators(java);
         java = translateComparisonOperators(java);
