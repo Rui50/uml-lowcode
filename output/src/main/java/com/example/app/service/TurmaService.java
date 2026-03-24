@@ -102,6 +102,43 @@ public class TurmaService {
     // Relationship stuff
 
     /**
+     * OneToMany (unidirectional): Add Aluno entities to Turma
+     * @param turmaId the Turma id
+     * @param alunoIds list of Aluno ids to add
+     * @return the updated Turma
+     */
+    public Turma addAlunos(Long turmaId, List<Long> alunoIds) {
+        Turma turma = turmaRepository.findById(turmaId)
+            .orElseThrow(() -> new RuntimeException("Turma not found: " + turmaId));
+        List<Aluno> alunos = alunoRepository.findAllById(alunoIds);
+
+        for (Aluno aluno : alunos) {
+            turma.getAlunos().put(aluno.getNumero(), aluno);
+        }
+
+        return turmaRepository.save(turma);
+    }
+
+    /**
+     * OneToMany (unidirectional): Remove Aluno entities from Turma
+     * @param turmaId the Turma id
+     * @param alunoIds list of Aluno ids to remove
+     * @return the updated Turma
+     */
+    public Turma removeAlunos(Long turmaId, List<Long> alunoIds) {
+        Turma turma = turmaRepository.findById(turmaId)
+            .orElseThrow(() -> new RuntimeException("Turma not found: " + turmaId));
+
+        List<Aluno> alunos = alunoRepository.findAllById(alunoIds);
+        for (Aluno aluno : alunos) {
+            turma.getAlunos().remove(aluno.getNumero());
+        }
+
+        return turmaRepository.save(turma);
+    }
+
+
+    /**
      * OneToMany (unidirectional): Add Turno entities to Turma
      * @param turmaId the Turma id
      * @param turnoIds list of Turno ids to add
@@ -134,6 +171,16 @@ public class TurmaService {
 
     // Custom operations from class diagram (TODO: implement)
     /**
+     * @return int
+     * @throws UnsupportedOperationException until implemented with Sequence Diagram
+     */
+    public int totalAlunos(Long id) {
+        throw new UnsupportedOperationException(
+            "Method 'totalAlunos' not yet implemented. "
+        );
+    }
+
+    /**
      * @param destino Turma
      * @param numero int
      * @return boolean
@@ -152,16 +199,6 @@ public class TurmaService {
     public void inicializarAlunosParaTeste(Long id, List<Aluno> alunos) {
         throw new UnsupportedOperationException(
             "Method 'inicializarAlunosParaTeste' not yet implemented. "
-        );
-    }
-
-    /**
-     * @return int
-     * @throws UnsupportedOperationException until implemented with Sequence Diagram
-     */
-    public int totalAlunos(Long id) {
-        throw new UnsupportedOperationException(
-            "Method 'totalAlunos' not yet implemented. "
         );
     }
 

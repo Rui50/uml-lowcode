@@ -1,4 +1,4 @@
-package com.example.app.controller;
+package com.example.app.controllers;
 
 import com.example.app.models.Turma;
 import com.example.app.service.TurmaService;
@@ -87,6 +87,29 @@ public class TurmaController {
     // ========================================================================
     // Relationship Endpoints
     // ========================================================================
+
+    /**
+     * Add Aluno entities to Turma by IDs
+     */
+    @PostMapping("/{id}/alunos")
+    public ResponseEntity<Turma> addAlunos(
+            @PathVariable Long id,
+            @RequestBody List<Long> alunoIds) {
+        Turma updated = turmaService.addAlunos(id, alunoIds);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Remove Aluno entities from Turma by IDs
+     */
+    @DeleteMapping("/{id}/alunos")
+    public ResponseEntity<Turma> removeAlunos(
+            @PathVariable Long id,
+            @RequestBody List<Long> alunoIds) {
+        Turma updated = turmaService.removeAlunos(id, alunoIds);
+        return ResponseEntity.ok(updated);
+    }
+
 
     /**
      * Add Turno entities to Turma by IDs

@@ -35,12 +35,10 @@ public class Turma{
     @Builder.Default
     private List<Turno> turnos = new ArrayList<>();
 
-    // ========================================================================
     // Validation (para ja so invariantes OCL simples
-    // ========================================================================
 
     /**
-     * Validate entity against OCL invariants
+     * Validate entity with OCL
      * 
      * - MaxAlunos: self.alunos -> size() <= 30
      * 
@@ -50,7 +48,7 @@ public class Turma{
        List<String> errors = new ArrayList<>();
 
         // Invariant: MaxAlunos
-        if (!(alunos.size() <= 30)) {
+        if (!(this.alunos.size() <= 30)) {
             errors.add("Invariant 'MaxAlunos' violated.");
         }
 

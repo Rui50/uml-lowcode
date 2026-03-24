@@ -30,6 +30,8 @@ public class SpringControllerGenerator {
             generateController(cls, classes, associations, controllerDir);
         }
 
+        generateExceptionHandler(controllerDir);
+
         System.out.println("Generation of controllers completed.");
     }
 
@@ -39,7 +41,7 @@ public class SpringControllerGenerator {
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
             // package
-            writer.println("package " + basePackage + ".controller;");
+            writer.println("package " + basePackage + ".controllers;");
             writer.println();
 
             generateImports(writer, className, cls, allClasses, associations);
@@ -205,8 +207,8 @@ public class SpringControllerGenerator {
                 generateCollectionRemoveEndpoint(writer, className, otherClass, serviceName);
             }
 
-            // OneToMany unidirectional: POST /{id}/{others} e DELETE /{id}/{others}
-            if ((!thisMultiple || assoc.hasQualifier()) && otherMultiple && !isBidirectional) {
+            // OneToMany unidirectional (or qualifier/Map): POST /{id}/{others} e DELETE /{id}/{others}
+            if ((!thisMultiple || assoc.hasQualifier()) && (otherMultiple || assoc.hasQualifier()) && !isBidirectional) {
                 if (!hasRelationships) {
                     writer.println("    // ========================================================================");
                     writer.println("    // Relationship Endpoints");
@@ -442,6 +444,39 @@ public class SpringControllerGenerator {
         if (multiplicity == null) return false;
         return multiplicity.contains("*") ||
                 (multiplicity.contains("..") && !multiplicity.equals("0..1"));
+    }
+
+    private void generateExceptionHandler(String controllerDir) throws IOException {
+        String filename = controllerDir + "/GlobalExceptionHandler.java";
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("package " + basePackage + ".controllers;");
+            writer.println();
+            writer.println("import org.springframework.http.HttpStatus;");
+            writer.println("import org.springframework.http.ResponseEntity;");
+            writer.println("import org.springframework.web.bind.annotation.ControllerAdvice;");
+            writer.println("import org.springframework.web.bind.annotation.ExceptionHandler;");
+            writer.println();
+            writer.println("import java.util.Map;");
+            writer.println();
+            writer.println("@ControllerAdvice");
+            writer.println("public class GlobalExceptionHandler {");
+            writer.println();
+            writer.println("    @ExceptionHandler(IllegalArgumentException.class)");
+            writer.println("    public ResponseEntity<Map<String, String>> handleValidationError(IllegalArgumentException ex) {");
+            writer.println("        return ResponseEntity.status(HttpStatus.BAD_REQUEST)");
+            writer.println("            .body(Map.of(\"error\", ex.getMessage()));");
+            writer.println("    }");
+            writer.println();
+            writer.println("    @ExceptionHandler(RuntimeException.class)");
+            writer.println("    public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException ex) {");
+            writer.println("        return ResponseEntity.status(HttpStatus.NOT_FOUND)");
+            writer.println("            .body(Map.of(\"error\", ex.getMessage()));");
+            writer.println("    }");
+            writer.println("}");
+        }
+
+        System.out.println("Generated exception handler: " + filename);
     }
 
 }

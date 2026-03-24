@@ -111,9 +111,11 @@ public class Main {
         // gerar código
         String outputDir = "output";
         String templateDir = "templates/spring-boot-template-h2";
+        // plain java classes
         CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
         codeGenerator.generate();
-        /*
+
+        // spring boot
         SpringProjectGenerator project = new SpringProjectGenerator(
             templateDir,
             outputDir
@@ -136,8 +138,6 @@ public class Main {
         // gerar controllers
         SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir);
         controllerGenerator.generateControllers(classes, associations);
-
-         */
 
         // ver as operações OCL (invariantes para ja)
         OCLTranslator translator = new OCLTranslator();

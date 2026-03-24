@@ -301,7 +301,7 @@ public class SpringServiceGenerator {
             // sem back-reference no outro lado
             // Gerar addX e removeX nesta classe
             // ========================================
-            if ((!thisMultiple || assoc.hasQualifier()) && otherMultiple && !isBidirectional) {
+            if ((!thisMultiple || assoc.hasQualifier()) && (otherMultiple || assoc.hasQualifier()) && !isBidirectional) {
                 if (!hasRelationships) {
                     writer.println("    // Relationship stuff");
                     hasRelationships = true;

@@ -28,12 +28,10 @@ public class Turno{
     @Builder.Default
     private List<Aluno> alunos = new ArrayList<>();
 
-    // ========================================================================
     // Validation (para ja so invariantes OCL simples
-    // ========================================================================
 
     /**
-     * Validate entity against OCL invariants
+     * Validate entity with OCL
      * 
      * - CapacidadePositiva: self.capacidade > 0
      * 
@@ -43,7 +41,7 @@ public class Turno{
        List<String> errors = new ArrayList<>();
 
         // Invariant: CapacidadePositiva
-        if (!(capacidade > 0)) {
+        if (!(this.capacidade > 0)) {
             errors.add("Invariant 'CapacidadePositiva' violated.");
         }
 

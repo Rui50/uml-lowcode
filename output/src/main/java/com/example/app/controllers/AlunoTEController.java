@@ -1,4 +1,4 @@
-package com.example.app.controller;
+package com.example.app.controllers;
 
 import com.example.app.models.AlunoTE;
 import com.example.app.service.AlunoTEService;
