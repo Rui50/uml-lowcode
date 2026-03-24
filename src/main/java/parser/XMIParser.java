@@ -276,8 +276,11 @@ public class XMIParser {
                     association.setSourceRole(sourceEnd.getName());
                     association.setTargetRole(targetEnd.getName());
 
-                    // agregação
+                    // agregação (só pode estar num dos lados)
                     String aggregation = sourceEnd.getPlainAttribute("aggregation");
+                    if (aggregation == null) {
+                        aggregation = targetEnd.getPlainAttribute("aggregation");
+                    }
                     if (aggregation != null) {
                         association.setAggregationType(aggregation);
                     }

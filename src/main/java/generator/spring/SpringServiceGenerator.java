@@ -162,7 +162,7 @@ public class SpringServiceGenerator {
     private void generateDependencies(PrintWriter writer, String className, List<Association> associations, List<Class> classes) {
         writer.println("    // Dependencies");
         writer.println("    private final " + className + "Repository " +
-                className.toLowerCase() + "Repository;");
+                lowercaseFirstLetter(className) + "Repository;");
 
         // repositories das entidades relacionadas
         Set<String> addedRepos = new HashSet<>();
@@ -171,14 +171,14 @@ public class SpringServiceGenerator {
                 String related = assoc.getTargetClass();
                 if (!related.equals(className) && addedRepos.add(related)) {
                     writer.println("    private final " + related + "Repository " +
-                            related.toLowerCase() + "Repository;");
+                            lowercaseFirstLetter(related) + "Repository;");
                 }
             }
             if (assoc.getTargetClass().equals(className) && assoc.isSourceNavigable()) {
                 String related = assoc.getSourceClass();
                 if (!related.equals(className) && addedRepos.add(related)) {
                     writer.println("    private final " + related + "Repository " +
-                            related.toLowerCase() + "Repository;");
+                            lowercaseFirstLetter(related) + "Repository;");
                 }
             }
         }
@@ -187,7 +187,7 @@ public class SpringServiceGenerator {
     }
 
     private void generateCrudMethods(PrintWriter writer, String className, Class cls, List<Association> associations) {
-        String varName = className.toLowerCase();
+        String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
 
         writer.println("   // CRUD methods");
@@ -326,9 +326,9 @@ public class SpringServiceGenerator {
                                        String fieldName, Association assoc,
                                        boolean isBidirectional, boolean isSource) {
         String className = cls.getName();
-        String varName = className.toLowerCase();
+        String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
-        String otherVar = otherClass.toLowerCase();
+        String otherVar = lowercaseFirstLetter(otherClass);
         String otherRepoName = otherVar + "Repository";
         String capitalizedField = capitalizeFirstLetter(fieldName);
 
@@ -384,7 +384,7 @@ public class SpringServiceGenerator {
                                              String fieldName, Association assoc,
                                              boolean isBidirectional, boolean isSource) {
         String className = cls.getName();
-        String varName = className.toLowerCase();
+        String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
         String capitalizedField = capitalizeFirstLetter(fieldName);
 
@@ -432,9 +432,9 @@ public class SpringServiceGenerator {
                                               String fieldName, Association assoc,
                                               boolean isBidirectional) {
         String className = cls.getName();
-        String varName = className.toLowerCase();
+        String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
-        String otherVar = otherClass.toLowerCase();
+        String otherVar = lowercaseFirstLetter(otherClass);
         String otherRepoName = otherVar + "Repository";
         String capitalizedField = capitalizeFirstLetter(fieldName);
         String otherPlural = otherVar + "s";
@@ -492,9 +492,9 @@ public class SpringServiceGenerator {
                                                  String fieldName, Association assoc,
                                                  boolean isBidirectional) {
         String className = cls.getName();
-        String varName = className.toLowerCase();
+        String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
-        String otherVar = otherClass.toLowerCase();
+        String otherVar = lowercaseFirstLetter(otherClass);
         String otherRepoName = otherVar + "Repository";
         String capitalizedField = capitalizeFirstLetter(fieldName);
         String otherPlural = otherVar + "s";
@@ -550,9 +550,9 @@ public class SpringServiceGenerator {
     private void generateOneToManyUniAddMethod(PrintWriter writer, Class cls, String otherClass,
                                                 String fieldName, Association assoc) {
         String className = cls.getName();
-        String varName = className.toLowerCase();
+        String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
-        String otherVar = otherClass.toLowerCase();
+        String otherVar = lowercaseFirstLetter(otherClass);
         String otherRepoName = otherVar + "Repository";
         String capitalizedField = capitalizeFirstLetter(fieldName);
         String otherPlural = otherVar + "s";
@@ -595,9 +595,9 @@ public class SpringServiceGenerator {
     private void generateOneToManyUniRemoveMethod(PrintWriter writer, Class cls, String otherClass,
                                                    String fieldName, Association assoc) {
         String className = cls.getName();
-        String varName = className.toLowerCase();
+        String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
-        String otherVar = otherClass.toLowerCase();
+        String otherVar = lowercaseFirstLetter(otherClass);
         String otherRepoName = otherVar + "Repository";
         String capitalizedField = capitalizeFirstLetter(fieldName);
         String otherPlural = otherVar + "s";
@@ -643,7 +643,7 @@ public class SpringServiceGenerator {
         writer.println("    // Simple query methods for strings");
 
         String className = cls.getName();
-        String varName = className.toLowerCase();
+        String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
 
         for (Attribute attr : stringAttributes){
@@ -679,7 +679,7 @@ public class SpringServiceGenerator {
     }
 
     private void generateCreateMethod(PrintWriter writer, String className, Class cls, List<Association> associations){
-        String varName = className.toLowerCase();
+        String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
 
         writer.println("    /**");
@@ -718,7 +718,7 @@ public class SpringServiceGenerator {
     }
 
     private void generateUpdateMethod(PrintWriter writer, String className, Class cls) {
-        String varName = className.toLowerCase();
+        String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
 
         writer.println("    /**");
@@ -751,7 +751,8 @@ public class SpringServiceGenerator {
             writer.println("        // Update all attributes");
             for (Attribute attr : cls.getAttributes()) {
                 String attrName = attr.getName();
-                String getter = "get" + capitalizeFirstLetter(attrName);
+                String prefix = "boolean".equals(attr.getType()) ? "is" : "get";
+                String getter = prefix + capitalizeFirstLetter(attrName);
                 String setter = "set" + capitalizeFirstLetter(attrName);
 
                 writer.println("        existing." + setter + "(" + varName + "." + getter + "());");

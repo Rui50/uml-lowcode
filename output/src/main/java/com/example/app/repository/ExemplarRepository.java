@@ -1,16 +1,16 @@
 package com.example.app.repository;
 
-import com.example.app.models.Turno;
+import com.example.app.models.Exemplar;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
- * Repository for Turno entity
+ * Repository for Exemplar entity
  * Spring Data JPA generates a base implementation automatically
  */
 @Repository
-public interface TurnoRepository extends JpaRepository<Turno, Long> {
+public interface ExemplarRepository extends JpaRepository<Exemplar, Long> {
 
     // Automatic CRUD methods provided by JpaRepository:
     // - save(entity)
@@ -20,6 +20,9 @@ public interface TurnoRepository extends JpaRepository<Turno, Long> {
     // - count()
     // - existsById(id)
 
-    // custom query methods TODO
+    // Query methods (Spring generates implementation):
+    List<Exemplar> findByCodigo(String codigo);
+    List<Exemplar> findByCodigoContaining(String codigo);
+    boolean existsByCodigo(String codigo);
 
 }

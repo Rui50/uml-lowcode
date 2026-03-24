@@ -1,7 +1,7 @@
 package com.example.app.controllers;
 
-import com.example.app.models.Turno;
-import com.example.app.service.TurnoService;
+import com.example.app.models.Emprestimo;
+import com.example.app.service.EmprestimoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,77 +9,75 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import com.example.app.models.Aluno;
-
 /**
- * REST Controller for Turno
+ * REST Controller for Emprestimo
  */
 @RestController
-@RequestMapping("/api/turnos")
+@RequestMapping("/api/emprestimos")
 @RequiredArgsConstructor
-public class TurnoController {
+public class EmprestimoController {
 
-    private final TurnoService turnoService;
+    private final EmprestimoService emprestimoService;
 
     // CRUD Endpoints
 
     /**
-     * GET /api/turnos
-     * Retrieve all Turno entities
+     * GET /api/emprestimos
+     * Retrieve all Emprestimo entities
      * @return list of all entities
      */
     @GetMapping
-    public ResponseEntity<List<Turno>> getAll() {
-        List<Turno> entities = turnoService.findAll();
+    public ResponseEntity<List<Emprestimo>> getAll() {
+        List<Emprestimo> entities = emprestimoService.findAll();
         return ResponseEntity.ok(entities);
     }
 
     /**
-     * GET /api/turnos/{id}
-     * Retrieve Turno by ID
+     * GET /api/emprestimos/{id}
+     * Retrieve Emprestimo by ID
      * @param id entity id
      * @return entity if found, 404 if not
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Turno> getById(@PathVariable Long id) {
-        return turnoService.findById(id)
+    public ResponseEntity<Emprestimo> getById(@PathVariable Long id) {
+        return emprestimoService.findById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * POST /api/turnos
-     * Create new Turno
-     * @param turno entity data
+     * POST /api/emprestimos
+     * Create new Emprestimo
+     * @param emprestimo entity data
      * @return created entity
      */
     @PostMapping
-    public ResponseEntity<Turno> create(@RequestBody Turno turno) {
-        Turno created = turnoService.create(turno);
+    public ResponseEntity<Emprestimo> create(@RequestBody Emprestimo emprestimo) {
+        Emprestimo created = emprestimoService.create(emprestimo);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Turno> update(
+    public ResponseEntity<Emprestimo> update(
             @PathVariable Long id,
-            @RequestBody Turno turno) {
-        Turno updated = turnoService.update(id, turno);
+            @RequestBody Emprestimo emprestimo) {
+        Emprestimo updated = emprestimoService.update(id, emprestimo);
         return ResponseEntity.ok(updated);
     }
 
     /**
-     * DELETE /api/turnos/{id}
-     * Delete Turno
+     * DELETE /api/emprestimos/{id}
+     * Delete Emprestimo
      * @param id entity id
      * @return 204 No Content if deleted, 404 if not found
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!turnoService.existsById(id)) {
+        if (!emprestimoService.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
 
-        turnoService.deleteById(id);
+        emprestimoService.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
