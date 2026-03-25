@@ -69,7 +69,7 @@ public class SpringServiceGenerator {
             //generateQueryMethods(writer, cls);
 
             // operações do diagrama de classe (TODO: implementar)
-            generateCustomOperations(writer, cls, interactions, classes);
+            //generateCustomOperations(writer, cls, interactions, classes);
 
             writer.println("}");
         }
@@ -260,12 +260,10 @@ public class SpringServiceGenerator {
 
             String otherClass = isSource ? assoc.getTargetClass() : assoc.getSourceClass();
 
-            // ========================================
             // ManyToOne: esta classe tem o FK (lado owner)
-            // thisMultiple = muitos de "mim" (o outro tem coleção de mim)
+            // thisMultiple = muitos de "mim" -> o outro tem coleção desta classe
             // !otherMultiple = eu tenho uma referência singular ao outro
             // Gerar assignX e removeX nesta classe
-            // ========================================
             if (thisMultiple && !otherMultiple) {
                 if (!hasRelationships) {
                     writer.println("    // Relationship stuff");
@@ -279,10 +277,8 @@ public class SpringServiceGenerator {
                 generateRemoveAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource);
             }
 
-            // ========================================
             // ManyToMany: gerar addX e removeX no lado owner (@JoinTable)
             // No entity generator, o source é o owner
-            // ========================================
             if (thisMultiple && otherMultiple && isSource) {
                 if (!hasRelationships) {
                     writer.println("    // Relationship stuff");
@@ -295,11 +291,9 @@ public class SpringServiceGenerator {
                 generateManyToManyRemoveMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional);
             }
 
-            // ========================================
             // OneToMany unidirectional: esta classe tem a coleção
             // sem back-reference no outro lado
             // Gerar addX e removeX nesta classe
-            // ========================================
             if ((!thisMultiple || assoc.hasQualifier()) && (otherMultiple || assoc.hasQualifier()) && !isBidirectional) {
                 if (!hasRelationships) {
                     writer.println("    // Relationship stuff");

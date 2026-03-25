@@ -74,7 +74,7 @@ public class SpringControllerGenerator {
             generateRelationEndpoints(writer, cls, associations);
 
             // custom operation endpoints (sequence diag)
-            generateCustomOperationEndpoints(writer, cls, interactions, allClasses);
+            //generateCustomOperationEndpoints(writer, cls, interactions, allClasses);
 
             writer.println("}");
         }
@@ -191,9 +191,7 @@ public class SpringControllerGenerator {
             // ManyToOne: PUT /{id}/{other}/{otherId} e DELETE /{id}/{other}
             if (thisMultiple && !otherMultiple) {
                 if (!hasRelationships) {
-                    writer.println("    // ========================================================================");
                     writer.println("    // Relationship Endpoints");
-                    writer.println("    // ========================================================================");
                     hasRelationships = true;
                 }
                 generateAssignEndpoint(writer, className, otherClass, serviceName);
@@ -203,9 +201,7 @@ public class SpringControllerGenerator {
             // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others}
             if (thisMultiple && otherMultiple && isSource) {
                 if (!hasRelationships) {
-                    writer.println("    // ========================================================================");
                     writer.println("    // Relationship Endpoints");
-                    writer.println("    // ========================================================================");
                     hasRelationships = true;
                 }
                 generateCollectionAddEndpoint(writer, className, otherClass, serviceName);
@@ -215,9 +211,7 @@ public class SpringControllerGenerator {
             // OneToMany unidirectional (or qualifier/Map): POST /{id}/{others} e DELETE /{id}/{others}
             if ((!thisMultiple || assoc.hasQualifier()) && (otherMultiple || assoc.hasQualifier()) && !isBidirectional) {
                 if (!hasRelationships) {
-                    writer.println("    // ========================================================================");
                     writer.println("    // Relationship Endpoints");
-                    writer.println("    // ========================================================================");
                     hasRelationships = true;
                 }
                 generateCollectionAddEndpoint(writer, className, otherClass, serviceName);
@@ -268,7 +262,7 @@ public class SpringControllerGenerator {
     }
 
     /**
-     * Collection (ManyToMany / OneToMany uni): POST /{id}/{others}
+     * Collection (ManyToMany / OneToMany unidirectional): POST /{id}/{others}
      * Ex: POST /api/turmas/1/alunos  body: [1, 2, 3]
      */
     private void generateCollectionAddEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {

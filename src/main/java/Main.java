@@ -28,7 +28,7 @@ import javax.swing.*;
 public class Main {
     public static void main(String[] args) throws Exception {
 
-        // File paths for the parser
+        // paths for the parser
         //String xmiFilePath = "test-models/test_classe_1_2.uml";
         //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
         String xmiFilePath = "test-models/aluno_turma_class_sequence.uml";
