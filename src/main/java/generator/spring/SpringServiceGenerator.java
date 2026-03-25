@@ -363,6 +363,7 @@ public class SpringServiceGenerator {
         }
 
         writer.println();
+        generateValidationBeforeSave(writer, cls, varName);
         writer.println("        return " + repoName + ".save(" + varName + ");");
         writer.println("    }");
         writer.println();
@@ -408,6 +409,7 @@ public class SpringServiceGenerator {
 
         writer.println("        " + varName + ".set" + capitalizedField + "(null);");
         writer.println();
+        generateValidationBeforeSave(writer, cls, varName);
         writer.println("        return " + repoName + ".save(" + varName + ");");
         writer.println("    }");
         writer.println();
@@ -471,6 +473,7 @@ public class SpringServiceGenerator {
         }
 
         writer.println();
+        generateValidationBeforeSave(writer, cls, varName);
         writer.println("        return " + repoName + ".save(" + varName + ");");
         writer.println("    }");
         writer.println();
@@ -530,6 +533,7 @@ public class SpringServiceGenerator {
         }
 
         writer.println();
+        generateValidationBeforeSave(writer, cls, varName);
         writer.println("        return " + repoName + ".save(" + varName + ");");
         writer.println("    }");
         writer.println();
@@ -576,6 +580,7 @@ public class SpringServiceGenerator {
         }
 
         writer.println();
+        generateValidationBeforeSave(writer, cls, varName);
         writer.println("        return " + repoName + ".save(" + varName + ");");
         writer.println("    }");
         writer.println();
@@ -621,6 +626,7 @@ public class SpringServiceGenerator {
         }
 
         writer.println();
+        generateValidationBeforeSave(writer, cls, varName);
         writer.println("        return " + repoName + ".save(" + varName + ");");
         writer.println("    }");
         writer.println();
@@ -681,18 +687,7 @@ public class SpringServiceGenerator {
         writer.println("     */");
         writer.println("    public " + className + " create(" + className + " " + varName + ") {");
 
-        // validações OCL
-        if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
-            writer.println("        // Validate OCL invariants");
-            writer.println("        List<String> errors = " + varName + ".validate();");
-            writer.println("        if (!errors.isEmpty()) {");
-            writer.println("            throw new IllegalArgumentException(");
-            writer.println("                \"Validation failed: \" + String.join(\", \", errors)");
-            writer.println("            );");
-            writer.println("        }");
-            writer.println();
-        }
-
+        generateValidationBeforeSave(writer, cls, varName);
         writer.println("        return " + repoName + ".save(" + varName + ");");
         writer.println("    }");
         writer.println();
@@ -745,18 +740,7 @@ public class SpringServiceGenerator {
         writer.println("        // para ja coleções nao sao updated aqui");
         writer.println();
 
-        // validações OCL
-        if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
-            writer.println("        // Validate OCL invariants");
-            writer.println("        List<String> errors = existing.validate();");
-            writer.println("        if (!errors.isEmpty()) {");
-            writer.println("            throw new IllegalArgumentException(");
-            writer.println("                \"Validation failed: \" + String.join(\", \", errors)");
-            writer.println("            );");
-            writer.println("        }");
-            writer.println();
-        }
-
+        generateValidationBeforeSave(writer, cls, "existing");
         writer.println("        return " + repoName + ".save(existing);");
         writer.println("    }");
         writer.println();
@@ -768,6 +752,19 @@ public class SpringServiceGenerator {
         //List<Teste.Aluno> -> List<Aluno>
 
         return type.replaceAll("\\b([A-Za-z_$][\\w$]*\\.)+([A-Za-z_$][\\w$]*)\\b", "$2");
+    }
+
+    private void generateValidationBeforeSave(PrintWriter writer, Class cls, String varName) {
+        if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
+            writer.println("        // Validate OCL invariants");
+            writer.println("        List<String> errors = " + varName + ".validate();");
+            writer.println("        if (!errors.isEmpty()) {");
+            writer.println("            throw new IllegalArgumentException(");
+            writer.println("                \"Validation failed: \" + String.join(\", \", errors)");
+            writer.println("            );");
+            writer.println("        }");
+            writer.println();
+        }
     }
 
     // extrair o tipo "base" de retorno e parametros

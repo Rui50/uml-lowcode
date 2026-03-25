@@ -84,9 +84,7 @@ public class TurmaController {
         return ResponseEntity.noContent().build();
     }
 
-    // ========================================================================
     // Relationship Endpoints
-    // ========================================================================
 
     /**
      * Add Aluno entities to Turma by IDs
@@ -133,35 +131,4 @@ public class TurmaController {
         return ResponseEntity.ok(updated);
     }
 
-
-    // Custom Operation Endpoints dos diagramas sequencia
-
-    @PostMapping("/{id}/transferirAluno")
-    public ResponseEntity<?> transferirAluno(
-            @PathVariable Long id,
-            @RequestParam int numero,
-            @RequestParam Long destinoId) {
-        Turma destino = turmaService.findById(destinoId)
-            .orElseThrow(() -> new RuntimeException("Turma not found: " + destinoId));
-
-        boolean result = turmaService.transferirAluno(id, numero, destino);
-        return ResponseEntity.ok(result);
-    }
-
-    @PostMapping("/{id}/totalAlunos")
-    public ResponseEntity<?> totalAlunos(
-            @PathVariable Long id) {
-
-        int result = turmaService.totalAlunos(id);
-        return ResponseEntity.ok(result);
-    }
-
-    @PostMapping("/{id}/inicializarAlunosParaTeste")
-    public ResponseEntity<?> inicializarAlunosParaTeste(
-            @PathVariable Long id,
-            @RequestParam List<Aluno> alunos) {
-
-        turmaService.inicializarAlunosParaTeste(id, alunos);
-        return ResponseEntity.ok().build();
-    }
 }

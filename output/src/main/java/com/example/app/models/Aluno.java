@@ -23,14 +23,14 @@ public class Aluno{
     private Long id;
 
     // attributes
+    @Column(name = "email")
+    private String email;
+
     @Column(name = "nome")
     private String nome;
 
     @Column(name = "numero")
     private int numero;
-
-    @Column(name = "email")
-    private String email;
 
     // relationship: Aluno -> Turno
     @JsonIgnoreProperties("alunos")

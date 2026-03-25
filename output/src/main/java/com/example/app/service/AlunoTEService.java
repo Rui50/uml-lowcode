@@ -76,12 +76,4 @@ public class AlunoTEService {
         return alunoTERepository.existsById(id);
     }
 
-    // operations (TODO: implement)
-
-    public boolean comprovativo(Long id
-    ) {
-        throw new UnsupportedOperationException(
-            "Method 'comprovativo' not yet implemented. "
-        );
-    }
 }

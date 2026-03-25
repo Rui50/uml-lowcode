@@ -81,14 +81,4 @@ public class AlunoTEController {
         return ResponseEntity.noContent().build();
     }
 
-
-    // Custom Operation Endpoints dos diagramas sequencia
-
-    @PostMapping("/{id}/comprovativo")
-    public ResponseEntity<?> comprovativo(
-            @PathVariable Long id) {
-
-        boolean result = alunoTEService.comprovativo(id);
-        return ResponseEntity.ok(result);
-    }
 }

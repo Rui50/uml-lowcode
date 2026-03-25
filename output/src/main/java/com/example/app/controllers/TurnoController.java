@@ -83,14 +83,4 @@ public class TurnoController {
         return ResponseEntity.noContent().build();
     }
 
-
-    // Custom Operation Endpoints dos diagramas sequencia
-
-    @PostMapping("/{id}/temVaga")
-    public ResponseEntity<?> temVaga(
-            @PathVariable Long id) {
-
-        boolean result = turnoService.temVaga(id);
-        return ResponseEntity.ok(result);
-    }
 }

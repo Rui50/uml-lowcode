@@ -116,6 +116,14 @@ public class TurmaService {
             turma.getAlunos().put(aluno.getNumero(), aluno);
         }
 
+        // Validate OCL invariants
+        List<String> errors = turma.validate();
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Validation failed: " + String.join(", ", errors)
+            );
+        }
+
         return turmaRepository.save(turma);
     }
 
@@ -132,6 +140,14 @@ public class TurmaService {
         List<Aluno> alunos = alunoRepository.findAllById(alunoIds);
         for (Aluno aluno : alunos) {
             turma.getAlunos().remove(aluno.getNumero());
+        }
+
+        // Validate OCL invariants
+        List<String> errors = turma.validate();
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Validation failed: " + String.join(", ", errors)
+            );
         }
 
         return turmaRepository.save(turma);
@@ -151,6 +167,14 @@ public class TurmaService {
 
         turma.getTurnos().addAll(turnos);
 
+        // Validate OCL invariants
+        List<String> errors = turma.validate();
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Validation failed: " + String.join(", ", errors)
+            );
+        }
+
         return turmaRepository.save(turma);
     }
 
@@ -166,37 +190,15 @@ public class TurmaService {
 
         turma.getTurnos().removeIf(turno -> turnoIds.contains(turno.getId()));
 
-        return turmaRepository.save(turma);
-    }
-
-    // operations (TODO: implement)
-
-    public boolean transferirAluno(Long id
-        , int numero
-        , Turma destino
-    ) {
-        Turma turma = turmaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Turma not found: " + id));
-
-        Turma turma1 = a.getTurma();
-        a.setTurma(novaTurma);
-        turma.addAluno(a);
+        // Validate OCL invariants
+        List<String> errors = turma.validate();
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Validation failed: " + String.join(", ", errors)
+            );
+        }
 
         return turmaRepository.save(turma);
     }
 
-    public int totalAlunos(Long id
-    ) {
-        throw new UnsupportedOperationException(
-            "Method 'totalAlunos' not yet implemented. "
-        );
-    }
-
-    public void inicializarAlunosParaTeste(Long id
-        , List<Aluno> alunos
-    ) {
-        throw new UnsupportedOperationException(
-            "Method 'inicializarAlunosParaTeste' not yet implemented. "
-        );
-    }
 }

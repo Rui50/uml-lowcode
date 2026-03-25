@@ -96,12 +96,4 @@ public class TurnoService {
         return turnoRepository.existsById(id);
     }
 
-    // operations (TODO: implement)
-
-    public boolean temVaga(Long id
-    ) {
-        throw new UnsupportedOperationException(
-            "Method 'temVaga' not yet implemented. "
-        );
-    }
 }

@@ -57,9 +57,9 @@ public class AlunoService {
             .orElseThrow(() -> new RuntimeException("Aluno not found: " + id));
 
         // Update all attributes
+        existing.setEmail(aluno.getEmail());
         existing.setNome(aluno.getNome());
         existing.setNumero(aluno.getNumero());
-        existing.setEmail(aluno.getEmail());
 
 
         // para ja coleções nao sao updated aqui
@@ -126,12 +126,4 @@ public class AlunoService {
         return alunoRepository.save(aluno);
     }
 
-    // operations (TODO: implement)
-
-    public List<String> validar(Long id
-    ) {
-        throw new UnsupportedOperationException(
-            "Method 'validar' not yet implemented. "
-        );
-    }
 }

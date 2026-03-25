@@ -83,9 +83,7 @@ public class AlunoController {
         return ResponseEntity.noContent().build();
     }
 
-    // ========================================================================
     // Relationship Endpoints
-    // ========================================================================
 
     /**
      * ManyToOne: Assign a Turno to Aluno
@@ -108,14 +106,4 @@ public class AlunoController {
         return ResponseEntity.ok(updated);
     }
 
-
-    // Custom Operation Endpoints dos diagramas sequencia
-
-    @PostMapping("/{id}/validar")
-    public ResponseEntity<?> validar(
-            @PathVariable Long id) {
-
-        List<String> result = alunoService.validar(id);
-        return ResponseEntity.ok(result);
-    }
 }
