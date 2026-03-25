@@ -31,16 +31,14 @@ public class Main {
         // File paths for the parser
         //String xmiFilePath = "test-models/test_classe_1_2.uml";
         //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
-        String xmiFilePath = "test-models/livraria_class_ocl.uml";
-
+        String xmiFilePath = "test-models/aluno_turma_class_sequence.uml";
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 
-        // Parsing
+        // Parsing do diagrama de classes
         XMIParser parser = new XMIParser();
         System.out.println("Loading model...");
         parser.loadModel(xmiFilePath);
-
 
         // Extrair classes
         System.out.println("Extracting classes...");
@@ -48,7 +46,7 @@ public class Main {
 
         System.out.println("Parsing completed successfully!");
 
-        // quantas classes
+        // quantas classes para debug
         System.out.println("Classes extracted: "  + classes.size());
 
         // detalhes
@@ -73,7 +71,7 @@ public class Main {
             }
         }
 
-        // heranças
+        // heranças tratadas separadamente
         System.out.println("Parsing generalizations...");
         List<Generalization> generalizations = parser.getGeneralizations();
         System.out.println("Generalizations extracted: " + generalizations.size());
@@ -91,22 +89,10 @@ public class Main {
             fillGeneralizations(classes, generalizations);
         }
 
+        // Parsing dos diagramas de sequencia
         SequenceDiagramParser sequenceParser = new SequenceDiagramParser();
         sequenceParser.loadModel(xmiFilePath);
-        // now sequence diagrams
         List<Interaction> interactions = sequenceParser.parseInteractions();
-/*
-        for (Interaction interaction : interactions) {
-            System.out.println("\n=== Interaction: " + interaction.getName() + " ===");
-            System.out.println("Lifelines:");
-            for (model.sequence.Lifeline ll : interaction.getLifelines()) {
-                System.out.println("  " + ll);
-            }
-            System.out.println("Messages:");
-            for (model.sequence.Message msg : interaction.getMessages()) {
-                System.out.println("  " + msg);
-            }
-        }*/
 
         // gerar código
         String outputDir = "output";
@@ -133,11 +119,11 @@ public class Main {
 
         // gerar serviços
         SpringServiceGenerator serviceGenerator = new SpringServiceGenerator(outputDir);
-        serviceGenerator.generateServices(classes, associations);
+        serviceGenerator.generateServices(classes, associations, interactions);
 
         // gerar controllers
         SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir);
-        controllerGenerator.generateControllers(classes, associations);
+        controllerGenerator.generateControllers(classes, associations, interactions);
 
         // ver as operações OCL (invariantes para ja)
         OCLTranslator translator = new OCLTranslator();

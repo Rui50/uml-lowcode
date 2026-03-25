@@ -2,15 +2,14 @@ package generator.spring;
 
 import model.*;
 import model.Class;
+import model.sequence.*;
 import org.w3c.dom.Attr;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Array;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class SpringServiceGenerator {
     public String baseOutputPath;
@@ -23,7 +22,7 @@ public class SpringServiceGenerator {
     /**
     * Gera os ficheiros dos services (CRUD)
     * */
-    public void generateServices(List<Class> classes, List<Association> associations) throws IOException {
+    public void generateServices(List<Class> classes, List<Association> associations, List<Interaction> interactions) throws IOException {
         System.out.println("Generating Spring services...");
 
         // criar dir
@@ -31,14 +30,14 @@ public class SpringServiceGenerator {
         new java.io.File(serviceDir).mkdirs();
 
         for (Class cls : classes){
-            generateService(cls, classes, associations, serviceDir);
+            generateService(cls, classes, associations, serviceDir, interactions);
         }
 
         System.out.println("Generation of services completed.");
     }
 
     // gerar um service
-    private void generateService(Class cls, List<Class> classes, List<Association> associations, String serviceDir) throws IOException {
+    private void generateService(Class cls, List<Class> classes, List<Association> associations, String serviceDir, List<Interaction> interactions) throws IOException {
         String className = cls.getName();
         String filename = serviceDir + "/" + className + "Service.java";
 
@@ -70,7 +69,7 @@ public class SpringServiceGenerator {
             //generateQueryMethods(writer, cls);
 
             // operações do diagrama de classe (TODO: implementar)
-            generateCustomOperations(writer, cls);
+            generateCustomOperations(writer, cls, interactions, classes);
 
             writer.println("}");
         }
@@ -705,18 +704,6 @@ public class SpringServiceGenerator {
         writer.println();
     }
 
-    private void generateCustomOperations(PrintWriter writer, Class cls) {
-        if (cls.getOperations().isEmpty()) {
-            return;
-        }
-
-        writer.println("    // Custom operations from class diagram (TODO: implement)");
-
-        for (Operation op : cls.getOperations()) {
-            generateCustomOperation(writer, cls, op);
-        }
-    }
-
     private void generateUpdateMethod(PrintWriter writer, String className, Class cls) {
         String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
@@ -777,49 +764,6 @@ public class SpringServiceGenerator {
         }
 
         writer.println("        return " + repoName + ".save(existing);");
-        writer.println("    }");
-        writer.println();
-    }
-
-    private void generateCustomOperation(PrintWriter writer, Class cls, Operation op) {
-        String operName = op.getName();
-        String returnType = removePackageNames(op.getReturnType() != null ? op.getReturnType() : "void");
-
-        // docs
-        writer.println("    /**");
-
-        for (Parameter param : op.getParameters()) {
-            writer.println("     * @param " + param.getName() + " " + removePackageNames(param.getType()));
-        }
-
-        if (!returnType.equals("void")) {
-            writer.println("     * @return " + returnType);
-        }
-
-        writer.println("     * @throws UnsupportedOperationException until implemented with Sequence Diagram");
-        writer.println("     */");
-
-        // assinatura
-        writer.print("    public " + returnType + " " + operName + "(");
-
-        // o tamos a gerar so no Generator, nao na classe, mas secalhar teria mais sentido meter o id logo no diagrama
-        writer.print("Long id");
-
-        if (!op.getParameters().isEmpty()) {
-            writer.print(", ");
-            for (int i = 0; i < op.getParameters().size(); i++) {
-                Parameter param = op.getParameters().get(i);
-                writer.print(removePackageNames(param.getType()) + " " + param.getName());
-                if (i < op.getParameters().size() - 1) {
-                    writer.print(", ");
-                }
-            }
-        }
-
-        writer.println(") {");
-        writer.println("        throw new UnsupportedOperationException(");
-        writer.println("            \"Method '" + operName + "' not yet implemented. \"");
-        writer.println("        );");
         writer.println("    }");
         writer.println();
     }
@@ -922,4 +866,172 @@ public class SpringServiceGenerator {
     }
 
 
+
+    /**
+     * Diagramas de sequencia
+     * */
+
+    private void generateCustomOperations(PrintWriter writer, Class cls, List<Interaction> interactions, List<Class> allClasses) {
+        if (cls.getOperations().isEmpty()) {
+            return;
+        }
+
+        writer.println("    // operations (TODO: implement)");
+
+        for (Operation op : cls.getOperations()) {
+            Interaction interaction = findInteractionForOperation(cls, op, interactions, allClasses);
+            generateCustomOperation(writer, cls, op, interaction);
+        }
+    }
+
+    private void generateCustomOperation(PrintWriter writer, Class cls, Operation op, Interaction
+            interaction) {
+        String className = cls.getName();
+        String varName = lowercaseFirstLetter(className);
+        String repoName = varName + "Repository";
+        String operName = op.getName();
+        String returnType = removePackageNames(op.getReturnType());
+
+        // assign metodo
+        writer.println();
+        writer.println("    public " + returnType + " " + operName + "(Long id");
+        for (Parameter param : op.getParameters()) {
+            String paramType = removePackageNames(param.getType());
+            writer.println("        , " + paramType + " " + param.getName());
+        }
+        writer.println("    ) {");
+
+        if (interaction != null) {
+            generateMethodBodyFromInteraction(writer, cls, op, interaction);
+        } else {
+            writer.println("        throw new UnsupportedOperationException(");
+            writer.println("            \"Method '" + operName + "' not yet implemented. \"");
+            writer.println("        );");
+        }
+
+        writer.println("    }");
+    }
+
+    private void generateMethodBodyFromInteraction(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
+        String className = cls.getName();
+        String varName = lowercaseFirstLetter(className);
+        String repoName = varName + "Repository";
+
+        // a class que é "Owner" (a do serviço)  é loaded
+        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(id)");
+        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found: \" + id));");
+        writer.println();
+
+        // construir um map com lifeline ID -> nome variavel java
+        // cada lifeline corresponde a uma variavel
+        Map<String, String> lifelineVarMap = new HashMap<>();
+
+        // mapear lifeline da classe para a variavel do fetch
+        for (Lifeline lifeline : interaction.getLifelines()) {
+            if (lifeline.getType().equals(className)) {
+                lifelineVarMap.put(lifeline.getId(), varName);
+            }
+        }
+
+        // mapear lifelines dos parametros para os nomes dos parametros
+        // para ja assim, e fazer nome+type match com fallback
+        for (Parameter param : op.getParameters()) {
+            String paramType = removePackageNames(param.getType());
+
+            // exact name + type match
+            for (Lifeline lifeline : interaction.getLifelines()) {
+                if (lifeline.getType() != null
+                        && lifeline.getType().equals(paramType)
+                        && lifeline.getRepresents() != null
+                        && lifeline.getRepresents().equals(param.getName())
+                        && !lifelineVarMap.containsKey(lifeline.getId())) {
+                    lifelineVarMap.put(lifeline.getId(), param.getName());
+                }
+            }
+
+            // (fallback) type-only match if theres unmappeds
+            for (Lifeline lifeline : interaction.getLifelines()) {
+                if (lifeline.getType() != null
+                        && lifeline.getType().equals(paramType)
+                        && !lifelineVarMap.containsKey(lifeline.getId())) {
+                    lifelineVarMap.put(lifeline.getId(), param.getName());
+                }
+            }
+        }
+
+        // Agora iterar mensagens e gerar chamadas de metodo
+        Map<String, Integer> varCount = new HashMap<>(); // para gerar nomes unicos tipo var1, var2 se houver multiplas lifelines do mesmo tipo
+        varCount.put(varName, 1); // contar a variavel do fetch inicial
+
+        boolean entry = false;
+        for (Message msg : interaction.getMessages()) {
+            if(!entry) {
+                // ignorar a do ponto de entrada
+                entry = true;
+                continue;
+            }
+
+            if("reply".equals(msg.getMessageSort())) continue; // ignorar mensagens de retorno para ja
+
+            String targetVar = lifelineVarMap.getOrDefault(
+                    msg.getTarget().getId(),
+                    msg.getTarget().getRepresents()
+            );
+
+            // construir lista dos argumentos
+            StringBuilder args = new StringBuilder();
+            for (int i = 0; i < msg.getArguments().size(); i++) {
+                if (i > 0) args.append(", ");
+                args.append(msg.getArguments().get(i).getName());
+            }
+
+            // gerar a linha de codigo
+            if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
+                String returnType = msg.getReturnType();
+                String returnVar = lowercaseFirstLetter(returnType);
+
+                // lidar conflitos de nome
+                int count = varCount.getOrDefault(returnVar, 0);
+                String uniqueVar = count == 0 ? returnVar : returnVar + count;
+                varCount.put(returnVar, count + 1);
+
+                writer.println("        " + returnType + " " + uniqueVar + " = " + targetVar + "." +
+                        msg.getName() + "(" + args + ");");
+            } else {
+                writer.println("        " + targetVar + "." + msg.getName() + "(" + args + ");");
+            }
+        }
+
+        // dar save e return
+
+        writer.println();
+        writer.println("        return " + repoName + ".save(" + varName + ");");
+    }
+
+    // Encontrar o diagrama correspondente a uma operaão
+    // Fica assim para ja, depois para ter mais organizado ou associamos dentro da ferramenta ou msm ao fazer o diagrama no nome
+    private Interaction findInteractionForOperation(Class cls, Operation op, List<Interaction>
+            interactions, List<Class> allClasses) {
+
+        // Pegar nos nomes das classes
+        Set<String> classNames = allClasses.stream()
+                .map(Class::getName)
+                .collect(Collectors.toSet());
+
+        for (Interaction interaction : interactions) {
+            for (Message msg : interaction.getMessages()) {
+                // ponto de entrada pode ser o nome da operação ou o nome do diagrama de sequencia
+                //if(!"synchCall".equals(msg.getMessageSort())) continue; // só  interessam mensagens sync
+                if(msg.getSource() == null || msg.getTarget() == null) continue;
+
+                String sourceType = msg.getSource().getType();
+                if(classNames.contains(sourceType)) continue;
+
+                if(msg.getName().equals(op.getName()) && msg.getTarget().getType().equals(cls.getName())) return interaction;
+                break;
+            }
+        }
+
+        return null;
+    }
 }

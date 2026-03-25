@@ -14,7 +14,7 @@ public class ValidationGenerator {
         this.oclTranslator = new OCLTranslator();
     }
     /**
-     * gen validate() for a class
+     * gera função validate() para uma classe
      * public java.util.List<String> validate() {
      *     java.util.List<String> errors = new java.util.ArrayList<>();
      *
@@ -69,10 +69,6 @@ public class ValidationGenerator {
     /**
      * validate() method with specific list of invariants
      * para depois na ferramenta poder selecionar quais
-     *
-     * @param writer PrintWriter to write code to
-     * @param cls Class being validated
-     * @param invariants Specific invariants to include
      */
     public void generateValidateMethod(PrintWriter writer, Class cls, List<Invariant> invariants) {
         if (invariants.isEmpty()) {

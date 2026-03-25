@@ -11,6 +11,7 @@ public class SequenceDiagramParser {
     private Model model;
     private MetaModel metaModel;
 
+    // igual al class parser, tenho de mudar a estrutura para os dois usarem o mesmo
     public void loadModel(String xmiFile) throws Exception{
 
         // caminhos dos ficheiros de configuração do SDMetrics (para uml 2.0)
@@ -59,6 +60,7 @@ public class SequenceDiagramParser {
         return interactions;
     }
 
+    // parse de uma interação, incluindo lifelines e mensagens
     private Interaction parseInteraction(ModelElement element) {
         Interaction interaction = new Interaction();
 
@@ -78,6 +80,7 @@ public class SequenceDiagramParser {
             }
         }
 
+        // parse messages entre as lifelines
         Collection<?> messages = element.getSetAttribute("messages");
         if (messages != null) {
             // ordenar pela ordem no documento XMI (senao vem a toa)

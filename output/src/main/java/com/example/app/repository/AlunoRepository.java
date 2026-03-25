@@ -1,16 +1,16 @@
 package com.example.app.repository;
 
-import com.example.app.models.Leitor;
+import com.example.app.models.Aluno;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
- * Repository for Leitor entity
+ * Repository for Aluno entity
  * Spring Data JPA generates a base implementation automatically
  */
 @Repository
-public interface LeitorRepository extends JpaRepository<Leitor, Long> {
+public interface AlunoRepository extends JpaRepository<Aluno, Long> {
 
     // Automatic CRUD methods provided by JpaRepository:
     // - save(entity)
@@ -21,12 +21,12 @@ public interface LeitorRepository extends JpaRepository<Leitor, Long> {
     // - existsById(id)
 
     // Query methods (Spring generates implementation):
-    List<Leitor> findByNome(String nome);
-    List<Leitor> findByNomeContaining(String nome);
+    List<Aluno> findByNome(String nome);
+    List<Aluno> findByNomeContaining(String nome);
     boolean existsByNome(String nome);
 
-    List<Leitor> findByEmail(String email);
-    List<Leitor> findByEmailContaining(String email);
+    List<Aluno> findByEmail(String email);
+    List<Aluno> findByEmailContaining(String email);
     boolean existsByEmail(String email);
 
 }

@@ -34,7 +34,7 @@ public class VpParser {
 
 
     /**
-     * Para Extrair os qualifiers, SD metrics nao consegue direito
+     * Para Extrair os qualifiers, SD metrics nao consegue direito porque está muito nested e nao possui ids
      * <ownedEnd> -> <qualifier> -> <modelRef value="id"/> -> <packagedElement xmi:id="id">
      */
 

@@ -2,6 +2,7 @@ package generator.spring;
 
 import model.*;
 import model.Class;
+import model.sequence.*;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class SpringControllerGenerator {
     private String outputDirectory;
@@ -20,14 +22,14 @@ public class SpringControllerGenerator {
     }
 
     // gera todos os controladores
-    public void generateControllers(List<Class> classes, List<Association> associations) throws IOException {
+    public void generateControllers(List<Class> classes, List<Association> associations, List<Interaction> interactions) throws IOException {
         System.out.println("Generating Spring REST controllers...");
 
         String controllerDir = outputDirectory + "/src/main/java/com/example/app/controllers";
         new java.io.File(controllerDir).mkdirs();
 
         for (Class cls : classes) {
-            generateController(cls, classes, associations, controllerDir);
+            generateController(cls, classes, associations, controllerDir, interactions);
         }
 
         generateExceptionHandler(controllerDir);
@@ -35,7 +37,7 @@ public class SpringControllerGenerator {
         System.out.println("Generation of controllers completed.");
     }
 
-    private void generateController(Class cls, List<Class> allClasses, List<Association> associations, String outputDir) throws IOException {
+    private void generateController(Class cls, List<Class> allClasses, List<Association> associations, String outputDir, List<Interaction> interactions) throws IOException {
         String className = cls.getName();
         String filename = outputDir + "/" + className + "Controller.java";
 
@@ -63,13 +65,16 @@ public class SpringControllerGenerator {
             writer.println();
 
             // dependencias (servicos)
-            generateDependencies(writer, className);
+            generateDependencies(writer, cls, allClasses);
 
             // CRUD endpoints
             generateCrudEndpoints(writer, cls);
 
             // endpoints para as relações
             generateRelationEndpoints(writer, cls, associations);
+
+            // custom operation endpoints (sequence diag)
+            generateCustomOperationEndpoints(writer, cls, interactions, allClasses);
 
             writer.println("}");
         }
@@ -334,12 +339,43 @@ public class SpringControllerGenerator {
             }
         }
 
+        Set<String> extraServices = new HashSet<>();
+        for (Operation op : cls.getOperations()) {
+            for (Parameter param : op.getParameters()) {
+                for (Class c : allClasses) {
+                    if (c.getName().equals(param.getType()) && !c.getName().equals(cls.getName())) {
+                        extraServices.add(c.getName());
+                    }
+                }
+            }
+        }
+        for (String extra : extraServices) {
+            writer.println("import " + basePackage + ".service." + extra + "Service;");
+        }
+
         writer.println();
     }
 
-    private void generateDependencies(PrintWriter writer, String className) {
+    private void generateDependencies(PrintWriter writer, Class cls, List<Class> allClasses) {
+        String className = cls.getName();
         writer.println("    private final " + className + "Service " +
                 toLowerCaseFirst(className) + "Service;");
+
+        // para cada param de cada operação, se for uma entidade, adicionar como dependência
+        Set<String> extraServices = new HashSet<>();
+        for (Operation op : cls.getOperations()) {
+            for (Parameter param : op.getParameters()) {
+                for (Class c : allClasses) {
+                    if (c.getName().equals(param.getType()) && !c.getName().equals(cls.getName())) {
+                        extraServices.add(c.getName());
+                    }
+                }
+            }
+        }
+        for (String extra : extraServices) {
+            writer.println("    private final " + extra + "Service " + toLowerCaseFirst(extra) + "Service;");
+        }
+
         writer.println();
     }
 
@@ -477,6 +513,120 @@ public class SpringControllerGenerator {
         }
 
         System.out.println("Generated exception handler: " + filename);
+    }
+
+    /***
+     * Diagramas sequencia
+     */
+
+    private void generateCustomOperationEndpoints(PrintWriter writer, Class cls, List<Interaction>
+            interactions, List<Class> allClasses) {
+        if (cls.getOperations().isEmpty()) return;
+
+        String className = cls.getName();
+        String serviceName = toLowerCaseFirst(className) + "Service";
+
+        writer.println();
+        writer.println("    // Custom Operation Endpoints dos diagramas sequencia");
+
+        for (Operation op : cls.getOperations()) {
+            Interaction interaction = findInteractionForOperation(cls, op, interactions, allClasses);
+
+            writer.println();
+
+            // method sign and @Post for now
+            writer.println("    @PostMapping(\"/{id}/" + op.getName() + "\")");
+            writer.print("    public ResponseEntity<?> " + op.getName() + "(\n");
+            writer.print("            @PathVariable Long id");
+
+            // para cada param: tipos -> @RequestParam Long paramNameId
+            //                  normais -> @RequestParam tipo paramName
+
+            for (Parameter param : op.getParameters()) {
+                String paramType = removePackageNames(param.getType());
+                boolean isEntity = false;
+                for (Class c : allClasses) {
+                    if (c.getName().equals(paramType)) {
+                        isEntity = true;
+                        break;
+                    }
+                }
+
+                if (isEntity) {
+                    writer.print(",\n            @RequestParam Long " + param.getName() + "Id");
+                } else {
+                    writer.print(",\n            @RequestParam " + paramType + " " + param.getName());
+                }
+            }
+            writer.println(") {");
+
+            // get entidades
+
+            for (Parameter param : op.getParameters()) {
+                String paramType = removePackageNames(param.getType());
+                boolean isEntity = false;
+                for (Class c : allClasses) {
+                    if (c.getName().equals(paramType)) {
+                        isEntity = true;
+                        break;
+                    }
+                }
+
+                if (isEntity) {
+                    String paramServiceName = toLowerCaseFirst(paramType) + "Service";
+                    writer.println("        " + paramType + " " + param.getName() + " = " + paramServiceName
+                            + ".findById(" + param.getName() + "Id)");
+                    writer.println("            .orElseThrow(() -> new RuntimeException(\"" + paramType + " " +
+                            "not found: \" + " + param.getName() + "Id));");
+                }
+            }
+
+            // chamar o serviço
+            writer.println();
+            StringBuilder args = new StringBuilder("id");
+            for (Parameter param : op.getParameters()) {
+                args.append(", ").append(param.getName());
+            }
+
+            String returnType = op.getReturnType();
+            if (returnType != null && !"void".equals(returnType)) {
+                writer.println("        " + returnType + " result = " + serviceName + "." + op.getName() +
+                        "(" + args + ");");
+                writer.println("        return ResponseEntity.ok(result);");
+            } else {
+                writer.println("        " + serviceName + "." + op.getName() + "(" + args + ");");
+                writer.println("        return ResponseEntity.ok().build();");
+            }
+
+            writer.println("    }");
+
+        }
+    }
+    // Encontrar o diagrama correspondente a uma operaão
+    // Fica assim para ja, depois para ter mais organizado ou associamos dentro da ferramenta ou msm ao fazer o diagrama no nome
+    private Interaction findInteractionForOperation(Class cls, Operation op, List<Interaction>
+            interactions, List<Class> allClasses) {
+
+        // Pegar nos nomes das classes
+        Set<String> classNames = allClasses.stream()
+                .map(Class::getName)
+                .collect(Collectors.toSet());
+
+        for (Interaction interaction : interactions) {
+            for (Message msg : interaction.getMessages()) {
+                // ponto de entrada pode ser o nome da operação ou o nome do diagrama de sequencia
+                //if(!"synchCall".equals(msg.getMessageSort())) continue; // só  interessam mensagens sync
+                if(msg.getSource() == null || msg.getTarget() == null) continue;
+
+                String sourceType = msg.getSource().getType();
+                if(classNames.contains(sourceType)) continue;
+
+                if(msg.getName().equals(op.getName()) && msg.getTarget().getType().equals(cls.getName())) return interaction;
+                break;
+            }
+        }
+
+        return null;
     }
 
 }

@@ -9,8 +9,8 @@ import java.util.regex.Pattern;
  * parsing OCL de notas
  * formato:
  *   context <ClassName> inv <InvariantName>: <OCLExpression>
-
  *
+ *  "context <ClassName> não é necessário se ligar a nota a classe
  * */
 public class VpAnnotationsParser {
     public static Invariant parseInvariant(String noteBody){

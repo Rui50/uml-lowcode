@@ -10,7 +10,7 @@ import java.util.List;
 
 /*
 * TODO
-* para as associações - Generalizations (Herança), Dependencies, Realizations
+* para as associações - Dependencies, Realizations
 *
 * */
 

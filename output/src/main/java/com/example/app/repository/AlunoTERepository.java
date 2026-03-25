@@ -1,16 +1,16 @@
 package com.example.app.repository;
 
-import com.example.app.models.Autor;
+import com.example.app.models.AlunoTE;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
- * Repository for Autor entity
+ * Repository for AlunoTE entity
  * Spring Data JPA generates a base implementation automatically
  */
 @Repository
-public interface AutorRepository extends JpaRepository<Autor, Long> {
+public interface AlunoTERepository extends JpaRepository<AlunoTE, Long> {
 
     // Automatic CRUD methods provided by JpaRepository:
     // - save(entity)
@@ -21,12 +21,16 @@ public interface AutorRepository extends JpaRepository<Autor, Long> {
     // - existsById(id)
 
     // Query methods (Spring generates implementation):
-    List<Autor> findByNacionlidade(String nacionlidade);
-    List<Autor> findByNacionlidadeContaining(String nacionlidade);
-    boolean existsByNacionlidade(String nacionlidade);
+    List<AlunoTE> findByEmpresa(String empresa);
+    List<AlunoTE> findByEmpresaContaining(String empresa);
+    boolean existsByEmpresa(String empresa);
 
-    List<Autor> findByNome(String nome);
-    List<Autor> findByNomeContaining(String nome);
+    List<AlunoTE> findByNome(String nome);
+    List<AlunoTE> findByNomeContaining(String nome);
     boolean existsByNome(String nome);
+
+    List<AlunoTE> findByEmail(String email);
+    List<AlunoTE> findByEmailContaining(String email);
+    boolean existsByEmail(String email);
 
 }

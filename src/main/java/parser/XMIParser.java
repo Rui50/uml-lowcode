@@ -99,18 +99,20 @@ public class XMIParser {
             for (Object attributeObj : attributes){
                 ModelElement attributeElement = (ModelElement) attributeObj;
 
-                // as associações também aparecem como atributos se tiverem role
+                // as associações também aparecem como atributos
                 // tirar porque são tratados depois
                 ModelElement associationRef = (ModelElement) attributeElement.getRefAttribute("association");
                 if (associationRef != null) {
                     continue;
                 }
 
+                // parsing dos atributos "normais"
                 Attribute attribute = parseAttribute(attributeElement);
                 cl.addAttribute(attribute);
             }
         }
 
+        // operações da classe
         Collection<?> operations = element.getSetAttribute("ownedoperations");
         if (operations != null) {
             for (Object operationObj : operations){
@@ -133,6 +135,7 @@ public class XMIParser {
         return cl;
     }
 
+    // para cada atributo obter nome, tipo e visibilidade
     private Attribute parseAttribute(ModelElement element) {
         Attribute attribute = new Attribute();
 
@@ -151,6 +154,10 @@ public class XMIParser {
         return attribute;
     }
 
+    /**
+     * para cada operação obter nome visibilidade
+     * tipos no return e parâmetros
+     */
     private Operation parseOperation(ModelElement element) {
         Operation operation = new Operation();
 
@@ -159,17 +166,18 @@ public class XMIParser {
         String visibility = element.getPlainAttribute("visibility");
         operation.setVisibility(visibility != null ? visibility : "public");
 
-       // tipos de retorno e parâmetros
+       // tipos de return e parâmetros
         Collection<?> parameters = element.getSetAttribute("ownedparameters");
 
         if (parameters != null) {
             for(Object paramObj : parameters) {
 
                 ModelElement paramElement = (ModelElement) paramObj;
+                // direction do parâmetro (in, out, return)
                 String direction = paramElement.getPlainAttribute("kind");
 
                 if (direction.equals("return")){
-                    // é um tipo de retorno
+                    // é um tipo de return
 
                     String genericType = paramElement.getPlainAttribute("generictype");
                     //System.out.println("Generic type for return: " + genericType);
@@ -178,6 +186,7 @@ public class XMIParser {
                     } else {
                         // fallback
                         ModelElement type = (ModelElement) paramElement.getRefAttribute("parametertype");
+                        System.out.println("had to use fallback for return type of operation " + operation.getName() + ".");
                         if (type != null) {
                             operation.setReturnType(type.getName());
                         }
@@ -197,6 +206,9 @@ public class XMIParser {
         return operation;
     }
 
+    /****
+     * para cada parâmetro obter nome, tipo e direção (in, out, inout)
+     */
     private Parameter parseParameter(ModelElement element, String direction) {
         Parameter parameter = new Parameter();
 
@@ -207,13 +219,12 @@ public class XMIParser {
 
         String genericType = element.getPlainAttribute("generictype");
 
-        //System.out.println("Generic type for parameter " + parameter.getName() + ": " + genericType);
-
         if (genericType != null && !genericType.trim().isEmpty()) {
             parameter.setType(genericType);
         } else {
             // fallback
             ModelElement type = (ModelElement) element.getRefAttribute("parametertype");
+            System.out.println("had to use fallback for return type of parameter " + parameter.getName() + ".");
             if (type != null) {
                 parameter.setType(type.getName());
             } else {
@@ -246,7 +257,7 @@ public class XMIParser {
             Collection<?> memberEnds = associationElement.getSetAttribute("memberends");
 
             if (memberEnds != null && memberEnds.size() == 2) {
-                // meter numa lista
+                // meter os dois lados numa lista, considerar a origim como o primeiro e o destino como o segundo se for necessário
                 List<ModelElement> ends = new ArrayList<>();
                 for (Object endObj : memberEnds) {
                     ends.add((ModelElement) endObj);
@@ -344,6 +355,9 @@ public class XMIParser {
         return associations;
     }
 
+    /**
+     * Funções relacionadas a herança
+     */
     public List<Generalization> getGeneralizations() {
         return parseGeneralizations();
     }
@@ -379,46 +393,16 @@ public class XMIParser {
         return generalizations;
     }
 
-
-    public Model getModel() {
-        return model;
-    }
-
-    public MetaModel getMetaModel() {
-        return metaModel;
-    }
-
-    private String buildMultiplicity(String lower, String upper) {
-        // ambos null -> sem multiplicidade
-        if (lower == null && upper == null) {
-            return null;
-        }
-
-        // só lower
-        if (upper == null) {
-            return lower;
-        }
-
-        // só upper
-        if (lower == null) {
-            return upper;
-        }
-
-        // ambos iguais -> simplifica "1..1" -> "1"
-        if (lower.equals(upper)) {
-            return lower;
-        }
-
-        // ambos diferentes -> "lower..upper"
-        return lower + ".." + upper;
-    }
-
+    /*
+    * Enquanto nao se faz na ferramenta, o OCL vem em notas
+    * notas sao carregadas ao inicializar o parser para poder associar as invariantes às classes certas
+     */
 
     private void loadAnnotationsFromComments(){
         System.out.println("loading ocl annotation");
 
         List<ModelElement> comments = model.getAcceptedElements(
-            metaModel.getType("comment")
+                metaModel.getType("comment")
         );
 
         System.out.println("Found " + comments.size() + " comments.");
@@ -460,5 +444,40 @@ public class XMIParser {
         }
     }
 
+    /**
+     * Auxiliares
+     */
 
+    public Model getModel() {
+        return model;
+    }
+
+    public MetaModel getMetaModel() {
+        return metaModel;
+    }
+
+    private String buildMultiplicity(String lower, String upper) {
+        // ambos null -> sem multiplicidade
+        if (lower == null && upper == null) {
+            return null;
+        }
+
+        // só lower
+        if (upper == null) {
+            return lower;
+        }
+
+        // só upper
+        if (lower == null) {
+            return upper;
+        }
+
+        // ambos iguais -> simplifica "1..1" -> "1"
+        if (lower.equals(upper)) {
+            return lower;
+        }
+
+        // ambos diferentes -> "lower..upper"
+        return lower + ".." + upper;
+    }
 }

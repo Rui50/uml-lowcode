@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<uml:Model name="teseeee" xmi:id="HNMXhjmGAqACRwBO" xmi:version="2.1" xmlns:uml="http://www.eclipse.org/uml2/2.0.0/UML" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1">
+<uml:Model name="Escola" xmi:id="HNMXhjmGAqACRwBO" xmi:version="2.1" xmlns:uml="http://www.eclipse.org/uml2/2.0.0/UML" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1">
 	<xmi:Documentation exporter="Visual Paradigm" exporterVersion="7.0.2">
 		<xmi:Extension extender="Visual Paradigm">
 			<nickname exportedFromDifferentName="false"/>
@@ -13951,7 +13951,7 @@
 					<qualityScore value="-1"/>
 				</xmi:Extension>
 			</lifeline>
-			<message messageSort="synchCall" name="transferirAluno(a : Aluno, t : Turma)" receiveEvent="W9doiLmGAqACRwmL" sendEvent="W9doiLmGAqACRwmK" xmi:id="69doiLmGAqACRwmI" xmi:type="uml:Message">
+			<message messageSort="synchCall" name="transferirAluno(a : Aluno, novaTurma : Turma)" receiveEvent="W9doiLmGAqACRwmL" sendEvent="W9doiLmGAqACRwmK" xmi:id="69doiLmGAqACRwmI" xmi:type="uml:Message">
 				<xmi:Extension extender="Visual Paradigm">
 					<number xmi:value="1"/>
 					<asynshronous xmi:value="false"/>
@@ -14082,7 +14082,7 @@
 					<type value="Turma"/>
 				</xmi:Extension>
 			</ownedAttribute>
-			<lifeline coveredBy="B57oiLmGAqACRwns h63oiLmGAqACRwoF" name="aluno" represents="XY1oiLmGAqACRwli_represents" xmi:id="XY1oiLmGAqACRwli" xmi:type="uml:Lifeline">
+			<lifeline coveredBy="B57oiLmGAqACRwns h63oiLmGAqACRwoF" name="a" represents="XY1oiLmGAqACRwli_represents" xmi:id="XY1oiLmGAqACRwli" xmi:type="uml:Lifeline">
 				<xmi:Extension extender="Visual Paradigm">
 					<active xmi:value="false"/>
 					<stopped xmi:value="false"/>
@@ -14110,7 +14110,7 @@
 					<qualityScore value="-1"/>
 				</xmi:Extension>
 			</lifeline>
-			<ownedAttribute name="aluno" xmi:id="XY1oiLmGAqACRwli_represents">
+			<ownedAttribute name="a" xmi:id="XY1oiLmGAqACRwli_represents">
 				<xmi:Extension extender="Visual Paradigm">
 					<type value="Aluno"/>
 				</xmi:Extension>
@@ -14138,7 +14138,7 @@
 				<afilterByViewpointLegend value="true"/>
 				<apmAuthor value="nonam"/>
 				<apmCreateDateTime value="1771169209477"/>
-				<apmLastModified value="1774278476688"/>
+				<apmLastModified value="1774378556085"/>
 				<ateamworkCreateDateTime value="0"/>
 				<ashowShapeLegend value="false"/>
 				<ashowConnectorLegend value="false"/>
@@ -14181,8 +14181,8 @@
 				<aconnectorModelElementNameAlignment value="4"/>
 				<amodelElementNameAlignment value="4"/>
 				<ashapePresentationOption value="0"/>
-				<azoomRatio value="1.2"/>
-				<amaximized value="true"/>
+				<azoomRatio value="1.1"/>
+				<amaximized value="false"/>
 				<ax value="0"/>
 				<ay value="0"/>
 				<awidth value="1119"/>
@@ -15014,7 +15014,7 @@
 				<afilterByViewpointLegend value="true"/>
 				<apmAuthor value="nonam"/>
 				<apmCreateDateTime value="1774108168557"/>
-				<apmLastModified value="1774111364656"/>
+				<apmLastModified value="1774391837274"/>
 				<ateamworkCreateDateTime value="0"/>
 				<ashowShapeLegend value="false"/>
 				<ashowConnectorLegend value="false"/>
@@ -15058,7 +15058,7 @@
 				<amodelElementNameAlignment value="4"/>
 				<ashapePresentationOption value="0"/>
 				<azoomRatio value="1.4"/>
-				<amaximized value="false"/>
+				<amaximized value="true"/>
 				<ax value="0"/>
 				<ay value="0"/>
 				<awidth value="1119"/>
@@ -15210,7 +15210,7 @@
 			</uml:DiagramElement>
 			<uml:DiagramElement geometry="721,40,70,266" preferredShapeType="InteractionLifeLine" subject="XY1oiLmGAqACRwli" xmi:id="XY1oiLmGAqACRwlh">
 				<xmi:Extension extender="Visual Paradigm">
-					<captionBounds value="720,40,70,30"/>
+					<captionBounds value="720,40,70,15"/>
 					<captionInternalWidth value="-2147483648"/>
 					<captionInternalHeight value="-2147483648"/>
 					<captionVisible value="true"/>
@@ -15333,7 +15333,7 @@
 			</uml:DiagramElement>
 			<uml:DiagramElement fromDiagramElement="82ZoiLmGAqACRwlO" geometry="219,114;465,114;" preferredShapeType="Message" subject="69doiLmGAqACRwmI" toDiagramElement="BrVoiLmGAqACRwlY" xmi:id="59doiLmGAqACRwmM">
 				<xmi:Extension extender="Visual Paradigm">
-					<captionBounds value="238,94,205,15"/>
+					<captionBounds value="210,93,258,15"/>
 					<captionInternalWidth value="-2147483648"/>
 					<captionInternalHeight value="-2147483648"/>
 					<captionVisible value="true"/>
@@ -15379,7 +15379,7 @@
 			</uml:DiagramElement>
 			<uml:DiagramElement fromDiagramElement="BrVoiLmGAqACRwlY" geometry="474,152;752,152;" preferredShapeType="Message" subject="B57oiLmGAqACRwnq" toDiagramElement="XY1oiLmGAqACRwlh" xmi:id="t57oiLmGAqACRwnt">
 				<xmi:Extension extender="Visual Paradigm">
-					<captionBounds value="543,132,137,15"/>
+					<captionBounds value="542,132,138,15"/>
 					<captionInternalWidth value="-2147483648"/>
 					<captionInternalHeight value="-2147483648"/>
 					<captionVisible value="true"/>
@@ -15425,7 +15425,7 @@
 			</uml:DiagramElement>
 			<uml:DiagramElement fromDiagramElement="BrVoiLmGAqACRwlY" geometry="474,210;752,210;" preferredShapeType="Message" subject="h63oiLmGAqACRwoD" toDiagramElement="XY1oiLmGAqACRwlh" xmi:id="F63oiLmGAqACRwoG">
 				<xmi:Extension extender="Visual Paradigm">
-					<captionBounds value="516,190,193,15"/>
+					<captionBounds value="515,190,194,15"/>
 					<captionInternalWidth value="-2147483648"/>
 					<captionInternalHeight value="-2147483648"/>
 					<captionVisible value="true"/>

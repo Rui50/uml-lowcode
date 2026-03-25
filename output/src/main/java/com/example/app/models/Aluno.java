@@ -4,15 +4,19 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.*;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Builder
+@SuperBuilder
 @Entity
-@Table(name = "leitor")
-public class Leitor{
+@Table(name = "aluno")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "type")
+@DiscriminatorValue("Aluno")
+public class Aluno{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,16 +26,16 @@ public class Leitor{
     @Column(name = "nome")
     private String nome;
 
-    @Column(name = "numCartao")
-    private int numCartao;
+    @Column(name = "numero")
+    private int numero;
 
     @Column(name = "email")
     private String email;
 
-    // relationship: Leitor -> Emprestimo
-    @OneToMany
-    @JoinColumn(name = "leitor_id")
-    @Builder.Default
-    private List<Emprestimo> emprestimos = new ArrayList<>();
+    // relationship: Aluno -> Turno
+    @JsonIgnoreProperties("alunos")
+    @ManyToOne
+    @JoinColumn(name = "turno_id")
+    private Turno turno;
 
 }
