@@ -34,6 +34,7 @@ public class Turno{
      * Validate entity with OCL
      * 
      * - CapacidadePositiva: self.capacidade > 0
+     * - MaxCap: self.alunos->size() <= self.capacidade
      * 
      * @return list of validation errors (empty if valid)
      */
@@ -43,6 +44,11 @@ public class Turno{
         // Invariant: CapacidadePositiva
         if (!(this.capacidade > 0)) {
             errors.add("Invariant 'CapacidadePositiva' violated.");
+        }
+
+        // Invariant: MaxCap
+        if (!(this.alunos.size() <= this.capacidade)) {
+            errors.add("Invariant 'MaxCap' violated.");
         }
 
         return errors;

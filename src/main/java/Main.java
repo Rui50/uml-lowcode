@@ -18,7 +18,10 @@ import model.Generalization;
 
 import javax.swing.*;
 
-
+import ocl.OCLLexer;
+import ocl.OCLParser;
+import ocl.OCLToJavaVisitor;
+import org.antlr.v4.runtime.*;
 /**
  * TODO
  * - fix em coisas como List<Aluno> porque fica como Teste.Aluno (nome do proj)
@@ -30,8 +33,9 @@ public class Main {
 
         // paths for the parser
         //String xmiFilePath = "test-models/test_classe_1_2.uml";
-        String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
+        //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
         //String xmiFilePath = "test-models/aluno_turma_class_sequence.uml";
+        String xmiFilePath = "test-models/aluno_turma_class_sequence_ocl.uml";
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 
@@ -132,6 +136,16 @@ public class Main {
                 String java = translator.translateToJava(i.getOclExpression());
                 System.out.println("OCL: " + i.getOclExpression());
                 System.out.println("Java: " + java);
+            }
+        }
+
+        for (Class c : classes) {
+            for (Invariant i : c.getInvariants()) {
+                OCLLexer lexer = new OCLLexer(CharStreams.fromString(i.getOclExpression()));
+                OCLParser parser2 = new OCLParser(new CommonTokenStream(lexer));
+                String java = new OCLToJavaVisitor().visit(parser2.standaloneExpression());
+                System.out.println("OCL:   " + i.getOclExpression());
+                System.out.println("ANTLR: " + java);
             }
         }
     }

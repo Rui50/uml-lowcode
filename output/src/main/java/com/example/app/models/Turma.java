@@ -41,6 +41,7 @@ public class Turma{
      * Validate entity with OCL
      * 
      * - MaxAlunos: self.alunos -> size() <= 30
+     * - MAlunos: self.alunos->forAll(a | a.numero > 0)
      * 
      * @return list of validation errors (empty if valid)
      */
@@ -50,6 +51,11 @@ public class Turma{
         // Invariant: MaxAlunos
         if (!(this.alunos.size() <= 30)) {
             errors.add("Invariant 'MaxAlunos' violated.");
+        }
+
+        // Invariant: MAlunos
+        if (!(this.alunos->forAll(a | a.numero > 0))) {
+            errors.add("Invariant 'MAlunos' violated.");
         }
 
         return errors;
