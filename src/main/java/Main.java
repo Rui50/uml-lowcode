@@ -11,6 +11,8 @@ import generator.spring.SpringServiceGenerator;
 import generator.spring.SpringControllerGenerator;
 import generator.spring.SpringProjectSettings;
 
+import generator.CLI.JavaProjectGenerator;
+
 import java.util.List;
 
 import model.Class;
@@ -102,37 +104,48 @@ public class Main {
         // gerar código
         String outputDir = "output";
 
+        String generateWhat = "cli"; // "plain" "spring" "cli"
+
         // plain java classes
-        CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
-        codeGenerator.generate();
+        if (generateWhat.equals("plain")) {
+            CodeGenerator codeGenerator = new CodeGenerator(classes, associations, outputDir);
+            codeGenerator.generate();
+        }
 
-        // spring boot - settings
-        SpringProjectSettings settings = new SpringProjectSettings();
-        // settings.setBasePackage("pt.uminho.app");
-        // settings.setDatabaseType(DatabaseType.POSTGRESQL);
-        // settings.setApplicationName("my-app");
-        // settings.setServerPort(9090);
+        if (generateWhat.equals("spring")) {
+            // spring boot - settings
+            SpringProjectSettings settings = new SpringProjectSettings();
+            // settings.setBasePackage("pt.uminho.app");
+            // settings.setDatabaseType(DatabaseType.POSTGRESQL);
+            // settings.setApplicationName("my-app");
+            // settings.setServerPort(9090);
 
-        SpringProjectGenerator project = new SpringProjectGenerator(settings, outputDir);
-        project.generateProjectStructure();
+            SpringProjectGenerator project = new SpringProjectGenerator(settings, outputDir);
+            project.generateProjectStructure();
 
-        String basePackage = settings.getBasePackage();
+            String basePackage = settings.getBasePackage();
 
-        // gerar entidades
-        SpringEntityGenerator entityGenerator = new SpringEntityGenerator(outputDir, basePackage);
-        entityGenerator.generateEntities(classes, associations);
+            // gerar entidades
+            SpringEntityGenerator entityGenerator = new SpringEntityGenerator(outputDir, basePackage);
+            entityGenerator.generateEntities(classes, associations);
 
-        // gerar repositórios
-        SpringRepositoryGenerator repositoryGenerator = new SpringRepositoryGenerator(outputDir, basePackage);
-        repositoryGenerator.generateRepositories(classes);
+            // gerar repositórios
+            SpringRepositoryGenerator repositoryGenerator = new SpringRepositoryGenerator(outputDir, basePackage);
+            repositoryGenerator.generateRepositories(classes);
 
-        // gerar serviços
-        SpringServiceGenerator serviceGenerator = new SpringServiceGenerator(outputDir, basePackage);
-        serviceGenerator.generateServices(classes, associations, interactions);
+            // gerar serviços
+            SpringServiceGenerator serviceGenerator = new SpringServiceGenerator(outputDir, basePackage);
+            serviceGenerator.generateServices(classes, associations, interactions);
 
-        // gerar controllers
-        SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir, basePackage);
-        controllerGenerator.generateControllers(classes, associations, interactions);
+            // gerar controllers
+            SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir, basePackage);
+            controllerGenerator.generateControllers(classes, associations, interactions);
+        }
+
+        if (generateWhat.equals("cli")) {
+            JavaProjectGenerator cliGenerator = new JavaProjectGenerator(outputDir);
+            cliGenerator.generate(classes, associations);
+        }
 
         // ver as operações OCL (invariantes para ja)
         OCLTranslator translator = new OCLTranslator();
