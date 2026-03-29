@@ -9,6 +9,7 @@ import generator.spring.SpringEntityGenerator;
 import generator.spring.SpringRepositoryGenerator;
 import generator.spring.SpringServiceGenerator;
 import generator.spring.SpringControllerGenerator;
+import generator.spring.SpringProjectSettings;
 
 import java.util.List;
 
@@ -100,33 +101,37 @@ public class Main {
 
         // gerar código
         String outputDir = "output";
-        String templateDir = "templates/spring-boot-template-h2";
+
         // plain java classes
         CodeGenerator codeGenerator = new generator.CodeGenerator(classes, associations, outputDir);
         codeGenerator.generate();
 
-        // spring boot
-        SpringProjectGenerator project = new SpringProjectGenerator(
-            templateDir,
-            outputDir
-        );
+        // spring boot - settings
+        SpringProjectSettings settings = new SpringProjectSettings();
+        // settings.setBasePackage("pt.uminho.app");
+        // settings.setDatabaseType(DatabaseType.POSTGRESQL);
+        // settings.setApplicationName("my-app");
+        // settings.setServerPort(9090);
 
+        SpringProjectGenerator project = new SpringProjectGenerator(settings, outputDir);
         project.generateProjectStructure();
 
+        String basePackage = settings.getBasePackage();
+
         // gerar entidades
-        SpringEntityGenerator entityGenerator = new SpringEntityGenerator(outputDir);
+        SpringEntityGenerator entityGenerator = new SpringEntityGenerator(outputDir, basePackage);
         entityGenerator.generateEntities(classes, associations);
 
         // gerar repositórios
-        SpringRepositoryGenerator repositoryGenerator = new SpringRepositoryGenerator(outputDir);
+        SpringRepositoryGenerator repositoryGenerator = new SpringRepositoryGenerator(outputDir, basePackage);
         repositoryGenerator.generateRepositories(classes);
 
         // gerar serviços
-        SpringServiceGenerator serviceGenerator = new SpringServiceGenerator(outputDir);
+        SpringServiceGenerator serviceGenerator = new SpringServiceGenerator(outputDir, basePackage);
         serviceGenerator.generateServices(classes, associations, interactions);
 
         // gerar controllers
-        SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir);
+        SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir, basePackage);
         controllerGenerator.generateControllers(classes, associations, interactions);
 
         // ver as operações OCL (invariantes para ja)

@@ -13,10 +13,11 @@ import java.util.stream.Collectors;
 
 public class SpringServiceGenerator {
     public String baseOutputPath;
-    public String basePackage = "com.example.app";
+    public String basePackage;
 
-    public SpringServiceGenerator(String baseOutputPath) {
+    public SpringServiceGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
+        this.basePackage = basePackage;
     }
 
     /**
@@ -26,7 +27,7 @@ public class SpringServiceGenerator {
         System.out.println("Generating Spring services...");
 
         // criar dir
-        String serviceDir = baseOutputPath + "/src/main/java/com/example/app/service";
+        String serviceDir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/service";
         new java.io.File(serviceDir).mkdirs();
 
         for (Class cls : classes){

@@ -95,8 +95,16 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
                 return base + ".get(" + visit(ctx.expression()) + ")";
             }
 
-            // accesso a propriedade: self.alunos -> this.alunos
-            return base + "." + ctx.ID().getText();
+            // accesso a propriedade
+            // se base é "this" (self) -> acesso direto: this.alunos
+            // se base é outro objeto -> usar getter: a.getNumero()
+            String prop = ctx.ID().getText();
+            if ("this".equals(base)) {
+                return base + "." + prop;
+            } else {
+                String getter = "get" + prop.substring(0, 1).toUpperCase() + prop.substring(1);
+                return base + "." + getter + "()";
+            }
         }
 
         if (ctx.ID() != null) return ctx.ID().getText();

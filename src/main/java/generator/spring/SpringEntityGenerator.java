@@ -15,23 +15,26 @@ import model.Association;
 
 public class SpringEntityGenerator {
     private String baseOutputPath;
+    private String basePackage;
 
     // para o tipo de herança, para já user SINGLE_TABLE, depois podemos configurar
     private String inheritanceStrategy = "SINGLE_TABLE";
 
     private ValidationGenerator validationGenerator;
 
-    public SpringEntityGenerator(String baseOutputPath) {
+    public SpringEntityGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
-        this.validationGenerator = new ValidationGenerator();
+        this.basePackage = basePackage;
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations) throws IOException {
         System.out.println("Generating Spring entities...");
 
         // criar path domain
-        String domainPath = baseOutputPath + "/src/main/java/com/example/app/models";
+        String domainPath = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/models";
         new File(domainPath).mkdirs();
+
+        this.validationGenerator = new ValidationGenerator(associations);
 
         for (Class cls : classes) {
             generateEntity(cls, classes, associations, domainPath);
@@ -49,7 +52,7 @@ public class SpringEntityGenerator {
 
         try (PrintWriter writer = new PrintWriter(new File(filename))) {
             // package
-            writer.println("package " + "com.example.app" + ".models;");
+            writer.println("package " + basePackage + ".models;");
             writer.println();
 
             // imports

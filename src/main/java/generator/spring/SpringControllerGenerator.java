@@ -15,17 +15,18 @@ import java.util.stream.Collectors;
 
 public class SpringControllerGenerator {
     private String outputDirectory;
-    private String basePackage = "com.example.app";
+    private String basePackage;
 
-    public SpringControllerGenerator(String outputDirectory) {
+    public SpringControllerGenerator(String outputDirectory, String basePackage) {
         this.outputDirectory = outputDirectory;
+        this.basePackage = basePackage;
     }
 
     // gera todos os controladores
     public void generateControllers(List<Class> classes, List<Association> associations, List<Interaction> interactions) throws IOException {
         System.out.println("Generating Spring REST controllers...");
 
-        String controllerDir = outputDirectory + "/src/main/java/com/example/app/controllers";
+        String controllerDir = outputDirectory + "/src/main/java/" + basePackage.replace('.', '/') + "/controllers";
         new java.io.File(controllerDir).mkdirs();
 
         for (Class cls : classes) {

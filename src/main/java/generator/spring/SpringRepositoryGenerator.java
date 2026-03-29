@@ -11,10 +11,11 @@ import java.util.List;
 
 public class SpringRepositoryGenerator {
     private String baseOutputPath;
-    private String basePackage = "com.example.app";
+    private String basePackage;
 
-    public SpringRepositoryGenerator(String baseOutputPath) {
+    public SpringRepositoryGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
+        this.basePackage = basePackage;
     }
 
     /**
@@ -26,7 +27,7 @@ public class SpringRepositoryGenerator {
         // que estende JpaRepository ou CrudRepository
         System.out.println("Generating Spring Data JPA repositories...");
 
-        String repositoryDir = baseOutputPath + "/src/main/java/com/example/app/repository";
+        String repositoryDir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/repository";
         new File(repositoryDir).mkdirs();
 
         for (Class cls : classes){

@@ -54,7 +54,7 @@ public class Turma{
         }
 
         // Invariant: MAlunos
-        if (!(this.alunos->forAll(a | a.numero > 0))) {
+        if (!(this.alunos.values().stream().allMatch(a -> a.getNumero() > 0))) {
             errors.add("Invariant 'MAlunos' violated.");
         }
 

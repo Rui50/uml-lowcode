@@ -2,46 +2,62 @@ package generator.spring;
 
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 public class SpringProjectGenerator {
-    private String templateDirectory;
+    private SpringProjectSettings settings;
     private String outputDirectory;
+    private String baseTemplateDir = "templates/spring-boot-static";
 
-    public SpringProjectGenerator(String templateDirectory, String outputDirectory) {
-        this.templateDirectory = templateDirectory;
+    public SpringProjectGenerator(SpringProjectSettings settings, String outputDirectory) {
+        this.settings = settings;
         this.outputDirectory = outputDirectory;
     }
 
     /**
-     * Copia template para output
+     * Gera a estrutura do projeto Spring Boot, copia a base, gera o pom.xml, application.properties, classe principal e classe de teste.
      * */
     public void generateProjectStructure() throws IOException {
-        System.out.println("Generating Spring Boot project from template in: " + templateDirectory);
-
-        File template = new File(templateDirectory);
-        if (!template.exists() || !template.isDirectory()) {
-            System.err.println("Template directory does not exist: " + templateDirectory);
-            return;
-        }
+        System.out.println("Generating Spring Boot project structure...");
 
         File output = new File(outputDirectory);
         if (output.exists()) {
             deleteDirectory(output);
         }
 
-        copyDirectory(template.toPath(), output.toPath());
-        System.out.println("Project structure generated in: " + outputDirectory);
+        createDirectoryStructure();
+        copyBaseTemplate();
+        generatePomXml();
+        generateApplicationProperties();
+        generateMainClass();
+        generateTestClass();
 
+        System.out.println("Project structure generated in: " + outputDirectory);
     }
 
-    /**
-     * copia dir recursivamente
-     * */
-    private void copyDirectory(Path source, Path target) throws IOException {
+    private void createDirectoryStructure() throws IOException {
+        String packagePath = settings.getPackagePath();
+
+        String[] dirs = {
+            "src/main/java/" + packagePath,
+            "src/main/resources",
+            "src/test/java/" + packagePath
+        };
+        for (String dir : dirs) {
+            Path path = Path.of(outputDirectory, dir);
+            Files.createDirectories(path);
+        }
+    }
+
+    private void copyBaseTemplate() throws IOException {
+        Path source = new File(baseTemplateDir).toPath();
+        Path target = new File(outputDirectory).toPath();
+
         Files.walk(source).forEach(sourcePath -> {
             try {
                 Path targetPath = target.resolve(source.relativize(sourcePath));
@@ -57,9 +73,229 @@ public class SpringProjectGenerator {
         });
     }
 
+    private void generatePomXml() throws IOException {
+        String filename = outputDirectory + "/pom.xml";
+        try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
+            w.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            w.println("<project xmlns=\"http://maven.apache.org/POM/4.0.0\"");
+            w.println("         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+            w.println("         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 " +
+                    "https://maven.apache.org/xsd/maven-4.0.0.xsd\">");
+            w.println("    <modelVersion>4.0.0</modelVersion>");
+            w.println();
+            w.println("    <parent>");
+            w.println("        <groupId>org.springframework.boot</groupId>");
+            w.println("        <artifactId>spring-boot-starter-parent</artifactId>");
+            w.println("        <version>4.0.3</version>");
+            w.println("        <relativePath/>");
+            w.println("    </parent>");
+            w.println();
+            // groupId: package sem a ultima parte, artifactId: ultima parte
+            String basePackage = settings.getBasePackage();
+            int lastDot = basePackage.lastIndexOf('.');
+            String groupId = lastDot > 0 ? basePackage.substring(0, lastDot) : basePackage;
+            String artifactId = lastDot > 0 ? basePackage.substring(lastDot + 1) : basePackage;
+
+            w.println("    <groupId>" + groupId + "</groupId>");
+            w.println("    <artifactId>" + artifactId + "</artifactId>");
+            w.println("    <version>0.0.1-SNAPSHOT</version>");
+            w.println("    <name>" + settings.getApplicationName() + "</name>");
+            w.println("    <description>Spring Template</description>");
+            w.println("    <url/>");
+            w.println("    <licenses>");
+            w.println("        <license/>");
+            w.println("    </licenses>");
+            w.println("    <developers>");
+            w.println("        <developer/>");
+            w.println("    </developers>");
+            w.println("    <scm>");
+            w.println("        <connection/>");
+            w.println("        <developerConnection/>");
+            w.println("        <tag/>");
+            w.println("        <url/>");
+            w.println("    </scm>");
+            w.println();
+            w.println("    <properties>");
+            w.println("        <java.version>17</java.version>");
+            w.println("    </properties>");
+            w.println();
+            w.println("    <dependencies>");
+            // Spring Data JPA
+            w.println("        <dependency>");
+            w.println("            <groupId>org.springframework.boot</groupId>");
+            w.println("            <artifactId>spring-boot-starter-data-jpa</artifactId>");
+            w.println("        </dependency>");
+            // Spring Web
+            w.println("        <dependency>");
+            w.println("            <groupId>org.springframework.boot</groupId>");
+            w.println("            <artifactId>spring-boot-starter-webmvc</artifactId>");
+            w.println("        </dependency>");
+            // Lombok
+            w.println("        <dependency>");
+            w.println("            <groupId>org.projectlombok</groupId>");
+            w.println("            <artifactId>lombok</artifactId>");
+            w.println("            <optional>true</optional>");
+            w.println("        </dependency>");
+
+            // Database dependency
+            switch (settings.getDatabaseType()) {
+                case H2:
+                    w.println("        <dependency>");
+                    w.println("            <groupId>com.h2database</groupId>");
+                    w.println("            <artifactId>h2</artifactId>");
+                    w.println("            <scope>runtime</scope>");
+                    w.println("        </dependency>");
+                    break;
+                case POSTGRESQL:
+                    w.println("        <dependency>");
+                    w.println("            <groupId>org.postgresql</groupId>");
+                    w.println("            <artifactId>postgresql</artifactId>");
+                    w.println("            <scope>runtime</scope>");
+                    w.println("        </dependency>");
+                    break;
+                case MYSQL:
+                    w.println("        <dependency>");
+                    w.println("            <groupId>com.mysql</groupId>");
+                    w.println("            <artifactId>mysql-connector-j</artifactId>");
+                    w.println("            <scope>runtime</scope>");
+                    w.println("        </dependency>");
+                    break;
+            }
+
+            // Test dependencies
+            w.println("        <dependency>");
+            w.println("            <groupId>org.springframework.boot</groupId>");
+            w.println("            <artifactId>spring-boot-starter-data-jpa-test</artifactId>");
+            w.println("            <scope>test</scope>");
+            w.println("        </dependency>");
+            w.println("        <dependency>");
+            w.println("            <groupId>org.springframework.boot</groupId>");
+            w.println("            <artifactId>spring-boot-starter-webmvc-test</artifactId>");
+            w.println("            <scope>test</scope>");
+            w.println("        </dependency>");
+
+            w.println("    </dependencies>");
+            w.println();
+            w.println("    <build>");
+            w.println("        <plugins>");
+            w.println("            <plugin>");
+            w.println("                <groupId>org.apache.maven.plugins</groupId>");
+            w.println("                <artifactId>maven-compiler-plugin</artifactId>");
+            w.println("                <configuration>");
+            w.println("                    <annotationProcessorPaths>");
+            w.println("                        <path>");
+            w.println("                            <groupId>org.projectlombok</groupId>");
+            w.println("                            <artifactId>lombok</artifactId>");
+            w.println("                        </path>");
+            w.println("                    </annotationProcessorPaths>");
+            w.println("                </configuration>");
+            w.println("            </plugin>");
+            w.println("            <plugin>");
+            w.println("                <groupId>org.springframework.boot</groupId>");
+            w.println("                <artifactId>spring-boot-maven-plugin</artifactId>");
+            w.println("                <configuration>");
+            w.println("                    <excludes>");
+            w.println("                        <exclude>");
+            w.println("                            <groupId>org.projectlombok</groupId>");
+            w.println("                            <artifactId>lombok</artifactId>");
+            w.println("                        </exclude>");
+            w.println("                    </excludes>");
+            w.println("                </configuration>");
+            w.println("            </plugin>");
+            w.println("        </plugins>");
+            w.println("    </build>");
+            w.println();
+            w.println("</project>");
+        }
+    }
+
+    private void generateApplicationProperties() throws IOException {
+        String filename = outputDirectory + "/src/main/resources/application.properties";
+        try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
+            w.println("spring.application.name=" + settings.getApplicationName());
+            w.println("server.port=" + settings.getServerPort());
+            w.println();
+
+            switch (settings.getDatabaseType()) {
+                case H2:
+                    w.println("spring.datasource.url=jdbc:h2:mem:testdb");
+                    w.println("spring.datasource.driver-class-name=org.h2.Driver");
+                    w.println("spring.datasource.username=sa");
+                    w.println("spring.datasource.password=");
+                    w.println("spring.h2.console.enabled=true");
+                    w.println("spring.h2.console.path=/h2-console");
+                    w.println("spring.jpa.hibernate.ddl-auto=create-drop");
+                    break;
+                case POSTGRESQL:
+                    w.println("spring.datasource.url=jdbc:postgresql://localhost:5432/" + settings.getApplicationName());
+                    w.println("spring.datasource.driver-class-name=org.postgresql.Driver");
+                    w.println("spring.datasource.username=postgres");
+                    w.println("spring.datasource.password=postgres");
+                    w.println("spring.jpa.hibernate.ddl-auto=update");
+                    break;
+                case MYSQL:
+                    w.println("spring.datasource.url=jdbc:mysql://localhost:3306/" + settings.getApplicationName());
+                    w.println("spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver");
+                    w.println("spring.datasource.username=root");
+                    w.println("spring.datasource.password=root");
+                    w.println("spring.jpa.hibernate.ddl-auto=update");
+                    break;
+            }
+
+            w.println();
+            w.println("spring.jpa.show-sql=true");
+            w.println("spring.jpa.properties.hibernate.format_sql=true");
+            w.println();
+            w.println("logging.level.org.springframework=INFO");
+            w.println("logging.level." + settings.getBasePackage() + "=DEBUG");
+        }
+    }
+
+    private void generateMainClass() throws IOException {
+        String packagePath = settings.getPackagePath();
+        String className = settings.getMainClassName();
+        String filename = outputDirectory + "/src/main/java/" + packagePath + "/" + className + ".java";
+
+        try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
+            w.println("package " + settings.getBasePackage() + ";");
+            w.println();
+            w.println("import org.springframework.boot.SpringApplication;");
+            w.println("import org.springframework.boot.autoconfigure.SpringBootApplication;");
+            w.println();
+            w.println("@SpringBootApplication");
+            w.println("public class " + className + " {");
+            w.println();
+            w.println("    public static void main(String[] args) {");
+            w.println("        SpringApplication.run(" + className + ".class, args);");
+            w.println("    }");
+            w.println("}");
+        }
+    }
+
+    private void generateTestClass() throws IOException {
+        String packagePath = settings.getPackagePath();
+        String className = settings.getMainClassName() + "Tests";
+        String filename = outputDirectory + "/src/test/java/" + packagePath + "/" + className + ".java";
+
+        try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
+            w.println("package " + settings.getBasePackage() + ";");
+            w.println();
+            w.println("import org.springframework.boot.test.context.SpringBootTest;");
+            w.println("import org.junit.jupiter.api.Test;");
+            w.println();
+            w.println("@SpringBootTest");
+            w.println("class " + className + " {");
+            w.println();
+            w.println("    @Test");
+            w.println("    void contextLoads() {");
+            w.println("    }");
+            w.println("}");
+        }
+    }
+
     /**
-    * Deleta dir recursivamente, para ja apaga para ser mais facil seguir mudanças
-    * */
+     * Deleta dir recursivamente, para ja apaga para ser mais facil seguir mudanças
+     * */
     private void deleteDirectory(File directory) throws IOException {
         File[] files = directory.listFiles();
         if (files != null) {
