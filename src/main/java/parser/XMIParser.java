@@ -30,7 +30,10 @@ public class XMIParser {
 
     private Map<String, Qualifier> qualifiers;
 
+    // chave: elementId da classe
     private Map<String, List<Invariant>> invariantsCache = new HashMap<>();
+    // lista de [attrName, expression]
+    private Map<String, List<String[]>> initsCache = new HashMap<>();
 
 
     public void loadModel(String xmiFile) throws Exception{
@@ -130,6 +133,24 @@ public class XMIParser {
                 cl.addInvariant(invariant);
             }
             System.out.println("Class " + cl.getName() + " has " + invariants.size() + " invariant(s) from comments.");
+        }
+
+        // aplicar inits aos atributos
+        List<String[]> inits = initsCache.get(classId);
+        if (inits != null) {
+            for (String[] init : inits) {
+                String attrName = init[0];
+                String expression = init[1];
+
+                // encontrar o atributo correspondente
+                for (Attribute attr : cl.getAttributes()) {
+                    if (attr.getName().equals(attrName)) {
+                        attr.setInitExpression(expression);
+                        System.out.println("Class " + cl.getName() + " attribute '" + attrName + "' init: " + expression);
+                        break;
+                    }
+                }
+            }
         }
 
         return cl;
@@ -414,31 +435,45 @@ public class XMIParser {
                 continue;
             }
 
+            // tentar parsing de invariante
             Invariant invariant = VpAnnotationsParser.parseInvariant(body);
 
-            if (invariant == null) {
+            // tentar parsing de init se não for invariante
+            String[] init = (invariant == null) ? VpAnnotationsParser.parseInit(body) : null;
+
+            if (invariant == null && init == null) {
                 continue;
             }
 
-            // obter elementos anotados
+            // obter elementos anotados (classe a que a nota está ligada)
             Collection<?> annotatedElements = comment.getSetAttribute("annotatedelement");
 
             if (annotatedElements == null || annotatedElements.isEmpty()) {
-                System.out.println("Invariant '" + invariant.getName() + "' has no annotated elements.");
+                if (invariant != null) {
+                    System.out.println("Invariant '" + invariant.getName() + "' has no annotated elements.");
+                } else {
+                    System.out.println("Init for '" + init[0] + "' has no annotated elements.");
+                }
                 continue;
             }
 
             for (Object annotatedElementObj : annotatedElements) {
                 ModelElement annotatedElement = (ModelElement) annotatedElementObj;
-
-                // guardar associação, temp num map
-
                 String elementId = annotatedElement.getXMIID();
 
-                if(!invariantsCache.containsKey(elementId)){
-                    invariantsCache.put(elementId, new ArrayList<>());
+                if (invariant != null) {
+                    if (!invariantsCache.containsKey(elementId)) {
+                        invariantsCache.put(elementId, new ArrayList<>());
+                    }
+                    invariantsCache.get(elementId).add(invariant);
                 }
-                invariantsCache.get(elementId).add(invariant);
+
+                if (init != null) {
+                    if (!initsCache.containsKey(elementId)) {
+                        initsCache.put(elementId, new ArrayList<>());
+                    }
+                    initsCache.get(elementId).add(init);
+                }
             }
 
         }

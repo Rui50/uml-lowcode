@@ -8,6 +8,8 @@ public class Attribute {
     private String type;
     private String visibility;
 
+    private String initExpression; // expressão ocl para inicialização do atributo
+
     public Attribute() {
         this.name = "";
         this.type = "";
@@ -42,6 +44,18 @@ public class Attribute {
 
     public void setVisibility(String visibility) {
         this.visibility = visibility;
+    }
+
+    public String getInitExpression() {
+        return initExpression;
+    }
+
+    public void setInitExpression(String initExpression) {
+        this.initExpression = initExpression;
+    }
+
+    public boolean hasInit() {
+        return initExpression != null && !initExpression.isEmpty();
     }
 
     @Override
