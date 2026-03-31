@@ -1,3 +1,4 @@
+import model.Attribute;
 import model.annotations.Invariant;
 import model.sequence.Interaction;
 import ocl.OCLTranslator;
@@ -38,7 +39,7 @@ public class Main {
         //String xmiFilePath = "test-models/test_classe_1_2.uml";
         //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
         //String xmiFilePath = "test-models/aluno_turma_class_sequence.uml";
-        String xmiFilePath = "test-models/aluno_turma_class_sequence_ocl.uml";
+        String xmiFilePath = "test-models/aluno_turma_class_sequence_ocl_init.uml";
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 
@@ -104,7 +105,7 @@ public class Main {
         // gerar código
         String outputDir = "output";
 
-        String generateWhat = "cli"; // "plain" "spring" "cli"
+        String generateWhat = "spring"; // "plain" "spring" "cli"
 
         // plain java classes
         if (generateWhat.equals("plain")) {
@@ -164,6 +165,18 @@ public class Main {
                 String java = new OCLToJavaVisitor().visit(parser2.standaloneExpression());
                 System.out.println("OCL:   " + i.getOclExpression());
                 System.out.println("ANTLR: " + java);
+            }
+        }
+
+        for (Class c : classes) {
+            for (Attribute a : c.getAttributes()) {
+                if (a.getInitExpression() != null) {
+                    OCLLexer lexer = new OCLLexer(CharStreams.fromString(a.getInitExpression()));
+                    OCLParser parser2 = new OCLParser(new CommonTokenStream(lexer));
+                    String java = new OCLToJavaVisitor().visit(parser2.standaloneExpression());
+                    System.out.println("OCL:   " + a.getInitExpression());
+                    System.out.println("ANTLR: " + java);
+                }
             }
         }
     }
