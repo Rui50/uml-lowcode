@@ -19,6 +19,7 @@ import model.Relationship;
 import model.Generalization;
 
 import model.annotations.Invariant;
+import model.annotations.Precondition;
 import parser.VpParser;
 import parser.VpParser.Qualifier;
 import parser.VpAnnotationsParser;
@@ -34,7 +35,8 @@ public class XMIParser {
     private Map<String, List<Invariant>> invariantsCache = new HashMap<>();
     // lista de [attrName, expression]
     private Map<String, List<String[]>> initsCache = new HashMap<>();
-
+    // pre cond
+    private Map<String, List<String[]>> preconditionsCache = new HashMap<>();
 
     public void loadModel(String xmiFile) throws Exception{
 
@@ -147,6 +149,25 @@ public class XMIParser {
                     if (attr.getName().equals(attrName)) {
                         attr.setInitExpression(expression);
                         System.out.println("Class " + cl.getName() + " attribute '" + attrName + "' init: " + expression);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // aplicar precondições as operações
+        List<String[]> preconditions = preconditionsCache.get(classId);
+        if (preconditions != null) {
+            for (String[] pre : preconditions) {
+                String operationName = pre[0];
+                String preName = pre[1];
+                String expression = pre[2];
+
+                // encontrar a operação correspondente
+                for (Operation op : cl.getOperations()) {
+                    if (op.getName().equals(operationName)) {
+                        op.addPrecondition(new Precondition(preName, expression, "Precondition '" + preName + "' violated."));
+                        System.out.println("Class " + cl.getName() + " operation '" + operationName + "' pre: " + preName);
                         break;
                     }
                 }
@@ -441,7 +462,9 @@ public class XMIParser {
             // tentar parsing de init se não for invariante
             String[] init = (invariant == null) ? VpAnnotationsParser.parseInit(body) : null;
 
-            if (invariant == null && init == null) {
+            String[] precondition = (invariant == null && init == null) ? VpAnnotationsParser.parsePreCondition(body) : null;
+
+            if (invariant == null && init == null && precondition == null) {
                 continue;
             }
 
@@ -451,8 +474,10 @@ public class XMIParser {
             if (annotatedElements == null || annotatedElements.isEmpty()) {
                 if (invariant != null) {
                     System.out.println("Invariant '" + invariant.getName() + "' has no annotated elements.");
-                } else {
+                } else if (init != null) {
                     System.out.println("Init for '" + init[0] + "' has no annotated elements.");
+                } else {
+                    System.out.println("Precondition '" + precondition[1] + "' has no annotated elements.");
                 }
                 continue;
             }
@@ -473,6 +498,13 @@ public class XMIParser {
                         initsCache.put(elementId, new ArrayList<>());
                     }
                     initsCache.get(elementId).add(init);
+                }
+
+                if (precondition != null) {
+                    if (!preconditionsCache.containsKey(elementId)) {
+                        preconditionsCache.put(elementId, new ArrayList<>());
+                    }
+                    preconditionsCache.get(elementId).add(precondition);
                 }
             }
 

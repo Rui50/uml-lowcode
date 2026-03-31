@@ -2,6 +2,7 @@ package model;
 
 import java.util.ArrayList;
 import java.util.List;
+import model.annotations.Precondition;
 
 /**
  * Representa uma operação de uma classe UML.
@@ -13,11 +14,14 @@ public class Operation {
     private String visibility;
     private List<Parameter> parameters;
 
+    private List<Precondition> preconditions = new ArrayList<>();
+
     public Operation() {
         this.name = "";
         this.returnType = "void";
         this.visibility = "";
         this.parameters = new ArrayList<>();
+        this.preconditions = new ArrayList<>();
     }
 
     public Operation(String name, String returnType, String visibility) {
@@ -25,6 +29,7 @@ public class Operation {
         this.returnType = returnType;
         this.visibility = visibility;
         this.parameters = new ArrayList<>();
+        this.preconditions = new ArrayList<>();
     }
 
     public String getName() {
@@ -57,6 +62,14 @@ public class Operation {
 
     public void addParameter(Parameter parameter) {
         this.parameters.add(parameter);
+    }
+
+    public List<Precondition> getPreconditions() {
+        return preconditions;
+    }
+
+    public void addPrecondition(Precondition precondition) {
+        this.preconditions.add(precondition);
     }
 
     @Override

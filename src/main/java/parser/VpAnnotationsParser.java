@@ -69,4 +69,35 @@ public class VpAnnotationsParser {
 
         return null;
     }
+
+    /**
+     * parsing de pre condições OCL
+     * formato: context ClassName::operationName(params) pre name: expression
+     * @return String[3] com [0] = nome da operação, [1] = nome da precondição, [2] = expressão OCL, ou null
+     */
+    public static String[] parsePreCondition(String noteBody) {
+        if (noteBody == null || noteBody.isEmpty()) {
+            return null;
+        }
+
+        Pattern pattern = Pattern.compile(
+                "context\\s+\\w+::(\\w+)\\s*\\(.*?\\)\\s*pre\\s+(\\w+):\\s*(.*)",
+                Pattern.DOTALL
+        );
+
+        Matcher matcher = pattern.matcher(noteBody.trim());
+
+        if (matcher.find()) {
+            String operationName = matcher.group(1);
+            String preName = matcher.group(2);
+            String expression = matcher.group(3).replaceAll("\\s+", " ").trim();
+
+            System.out.println("Parsed Precondition - Operation: " + operationName +
+                    ", Name: " + preName + ", Expression: " + expression);
+
+            return new String[]{operationName, preName, expression};
+        }
+
+        return null;
+    }
 }

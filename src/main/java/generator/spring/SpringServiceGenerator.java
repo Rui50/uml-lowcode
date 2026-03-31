@@ -2,6 +2,7 @@ package generator.spring;
 
 import model.*;
 import model.Class;
+import model.annotations.Precondition;
 import model.sequence.*;
 import org.w3c.dom.Attr;
 
@@ -876,8 +877,7 @@ public class SpringServiceGenerator {
         }
     }
 
-    private void generateCustomOperation(PrintWriter writer, Class cls, Operation op, Interaction
-            interaction) {
+    private void generateCustomOperation(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
         String className = cls.getName();
         String varName = lowercaseFirstLetter(className);
         String repoName = varName + "Repository";
@@ -892,6 +892,13 @@ public class SpringServiceGenerator {
             writer.println("        , " + paramType + " " + param.getName());
         }
         writer.println("    ) {");
+
+        for (Precondition pre : op.getPreconditions()) {
+            String javaExpr = translateOclToJava(pre.getOclExpression());
+            writer.println("        if (!(" + javaExpr + ")) {");
+            writer.println("            throw new IllegalStateException(\"" + pre.getMessage() + "\");");
+            writer.println("        }");
+        }
 
         if (interaction != null) {
             generateMethodBodyFromInteraction(writer, cls, op, interaction);
@@ -1025,5 +1032,16 @@ public class SpringServiceGenerator {
         }
 
         return null;
+    }
+
+    private String translateOclToJava(String oclExpression) {
+        try {
+            ocl.OCLLexer lexer = new ocl.OCLLexer(org.antlr.v4.runtime.CharStreams.fromString(oclExpression));
+            ocl.OCLParser parser = new ocl.OCLParser(new org.antlr.v4.runtime.CommonTokenStream(lexer));
+            return new ocl.OCLToJavaVisitor().visit(parser.standaloneExpression());
+        } catch (Exception e) {
+            System.err.println("Warning: Could not translate precondition: " + oclExpression);
+            return oclExpression;
+        }
     }
 }
