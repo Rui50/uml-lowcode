@@ -18,6 +18,7 @@ import java.util.List;
 
 import model.Class;
 import model.Association;
+import model.Enumeration;
 import model.Generalization;
 
 import javax.swing.*;
@@ -38,8 +39,9 @@ public class Main {
         // paths for the parser
         //String xmiFilePath = "test-models/test_classe_1_2.uml";
         //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
-        //String xmiFilePath = "test-models/aluno_turma_class_sequence.uml";
-        String xmiFilePath = "test-models/aluno_turma_class_sequence_ocl_init.uml";
+        //String xmiFilePath = "test-models/aluno_turma_class_sequence_test.uml";
+        //String xmiFilePath = "test-models/aluno_turma_class_sequence_ocl_init.uml";
+        String xmiFilePath = "test-models/aluno_turma_class_enum.uml";
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 
@@ -97,6 +99,19 @@ public class Main {
             fillGeneralizations(classes, generalizations);
         }
 
+        // Parsing das enumerações
+        System.out.println("Parsing enumerations...");
+        List<Enumeration> enumerations = parser.getEnumerations();
+        System.out.println("Enumerations extracted: " + enumerations.size());
+
+        if (enumerations.isEmpty()) {
+            System.out.println("No enumerations found");
+        } else {
+            for (Enumeration e : enumerations) {
+                System.out.println(e);
+            }
+        }
+
         // Parsing dos diagramas de sequencia
         SequenceDiagramParser sequenceParser = new SequenceDiagramParser();
         sequenceParser.loadModel(xmiFilePath);
@@ -105,11 +120,11 @@ public class Main {
         // gerar código
         String outputDir = "output";
 
-        String generateWhat = "spring"; // "plain" "spring" "cli"
+        String generateWhat = "cli"; // "plain" "spring" "cli"
 
         // plain java classes
         if (generateWhat.equals("plain")) {
-            CodeGenerator codeGenerator = new CodeGenerator(classes, associations, outputDir);
+            CodeGenerator codeGenerator = new CodeGenerator(classes, associations, enumerations, outputDir);
             codeGenerator.generate();
         }
 
@@ -128,7 +143,7 @@ public class Main {
 
             // gerar entidades
             SpringEntityGenerator entityGenerator = new SpringEntityGenerator(outputDir, basePackage);
-            entityGenerator.generateEntities(classes, associations);
+            entityGenerator.generateEntities(classes, associations, enumerations);
 
             // gerar repositórios
             SpringRepositoryGenerator repositoryGenerator = new SpringRepositoryGenerator(outputDir, basePackage);
@@ -145,7 +160,7 @@ public class Main {
 
         if (generateWhat.equals("cli")) {
             JavaProjectGenerator cliGenerator = new JavaProjectGenerator(outputDir);
-            cliGenerator.generate(classes, associations);
+            cliGenerator.generate(classes, associations, enumerations);
         }
 
         // ver as operações OCL (invariantes para ja)

@@ -11,6 +11,7 @@ import java.util.List;
 
 import model.Attribute;
 import model.Class;
+import model.Enumeration;
 import model.Association;
 
 public class SpringEntityGenerator {
@@ -22,12 +23,19 @@ public class SpringEntityGenerator {
 
     private ValidationGenerator validationGenerator;
 
+    // nomes das enumerações para saber quando um atributo é enum
+    private java.util.Set<String> enumNames = new java.util.HashSet<>();
+
     public SpringEntityGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations) throws IOException {
+        generateEntities(classes, associations, new ArrayList<>());
+    }
+
+    public void generateEntities(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
         System.out.println("Generating Spring entities...");
 
         // criar path domain
@@ -36,11 +44,41 @@ public class SpringEntityGenerator {
 
         this.validationGenerator = new ValidationGenerator(associations);
 
+        // guardar nomes das enumerações
+        for (Enumeration enumeration : enumerations) {
+            enumNames.add(enumeration.getName());
+        }
+
+        // gerar enums
+        for (Enumeration enumeration : enumerations) {
+            generateEnum(enumeration, domainPath);
+        }
+
         for (Class cls : classes) {
             generateEntity(cls, classes, associations, domainPath);
         }
 
         System.out.println("Entity generation completed.");
+    }
+
+    private void generateEnum(Enumeration enumeration, String modelsDir) throws IOException {
+        String filename = modelsDir + "/" + enumeration.getName() + ".java";
+
+        try (PrintWriter writer = new PrintWriter(new File(filename))) {
+            writer.println("package " + basePackage + ".models;");
+            writer.println();
+            writer.println("public enum " + enumeration.getName() + " {");
+
+            List<String> literals = enumeration.getLiterals();
+            for (int i = 0; i < literals.size(); i++) {
+                String separator = (i < literals.size() - 1) ? "," : ";";
+                writer.println("    " + literals.get(i) + separator);
+            }
+
+            writer.println("}");
+
+            System.out.println("Generated enum: " + enumeration.getName() + ".java");
+        }
     }
 
     /**
@@ -162,6 +200,9 @@ public class SpringEntityGenerator {
     private void generateAttributes(PrintWriter writer, Class cls) {
         writer.println("    // attributes");
         for (Attribute atr : cls.getAttributes()){
+            if (enumNames.contains(atr.getType())) {
+                writer.println("    @Enumerated(EnumType.STRING)");
+            }
             writer.println("    @Column(name = \"" + atr.getName() + "\")");
             if (atr.hasInit()) {
                 String javaInit = translateOclToJava(atr.getInitExpression());

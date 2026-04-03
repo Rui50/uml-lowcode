@@ -3,6 +3,7 @@ package generator.CLI;
 import model.Association;
 import model.Attribute;
 import model.Class;
+import model.Enumeration;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +13,7 @@ import java.util.*;
 public class JavaMenuGenerator {
 
     private String baseOutputPath;
+    private Set<String> enumNames = new HashSet<>();
 
     public JavaMenuGenerator(String baseOutputPath) {
         this.baseOutputPath = baseOutputPath;
@@ -21,6 +23,13 @@ public class JavaMenuGenerator {
      * entrada: gera todos os menus (um por entidade + MainMenu)
      */
     public void generateMenus(List<Class> classes, List<Association> associations) throws IOException {
+        generateMenus(classes, associations, new ArrayList<>());
+    }
+
+    public void generateMenus(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
+        for (Enumeration e : enumerations) {
+            enumNames.add(e.getName());
+        }
         System.out.println("Generating Java Menus...");
 
         String menusPath = baseOutputPath + "/src/menus";
@@ -532,8 +541,13 @@ public class JavaMenuGenerator {
                 w.println("        boolean " + name + " = Boolean.parseBoolean(scanner.nextLine());");
                 break;
             default:
-                w.println("        System.out.print(\"" + name + ": \");");
-                w.println("        String " + name + "Str = scanner.nextLine();");
+                if (enumNames.contains(attr.getType())) {
+                    w.println("        System.out.print(\"" + name + " \" + java.util.Arrays.toString(" + attr.getType() + ".values()) + \": \");");
+                    w.println("        " + attr.getType() + " " + name + " = " + attr.getType() + ".valueOf(scanner.nextLine().trim().toUpperCase());");
+                } else {
+                    w.println("        System.out.print(\"" + name + ": \");");
+                    w.println("        String " + name + "Str = scanner.nextLine();");
+                }
         }
     }
 
@@ -578,11 +592,17 @@ public class JavaMenuGenerator {
                         "(Boolean.parseBoolean(" + name + "Str));");
                 break;
             default:
-                w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
-                        "\"]: \");");
-                w.println("        String " + name + " = scanner.nextLine();");
-                w.println("        if (!" + name + ".isEmpty()) entity.set" + capitalized + "(" + name +
-                        ");");
+                if (enumNames.contains(attr.getType())) {
+                    w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() + \"] \" + java.util.Arrays.toString(" + attr.getType() + ".values()) + \": \");");
+                    w.println("        String " + name + "Str = scanner.nextLine();");
+                    w.println("        if (!" + name + "Str.isEmpty()) entity.set" + capitalized + "(" + attr.getType() + ".valueOf(" + name + "Str.trim().toUpperCase()));");
+                } else {
+                    w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
+                            "\"]: \");");
+                    w.println("        String " + name + " = scanner.nextLine();");
+                    w.println("        if (!" + name + ".isEmpty()) entity.set" + capitalized + "(" + name +
+                            ");");
+                }
                 break;
         }
     }

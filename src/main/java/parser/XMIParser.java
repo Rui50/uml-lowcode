@@ -13,6 +13,7 @@ import com.sdmetrics.util.XMLParser;
 import model.Association;
 import model.Attribute;
 import model.Class;
+import model.Enumeration;
 import model.Operation;
 import model.Parameter;
 import model.Relationship;
@@ -395,6 +396,29 @@ public class XMIParser {
             }
         }
         return associations;
+    }
+
+    // extrair enumerações do modelo
+    public List<Enumeration> getEnumerations() {
+        List<Enumeration> enumerations = new ArrayList<>();
+
+        List<ModelElement> enumElements = model.getAcceptedElements(metaModel.getType("enumeration"));
+
+        for (ModelElement enumElement : enumElements) {
+            Enumeration enumeration = new Enumeration(enumElement.getName());
+
+            Collection<?> literals = enumElement.getSetAttribute("ownedliterals");
+            if (literals != null) {
+                for (Object literalObj : literals) {
+                    ModelElement literalElement = (ModelElement) literalObj;
+                    enumeration.addLiteral(literalElement.getName());
+                }
+            }
+
+            enumerations.add(enumeration);
+        }
+
+        return enumerations;
     }
 
     /**

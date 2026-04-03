@@ -1,6 +1,7 @@
 package generator;
 
 import model.Class;
+import model.Enumeration;
 import model.*;
 
 import java.io.File;
@@ -12,14 +13,20 @@ import java.util.List;
 public class CodeGenerator {
     private List<Class> classes;
     private List <Association> associations;
+    private List<Enumeration> enumerations;
 
     private String outputDirectory;
 
     private ClassGenerator classGenerator;
 
     public CodeGenerator(List<Class> classes, List<Association> associations, String outputDirectory) {
+        this(classes, associations, new java.util.ArrayList<>(), outputDirectory);
+    }
+
+    public CodeGenerator(List<Class> classes, List<Association> associations, List<Enumeration> enumerations, String outputDirectory) {
         this.classes = classes;
         this.associations = associations;
+        this.enumerations = enumerations;
         this.outputDirectory = outputDirectory;
 
         this.classGenerator = new ClassGenerator(outputDirectory);
@@ -36,7 +43,7 @@ public class CodeGenerator {
 
         // gerar código para cada classe
         System.out.println("Generating class structures...");
-        classGenerator.generateClasses(classes, associations);
+        classGenerator.generateClasses(classes, associations, enumerations);
 
         System.out.println("Generation completed");
     }

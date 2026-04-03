@@ -1,6 +1,7 @@
 package generator;
 
 import model.Class;
+import model.Enumeration;
 import model.*;
 
 import java.io.FileWriter;
@@ -23,9 +24,34 @@ public class ClassGenerator {
     }
 
     public void generateClasses(List<Class> classes, List<Association> associations) throws IOException {
+        generateClasses(classes, associations, new ArrayList<>());
+    }
+
+    public void generateClasses(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
+        for (Enumeration enumeration : enumerations) {
+            generateEnum(enumeration);
+        }
         for (Class cls : classes) {
             generateClass(cls, associations);
         }
+    }
+
+    private void generateEnum(Enumeration enumeration) throws IOException {
+        String filename = outputDirectory + "/" + enumeration.getName() + ".java";
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("public enum " + enumeration.getName() + " {");
+
+            List<String> literals = enumeration.getLiterals();
+            for (int i = 0; i < literals.size(); i++) {
+                String separator = (i < literals.size() - 1) ? "," : ";";
+                writer.println("    " + literals.get(i) + separator);
+            }
+
+            writer.println("}");
+        }
+
+        System.out.println("Generated enum: " + filename);
     }
 
     private void generateClass(Class cls, List<Association> associations) throws IOException {

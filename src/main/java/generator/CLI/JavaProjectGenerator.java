@@ -2,10 +2,12 @@ package generator.CLI;
 
 import model.Association;
 import model.Class;
+import model.Enumeration;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -27,6 +29,10 @@ public class JavaProjectGenerator {
      */
 
     public void generate(List<Class> classes, List<Association> associations) throws IOException {
+        generate(classes, associations, new ArrayList<>());
+    }
+
+    public void generate(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
         System.out.println("Generating Java CLI App...");
 
         // limpar output anterior
@@ -44,7 +50,7 @@ public class JavaProjectGenerator {
 
         // entidades
         JavaEntityGenerator entityGenerator = new JavaEntityGenerator(outputDirectory);
-        entityGenerator.generateEntities(classes, associations);
+        entityGenerator.generateEntities(classes, associations, enumerations);
 
         // repositórios
         JavaRepositoryGenerator repoGenerator = new JavaRepositoryGenerator(outputDirectory);
@@ -52,7 +58,7 @@ public class JavaProjectGenerator {
 
         // menus
         JavaMenuGenerator menuGenerator = new JavaMenuGenerator(outputDirectory);
-        menuGenerator.generateMenus(classes, associations);
+        menuGenerator.generateMenus(classes, associations, enumerations);
 
         System.out.println("CLI Application generated in: " + outputDirectory);
     }

@@ -4,6 +4,7 @@ import generator.ValidationGenerator;
 import model.Association;
 import model.Attribute;
 import model.Class;
+import model.Enumeration;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,6 +21,10 @@ public class JavaEntityGenerator {
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations) throws IOException {
+        generateEntities(classes, associations, new ArrayList<>());
+    }
+
+    public void generateEntities(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
         System.out.println("Generating java entities");
 
         String modelsPath = baseOutputPath + "/src/models";
@@ -27,11 +32,35 @@ public class JavaEntityGenerator {
 
         this.validationGenerator = new ValidationGenerator(associations);
 
+        for (Enumeration enumeration : enumerations) {
+            generateEnum(enumeration, modelsPath);
+        }
+
         for (Class cls : classes) {
             generateEntity(cls, classes, associations, modelsPath);
         }
 
         System.out.println("Java entity generation completed.");
+    }
+
+    private void generateEnum(Enumeration enumeration, String modelsDir) throws IOException {
+        String filename = modelsDir + "/" + enumeration.getName() + ".java";
+
+        try (PrintWriter writer = new PrintWriter(new File(filename))) {
+            writer.println("package models;");
+            writer.println();
+            writer.println("public enum " + enumeration.getName() + " {");
+
+            List<String> literals = enumeration.getLiterals();
+            for (int i = 0; i < literals.size(); i++) {
+                String separator = (i < literals.size() - 1) ? "," : ";";
+                writer.println("    " + literals.get(i) + separator);
+            }
+
+            writer.println("}");
+
+            System.out.println("Generated enum: " + enumeration.getName() + ".java");
+        }
     }
 
     private void generateEntity(Class cls, List<Class> allClasses, List<Association> associations, String modelsDir) throws IOException {
