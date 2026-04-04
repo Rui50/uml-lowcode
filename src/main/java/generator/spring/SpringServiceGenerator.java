@@ -83,13 +83,15 @@ public class SpringServiceGenerator {
         // importar a classe do modelo
         writer.println("import " + basePackage + ".models." + cls.getName() + ";");
         writer.println("import " + basePackage + ".repository." + cls.getName() + "Repository;");
+        writer.println("import " + basePackage + ".dto." + cls.getName() + "CreateDTO;");
+        writer.println("import " + basePackage + ".dto." + cls.getName() + "ResponseDTO;");
         writer.println();
         writer.println("import lombok.RequiredArgsConstructor;");
         writer.println("import org.springframework.stereotype.Service;");
         writer.println("import org.springframework.transaction.annotation.Transactional;");
         writer.println();
         writer.println("import java.util.*;");
-        writer.println("import java.util.Optional;");
+        writer.println("import java.util.stream.Collectors;");
         writer.println();
 
         // importar os modelos das entidades se necessário
@@ -195,20 +197,23 @@ public class SpringServiceGenerator {
 
         // findAll()
         writer.println("    /**");
-        writer.println("     * @return list of all entities");
+        writer.println("     * @return list of all entities as DTOs");
         writer.println("     */");
-        writer.println("    public List<" + className + "> findAll() {");
-        writer.println("        return " + repoName + ".findAll();");
+        writer.println("    public List<" + className + "ResponseDTO> findAll() {");
+        writer.println("        return " + repoName + ".findAll().stream()");
+        writer.println("            .map(" + className + "ResponseDTO::fromEntity)");
+        writer.println("            .collect(Collectors.toList());");
         writer.println("    }");
         writer.println();
 
         // findById()
         writer.println("    /**");
         writer.println("     * @param id the entity id");
-        writer.println("     * @return Optional containing the entity if found");
+        writer.println("     * @return Optional containing the entity DTO if found");
         writer.println("     */");
-        writer.println("    public Optional<" + className + "> findById(Long id) {");
-        writer.println("        return " + repoName + ".findById(id);");
+        writer.println("    public Optional<" + className + "ResponseDTO> findById(Long id) {");
+        writer.println("        return " + repoName + ".findById(id)");
+        writer.println("            .map(" + className + "ResponseDTO::fromEntity);");
         writer.println("    }");
         writer.println();
 
@@ -334,7 +339,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Id the " + otherClass + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + " assign" + capitalizeFirstLetter(otherClass) +
+        writer.println("    public " + className + "ResponseDTO assign" + capitalizeFirstLetter(otherClass) +
                 "(Long " + varName + "Id, Long " + otherVar + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -366,7 +371,8 @@ public class SpringServiceGenerator {
 
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
-        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
+        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
         writer.println();
     }
@@ -389,7 +395,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + " remove" + capitalizeFirstLetter(otherClass) +
+        writer.println("    public " + className + "ResponseDTO remove" + capitalizeFirstLetter(otherClass) +
                 "(Long " + varName + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -412,7 +418,8 @@ public class SpringServiceGenerator {
         writer.println("        " + varName + ".set" + capitalizedField + "(null);");
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
-        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
+        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
         writer.println();
     }
@@ -443,7 +450,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + " add" + capitalizeFirstLetter(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO add" + capitalizeFirstLetter(otherPlural) +
                 "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -476,7 +483,8 @@ public class SpringServiceGenerator {
 
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
-        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
+        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
         writer.println();
     }
@@ -503,7 +511,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + " remove" + capitalizeFirstLetter(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO remove" + capitalizeFirstLetter(otherPlural) +
                 "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -536,7 +544,8 @@ public class SpringServiceGenerator {
 
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
-        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
+        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
         writer.println();
     }
@@ -563,7 +572,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + " add" + capitalizeFirstLetter(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO add" + capitalizeFirstLetter(otherPlural) +
                 "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -583,7 +592,8 @@ public class SpringServiceGenerator {
 
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
-        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
+        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
         writer.println();
     }
@@ -608,7 +618,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + " remove" + capitalizeFirstLetter(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO remove" + capitalizeFirstLetter(otherPlural) +
                 "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -629,7 +639,8 @@ public class SpringServiceGenerator {
 
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
-        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
+        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
         writer.println();
     }
@@ -684,13 +695,15 @@ public class SpringServiceGenerator {
         String repoName = varName + "Repository";
 
         writer.println("    /**");
-        writer.println("     * @param " + varName + " the entity to create");
-        writer.println("     * @return the created entity");
+        writer.println("     * @param dto the data to create the entity");
+        writer.println("     * @return the created entity as DTO");
         writer.println("     */");
-        writer.println("    public " + className + " create(" + className + " " + varName + ") {");
-
+        writer.println("    public " + className + "ResponseDTO create(" + className + "CreateDTO dto) {");
+        writer.println("        " + className + " " + varName + " = dto.toEntity();");
+        writer.println();
         generateValidationBeforeSave(writer, cls, varName);
-        writer.println("        return " + repoName + ".save(" + varName + ");");
+        writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
+        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
         writer.println();
     }
@@ -701,49 +714,32 @@ public class SpringServiceGenerator {
 
         writer.println("    /**");
         writer.println("     * @param id the entity id");
-        writer.println("     * @param " + varName + " the entity data to update");
-        writer.println("     * @return the updated entity");
+        writer.println("     * @param dto the data to update");
+        writer.println("     * @return the updated entity as DTO");
         writer.println("     */");
-        writer.println("    public " + className + " update(Long id, " + className + " " + varName + ") {");
-        writer.println("        // Find existing entity");
+        writer.println("    public " + className + "ResponseDTO update(Long id, " + className + "CreateDTO dto) {");
         writer.println("        " + className + " existing = " + repoName + ".findById(id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found: \" + id));");
         writer.println();
 
-        // merge atributos , para ja verificamos todos, enquanto nao temos DTOS TODO
-        // TODO tipos primitivos nao da para verificar null, vou assumir so o int para ja para testes
-        // TODO basicamente o update vai assumir nada null, e depois um PATCH assumo que pode tar null?
-        /*writer.println("        // Update attributes");
-        for (Attribute attr : cls.getAttributes()) {
-            if (attr.getType().equals("int")) continue; // para tipos primitivos, teriamos de usar um wrapper ou outra abordagem para verificar se foi atualizado ou nao
-            String attrName = attr.getName();
-            String getter = "get" + capitalizeFirstLetter(attrName);
-            String setter = "set" + capitalizeFirstLetter(attrName);
-
-            writer.println("        if (" + varName + "." + getter + "() != null) {");
-            writer.println("            existing." + setter + "(" + varName + "." + getter + "());");
-            writer.println("        }");
-        }*/
-
-        if (!cls.getAttributes().isEmpty()) {
-            writer.println("        // Update all attributes");
-            for (Attribute attr : cls.getAttributes()) {
+        // update all attributes from DTO
+        List<Attribute> allAttrs = getAllAttributes(cls);
+        if (!allAttrs.isEmpty()) {
+            writer.println("        // Update attributes from DTO");
+            for (Attribute attr : allAttrs) {
                 String attrName = attr.getName();
                 String prefix = "boolean".equals(attr.getType()) ? "is" : "get";
                 String getter = prefix + capitalizeFirstLetter(attrName);
                 String setter = "set" + capitalizeFirstLetter(attrName);
 
-                writer.println("        existing." + setter + "(" + varName + "." + getter + "());");
+                writer.println("        existing." + setter + "(dto." + getter + "());");
             }
             writer.println();
         }
 
-        writer.println();
-        writer.println("        // para ja coleções nao sao updated aqui");
-        writer.println();
-
         generateValidationBeforeSave(writer, cls, "existing");
-        writer.println("        return " + repoName + ".save(existing);");
+        writer.println("        " + className + " saved = " + repoName + ".save(existing);");
+        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
         writer.println();
     }
@@ -754,6 +750,15 @@ public class SpringServiceGenerator {
         //List<Teste.Aluno> -> List<Aluno>
 
         return type.replaceAll("\\b([A-Za-z_$][\\w$]*\\.)+([A-Za-z_$][\\w$]*)\\b", "$2");
+    }
+
+    private List<Attribute> getAllAttributes(Class cls) {
+        List<Attribute> all = new ArrayList<>();
+        if (cls.getParentClass() != null) {
+            all.addAll(cls.getParentClass().getAttributes());
+        }
+        all.addAll(cls.getAttributes());
+        return all;
     }
 
     private void generateValidationBeforeSave(PrintWriter writer, Class cls, String varName) {

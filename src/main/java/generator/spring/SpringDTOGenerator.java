@@ -1,0 +1,271 @@
+package generator.spring;
+
+import model.Association;
+import model.Attribute;
+import model.Class;
+import model.Enumeration;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.*;
+
+public class SpringDTOGenerator {
+    private String baseOutputPath;
+    private String basePackage;
+    private Set<String> enumNames = new HashSet<>();
+
+    public SpringDTOGenerator(String baseOutputPath, String basePackage) {
+        this.baseOutputPath = baseOutputPath;
+        this.basePackage = basePackage;
+    }
+
+    public void generateDTOs(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
+        System.out.println("Generating Spring DTOs...");
+
+        String dtoDir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/dto";
+        new File(dtoDir).mkdirs();
+
+        for (Enumeration e : enumerations) {
+            enumNames.add(e.getName());
+        }
+
+        for (Class cls : classes) {
+            generateCreateDTO(cls, associations, dtoDir);
+            generateResponseDTO(cls, associations, dtoDir);
+        }
+
+        System.out.println("DTO generation completed.");
+    }
+
+    /**
+     * CreateDTO: only the class's own attributes (no id, no relationships)
+     * Used for POST and PUT
+     */
+    private void generateCreateDTO(Class cls, List<Association> associations, String dtoDir) throws IOException {
+        String className = cls.getName();
+        String filename = dtoDir + "/" + className + "CreateDTO.java";
+
+        try (PrintWriter w = new PrintWriter(new File(filename))) {
+            w.println("package " + basePackage + ".dto;");
+            w.println();
+            w.println("import lombok.*;");
+            w.println("import " + basePackage + ".models." + className + ";");
+
+            // check if any attribute is an enum
+            for (Attribute attr : getAllAttributes(cls)) {
+                if (enumNames.contains(attr.getType())) {
+                    w.println("import " + basePackage + ".models." + attr.getType() + ";");
+                }
+            }
+
+            w.println();
+            w.println("@Getter");
+            w.println("@Setter");
+            w.println("@NoArgsConstructor");
+            w.println("@AllArgsConstructor");
+            w.println("@Builder");
+            w.println("public class " + className + "CreateDTO {");
+            w.println();
+
+            // all attributes (including inherited)
+            List<Attribute> allAttrs = getAllAttributes(cls);
+            for (Attribute attr : allAttrs) {
+                w.println("    private " + attr.getType() + " " + attr.getName() + ";");
+            }
+
+            // toEntity() method
+            w.println();
+            String varName = className.substring(0, 1).toLowerCase() + className.substring(1);
+            w.println("    public " + className + " toEntity() {");
+            w.println("        " + className + " " + varName + " = new " + className + "();");
+            for (Attribute attr : allAttrs) {
+                String cap = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
+                String prefix = "boolean".equals(attr.getType()) ? "is" : "get";
+                w.println("        " + varName + ".set" + cap + "(this." + prefix + cap + "());");
+            }
+            w.println("        return " + varName + ";");
+            w.println("    }");
+
+            w.println("}");
+        }
+
+        System.out.println("Generated: " + className + "CreateDTO.java");
+    }
+
+    /**
+     * ResponseDTO: id + attributes + relationship IDs
+     * Used for GET responses and return values
+     */
+    private void generateResponseDTO(Class cls, List<Association> associations, String dtoDir) throws IOException {
+        String className = cls.getName();
+        String filename = dtoDir + "/" + className + "ResponseDTO.java";
+
+        try (PrintWriter w = new PrintWriter(new File(filename))) {
+            w.println("package " + basePackage + ".dto;");
+            w.println();
+            w.println("import lombok.*;");
+            w.println("import java.util.*;");
+            w.println("import java.util.stream.Collectors;");
+            w.println("import " + basePackage + ".models." + className + ";");
+
+            // import enums and related entity classes for fromEntity
+            Set<String> extraImports = new LinkedHashSet<>();
+            for (Attribute attr : getAllAttributes(cls)) {
+                if (enumNames.contains(attr.getType())) {
+                    extraImports.add(attr.getType());
+                }
+            }
+            for (Association assoc : associations) {
+                if (assoc.getSourceClass().equals(className) && assoc.isTargetNavigable()) {
+                    extraImports.add(assoc.getTargetClass());
+                }
+                if (assoc.getTargetClass().equals(className) && assoc.isSourceNavigable()) {
+                    extraImports.add(assoc.getSourceClass());
+                }
+            }
+            for (String imp : extraImports) {
+                if (!imp.equals(className)) {
+                    w.println("import " + basePackage + ".models." + imp + ";");
+                }
+            }
+
+            w.println();
+            w.println("@Getter");
+            w.println("@Setter");
+            w.println("@NoArgsConstructor");
+            w.println("@AllArgsConstructor");
+            w.println("@Builder");
+            w.println("public class " + className + "ResponseDTO {");
+            w.println();
+
+            // id
+            w.println("    private Long id;");
+            w.println();
+
+            // attributes
+            List<Attribute> allAttrs = getAllAttributes(cls);
+            for (Attribute attr : allAttrs) {
+                w.println("    private " + attr.getType() + " " + attr.getName() + ";");
+            }
+
+            // relationship ID fields
+            // collect relationship info for both fields and fromEntity mapping
+            List<RelationshipInfo> relationships = new ArrayList<>();
+            for (Association assoc : associations) {
+                if (assoc.getSourceClass().equals(className) && assoc.isTargetNavigable()) {
+                    relationships.add(new RelationshipInfo(
+                            assoc.getTargetClass(), assoc.getTargetRole(),
+                            assoc.getTargetMultiplicity(), assoc));
+                }
+                if (assoc.getTargetClass().equals(className) && assoc.isSourceNavigable()) {
+                    relationships.add(new RelationshipInfo(
+                            assoc.getSourceClass(), assoc.getSourceRole(),
+                            assoc.getSourceMultiplicity(), assoc));
+                }
+            }
+
+            if (!relationships.isEmpty()) {
+                w.println();
+                for (RelationshipInfo rel : relationships) {
+                    generateRelationshipIdField(w, rel.otherClass, rel.role, rel.multiplicity, rel.assoc);
+                }
+            }
+
+            // fromEntity() static factory method
+            w.println();
+            String varName = className.substring(0, 1).toLowerCase() + className.substring(1);
+            w.println("    public static " + className + "ResponseDTO fromEntity(" + className + " " + varName + ") {");
+            w.println("        " + className + "ResponseDTO dto = new " + className + "ResponseDTO();");
+            w.println("        dto.setId(" + varName + ".getId());");
+
+            for (Attribute attr : allAttrs) {
+                String cap = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
+                String prefix = "boolean".equals(attr.getType()) ? "is" : "get";
+                w.println("        dto.set" + cap + "(" + varName + "." + prefix + cap + "());");
+            }
+
+            for (RelationshipInfo rel : relationships) {
+                generateRelationshipIdMapping(w, varName, rel.otherClass, rel.role, rel.multiplicity, rel.assoc);
+            }
+
+            w.println("        return dto;");
+            w.println("    }");
+
+            w.println("}");
+        }
+
+        System.out.println("Generated: " + className + "ResponseDTO.java");
+    }
+
+    private void generateRelationshipIdField(PrintWriter w, String otherClass, String role,
+                                              String multiplicity, Association assoc) {
+        String fieldName = makeFieldName(otherClass, role, multiplicity);
+
+        if (checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
+            // collection -> List<Long> of IDs
+            w.println("    private List<Long> " + fieldName + "Ids;");
+        } else {
+            // single reference -> Long ID
+            w.println("    private Long " + fieldName + "Id;");
+        }
+    }
+
+    private void generateRelationshipIdMapping(PrintWriter w, String varName, String otherClass,
+                                                String role, String multiplicity, Association assoc) {
+        String fieldName = makeFieldName(otherClass, role, multiplicity);
+        String capitalizedField = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+
+        if (checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
+            if (assoc.hasQualifier()) {
+                w.println("        dto.set" + capitalizedField + "Ids(" + varName + ".get" + capitalizedField + "() != null");
+                w.println("            ? " + varName + ".get" + capitalizedField + "().values().stream().map(" + otherClass + "::getId).collect(Collectors.toList())");
+                w.println("            : new ArrayList<>());");
+            } else {
+                w.println("        dto.set" + capitalizedField + "Ids(" + varName + ".get" + capitalizedField + "() != null");
+                w.println("            ? " + varName + ".get" + capitalizedField + "().stream().map(" + otherClass + "::getId).collect(Collectors.toList())");
+                w.println("            : new ArrayList<>());");
+            }
+        } else {
+            w.println("        dto.set" + capitalizedField + "Id(" + varName + ".get" + capitalizedField + "() != null");
+            w.println("            ? " + varName + ".get" + capitalizedField + "().getId() : null);");
+        }
+    }
+
+    // helper to carry relationship info
+    private static class RelationshipInfo {
+        String otherClass, role, multiplicity;
+        Association assoc;
+
+        RelationshipInfo(String otherClass, String role, String multiplicity, Association assoc) {
+            this.otherClass = otherClass;
+            this.role = role;
+            this.multiplicity = multiplicity;
+            this.assoc = assoc;
+        }
+    }
+
+    private List<Attribute> getAllAttributes(Class cls) {
+        List<Attribute> all = new ArrayList<>();
+        if (cls.getParentClass() != null) {
+
+            all.addAll(cls.getParentClass().getAttributes());
+        }
+        all.addAll(cls.getAttributes());
+        return all;
+    }
+
+    private String makeFieldName(String className, String role, String multiplicity) {
+        if (role != null && !role.trim().isEmpty()) {
+            return role.trim();
+        }
+        String base = className.substring(0, 1).toLowerCase() + className.substring(1);
+        return checkMultiplicity(multiplicity) ? base + "s" : base;
+    }
+
+    private boolean checkMultiplicity(String multiplicity) {
+        if (multiplicity == null) return false;
+        return multiplicity.contains("*") ||
+                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
+    }
+}

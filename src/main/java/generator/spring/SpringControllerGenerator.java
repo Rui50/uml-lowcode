@@ -102,8 +102,8 @@ public class SpringControllerGenerator {
         writer.println("     * @return list of all entities");
         writer.println("     */");
         writer.println("    @GetMapping");
-        writer.println("    public ResponseEntity<List<" + className + ">> getAll() {");
-        writer.println("        List<" + className + "> entities = " + serviceName + ".findAll();");
+        writer.println("    public ResponseEntity<List<" + className + "ResponseDTO>> getAll() {");
+        writer.println("        List<" + className + "ResponseDTO> entities = " + serviceName + ".findAll();");
         writer.println("        return ResponseEntity.ok(entities);");
         writer.println("    }");
         writer.println();
@@ -116,7 +116,7 @@ public class SpringControllerGenerator {
         writer.println("     * @return entity if found, 404 if not");
         writer.println("     */");
         writer.println("    @GetMapping(\"/{id}\")");
-        writer.println("    public ResponseEntity<" + className + "> getById(@PathVariable Long id) {");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> getById(@PathVariable Long id) {");
         writer.println("        return " + serviceName + ".findById(id)");
         writer.println("            .map(ResponseEntity::ok)");
         writer.println("            .orElse(ResponseEntity.notFound().build());");
@@ -127,22 +127,22 @@ public class SpringControllerGenerator {
         writer.println("    /**");
         writer.println("     * POST /api/" + pluralPath);
         writer.println("     * Create new " + className);
-        writer.println("     * @param " + varName + " entity data");
+        writer.println("     * @param dto entity data");
         writer.println("     * @return created entity");
         writer.println("     */");
         writer.println("    @PostMapping");
-        writer.println("    public ResponseEntity<" + className + "> create(@RequestBody " + className + " " + varName + ") {");
-        writer.println("        " + className + " created = " + serviceName + ".create(" + varName + ");");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> create(@RequestBody " + className + "CreateDTO dto) {");
+        writer.println("        " + className + "ResponseDTO created = " + serviceName + ".create(dto);");
         writer.println("        return ResponseEntity.status(HttpStatus.CREATED).body(created);");
         writer.println("    }");
         writer.println();
 
         // PUT /api/entities/{id} - Update
         writer.println("    @PutMapping(\"/{id}\")");
-        writer.println("    public ResponseEntity<" + className + "> update(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> update(");
         writer.println("            @PathVariable Long id,");
-        writer.println("            @RequestBody " + className + " " + varName + ") {");
-        writer.println("        " + className + " updated = " + serviceName + ".update(id, " + varName + ");");
+        writer.println("            @RequestBody " + className + "CreateDTO dto) {");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".update(id, dto);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -234,10 +234,10 @@ public class SpringControllerGenerator {
         writer.println("     * ManyToOne: Assign a " + otherClass + " to " + className);
         writer.println("     */");
         writer.println("    @PutMapping(\"/{id}/" + otherPath + "/{" + otherVar + "Id}\")");
-        writer.println("    public ResponseEntity<" + className + "> assign" + otherClass + "(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> assign" + otherClass + "(");
         writer.println("            @PathVariable Long id,");
         writer.println("            @PathVariable Long " + otherVar + "Id) {");
-        writer.println("        " + className + " updated = " + serviceName + ".assign" + otherClass + "(id, " + otherVar + "Id);");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".assign" + otherClass + "(id, " + otherVar + "Id);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -254,9 +254,9 @@ public class SpringControllerGenerator {
         writer.println("     * ManyToOne: Remove the " + otherClass + " from " + className);
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
-        writer.println("    public ResponseEntity<" + className + "> remove" + otherClass + "(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + otherClass + "(");
         writer.println("            @PathVariable Long id) {");
-        writer.println("        " + className + " updated = " + serviceName + ".remove" + otherClass + "(id);");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + otherClass + "(id);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -276,10 +276,10 @@ public class SpringControllerGenerator {
         writer.println("     * Add " + otherClass + " entities to " + className + " by IDs");
         writer.println("     */");
         writer.println("    @PostMapping(\"/{id}/" + otherPath + "\")");
-        writer.println("    public ResponseEntity<" + className + "> add" + capitalizeFirstLetter(otherPlural) + "(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> add" + capitalizeFirstLetter(otherPlural) + "(");
         writer.println("            @PathVariable Long id,");
         writer.println("            @RequestBody List<Long> " + otherVar + "Ids) {");
-        writer.println("        " + className + " updated = " + serviceName + ".add" + capitalizeFirstLetter(otherPlural) + "(id, " + otherVar + "Ids);");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".add" + capitalizeFirstLetter(otherPlural) + "(id, " + otherVar + "Ids);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -298,10 +298,10 @@ public class SpringControllerGenerator {
         writer.println("     * Remove " + otherClass + " entities from " + className + " by IDs");
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
-        writer.println("    public ResponseEntity<" + className + "> remove" + capitalizeFirstLetter(otherPlural) + "(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + capitalizeFirstLetter(otherPlural) + "(");
         writer.println("            @PathVariable Long id,");
         writer.println("            @RequestBody List<Long> " + otherVar + "Ids) {");
-        writer.println("        " + className + " updated = " + serviceName + ".remove" + capitalizeFirstLetter(otherPlural) + "(id, " + otherVar + "Ids);");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + capitalizeFirstLetter(otherPlural) + "(id, " + otherVar + "Ids);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -312,12 +312,13 @@ public class SpringControllerGenerator {
 
         writer.println("import " + basePackage + ".models." + className + ";");
         writer.println("import " + basePackage + ".service." + className + "Service;");
+        writer.println("import " + basePackage + ".dto." + className + "CreateDTO;");
+        writer.println("import " + basePackage + ".dto." + className + "ResponseDTO;");
         writer.println("import lombok.RequiredArgsConstructor;");
         writer.println("import org.springframework.http.HttpStatus;");
         writer.println("import org.springframework.http.ResponseEntity;");
         writer.println("import org.springframework.web.bind.annotation.*;");
         writer.println();
-        //writer.println("import jakarta.validation.Valid;");
         writer.println("import java.util.List;");
 
         // Imports de entidades usadas nas Operations

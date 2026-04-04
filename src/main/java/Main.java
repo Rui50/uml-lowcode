@@ -10,6 +10,7 @@ import generator.spring.SpringEntityGenerator;
 import generator.spring.SpringRepositoryGenerator;
 import generator.spring.SpringServiceGenerator;
 import generator.spring.SpringControllerGenerator;
+import generator.spring.SpringDTOGenerator;
 import generator.spring.SpringProjectSettings;
 
 import generator.CLI.JavaProjectGenerator;
@@ -120,7 +121,7 @@ public class Main {
         // gerar código
         String outputDir = "output";
 
-        String generateWhat = "cli"; // "plain" "spring" "cli"
+        String generateWhat = "spring"; // "plain" "spring" "cli"
 
         // plain java classes
         if (generateWhat.equals("plain")) {
@@ -144,6 +145,10 @@ public class Main {
             // gerar entidades
             SpringEntityGenerator entityGenerator = new SpringEntityGenerator(outputDir, basePackage);
             entityGenerator.generateEntities(classes, associations, enumerations);
+
+            // gerar DTOs
+            SpringDTOGenerator dtoGenerator = new SpringDTOGenerator(outputDir, basePackage);
+            dtoGenerator.generateDTOs(classes, associations, enumerations);
 
             // gerar repositórios
             SpringRepositoryGenerator repositoryGenerator = new SpringRepositoryGenerator(outputDir, basePackage);
