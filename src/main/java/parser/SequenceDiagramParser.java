@@ -211,24 +211,34 @@ public class SequenceDiagramParser {
             return;
         }
 
+        // verificar se tem assignment (var = method)
+        String signaturePart = rawName;
+        int equalsIndex = rawName.indexOf('=');
         int parenOpen = rawName.indexOf('(');
+
+        // o '=' tem de vir antes do '(' para ser assignment (senão pode ser parte de um argumento)
+        if (equalsIndex != -1 && (parenOpen == -1 || equalsIndex < parenOpen)) {
+            message.setAssignVariable(rawName.substring(0, equalsIndex).trim());
+            signaturePart = rawName.substring(equalsIndex + 1).trim();
+            parenOpen = signaturePart.indexOf('(');
+        }
 
         // sem parenteses é nome simples sem argumentos
         if (parenOpen == -1) {
-            message.setName(rawName.trim());
+            message.setName(signaturePart.trim());
             return;
         }
 
         // nome do metodo é tudo antes do '('
-        message.setName(rawName.substring(0, parenOpen).trim());
+        message.setName(signaturePart.substring(0, parenOpen).trim());
 
-        int parenClose = rawName.lastIndexOf(')');
+        int parenClose = signaturePart.lastIndexOf(')');
         if (parenClose == -1 || parenClose <= parenOpen) {
             return;
         }
 
         // argumentos entre '(' e ')'
-        String argsString = rawName.substring(parenOpen + 1, parenClose).trim();
+        String argsString = signaturePart.substring(parenOpen + 1, parenClose).trim();
         if (!argsString.isEmpty()) {
             // split por ',' mas respeitando generics como ArrayList<User>
             List<String> argParts = splitArguments(argsString);
@@ -242,7 +252,7 @@ public class SequenceDiagramParser {
         }
 
         // return type: tudo depois de ')' com ':' -> " : User"
-        String afterParen = rawName.substring(parenClose + 1).trim();
+        String afterParen = signaturePart.substring(parenClose + 1).trim();
         if (afterParen.startsWith(":")) {
             String returnType = afterParen.substring(1).trim();
             if (!returnType.isEmpty()) {
@@ -250,7 +260,54 @@ public class SequenceDiagramParser {
             }
         }
 
-        System.out.println("Parsed message signature - Name: " + message.getName() + ", Arguments: " + message.getArguments() + ", Return Type: " + message.getReturnType());
+        System.out.println("Parsed message signature - Name: " + message.getName()
+                + ", Arguments: " + message.getArguments()
+                + ", Return Type: " + message.getReturnType()
+                + ", AssignVariable: " + message.getAssignVariable());
+    }
+
+    private void parseMessageSignature2(Message message, String rawName) {
+        if (rawName == null || rawName.isEmpty()) {
+            message.setName(rawName);
+            return;
+        }
+
+        // regex: (variavel =)? metodo(args) (: ReturnType)?
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                "^(?:(.+?)\\s*=\\s*)?(.+?)\\((.*)\\)(?:\\s*:\\s*(.+))?$"
+        );
+        java.util.regex.Matcher m = pattern.matcher(rawName.trim());
+
+        if (m.matches()) {
+            if (m.group(1) != null) {
+                message.setAssignVariable(m.group(1).trim());
+            }
+            message.setName(m.group(2).trim());
+
+            // parse argumentos
+            String argsString = m.group(3).trim();
+            if (!argsString.isEmpty()) {
+                List<String> argParts = splitArguments(argsString);
+                for (String argPart : argParts) {
+                    MessageArgument arg = parseArgument(argPart.trim());
+                    if (arg != null) {
+                        message.getArguments().add(arg);
+                    }
+                }
+            }
+
+            if (m.group(4) != null) {
+                message.setReturnType(m.group(4).trim());
+            }
+        } else {
+            // sem parenteses — nome simples
+            message.setName(rawName.trim());
+        }
+
+        System.out.println("Parsed message signature2 - Name: " + message.getName()
+                + ", Arguments: " + message.getArguments()
+                + ", Return Type: " + message.getReturnType()
+                + ", AssignVariable: " + message.getAssignVariable());
     }
 
     /**

@@ -71,7 +71,7 @@ public class SpringServiceGenerator {
             //generateQueryMethods(writer, cls);
 
             // operações do diagrama de classe (TODO: implementar)
-            //generateCustomOperations(writer, cls, interactions, classes);
+            generateCustomOperations(writer, cls, interactions, classes);
 
             writer.println("}");
         }
@@ -884,20 +884,45 @@ public class SpringServiceGenerator {
 
     private void generateCustomOperation(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
         String className = cls.getName();
-        String varName = lowercaseFirstLetter(className);
-        String repoName = varName + "Repository";
         String operName = op.getName();
-        String returnType = removePackageNames(op.getReturnType());
 
-        // assign metodo
-        writer.println();
-        writer.println("    public " + returnType + " " + operName + "(Long id");
-        for (Parameter param : op.getParameters()) {
-            String paramType = removePackageNames(param.getType());
-            writer.println("        , " + paramType + " " + param.getName());
+        if (interaction == null) {
+            writer.println();
+            writer.println("    public void " + operName + "() {");
+            writer.println("        throw new UnsupportedOperationException(");
+            writer.println("            \"Method '" + operName + "' not yet implemented. \"");
+            writer.println("        );");
+            writer.println("    }");
+            return;
         }
-        writer.println("    ) {");
 
+        // encontrar a mensagem de entrada no service (Controller -> Service)
+        String serviceType = className + "Service";
+        Message entryMessage = null;
+        for (Message msg : interaction.getMessages()) {
+            if (msg.getTarget() != null &&
+                msg.getTarget().getType() != null &&
+                msg.getTarget().getType().equals(serviceType) &&
+                msg.getName().equals(operName)) {
+                entryMessage = msg;
+                break;
+            }
+        }
+
+        // assinatura — parâmetros vêm da mensagem de entrada do diagrama de sequência
+        writer.println();
+        writer.print("    public void " + operName + "(");
+        if (entryMessage != null && !entryMessage.getArguments().isEmpty()) {
+            for (int i = 0; i < entryMessage.getArguments().size(); i++) {
+                if (i > 0) writer.print(", ");
+                MessageArgument arg = entryMessage.getArguments().get(i);
+                String argType = arg.getType() != null ? arg.getType() : "Long";
+                writer.print(argType + " " + arg.getName());
+            }
+        }
+        writer.println(") {");
+
+        // preconditions
         for (Precondition pre : op.getPreconditions()) {
             String javaExpr = translateOclToJava(pre.getOclExpression());
             writer.println("        if (!(" + javaExpr + ")) {");
@@ -905,81 +930,51 @@ public class SpringServiceGenerator {
             writer.println("        }");
         }
 
-        if (interaction != null) {
-            generateMethodBodyFromInteraction(writer, cls, op, interaction);
-        } else {
-            writer.println("        throw new UnsupportedOperationException(");
-            writer.println("            \"Method '" + operName + "' not yet implemented. \"");
-            writer.println("        );");
-        }
+        generateMethodBodyFromInteraction(writer, cls, op, interaction);
 
         writer.println("    }");
     }
 
-    private void generateMethodBodyFromInteraction(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
+    private void generateMethodBodyFromInteraction(PrintWriter writer, Class cls, Operation op, Interaction
+            interaction) {
+        // identificar a lifeline do Service (owner deste método)
         String className = cls.getName();
-        String varName = lowercaseFirstLetter(className);
-        String repoName = varName + "Repository";
+        String serviceName = className + "Service";
 
-        // a class que é "Owner" (a do serviço)  é loaded
-        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(id)");
-        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found: \" + id));");
-        writer.println();
+        // encontrar a lifeline do service owner
+        Lifeline serviceLifeline = null;
+        for (Lifeline ll : interaction.getLifelines()) {
+            if (ll.getType() != null && ll.getType().equals(serviceName)) {
+                serviceLifeline = ll;
+                break;
+            }
+        }
 
-        // construir um map com lifeline ID -> nome variavel java
-        // cada lifeline corresponde a uma variavel
+        // mapear lifeline ID -> nome da variável java para os repositories
+        // ex: TurmaRepository -> turmaRepository, AlunoRepository -> alunoRepository
         Map<String, String> lifelineVarMap = new HashMap<>();
-
-        // mapear lifeline da classe para a variavel do fetch
-        for (Lifeline lifeline : interaction.getLifelines()) {
-            if (lifeline.getType().equals(className)) {
-                lifelineVarMap.put(lifeline.getId(), varName);
+        for (Lifeline ll : interaction.getLifelines()) {
+            if (ll.getType() != null && ll.getType().endsWith("Repository")) {
+                String repoVar = lowercaseFirstLetter(ll.getType());
+                lifelineVarMap.put(ll.getId(), repoVar);
+            }
+            if (ll.getType() != null && ll.getType().endsWith("Service")) {
+                lifelineVarMap.put(ll.getId(), "self");
             }
         }
 
-        // mapear lifelines dos parametros para os nomes dos parametros
-        // para ja assim, e fazer nome+type match com fallback
-        for (Parameter param : op.getParameters()) {
-            String paramType = removePackageNames(param.getType());
-
-            // exact name + type match
-            for (Lifeline lifeline : interaction.getLifelines()) {
-                if (lifeline.getType() != null
-                        && lifeline.getType().equals(paramType)
-                        && lifeline.getRepresents() != null
-                        && lifeline.getRepresents().equals(param.getName())
-                        && !lifelineVarMap.containsKey(lifeline.getId())) {
-                    lifelineVarMap.put(lifeline.getId(), param.getName());
-                }
-            }
-
-            // (fallback) type-only match if theres unmappeds
-            for (Lifeline lifeline : interaction.getLifelines()) {
-                if (lifeline.getType() != null
-                        && lifeline.getType().equals(paramType)
-                        && !lifelineVarMap.containsKey(lifeline.getId())) {
-                    lifelineVarMap.put(lifeline.getId(), param.getName());
-                }
-            }
-        }
-
-        // Agora iterar mensagens e gerar chamadas de metodo
-        Map<String, Integer> varCount = new HashMap<>(); // para gerar nomes unicos tipo var1, var2 se houver multiplas lifelines do mesmo tipo
-        varCount.put(varName, 1); // contar a variavel do fetch inicial
-
-        boolean entry = false;
+        // ignorar mensagens de entrada (Actor->Controller, Controller->Service)
+        // processar apenas as mensagens que partem do Service
         for (Message msg : interaction.getMessages()) {
-            if(!entry) {
-                // ignorar a do ponto de entrada
-                entry = true;
-                continue;
-            }
+            if (msg.getSource() == null || msg.getTarget() == null) continue;
+            if ("reply".equals(msg.getMessageSort())) continue;
 
-            if("reply".equals(msg.getMessageSort())) continue; // ignorar mensagens de retorno para ja
+            // só processar mensagens enviadas pelo service
+            if (serviceLifeline == null || !msg.getSource().getId().equals(serviceLifeline.getId())) continue;
 
             String targetVar = lifelineVarMap.getOrDefault(
                     msg.getTarget().getId(),
-                    msg.getTarget().getRepresents()
+                    lowercaseFirstLetter(msg.getTarget().getType())
             );
 
             // construir lista dos argumentos
@@ -989,27 +984,32 @@ public class SpringServiceGenerator {
                 args.append(msg.getArguments().get(i).getName());
             }
 
-            // gerar a linha de codigo
-            if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
+            String methodName = msg.getName();
+            boolean isSelfMessage = msg.getSource().getId().equals(msg.getTarget().getId());
+
+            if (isSelfMessage) {
+                // self-message: turma.removeAluno(aluno) -> código direto
+                writer.println("        " + methodName + "(" + args + ");");
+            } else if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
+                // chamada com retorno: findById(id) : Turma
                 String returnType = msg.getReturnType();
-                String returnVar = lowercaseFirstLetter(returnType);
+                String varName = msg.getAssignVariable() != null
+                        ? msg.getAssignVariable()
+                        : lowercaseFirstLetter(returnType);
 
-                // lidar conflitos de nome
-                int count = varCount.getOrDefault(returnVar, 0);
-                String uniqueVar = count == 0 ? returnVar : returnVar + count;
-                varCount.put(returnVar, count + 1);
-
-                writer.println("        " + returnType + " " + uniqueVar + " = " + targetVar + "." +
-                        msg.getName() + "(" + args + ");");
+                if (methodName.equals("findById")) {
+                    writer.println("        " + returnType + " " + varName + " = " + targetVar + "." +
+                            methodName + "(" + args + ")");
+                    writer.println("            .orElseThrow(() -> new RuntimeException(\"" + returnType + " not found\"));");
+                } else {
+                    writer.println("        " + returnType + " " + varName + " = " + targetVar + "." +
+                            methodName + "(" + args + ");");
+                }
             } else {
-                writer.println("        " + targetVar + "." + msg.getName() + "(" + args + ");");
+                // chamada sem retorno: save(turma)
+                writer.println("        " + targetVar + "." + methodName + "(" + args + ");");
             }
         }
-
-        // dar save e return
-
-        writer.println();
-        writer.println("        return " + repoName + ".save(" + varName + ");");
     }
 
     // Encontrar o diagrama correspondente a uma operaão
@@ -1022,16 +1022,20 @@ public class SpringServiceGenerator {
                 .map(Class::getName)
                 .collect(Collectors.toSet());
 
+        String controllerType = cls.getName() + "Controller";
+        String serviceType = cls.getName() + "Service";
+
         for (Interaction interaction : interactions) {
             for (Message msg : interaction.getMessages()) {
-                // ponto de entrada pode ser o nome da operação ou o nome do diagrama de sequencia
-                //if(!"synchCall".equals(msg.getMessageSort())) continue; // só  interessam mensagens sync
                 if(msg.getSource() == null || msg.getTarget() == null) continue;
 
                 String sourceType = msg.getSource().getType();
                 if(classNames.contains(sourceType)) continue;
 
-                if(msg.getName().equals(op.getName()) && msg.getTarget().getType().equals(cls.getName())) return interaction;
+                if(msg.getName().equals(op.getName()) &&
+                        msg.getTarget().getType() != null &&
+                        (msg.getTarget().getType().equals(controllerType) ||
+                                msg.getTarget().getType().equals(serviceType))) return interaction;
                 break;
             }
         }

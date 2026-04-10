@@ -9,6 +9,7 @@ public class Message {
     private String rawName;                 // full original: "getTurma(a: Aluno) : Turma"
     private String messageSort;             // synchCall, asynchCall, reply
     private String returnType;              // return type if specified (e.g., "User")
+    private String assignVariable;          // variable name for assignment (e.g., "turma" in "turma = findById(id) : Turma")
     private Lifeline source;
     private Lifeline target;
     private List<MessageArgument> arguments;
@@ -49,6 +50,14 @@ public class Message {
 
     public void setReturnType(String returnType) {
         this.returnType = returnType;
+    }
+
+    public String getAssignVariable() {
+        return assignVariable;
+    }
+
+    public void setAssignVariable(String assignVariable) {
+        this.assignVariable = assignVariable;
     }
 
     public String getMessageSort() {
@@ -95,10 +104,12 @@ public class Message {
     public String toString() {
         return "Message {" +
                 "name:'" + name + '\'' +
+                (assignVariable != null ? ", assignVariable:'" + assignVariable + "'" : "") +
                 ", messageSort:'" + messageSort + '\'' +
-                ", source:" + (source != null ? source.getName() : "null") +
-                ", target:" + (target != null ? target.getName() : "null") +
+                ", source:" + (source != null ? source.getType() : "null") +
+                ", target:" + (target != null ? target.getType() : "null") +
                 ", arguments:" + arguments +
+                (returnType != null ? ", returnType:'" + returnType + "'" : "") +
                 '}';
     }
 }

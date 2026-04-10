@@ -42,7 +42,7 @@ public class Main {
         //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
         //String xmiFilePath = "test-models/aluno_turma_class_sequence_test.uml";
         //String xmiFilePath = "test-models/aluno_turma_class_sequence_ocl_init.uml";
-        String xmiFilePath = "test-models/aluno_turma_class_enum.uml";
+        String xmiFilePath = "test-models/aluno_turma_class_seq.uml";
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 
@@ -121,7 +121,7 @@ public class Main {
         // gerar código
         String outputDir = "output";
 
-        String generateWhat = "spring"; // "plain" "spring" "cli"
+        String generateWhat = "plain"; // "plain" "spring" "cli"
 
         // plain java classes
         if (generateWhat.equals("plain")) {
