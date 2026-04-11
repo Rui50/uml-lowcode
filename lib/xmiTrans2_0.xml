@@ -286,6 +286,8 @@ especifica do visual paradigm
 
 <xmitransformation modelelement="interactionoperand" xmipattern="uml:InteractionOperand" recurse="true">
 	<trigger name="fragments" type="xmi2assoc" attr="fragment" />
+	<!-- para os alts etc-->
+	<trigger name="guard" type="gcattrval" src="guard" attr="value" />
 </xmitransformation>
 
 <xmitransformation modelelement="event" xmipattern="uml:ExecutionEvent" recurse="true">

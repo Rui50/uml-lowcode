@@ -5,19 +5,20 @@ import java.util.List;
 
 public class Interaction {
     private String id;
-    private String name; // nome operação
-    private String contextClass; // clase que contem metodo
+    private String name;
+    private String contextClass;
     private List<Lifeline> lifelines;
-    private List<Message> messages;
+    private List<Object> elements;  // Message ou Fragment, por ordem
 
-    public Interaction(){
+    public Interaction() {
         this.lifelines = new ArrayList<>();
-        this.messages = new ArrayList<>();
+        this.elements = new ArrayList<>();
     }
 
     public String getId() {
         return id;
     }
+
     public void setId(String id) {
         this.id = id;
     }
@@ -25,6 +26,7 @@ public class Interaction {
     public String getName() {
         return name;
     }
+
     public void setName(String name) {
         this.name = name;
     }
@@ -32,6 +34,7 @@ public class Interaction {
     public String getContextClass() {
         return contextClass;
     }
+
     public void setContextClass(String contextClass) {
         this.contextClass = contextClass;
     }
@@ -39,33 +42,40 @@ public class Interaction {
     public List<Lifeline> getLifelines() {
         return lifelines;
     }
-    public void setLifelines(List<Lifeline> lifelines) {
-        this.lifelines = lifelines;
-    }
 
     public void addLifeline(Lifeline lifeline) {
         this.lifelines.add(lifeline);
     }
 
+    public List<Object> getElements() {
+        return elements;
+    }
+
+    public void addElement(Object element) {
+        this.elements.add(element);
+    }
+
+    /**
+     * Compatibilidade temporária — extrai só as Messages (root-level) da lista de elements.
+     * TODO: remover quando os generators forem atualizados para usar getElements()
+     */
     public List<Message> getMessages() {
-        return messages;
-    }
-    public void setMessages(List<Message> messages) {
-        this.messages = messages;
+        List<Message> msgs = new ArrayList<>();
+        for (Object el : elements) {
+            if (el instanceof Message) {
+                msgs.add((Message) el);
+            }
+        }
+        return msgs;
     }
 
-    public void addMessage(Message message) {
-        this.messages.add(message);
-    }
-
-     @Override
+    @Override
     public String toString() {
-         return "Interaction {" +
-                 "id:'" + id + '\'' +
-                 ", name:'" + name + '\'' +
-                 ", contextClass:'" + contextClass + '\'' +
-                 ", lifelines:" + lifelines +
-                 ", messages:" + messages +
-                 '}';
+        return "Interaction{" +
+                "name='" + name + '\'' +
+                ", contextClass='" + contextClass + '\'' +
+                ", lifelines=" + lifelines +
+                ", elements=" + elements +
+                '}';
     }
 }

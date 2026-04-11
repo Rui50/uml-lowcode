@@ -206,6 +206,9 @@ public class SpringEntityGenerator {
             writer.println("    @Column(name = \"" + atr.getName() + "\")");
             if (atr.hasInit()) {
                 String javaInit = translateOclToJava(atr.getInitExpression());
+                if (enumNames.contains(atr.getType())) {
+                    javaInit = atr.getType() + "." + javaInit;
+                }
                 writer.println("    @Builder.Default");
                 writer.println("    private " + atr.getType() + " " + atr.getName() + " = " + javaInit + ";");
             } else {

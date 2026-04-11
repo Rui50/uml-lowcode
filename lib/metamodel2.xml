@@ -213,6 +213,8 @@ other part of SDMetrics.
 
 <modelelement name="interactionoperand">
   <attribute name="fragments" type="ref" multiplicity="many">The message occurrence specifications and combined fragments of the interaction operand.</attribute>
+    <!-- add guard para os loops etc -->
+  <attribute name="guard" type="ref">The guard condition expression of this operand.</attribute>
 </modelelement>
 
 

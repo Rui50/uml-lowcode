@@ -1,6 +1,6 @@
 import model.Attribute;
 import model.annotations.Invariant;
-import model.sequence.Interaction;
+import model.sequence.*;;
 import ocl.OCLTranslator;
 import parser.SequenceDiagramParser;
 import parser.XMIParser;
@@ -42,7 +42,7 @@ public class Main {
         //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
         //String xmiFilePath = "test-models/aluno_turma_class_sequence_test.uml";
         //String xmiFilePath = "test-models/aluno_turma_class_sequence_ocl_init.uml";
-        String xmiFilePath = "test-models/aluno_turma_class_seq.uml";
+        String xmiFilePath = "test-models/aluno_turma_class_seq_loop.uml";
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 
@@ -118,10 +118,18 @@ public class Main {
         sequenceParser.loadModel(xmiFilePath);
         List<Interaction> interactions = sequenceParser.parseInteractions();
 
+        // debug: imprimir interactions parseadas
+        for (Interaction inter : interactions) {
+            System.out.println("\n=== Interaction: " + inter.getName() + " ===");
+            System.out.println("Lifelines: " + inter.getLifelines());
+            System.out.println("Elements:");
+            printElements(inter.getElements(), 1);
+        }
+
         // gerar código
         String outputDir = "output";
 
-        String generateWhat = "plain"; // "plain" "spring" "cli"
+        String generateWhat = "none"; // "plain" "spring" "cli" "none"
 
         // plain java classes
         if (generateWhat.equals("plain")) {
@@ -220,5 +228,26 @@ public class Main {
             }
         }
         return null;
+    }
+
+    private static void printElements(java.util.List<Object> elements, int depth) {
+        String indent = "  ".repeat(depth);
+        for (Object el : elements) {
+            if (el instanceof Message) {
+                Message msg = (Message) el;
+                System.out.println(indent + "Message: " + msg.getName()
+                        + (msg.getAssignVariable() != null ? " (assign: " + msg.getAssignVariable() + ")" : "")
+                        + " [" + (msg.getSource() != null ? msg.getSource().getType() : "?")
+                        + " -> " + (msg.getTarget() != null ? msg.getTarget().getType() : "?") + "]"
+                        + (msg.getReturnType() != null ? " : " + msg.getReturnType() : ""));
+            } else if (el instanceof Fragment) {
+                Fragment frag = (Fragment) el;
+                System.out.println(indent + "Fragment: " + frag.getOperator());
+                for (Operand op : frag.getOperands()) {
+                    System.out.println(indent + "  Operand [guard: " + op.getGuard() + "]");
+                    printElements(op.getElements(), depth + 2);
+                }
+            }
+        }
     }
 }
