@@ -129,7 +129,7 @@ public class Main {
         // gerar código
         String outputDir = "output";
 
-        String generateWhat = "none"; // "plain" "spring" "cli" "none"
+        String generateWhat = "spring"; // "plain" "spring" "cli" "none"
 
         // plain java classes
         if (generateWhat.equals("plain")) {
@@ -164,7 +164,7 @@ public class Main {
 
             // gerar serviços
             SpringServiceGenerator serviceGenerator = new SpringServiceGenerator(outputDir, basePackage);
-            serviceGenerator.generateServices(classes, associations, interactions);
+            serviceGenerator.generateServices(classes, associations, interactions, enumerations);
 
             // gerar controllers
             SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir, basePackage);

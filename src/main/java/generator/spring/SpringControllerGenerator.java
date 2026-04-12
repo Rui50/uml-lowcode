@@ -75,7 +75,7 @@ public class SpringControllerGenerator {
             generateRelationEndpoints(writer, cls, associations);
 
             // custom operation endpoints (sequence diag)
-            //generateCustomOperationEndpoints(writer, cls, interactions, allClasses);
+            generateCustomOperationEndpoints(writer, cls, interactions, allClasses);
 
             writer.println("}");
         }
@@ -527,75 +527,75 @@ public class SpringControllerGenerator {
 
         for (Operation op : cls.getOperations()) {
             Interaction interaction = findInteractionForOperation(cls, op, interactions, allClasses);
+            if (interaction == null) continue;
+
+            // encontrar a mensagem de entrada no service (Controller -> Service)
+            // isto depois vai ser configurado na app, mas para ja consideramos a do servico
+            String serviceType = className + "Service";
+            Message entryMessage = null;
+            for (Message msg : interaction.getMessages()) {
+                if (msg.getTarget() != null && serviceType.equals(msg.getTarget().getType()) && msg.getName().equals(op.getName())) {
+                    entryMessage = msg;
+                    break;
+                }
+            }
+
+            List<MessageArgument> entryArgs = (entryMessage != null) ? entryMessage.getArguments() : new ArrayList<>();
 
             writer.println();
-
-            // method sign and @Post for now
             writer.println("    @PostMapping(\"/{id}/" + op.getName() + "\")");
             writer.print("    public ResponseEntity<?> " + op.getName() + "(\n");
             writer.print("            @PathVariable Long id");
 
-            // para cada param: tipos -> @RequestParam Long paramNameId
-            //                  normais -> @RequestParam tipo paramName
-
-            for (Parameter param : op.getParameters()) {
-                String paramType = removePackageNames(param.getType());
+            for (MessageArgument arg : entryArgs) {
+                String argName = arg.getName();
+                if ("id".equals(argName)) continue;
+                String argType = arg.getType() != null ? arg.getType() : "Long";
                 boolean isEntity = false;
                 for (Class c : allClasses) {
-                    if (c.getName().equals(paramType)) {
+                    if (c.getName().equals(argType)) {
                         isEntity = true;
                         break;
                     }
                 }
-
                 if (isEntity) {
-                    writer.print(",\n            @RequestParam Long " + param.getName() + "Id");
+                    writer.print(",\n            @RequestParam Long " + argName + "Id");
                 } else {
-                    writer.print(",\n            @RequestParam " + paramType + " " + param.getName());
+                    writer.print(",\n            @RequestParam " + argType + " " + argName);
                 }
             }
             writer.println(") {");
 
-            // get entidades
-
-            for (Parameter param : op.getParameters()) {
-                String paramType = removePackageNames(param.getType());
+            for (MessageArgument arg : entryArgs) {
+                String argName = arg.getName();
+                if ("id".equals(argName)) continue;
+                String argType = arg.getType() != null ? arg.getType() : "Long";
                 boolean isEntity = false;
                 for (Class c : allClasses) {
-                    if (c.getName().equals(paramType)) {
+                    if (c.getName().equals(argType)) {
                         isEntity = true;
                         break;
                     }
                 }
-
                 if (isEntity) {
-                    String paramServiceName = toLowerCaseFirst(paramType) + "Service";
-                    writer.println("        " + paramType + " " + param.getName() + " = " + paramServiceName
-                            + ".findById(" + param.getName() + "Id)");
-                    writer.println("            .orElseThrow(() -> new RuntimeException(\"" + paramType + " " +
-                            "not found: \" + " + param.getName() + "Id));");
+                    String paramServiceName = toLowerCaseFirst(argType) + "Service";
+                    writer.println("        " + argType + " " + argName + " = " + paramServiceName
+                            + ".findById(" + argName + "Id)");
+                    writer.println("            .orElseThrow(() -> new RuntimeException(\"" + argType
+                            + " not found: \" + " + argName + "Id));");
                 }
             }
 
-            // chamar o serviço
             writer.println();
             StringBuilder args = new StringBuilder("id");
-            for (Parameter param : op.getParameters()) {
-                args.append(", ").append(param.getName());
+            for (MessageArgument arg : entryArgs) {
+                if ("id".equals(arg.getName())) continue;
+                args.append(", ").append(arg.getName());
             }
 
-            String returnType = op.getReturnType();
-            if (returnType != null && !"void".equals(returnType)) {
-                writer.println("        " + returnType + " result = " + serviceName + "." + op.getName() +
-                        "(" + args + ");");
-                writer.println("        return ResponseEntity.ok(result);");
-            } else {
-                writer.println("        " + serviceName + "." + op.getName() + "(" + args + ");");
-                writer.println("        return ResponseEntity.ok().build();");
-            }
-
+            writer.println("        " + serviceName + "." + op.getName() + "(" + args + ");");
+            writer.println("        return ResponseEntity.ok().build();");
             writer.println("    }");
-
         }
     }
     // Encontrar o diagrama correspondente a uma operaão
@@ -608,16 +608,20 @@ public class SpringControllerGenerator {
                 .map(Class::getName)
                 .collect(Collectors.toSet());
 
+        String controllerType = cls.getName() + "Controller";
+        String serviceType = cls.getName() + "Service";
+
         for (Interaction interaction : interactions) {
             for (Message msg : interaction.getMessages()) {
-                // ponto de entrada pode ser o nome da operação ou o nome do diagrama de sequencia
-                //if(!"synchCall".equals(msg.getMessageSort())) continue; // só  interessam mensagens sync
                 if(msg.getSource() == null || msg.getTarget() == null) continue;
 
                 String sourceType = msg.getSource().getType();
                 if(classNames.contains(sourceType)) continue;
 
-                if(msg.getName().equals(op.getName()) && msg.getTarget().getType().equals(cls.getName())) return interaction;
+                if(msg.getName().equals(op.getName()) &&
+                        msg.getTarget().getType() != null &&
+                        (msg.getTarget().getType().equals(controllerType) ||
+                                msg.getTarget().getType().equals(serviceType))) return interaction;
                 break;
             }
         }

@@ -24,7 +24,7 @@ public class SpringServiceGenerator {
     /**
     * Gera os ficheiros dos services (CRUD)
     * */
-    public void generateServices(List<Class> classes, List<Association> associations, List<Interaction> interactions) throws IOException {
+    public void generateServices(List<Class> classes, List<Association> associations, List<Interaction> interactions, List<model.Enumeration> enumerations) throws IOException {
         System.out.println("Generating Spring services...");
 
         // criar dir
@@ -32,14 +32,14 @@ public class SpringServiceGenerator {
         new java.io.File(serviceDir).mkdirs();
 
         for (Class cls : classes){
-            generateService(cls, classes, associations, serviceDir, interactions);
+            generateService(cls, classes, associations, serviceDir, interactions, enumerations);
         }
 
         System.out.println("Generation of services completed.");
     }
 
     // gerar um service
-    private void generateService(Class cls, List<Class> classes, List<Association> associations, String serviceDir, List<Interaction> interactions) throws IOException {
+    private void generateService(Class cls, List<Class> classes, List<Association> associations, String serviceDir, List<Interaction> interactions, List<model.Enumeration> enumerations) throws IOException {
         String className = cls.getName();
         String filename = serviceDir + "/" + className + "Service.java";
 
@@ -49,7 +49,7 @@ public class SpringServiceGenerator {
             writer.println();
 
             // imports
-            generateImports(writer, cls, classes, associations);
+            generateImports(writer, cls, classes, associations, enumerations);
 
             // class declaration
             writer.println("@Service");
@@ -79,7 +79,7 @@ public class SpringServiceGenerator {
         System.out.println("Generated: " + className + "Service.java");
     }
 
-    private void generateImports(PrintWriter writer, Class cls, List<Class> classes, List<Association> associations) {
+    private void generateImports(PrintWriter writer, Class cls, List<Class> classes, List<Association> associations, List<model.Enumeration> enumerations) {
         // importar a classe do modelo
         writer.println("import " + basePackage + ".models." + cls.getName() + ";");
         writer.println("import " + basePackage + ".repository." + cls.getName() + "Repository;");
@@ -109,6 +109,13 @@ public class SpringServiceGenerator {
             }
         }
 
+        // importar todas as enumerações — podem ser referenciadas no corpo de operações (diagramas de sequência)
+        if (enumerations != null && !enumerations.isEmpty()) {
+            writer.println();
+            for (model.Enumeration en : enumerations) {
+                writer.println("import " + basePackage + ".models." + en.getName() + ";");
+            }
+        }
     }
 
     private List<String> getModelsToImportFromOperations(Class cls, List<Class> classes) {
@@ -963,54 +970,122 @@ public class SpringServiceGenerator {
             }
         }
 
-        // ignorar mensagens de entrada (Actor->Controller, Controller->Service)
-        // processar apenas as mensagens que partem do Service
-        for (Message msg : interaction.getMessages()) {
-            if (msg.getSource() == null || msg.getTarget() == null) continue;
-            if ("reply".equals(msg.getMessageSort())) continue;
+        // percorrer a árvore de elements (Messages e Fragments)
+        generateElements(writer, interaction.getElements(), serviceLifeline, lifelineVarMap, 2);
+    }
 
-            // só processar mensagens enviadas pelo service
-            if (serviceLifeline == null || !msg.getSource().getId().equals(serviceLifeline.getId())) continue;
-
-            String targetVar = lifelineVarMap.getOrDefault(
-                    msg.getTarget().getId(),
-                    lowercaseFirstLetter(msg.getTarget().getType())
-            );
-
-            // construir lista dos argumentos
-            StringBuilder args = new StringBuilder();
-            for (int i = 0; i < msg.getArguments().size(); i++) {
-                if (i > 0) args.append(", ");
-                args.append(msg.getArguments().get(i).getName());
-            }
-
-            String methodName = msg.getName();
-            boolean isSelfMessage = msg.getSource().getId().equals(msg.getTarget().getId());
-
-            if (isSelfMessage) {
-                // self-message: turma.removeAluno(aluno) -> código direto
-                writer.println("        " + methodName + "(" + args + ");");
-            } else if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
-                // chamada com retorno: findById(id) : Turma
-                String returnType = msg.getReturnType();
-                String varName = msg.getAssignVariable() != null
-                        ? msg.getAssignVariable()
-                        : lowercaseFirstLetter(returnType);
-
-                if (methodName.equals("findById")) {
-                    writer.println("        " + returnType + " " + varName + " = " + targetVar + "." +
-                            methodName + "(" + args + ")");
-                    writer.println("            .orElseThrow(() -> new RuntimeException(\"" + returnType + " not found\"));");
-                } else {
-                    writer.println("        " + returnType + " " + varName + " = " + targetVar + "." +
-                            methodName + "(" + args + ");");
-                }
-            } else {
-                // chamada sem retorno: save(turma)
-                writer.println("        " + targetVar + "." + methodName + "(" + args + ");");
+    // percorre a lista de elementos (mensagens ou fragmentos) e gera o código correspondente
+    // indent: nível de indentação (0, 1, 2...) — cada nível = 4 espaços
+    private void generateElements(PrintWriter writer, List<Object> elements,
+                                  Lifeline serviceLifeline, Map<String, String> lifelineVarMap, int indent) {
+        String indentStr = "    ".repeat(indent);
+        for (Object elem : elements) {
+            if (elem instanceof Message) {
+                generateMessageCode(writer, (Message) elem, serviceLifeline, lifelineVarMap, indentStr);
+            } else if (elem instanceof Fragment) {
+                generateFragmentCode(writer, (Fragment) elem, serviceLifeline, lifelineVarMap, indent);
             }
         }
     }
+
+    // gera codigo java para mensagens
+    // ignora mensagens que nao fazem parte do service
+    private void generateMessageCode(PrintWriter writer, Message msg, Lifeline serviceLifeline,
+                                      Map<String, String> lifelineVarMap, String indent) {
+        if (msg.getSource() == null || msg.getTarget() == null) return;
+        if ("reply".equals(msg.getMessageSort())) return;
+
+        // só processar mensagens enviadas pelo service
+        if (serviceLifeline == null || !msg.getSource().getId().equals(serviceLifeline.getId())) return;
+
+        String targetVar = lifelineVarMap.getOrDefault(
+                msg.getTarget().getId(),
+                lowercaseFirstLetter(msg.getTarget().getType())
+        );
+
+        // construir lista dos argumentos
+        StringBuilder args = new StringBuilder();
+        for (int i = 0; i < msg.getArguments().size(); i++) {
+            if (i > 0) args.append(", ");
+            args.append(msg.getArguments().get(i).getName());
+        }
+
+        String methodName = msg.getName();
+        boolean isSelfMessage = msg.getSource().getId().equals(msg.getTarget().getId());
+
+        if (isSelfMessage) {
+            // self-message: turma.removeAluno(aluno) -> código direto
+            writer.println(indent + methodName + "(" + args + ");");
+        } else if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
+            // chamada com retorno: findById(id) : Turma
+            String returnType = msg.getReturnType();
+            String varName = msg.getAssignVariable() != null
+                    ? msg.getAssignVariable()
+                    : lowercaseFirstLetter(returnType);
+
+            if (methodName.equals("findById")) {
+                writer.println(indent + returnType + " " + varName + " = " + targetVar + "." +
+                        methodName + "(" + args + ")");
+                writer.println(indent + "    .orElseThrow(() -> new RuntimeException(\"" + returnType + " not found\"));");
+            } else {
+                writer.println(indent + returnType + " " + varName + " = " + targetVar + "." +
+                        methodName + "(" + args + ");");
+            }
+        } else {
+            // chamada sem retorno: save(turma)
+            writer.println(indent + targetVar + "." + methodName + "(" + args + ");");
+        }
+    }
+
+    /*
+    * gera código para fragmentos (alt, opt, loop)
+     */
+    private void generateFragmentCode(PrintWriter writer, Fragment frag, Lifeline serviceLifeline,
+                                      Map<String, String> lifelineVarMap, int indent) {
+        String indentStr = "    ".repeat(indent);
+        String operator = frag.getOperator();
+
+        if ("loop".equals(operator)){
+            Operand operand = frag.getOperands().get(0);
+            String guard = operand.getGuard();
+
+            // guard no formato "var : collection" -> "for (var x : collection)"
+            String[] parts = guard.split("\\s*:\\s*", 2);
+            if (parts.length == 2) {
+                writer.println(indentStr + "for (var " + parts[0].trim() + " : " + parts[1].trim() + ") {");
+            } else {
+                //fallback: guard é condição booleana
+                writer.println(indentStr + "while (" + guard + ") {");
+            }
+            generateElements(writer, operand.getElements(), serviceLifeline, lifelineVarMap, indent + 1);
+            writer.println(indentStr + "}");
+        }
+
+        else if ("opt".equals(operator)) {
+            Operand operand = frag.getOperands().get(0);
+            writer.println(indentStr + "if (" + operand.getGuard() + ") {");
+            generateElements(writer, operand.getElements(), serviceLifeline, lifelineVarMap, indent + 1);
+            writer.println(indentStr + "}");
+        }
+
+        else if ("alt".equals(operator)) {
+            for(int i = 0; i < frag.getOperands().size(); i++) {
+                Operand operand = frag.getOperands().get(i);
+                String guard = operand.getGuard();
+                if (i == 0) {
+                    writer.println(indentStr + "if (" + guard + ") {");
+                } else if (guard != null && !guard.isEmpty() && !guard.equalsIgnoreCase("else")) {
+                    writer.println(indentStr + "} else if (" + guard + ") {");
+                } else {
+                    writer.println(indentStr + "} else {");
+                }
+                generateElements(writer, operand.getElements(), serviceLifeline, lifelineVarMap, indent + 1);
+            }
+            writer.println(indentStr + "}");
+        }
+    }
+
+
 
     // Encontrar o diagrama correspondente a uma operaão
     // Fica assim para ja, depois para ter mais organizado ou associamos dentro da ferramenta ou msm ao fazer o diagrama no nome
