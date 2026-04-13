@@ -1,5 +1,6 @@
 package generator.spring;
 
+import generator.GeneratorUtils;
 import model.*;
 import model.Class;
 import model.annotations.Precondition;
@@ -172,7 +173,7 @@ public class SpringServiceGenerator {
     private void generateDependencies(PrintWriter writer, String className, List<Association> associations, List<Class> classes) {
         writer.println("    // Dependencies");
         writer.println("    private final " + className + "Repository " +
-                lowercaseFirstLetter(className) + "Repository;");
+                GeneratorUtils.lowercaseFirst(className) + "Repository;");
 
         // repositories das entidades relacionadas
         Set<String> addedRepos = new HashSet<>();
@@ -181,14 +182,14 @@ public class SpringServiceGenerator {
                 String related = assoc.getTargetClass();
                 if (!related.equals(className) && addedRepos.add(related)) {
                     writer.println("    private final " + related + "Repository " +
-                            lowercaseFirstLetter(related) + "Repository;");
+                            GeneratorUtils.lowercaseFirst(related) + "Repository;");
                 }
             }
             if (assoc.getTargetClass().equals(className) && assoc.isSourceNavigable()) {
                 String related = assoc.getSourceClass();
                 if (!related.equals(className) && addedRepos.add(related)) {
                     writer.println("    private final " + related + "Repository " +
-                            lowercaseFirstLetter(related) + "Repository;");
+                            GeneratorUtils.lowercaseFirst(related) + "Repository;");
                 }
             }
         }
@@ -197,7 +198,7 @@ public class SpringServiceGenerator {
     }
 
     private void generateCrudMethods(PrintWriter writer, String className, Class cls, List<Association> associations) {
-        String varName = lowercaseFirstLetter(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
 
         writer.println("   // CRUD methods");
@@ -333,11 +334,11 @@ public class SpringServiceGenerator {
                                        String fieldName, Association assoc,
                                        boolean isBidirectional, boolean isSource) {
         String className = cls.getName();
-        String varName = lowercaseFirstLetter(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
-        String otherVar = lowercaseFirstLetter(otherClass);
+        String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherRepoName = otherVar + "Repository";
-        String capitalizedField = capitalizeFirstLetter(fieldName);
+        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
 
         writer.println();
         writer.println("    /**");
@@ -346,7 +347,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Id the " + otherClass + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO assign" + capitalizeFirstLetter(otherClass) +
+        writer.println("    public " + className + "ResponseDTO assign" + GeneratorUtils.capitalizeFirst(otherClass) +
                 "(Long " + varName + "Id, Long " + otherVar + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -361,7 +362,7 @@ public class SpringServiceGenerator {
             String otherSideMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
             String otherSideField = makeAttributeName(className,
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
-            String capitalizedOtherField = capitalizeFirstLetter(otherSideField);
+            String capitalizedOtherField = GeneratorUtils.capitalizeFirst(otherSideField);
 
             writer.println("        // Remove from previous " + otherClass + " if exists");
             writer.println("        if (" + varName + ".get" + capitalizedField + "() != null) {");
@@ -393,16 +394,16 @@ public class SpringServiceGenerator {
                                              String fieldName, Association assoc,
                                              boolean isBidirectional, boolean isSource) {
         String className = cls.getName();
-        String varName = lowercaseFirstLetter(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
-        String capitalizedField = capitalizeFirstLetter(fieldName);
+        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
 
         writer.println("    /**");
         writer.println("     * ManyToOne: Remove the " + otherClass + " from " + className);
         writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO remove" + capitalizeFirstLetter(otherClass) +
+        writer.println("    public " + className + "ResponseDTO remove" + GeneratorUtils.capitalizeFirst(otherClass) +
                 "(Long " + varName + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -413,7 +414,7 @@ public class SpringServiceGenerator {
             String otherSideMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
             String otherSideField = makeAttributeName(className,
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
-            String capitalizedOtherField = capitalizeFirstLetter(otherSideField);
+            String capitalizedOtherField = GeneratorUtils.capitalizeFirst(otherSideField);
 
             writer.println("        // Remove from both sides");
             writer.println("        if (" + varName + ".get" + capitalizedField + "() != null) {");
@@ -443,11 +444,11 @@ public class SpringServiceGenerator {
                                               String fieldName, Association assoc,
                                               boolean isBidirectional) {
         String className = cls.getName();
-        String varName = lowercaseFirstLetter(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
-        String otherVar = lowercaseFirstLetter(otherClass);
+        String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherRepoName = otherVar + "Repository";
-        String capitalizedField = capitalizeFirstLetter(fieldName);
+        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
         String otherPlural = otherVar + "s";
 
         writer.println();
@@ -457,7 +458,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO add" + capitalizeFirstLetter(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO add" + GeneratorUtils.capitalizeFirst(otherPlural) +
                 "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -466,14 +467,14 @@ public class SpringServiceGenerator {
         writer.println();
 
         if (assoc.hasQualifier()) {
-            String qualifierGetter = "get" + capitalizeFirstLetter(assoc.getQualifierName());
+            String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedField + "().put(" +
                     otherVar + "." + qualifierGetter + "(), " + otherVar + ");");
             if (isBidirectional) {
                 String inverseMul = assoc.getSourceMultiplicity();
                 String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
-                writer.println("            " + otherVar + ".get" + capitalizeFirstLetter(inverseField) + "().put(" +
+                writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().put(" +
                         varName + "." + qualifierGetter + "(), " + varName + ");");
             }
             writer.println("        }");
@@ -483,7 +484,7 @@ public class SpringServiceGenerator {
             if (isBidirectional) {
                 String inverseMul = assoc.getSourceMultiplicity();
                 String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
-                writer.println("            " + otherVar + ".get" + capitalizeFirstLetter(inverseField) + "().add(" + varName + ");");
+                writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().add(" + varName + ");");
             }
             writer.println("        }");
         }
@@ -505,11 +506,11 @@ public class SpringServiceGenerator {
                                                  String fieldName, Association assoc,
                                                  boolean isBidirectional) {
         String className = cls.getName();
-        String varName = lowercaseFirstLetter(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
-        String otherVar = lowercaseFirstLetter(otherClass);
+        String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherRepoName = otherVar + "Repository";
-        String capitalizedField = capitalizeFirstLetter(fieldName);
+        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
         String otherPlural = otherVar + "s";
 
         writer.println("    /**");
@@ -518,7 +519,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO remove" + capitalizeFirstLetter(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO remove" + GeneratorUtils.capitalizeFirst(otherPlural) +
                 "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -527,14 +528,14 @@ public class SpringServiceGenerator {
         writer.println();
 
         if (assoc.hasQualifier()) {
-            String qualifierGetter = "get" + capitalizeFirstLetter(assoc.getQualifierName());
+            String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedField + "().remove(" +
                     otherVar + "." + qualifierGetter + "());");
             if (isBidirectional) {
                 String inverseMul = assoc.getSourceMultiplicity();
                 String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
-                writer.println("            " + otherVar + ".get" + capitalizeFirstLetter(inverseField) + "().remove(" +
+                writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().remove(" +
                         varName + "." + qualifierGetter + "());");
             }
             writer.println("        }");
@@ -544,7 +545,7 @@ public class SpringServiceGenerator {
             if (isBidirectional) {
                 String inverseMul = assoc.getSourceMultiplicity();
                 String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
-                writer.println("            " + otherVar + ".get" + capitalizeFirstLetter(inverseField) + "().remove(" + varName + ");");
+                writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().remove(" + varName + ");");
             }
             writer.println("        }");
         }
@@ -565,11 +566,11 @@ public class SpringServiceGenerator {
     private void generateOneToManyUniAddMethod(PrintWriter writer, Class cls, String otherClass,
                                                 String fieldName, Association assoc) {
         String className = cls.getName();
-        String varName = lowercaseFirstLetter(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
-        String otherVar = lowercaseFirstLetter(otherClass);
+        String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherRepoName = otherVar + "Repository";
-        String capitalizedField = capitalizeFirstLetter(fieldName);
+        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
         String otherPlural = otherVar + "s";
 
         writer.println();
@@ -579,7 +580,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO add" + capitalizeFirstLetter(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO add" + GeneratorUtils.capitalizeFirst(otherPlural) +
                 "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -588,7 +589,7 @@ public class SpringServiceGenerator {
         writer.println();
 
         if (assoc.hasQualifier()) {
-            String qualifierGetter = "get" + capitalizeFirstLetter(assoc.getQualifierName());
+            String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedField + "().put(" +
                     otherVar + "." + qualifierGetter + "(), " + otherVar + ");");
@@ -612,11 +613,11 @@ public class SpringServiceGenerator {
     private void generateOneToManyUniRemoveMethod(PrintWriter writer, Class cls, String otherClass,
                                                    String fieldName, Association assoc) {
         String className = cls.getName();
-        String varName = lowercaseFirstLetter(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
-        String otherVar = lowercaseFirstLetter(otherClass);
+        String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherRepoName = otherVar + "Repository";
-        String capitalizedField = capitalizeFirstLetter(fieldName);
+        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
         String otherPlural = otherVar + "s";
 
         writer.println("    /**");
@@ -625,7 +626,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO remove" + capitalizeFirstLetter(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO remove" + GeneratorUtils.capitalizeFirst(otherPlural) +
                 "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -633,7 +634,7 @@ public class SpringServiceGenerator {
         writer.println();
 
         if (assoc.hasQualifier()) {
-            String qualifierGetter = "get" + capitalizeFirstLetter(assoc.getQualifierName());
+            String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedField + "().remove(" +
@@ -662,7 +663,7 @@ public class SpringServiceGenerator {
         writer.println("    // Simple query methods for strings");
 
         String className = cls.getName();
-        String varName = lowercaseFirstLetter(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
 
         for (Attribute attr : stringAttributes){
@@ -698,7 +699,7 @@ public class SpringServiceGenerator {
     }
 
     private void generateCreateMethod(PrintWriter writer, String className, Class cls, List<Association> associations){
-        String varName = lowercaseFirstLetter(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
 
         writer.println("    /**");
@@ -716,7 +717,7 @@ public class SpringServiceGenerator {
     }
 
     private void generateUpdateMethod(PrintWriter writer, String className, Class cls) {
-        String varName = lowercaseFirstLetter(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
 
         writer.println("    /**");
@@ -736,8 +737,8 @@ public class SpringServiceGenerator {
             for (Attribute attr : allAttrs) {
                 String attrName = attr.getName();
                 String prefix = "boolean".equals(attr.getType()) ? "is" : "get";
-                String getter = prefix + capitalizeFirstLetter(attrName);
-                String setter = "set" + capitalizeFirstLetter(attrName);
+                String getter = prefix + GeneratorUtils.capitalizeFirst(attrName);
+                String setter = "set" + GeneratorUtils.capitalizeFirst(attrName);
 
                 writer.println("        existing." + setter + "(dto." + getter + "());");
             }
@@ -749,14 +750,6 @@ public class SpringServiceGenerator {
         writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
         writer.println();
-    }
-
-    private String removePackageNames(String type) {
-        if (type == null) return null;
-
-        //List<Teste.Aluno> -> List<Aluno>
-
-        return type.replaceAll("\\b([A-Za-z_$][\\w$]*\\.)+([A-Za-z_$][\\w$]*)\\b", "$2");
     }
 
     private List<Attribute> getAllAttributes(Class cls) {
@@ -786,7 +779,7 @@ public class SpringServiceGenerator {
     private String extractBaseType(String type) {
         if (type == null) return null;
 
-        type = removePackageNames(type.trim());
+        type = GeneratorUtils.removePackageNames(type.trim());
 
         if (type.contains("<")) {
             int start = type.indexOf("<") + 1;
@@ -816,7 +809,7 @@ public class SpringServiceGenerator {
             if (sourceRole != null && !sourceRole.trim().isEmpty()) {
                 return sourceRole.trim();
             }
-            return lowercaseFirstLetter(className);
+            return GeneratorUtils.lowercaseFirst(className);
         } else {
             String targetClass = assoc.getTargetClass();
             String targetRole = assoc.getTargetRole();
@@ -851,27 +844,6 @@ public class SpringServiceGenerator {
                 (multiplicity.contains("..") && !multiplicity.equals("0..1"));
     }
 
-    private String capitalizeFirstLetter(String str) {
-        if (str == null || str.isEmpty()) return str;
-        return str.substring(0, 1).toUpperCase() + str.substring(1);
-    }
-
-    private String lowercaseFirstLetter(String str) {
-        if (str == null || str.isEmpty()) return str;
-        return str.substring(0, 1).toLowerCase() + str.substring(1);
-    }
-
-    private Class findClassByName(String name, List<Class> classes) {
-        for (Class cls : classes) {
-            if (cls.getName().equals(name)) {
-                return cls;
-            }
-        }
-        return null;
-    }
-
-
-
     /**
      * Diagramas de sequencia
      * */
@@ -884,7 +856,7 @@ public class SpringServiceGenerator {
         writer.println("    // operations (TODO: implement)");
 
         for (Operation op : cls.getOperations()) {
-            Interaction interaction = findInteractionForOperation(cls, op, interactions, allClasses);
+            Interaction interaction = SpringUtils.findInteractionForOperation(cls, op, interactions, allClasses);
             generateCustomOperation(writer, cls, op, interaction);
         }
     }
@@ -903,18 +875,7 @@ public class SpringServiceGenerator {
             return;
         }
 
-        // encontrar a mensagem de entrada no service (Controller -> Service)
-        String serviceType = className + "Service";
-        Message entryMessage = null;
-        for (Message msg : interaction.getMessages()) {
-            if (msg.getTarget() != null &&
-                msg.getTarget().getType() != null &&
-                msg.getTarget().getType().equals(serviceType) &&
-                msg.getName().equals(operName)) {
-                entryMessage = msg;
-                break;
-            }
-        }
+        Message entryMessage = SpringUtils.findEntryMessage(interaction, cls, op);
 
         // assinatura — parâmetros vêm da mensagem de entrada do diagrama de sequência
         writer.println();
@@ -962,7 +923,7 @@ public class SpringServiceGenerator {
         Map<String, String> lifelineVarMap = new HashMap<>();
         for (Lifeline ll : interaction.getLifelines()) {
             if (ll.getType() != null && ll.getType().endsWith("Repository")) {
-                String repoVar = lowercaseFirstLetter(ll.getType());
+                String repoVar = GeneratorUtils.lowercaseFirst(ll.getType());
                 lifelineVarMap.put(ll.getId(), repoVar);
             }
             if (ll.getType() != null && ll.getType().endsWith("Service")) {
@@ -1000,7 +961,7 @@ public class SpringServiceGenerator {
 
         String targetVar = lifelineVarMap.getOrDefault(
                 msg.getTarget().getId(),
-                lowercaseFirstLetter(msg.getTarget().getType())
+                GeneratorUtils.lowercaseFirst(msg.getTarget().getType())
         );
 
         // construir lista dos argumentos
@@ -1021,7 +982,7 @@ public class SpringServiceGenerator {
             String returnType = msg.getReturnType();
             String varName = msg.getAssignVariable() != null
                     ? msg.getAssignVariable()
-                    : lowercaseFirstLetter(returnType);
+                    : GeneratorUtils.lowercaseFirst(returnType);
 
             if (methodName.equals("findById")) {
                 writer.println(indent + returnType + " " + varName + " = " + targetVar + "." +
@@ -1086,37 +1047,6 @@ public class SpringServiceGenerator {
     }
 
 
-
-    // Encontrar o diagrama correspondente a uma operaão
-    // Fica assim para ja, depois para ter mais organizado ou associamos dentro da ferramenta ou msm ao fazer o diagrama no nome
-    private Interaction findInteractionForOperation(Class cls, Operation op, List<Interaction>
-            interactions, List<Class> allClasses) {
-
-        // Pegar nos nomes das classes
-        Set<String> classNames = allClasses.stream()
-                .map(Class::getName)
-                .collect(Collectors.toSet());
-
-        String controllerType = cls.getName() + "Controller";
-        String serviceType = cls.getName() + "Service";
-
-        for (Interaction interaction : interactions) {
-            for (Message msg : interaction.getMessages()) {
-                if(msg.getSource() == null || msg.getTarget() == null) continue;
-
-                String sourceType = msg.getSource().getType();
-                if(classNames.contains(sourceType)) continue;
-
-                if(msg.getName().equals(op.getName()) &&
-                        msg.getTarget().getType() != null &&
-                        (msg.getTarget().getType().equals(controllerType) ||
-                                msg.getTarget().getType().equals(serviceType))) return interaction;
-                break;
-            }
-        }
-
-        return null;
-    }
 
     private String translateOclToJava(String oclExpression) {
         try {

@@ -5,6 +5,7 @@ import ocl.OCLTranslator;
 import parser.SequenceDiagramParser;
 import parser.XMIParser;
 import generator.CodeGenerator;
+import generator.GeneratorUtils;
 import generator.spring.SpringProjectGenerator;
 import generator.spring.SpringEntityGenerator;
 import generator.spring.SpringRepositoryGenerator;
@@ -42,7 +43,7 @@ public class Main {
         //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
         //String xmiFilePath = "test-models/aluno_turma_class_sequence_test.uml";
         //String xmiFilePath = "test-models/aluno_turma_class_sequence_ocl_init.uml";
-        String xmiFilePath = "test-models/aluno_turma_class_seq_loop.uml";
+        String xmiFilePath = "test-models/aluno_turma_class_seq_full.uml";
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 
@@ -116,15 +117,33 @@ public class Main {
         // Parsing dos diagramas de sequencia
         SequenceDiagramParser sequenceParser = new SequenceDiagramParser();
         sequenceParser.loadModel(xmiFilePath);
-        List<Interaction> interactions = sequenceParser.parseInteractions();
+        List<Interaction> allInteractions = sequenceParser.parseInteractions();
 
+        // separar PSM (Spring) e PIM (CLI/plain)
+        List<Interaction> psmInteractions = new java.util.ArrayList<>();
+        List<Interaction> pimInteractions = new java.util.ArrayList<>();
+        for (Interaction inter : allInteractions) {
+            String name = inter.getName();
+            if (name == null) continue;
+            if (name.endsWith("_psm")) {
+                inter.setName(name.substring(0, name.length() - 4));
+                psmInteractions.add(inter);
+            } else if (name.endsWith("_pim")) {
+                inter.setName(name.substring(0, name.length() - 4));
+                pimInteractions.add(inter);
+            }
+        }
+
+        // por omissão o spring usa PSM; se não houver _psm cai para todas (compat com modelos antigos)
         // debug: imprimir interactions parseadas
-        for (Interaction inter : interactions) {
+        for (Interaction inter : allInteractions) {
             System.out.println("\n=== Interaction: " + inter.getName() + " ===");
             System.out.println("Lifelines: " + inter.getLifelines());
             System.out.println("Elements:");
             printElements(inter.getElements(), 1);
         }
+
+        List<Interaction> interactions = null;
 
         // gerar código
         String outputDir = "output";
@@ -133,11 +152,14 @@ public class Main {
 
         // plain java classes
         if (generateWhat.equals("plain")) {
+            interactions = pimInteractions;
             CodeGenerator codeGenerator = new CodeGenerator(classes, associations, enumerations, outputDir);
             codeGenerator.generate();
         }
 
         if (generateWhat.equals("spring")) {
+            interactions = psmInteractions;
+
             // spring boot - settings
             SpringProjectSettings settings = new SpringProjectSettings();
             // settings.setBasePackage("pt.uminho.app");
@@ -172,6 +194,7 @@ public class Main {
         }
 
         if (generateWhat.equals("cli")) {
+            interactions = pimInteractions;
             JavaProjectGenerator cliGenerator = new JavaProjectGenerator(outputDir);
             cliGenerator.generate(classes, associations, enumerations);
         }
@@ -212,22 +235,13 @@ public class Main {
     // para ja fica aqui, depois meter num parser helper
     private static void fillGeneralizations(List<Class> classes, List<Generalization> generalizations){
         for (Generalization gen : generalizations) {
-            Class child = findClassByName(classes, gen.getChildClass());
-            Class parent = findClassByName(classes, gen.getParentClass());
+            Class child = GeneratorUtils.findClassByName(classes, gen.getChildClass());
+            Class parent = GeneratorUtils.findClassByName(classes, gen.getParentClass());
 
             if (child != null && parent != null) {
                 child.setParentClass(parent);
             }
         }
-    }
-
-    private static Class findClassByName(List<Class> classes, String name) {
-        for (Class c : classes) {
-            if (c.getName().equals(name)) {
-                return c;
-            }
-        }
-        return null;
     }
 
     private static void printElements(java.util.List<Object> elements, int depth) {

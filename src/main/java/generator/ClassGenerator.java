@@ -360,7 +360,7 @@ public class ClassGenerator {
         for (Operation op : cls.getOperations()) {
             // assinatura
             String visibility = op.getVisibility();
-            String returnType = removePackageNames(op.getReturnType());
+            String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
             String name = op.getName();
             writer.println("    " + visibility + " " + returnType + " " + name + "(");
 
@@ -368,7 +368,7 @@ public class ClassGenerator {
             List<Parameter> parameters = op.getParameters();
             for (int i = 0; i < parameters.size(); i++) {
                 Parameter param = parameters.get(i);
-                String paramType = removePackageNames(param.getType());
+                String paramType = GeneratorUtils.removePackageNames(param.getType());
                 String paramName = param.getName();
                 writer.print("        " + paramType + " " + paramName);
                 if (i < parameters.size() - 1) {
@@ -386,11 +386,4 @@ public class ClassGenerator {
         }
     }
 
-    private String removePackageNames(String type) {
-        if (type == null) return null;
-
-        //List<Teste.Aluno> -> List<Aluno>
-
-        return type.replaceAll("\\b([A-Za-z_$][\\w$]*\\.)+([A-Za-z_$][\\w$]*)\\b", "$2");
-    }
 }

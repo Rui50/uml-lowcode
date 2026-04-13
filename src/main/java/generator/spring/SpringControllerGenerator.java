@@ -1,5 +1,6 @@
 package generator.spring;
 
+import generator.GeneratorUtils;
 import model.*;
 import model.Class;
 import model.sequence.*;
@@ -11,7 +12,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class SpringControllerGenerator {
     private String outputDirectory;
@@ -85,7 +85,7 @@ public class SpringControllerGenerator {
     }
     private void generateCrudEndpoints(PrintWriter writer, Class cls) {
         String className = cls.getName();
-        String varName = toLowerCaseFirst(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String serviceName = varName + "Service";
         String pluralPath = className.toLowerCase();
         if (!pluralPath.endsWith("s")){
@@ -168,7 +168,7 @@ public class SpringControllerGenerator {
 
     private void generateRelationEndpoints(PrintWriter writer, Class cls, List<Association> associations) {
         String className = cls.getName();
-        String varName = toLowerCaseFirst(className);
+        String varName = GeneratorUtils.lowercaseFirst(className);
         String serviceName = varName + "Service";
         boolean hasRelationships = false;
 
@@ -226,7 +226,7 @@ public class SpringControllerGenerator {
      * Ex: PUT /api/alunos/1/turno/3
      */
     private void generateAssignEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
-        String otherVar = toLowerCaseFirst(otherClass);
+        String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherPath = otherVar.toLowerCase();
 
         writer.println();
@@ -267,7 +267,7 @@ public class SpringControllerGenerator {
      * Ex: POST /api/turmas/1/alunos  body: [1, 2, 3]
      */
     private void generateCollectionAddEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
-        String otherVar = toLowerCaseFirst(otherClass);
+        String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherPlural = otherVar + "s";
         String otherPath = otherPlural.toLowerCase();
 
@@ -276,10 +276,10 @@ public class SpringControllerGenerator {
         writer.println("     * Add " + otherClass + " entities to " + className + " by IDs");
         writer.println("     */");
         writer.println("    @PostMapping(\"/{id}/" + otherPath + "\")");
-        writer.println("    public ResponseEntity<" + className + "ResponseDTO> add" + capitalizeFirstLetter(otherPlural) + "(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> add" + GeneratorUtils.capitalizeFirst(otherPlural) + "(");
         writer.println("            @PathVariable Long id,");
         writer.println("            @RequestBody List<Long> " + otherVar + "Ids) {");
-        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".add" + capitalizeFirstLetter(otherPlural) + "(id, " + otherVar + "Ids);");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".add" + GeneratorUtils.capitalizeFirst(otherPlural) + "(id, " + otherVar + "Ids);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -290,7 +290,7 @@ public class SpringControllerGenerator {
      * Ex: DELETE /api/turmas/1/alunos  body: [1, 2, 3]
      */
     private void generateCollectionRemoveEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
-        String otherVar = toLowerCaseFirst(otherClass);
+        String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherPlural = otherVar + "s";
         String otherPath = otherPlural.toLowerCase();
 
@@ -298,10 +298,10 @@ public class SpringControllerGenerator {
         writer.println("     * Remove " + otherClass + " entities from " + className + " by IDs");
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
-        writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + capitalizeFirstLetter(otherPlural) + "(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + GeneratorUtils.capitalizeFirst(otherPlural) + "(");
         writer.println("            @PathVariable Long id,");
         writer.println("            @RequestBody List<Long> " + otherVar + "Ids) {");
-        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + capitalizeFirstLetter(otherPlural) + "(id, " + otherVar + "Ids);");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + GeneratorUtils.capitalizeFirst(otherPlural) + "(id, " + otherVar + "Ids);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -355,7 +355,7 @@ public class SpringControllerGenerator {
     private void generateDependencies(PrintWriter writer, Class cls, List<Class> allClasses) {
         String className = cls.getName();
         writer.println("    private final " + className + "Service " +
-                toLowerCaseFirst(className) + "Service;");
+                GeneratorUtils.lowercaseFirst(className) + "Service;");
 
         // para cada param de cada operação, se for uma entidade, adicionar como dependência
         Set<String> extraServices = new HashSet<>();
@@ -369,7 +369,7 @@ public class SpringControllerGenerator {
             }
         }
         for (String extra : extraServices) {
-            writer.println("    private final " + extra + "Service " + toLowerCaseFirst(extra) + "Service;");
+            writer.println("    private final " + extra + "Service " + GeneratorUtils.lowercaseFirst(extra) + "Service;");
         }
 
         writer.println();
@@ -431,7 +431,7 @@ public class SpringControllerGenerator {
     private String extractBaseType(String type) {
         if (type == null) return null;
 
-        type = removePackageNames(type.trim());
+        type = GeneratorUtils.removePackageNames(type.trim());
 
         if (type.contains("<")) {
             int start = type.indexOf("<") + 1;
@@ -452,24 +452,6 @@ public class SpringControllerGenerator {
         }
 
         return type;
-    }
-
-    private String removePackageNames(String type) {
-        if (type == null) return null;
-
-        //List<Teste.Aluno> -> List<Aluno>
-
-        return type.replaceAll("\\b([A-Za-z_$][\\w$]*\\.)+([A-Za-z_$][\\w$]*)\\b", "$2");
-    }
-
-    private String toLowerCaseFirst(String s) {
-        if (s == null || s.isEmpty()) return s;
-        return Character.toLowerCase(s.charAt(0)) + s.substring(1);
-    }
-
-    private String capitalizeFirstLetter(String str) {
-        if (str == null || str.isEmpty()) return str;
-        return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 
     private boolean checkMultiplicity(String multiplicity) {
@@ -520,26 +502,16 @@ public class SpringControllerGenerator {
         if (cls.getOperations().isEmpty()) return;
 
         String className = cls.getName();
-        String serviceName = toLowerCaseFirst(className) + "Service";
+        String serviceName = GeneratorUtils.lowercaseFirst(className) + "Service";
 
         writer.println();
         writer.println("    // Custom Operation Endpoints dos diagramas sequencia");
 
         for (Operation op : cls.getOperations()) {
-            Interaction interaction = findInteractionForOperation(cls, op, interactions, allClasses);
+            Interaction interaction = SpringUtils.findInteractionForOperation(cls, op, interactions, allClasses);
             if (interaction == null) continue;
 
-            // encontrar a mensagem de entrada no service (Controller -> Service)
-            // isto depois vai ser configurado na app, mas para ja consideramos a do servico
-            String serviceType = className + "Service";
-            Message entryMessage = null;
-            for (Message msg : interaction.getMessages()) {
-                if (msg.getTarget() != null && serviceType.equals(msg.getTarget().getType()) && msg.getName().equals(op.getName())) {
-                    entryMessage = msg;
-                    break;
-                }
-            }
-
+            Message entryMessage = SpringUtils.findEntryMessage(interaction, cls, op);
             List<MessageArgument> entryArgs = (entryMessage != null) ? entryMessage.getArguments() : new ArrayList<>();
 
             writer.println();
@@ -578,7 +550,7 @@ public class SpringControllerGenerator {
                     }
                 }
                 if (isEntity) {
-                    String paramServiceName = toLowerCaseFirst(argType) + "Service";
+                    String paramServiceName = GeneratorUtils.lowercaseFirst(argType) + "Service";
                     writer.println("        " + argType + " " + argName + " = " + paramServiceName
                             + ".findById(" + argName + "Id)");
                     writer.println("            .orElseThrow(() -> new RuntimeException(\"" + argType
@@ -598,35 +570,4 @@ public class SpringControllerGenerator {
             writer.println("    }");
         }
     }
-    // Encontrar o diagrama correspondente a uma operaão
-    // Fica assim para ja, depois para ter mais organizado ou associamos dentro da ferramenta ou msm ao fazer o diagrama no nome
-    private Interaction findInteractionForOperation(Class cls, Operation op, List<Interaction>
-            interactions, List<Class> allClasses) {
-
-        // Pegar nos nomes das classes
-        Set<String> classNames = allClasses.stream()
-                .map(Class::getName)
-                .collect(Collectors.toSet());
-
-        String controllerType = cls.getName() + "Controller";
-        String serviceType = cls.getName() + "Service";
-
-        for (Interaction interaction : interactions) {
-            for (Message msg : interaction.getMessages()) {
-                if(msg.getSource() == null || msg.getTarget() == null) continue;
-
-                String sourceType = msg.getSource().getType();
-                if(classNames.contains(sourceType)) continue;
-
-                if(msg.getName().equals(op.getName()) &&
-                        msg.getTarget().getType() != null &&
-                        (msg.getTarget().getType().equals(controllerType) ||
-                                msg.getTarget().getType().equals(serviceType))) return interaction;
-                break;
-            }
-        }
-
-        return null;
-    }
-
 }
