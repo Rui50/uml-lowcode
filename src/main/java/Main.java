@@ -1,8 +1,10 @@
+import generator.OperationGenerator;
 import model.Attribute;
 import model.annotations.Invariant;
 import model.sequence.*;;
 import ocl.OCLTranslator;
 import parser.SequenceDiagramParser;
+import parser.SequenceDiagramParser2;
 import parser.XMIParser;
 import generator.CodeGenerator;
 import generator.GeneratorUtils;
@@ -16,6 +18,7 @@ import generator.spring.SpringProjectSettings;
 
 import generator.CLI.JavaProjectGenerator;
 
+import java.io.PrintWriter;
 import java.util.List;
 
 import model.Class;
@@ -148,12 +151,13 @@ public class Main {
         // gerar código
         String outputDir = "output";
 
-        String generateWhat = "spring"; // "plain" "spring" "cli" "none"
+        String generateWhat = "cli"; // "plain" "spring" "cli" "none"
 
         // plain java classes
         if (generateWhat.equals("plain")) {
             interactions = pimInteractions;
-            CodeGenerator codeGenerator = new CodeGenerator(classes, associations, enumerations, outputDir);
+
+            CodeGenerator codeGenerator = new CodeGenerator(classes, associations, enumerations, outputDir, pimInteractions);
             codeGenerator.generate();
         }
 
@@ -196,7 +200,7 @@ public class Main {
         if (generateWhat.equals("cli")) {
             interactions = pimInteractions;
             JavaProjectGenerator cliGenerator = new JavaProjectGenerator(outputDir);
-            cliGenerator.generate(classes, associations, enumerations);
+            cliGenerator.generate(classes, associations, enumerations, interactions);
         }
 
         // ver as operações OCL (invariantes para ja)
@@ -254,6 +258,9 @@ public class Main {
                         + " [" + (msg.getSource() != null ? msg.getSource().getType() : "?")
                         + " -> " + (msg.getTarget() != null ? msg.getTarget().getType() : "?") + "]"
                         + (msg.getReturnType() != null ? " : " + msg.getReturnType() : ""));
+                if (msg.getArguments() != null && !msg.getArguments().isEmpty()) {
+                    System.out.println(indent + "  args: " + msg.getArguments());
+                }
             } else if (el instanceof Fragment) {
                 Fragment frag = (Fragment) el;
                 System.out.println(indent + "Fragment: " + frag.getOperator());

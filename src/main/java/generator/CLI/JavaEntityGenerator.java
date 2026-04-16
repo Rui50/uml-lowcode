@@ -5,6 +5,12 @@ import model.Association;
 import model.Attribute;
 import model.Class;
 import model.Enumeration;
+import model.sequence.Interaction;
+import model.Operation;
+import model.Parameter;
+import model.sequence.Interaction;
+import generator.OperationGenerator;
+import generator.GeneratorUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,9 +21,11 @@ import java.util.List;
 public class JavaEntityGenerator {
     private String baseOutputPath;
     private ValidationGenerator validationGenerator;
+    private List<Interaction> interactions;
 
-    public JavaEntityGenerator(String baseOutputPath) {
+    public JavaEntityGenerator(String baseOutputPath, List<Interaction> interactions) {
         this.baseOutputPath = baseOutputPath;
+        this.interactions = interactions;
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations) throws IOException {
@@ -119,6 +127,8 @@ public class JavaEntityGenerator {
             if (!cls.getInvariants().isEmpty()) {
                 validationGenerator.generateValidateMethod(writer, cls);
             }
+
+            generateOperations(writer, cls, associations);
 
             writer.println("}");
         }
@@ -254,6 +264,35 @@ public class JavaEntityGenerator {
                     generateGetterSetter(writer, type, fieldName);
                     generatedFields.add(fieldName);
                 }
+            }
+        }
+    }
+
+    private void generateOperations(PrintWriter writer, Class cls, List<Association> associations) {
+        if (cls.getOperations().isEmpty()) return;
+
+        writer.println("    // Operations");
+
+        for (Operation op : cls.getOperations()) {
+            Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
+            if (interaction != null) {
+                OperationGenerator.generateOperation(writer, cls, interaction, associations);
+            } else {
+                String visibility = op.getVisibility();
+                String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
+                writer.println("    " + visibility + " " + returnType + " " + op.getName() + "(");
+
+                List<Parameter> parameters = op.getParameters();
+                for (int i = 0; i < parameters.size(); i++) {
+                    Parameter param = parameters.get(i);
+                    String paramType = GeneratorUtils.removePackageNames(param.getType());
+                    writer.print("        " + paramType + " " + param.getName());
+                    writer.println(i < parameters.size() - 1 ? "," : "");
+                }
+
+                writer.println("    ) {");
+                writer.println("        throw new UnsupportedOperationException(\"Not implemented yet\");");
+                writer.println("    }");
             }
         }
     }

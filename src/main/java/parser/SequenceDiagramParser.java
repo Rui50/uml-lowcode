@@ -1,6 +1,5 @@
 package parser;
 
-import java.awt.*;
 import java.util.*;
 import java.util.List;
 
@@ -62,201 +61,129 @@ public class SequenceDiagramParser {
         return interactions;
     }
 
-    // parse de uma interação, incluindo lifelines e mensagens
-    // construi a arvore de fragments (Combined fragments com operands e guards)
-    // mapeia os eventos para operands(para saber em que operand cada mensagem esta)
-    // coloca as mensagens no sitio
+    /**
+     * Parse de uma interação
+     * popula lifelines, mensagens e fragmentos em ordem do XMI
+     *
+     * mensagens sao primeiro porque estao em .messages, equanto que os eventos em si em .fragments
+     */
     private Interaction parseInteraction(ModelElement element) {
         Interaction interaction = new Interaction();
-
-        // nome da interação
         interaction.setId(element.getXMIID());
         interaction.setName(element.getName());
 
-        System.out.println("Parsing interaction: " + interaction.getName() + " (ID: " + interaction.getId() + ")");
-
-        // parse lifelines
+        // lifelines
         Collection<?> lifelines = element.getSetAttribute("lifelines");
         if (lifelines != null) {
-            for (Object lifelineObj : lifelines) {
-                ModelElement lifelineElement = (ModelElement) lifelineObj;
-                Lifeline lifeline = parseLifeline(lifelineElement);
-                interaction.getLifelines().add(lifeline);
+            for (Object o : lifelines) {
+                interaction.getLifelines().add(parseLifeline((ModelElement) o));
             }
         }
 
-        // arvore de fragmentos
-        Map<String, Operand> operandMap = new HashMap<>();
-        // os combined fragments que estao no nivel mais alto
-        List<Fragment> rootCombinedFragments = makeFragmentTree(operandMap);
+        // mensagens primeiro porque estao em interaction.messages mas os eventos estao em fragments, entao preciso de mapear os eventos para as mensagens antes de colocar as mensagens
+        Map<String, Message> sendEventToMessage = parseMessages(element, interaction);
 
-        // map events a operands
-        Map<String, String> eventToOperandId = buildEventMap(operandMap);
+        // todos os combinedFragments
+        List<ModelElement> allCombFrags = model.getAcceptedElements(metaModel.getType("combinedfragment"));
+        if (allCombFrags == null) allCombFrags = Collections.emptyList();
 
-        // por mensagens na árvore
-        placeMessages(element, interaction, operandMap, rootCombinedFragments, eventToOperandId);
+        // iteração recursiva, constroi e coloca por orden
+        buildContents(element, interaction.getElements(), sendEventToMessage, allCombFrags);
 
-        // Context class
+        // context class
         if (!interaction.getLifelines().isEmpty()) {
             interaction.setContextClass(interaction.getLifelines().get(0).getType());
         }
         return interaction;
     }
 
-    /*
-     * constroi os fragmentos iniciais a partir dos CombinedFragments
-     * 1 - Começa por criar um fragment para cada CombinedFragment, preenchendo o operador e guardasdos operandos
-     * 2 - Resolve nesting, para cada CF, verificar se o seu owner é um operand.
-     *     Se for, está nested, adiciona-o aos elements desse operand.
-     *     Se não, é um fragmento raiz, adiciona-o à lista de rootCombinedFragments
 
-     * SDMetrics nao tem order, pode devolver em qualquer ordem, assim corrigo isso
-
+    /**
+     * Construi recursivamente a hierarquia dos elementos (mensagens/frags)
+     *
+     * Just os elementos
+     *  - .fragments, inclui eventos de mensagens e combined fragments top level
+     *  - combined fragments nested, porque o visual paradigm emite nested CFs como <packagedElement> em vez de <fragment>
+     *
+     *  depois ordena e itera: para cada cf cria fragment e operands e chama
+     *  recursivamente para construir o conteúdo do operand,
+     *
      */
+    private void buildContents(ModelElement container, List<Object> elementsList,
+                               Map<String, Message> sendEventToMessage,
+                               List<ModelElement> allCombFrags) {
+        // junta os elementos de ambas fontes (messageoccurence e combinedfrags)
+        List<ModelElement> elements = new ArrayList<>();
+        Collection<?> fragments = container.getSetAttribute("fragments");
+        if (fragments != null) {
+            for (Object o : fragments) {
+                elements.add((ModelElement) o);
+            }
+        }
 
-    private List<Fragment> makeFragmentTree(Map<String, Operand> operandMap) {
-        List<Fragment> rootCombinedFragments = new ArrayList<>();
-        List<ModelElement> allCombFrags = model.getAcceptedElements(metaModel.getType("combinedfragment"));
-        if (allCombFrags == null || allCombFrags.isEmpty()) return rootCombinedFragments;
+        // combined fragments cujo owner é o container atual
+        String containerId = container.getXMIID();
+        for (ModelElement cf : allCombFrags) {
+            ModelElement owner = cf.getOwner();
+            if (owner == null || !containerId.equals(owner.getXMIID())) continue;
+            if (!elements.contains(cf)) elements.add(cf);
+        }
 
-        // Começar por criar fragment para cada CF e operand para cada operand
-        Map<String, Fragment> combFragMap = new HashMap<>(); // usar para resolver nesting
-        for (ModelElement combFragElem : allCombFrags) {
-            Fragment frag = new Fragment();
-            frag.setOperator(combFragElem.getPlainAttribute("operator"));
-            frag.setId(combFragElem.getXMIID());
+        // ordernar por ordem do xmi
+        elements.sort(ModelElement.getComparator());
 
-            combFragMap.put(frag.getId(), frag);
+        // interar e construir recursivamente
+        for (ModelElement elem : elements) {
+            String typeName = elem.getType().getName();
+            if ("combinedfragment".equals(typeName)) {
+                Fragment frag = new Fragment();
+                frag.setId(elem.getXMIID());
+                // operator (loop, alt, opt)
+                frag.setOperator(elem.getPlainAttribute("operator"));
 
-            Collection<?> operands = combFragElem.getSetAttribute("operands");
-            if (operands != null) {
-                for (Object operandObj : operands) {
-                    ModelElement operandElem = (ModelElement) operandObj;
-                    Operand operand = new Operand();
-                    operand.setId(operandElem.getXMIID());
-                    // guard é ref para um LiteralString — dereferenciar para obter o value
-                    ModelElement guardEl = (ModelElement) operandElem.getRefAttribute("guard");
-                    if (guardEl != null) {
-                        operand.setGuard(guardEl.getPlainAttribute("value"));
+                // operands (guard + branches se tiver)
+                Collection<?> operands = elem.getSetAttribute("operands");
+                if (operands != null) {
+                    for (Object o : operands) {
+                        ModelElement operandElem = (ModelElement) o;
+                        Operand op = new Operand();
+                        op.setId(operandElem.getXMIID());
+                        ModelElement guardEl = (ModelElement) operandElem.getRefAttribute("guard");
+                        if (guardEl != null) op.setGuard(guardEl.getPlainAttribute("value"));
+
+                        // recursão para construir o conteúdo do operand
+                        //o operand é ele próprio um container
+                        buildContents(operandElem, op.getElements(), sendEventToMessage, allCombFrags);
+
+                        frag.getOperands().add(op);
                     }
-                    frag.getOperands().add(operand);
-                    operandMap.put(operand.getId(), operand); // mapear id do operand para o fragmento
                 }
+                elementsList.add(frag);
+            } else if ("occurrencespec".equals(typeName)) {
+                Message msg = sendEventToMessage.get(elem.getXMIID());
+                if (msg != null) elementsList.add(msg);
             }
         }
-
-        // resolver nesting
-        // dono de um CF é um operand (existe no operandMap) -> nested dentro desse operand
-        // dono não é um operand -> top-level
-        for (ModelElement combFragElem : allCombFrags) {
-            Fragment frag = combFragMap.get(combFragElem.getXMIID());
-            ModelElement owner = combFragElem.getOwner();
-
-            if (owner != null && operandMap.containsKey(owner.getXMIID())) {
-                operandMap.get(owner.getXMIID()).addElement(frag);
-            } else {
-                rootCombinedFragments.add(frag);
-            }
-        }
-
-        return rootCombinedFragments;
     }
 
-    /**
-     * Mapeia eventos (send/receive) a operadores
-     *
-     * pelo xmi cada operand contem "fragments" do tipo MessageOccurrenceSpecification
-     * Este mapa vai ser para dado um sendEvent de uma mensagem, encontrar o operand onde esse evento ocorre
-     * Se o sendEvent não está no mapa, a mensagem está na raiz da interaction.
-     */
-    private Map<String, String> buildEventMap(Map<String, Operand> operandMap){
-        Map<String, String> eventToOperandId = new HashMap<>();
-
-        List<ModelElement> allOperands = model.getAcceptedElements(metaModel.getType("interactionoperand"));
-        for (ModelElement operandElem : allOperands){
-            // filtrar
-            if (!operandMap.containsKey(operandElem.getXMIID())) continue;
-
-            // "fragmentos" aqui sao eventos
-            Collection<?> events = operandElem.getSetAttribute("fragments");
-
-            if(events != null){
-                for (Object eventObj : events){
-                    ModelElement eventElem = (ModelElement) eventObj;
-                    eventToOperandId.put(eventElem.getXMIID(), operandElem.getXMIID());
-                }
-            }
-        }
-        return eventToOperandId;
-    }
-
-    /**
-     * Itera as mensagens por odem e coloca cada uma no "seu lugar"
-     *
-     * cada mensagem
-     * 1 - procura sendevent no eventMap
-     * 2 - se encontrar, coloca a mensagem nesse operand e insere o "toplevel" frag na interaçºão
-     * 3 - se nao encontra a mensagem é top-level, coloca-a diretamente na interação
-     */
-
-    private void placeMessages(ModelElement element,
-                               Interaction interaction,
-                               Map<String, Operand> operandMap,
-                               List<Fragment> rootCombinedFragments,
-                               Map<String, String> eventToOperandId) {
-
+    private Map<String, Message> parseMessages(ModelElement element, Interaction interaction) {
+        Map<String, Message> sendEventToMessage = new HashMap<>();
         Collection<?> messages = element.getSetAttribute("messages");
-        if (messages == null) return;
+        if (messages == null) return sendEventToMessage;
 
-        // ordenar mensagens
         List<ModelElement> sorted = new ArrayList<>();
-        for (Object obj : messages) sorted.add((ModelElement) obj);
+        for (Object o : messages) sorted.add((ModelElement) o);
         sorted.sort(ModelElement.getComparator());
 
-        //
-        Set<String> placedFragments = new HashSet<>();
         int seq = 0;
-
-        for (ModelElement msgElement : sorted) {
-            Message msg = parseMessage(msgElement, interaction);
+        for (ModelElement msgEl : sorted) {
+            Message msg = parseMessage(msgEl, interaction);
             if (msg == null) continue;
             msg.setSequenceNumber(seq++);
-
-            // descobrir o operand em que a msg está
-            ModelElement sendEvent = (ModelElement) msgElement.getRefAttribute("sendevent");
-            String operandId = (sendEvent != null) ? eventToOperandId.get(sendEvent.getXMIID()) : null;
-
-            if (operandId != null && operandMap.containsKey(operandId)){
-                // mensagem dentro de um fragment
-                operandMap.get(operandId).addElement(msg);
-
-                // inserir o top level fragment na interação em si se ainda nao foi
-                for (Fragment frag : rootCombinedFragments){
-                    if (!placedFragments.contains(frag.getId()) && containsOperand(frag, operandId)) {
-                        interaction.addElement(frag);
-                        placedFragments.add(frag.getId());
-                    }
-                }
-            } else {
-                // mensagem na raiz
-                interaction.addElement(msg);
-            }
+            ModelElement sendEvt = (ModelElement) msgEl.getRefAttribute("sendevent");
+            if (sendEvt != null) sendEventToMessage.put(sendEvt.getXMIID(), msg);
         }
-    }
-
-    /**
-     * Verifica recursivamente se um Fragment contém um operand com o ID dado.
-     * Percorre os operands do Fragment e os elements de cada operand (que podem conter sub-Fragments).
-     */
-    private boolean containsOperand(Fragment fragment, String operandId) {
-        for (Operand op : fragment.getOperands()) {
-            if (op.getId().equals(operandId)) return true;
-            // Verificar sub-fragments dentro deste operand
-            for (Object el : op.getElements()) {
-                if (el instanceof Fragment && containsOperand((Fragment) el, operandId)) return true;
-            }
-        }
-        return false;
+        return sendEventToMessage;
     }
 
     private Lifeline parseLifeline(ModelElement element) {
@@ -484,7 +411,6 @@ public class SequenceDiagramParser {
 
         return arg;
     }
-
     /**
      * Divide uma string por , mas ignora as vírgulas dentro de < > (para listas e maps)
      */

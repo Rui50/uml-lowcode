@@ -3,6 +3,7 @@ package generator.CLI;
 import model.Association;
 import model.Class;
 import model.Enumeration;
+import model.sequence.Interaction;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,11 +29,7 @@ public class JavaProjectGenerator {
      * 5 - menus
      */
 
-    public void generate(List<Class> classes, List<Association> associations) throws IOException {
-        generate(classes, associations, new ArrayList<>());
-    }
-
-    public void generate(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
+    public void generate(List<Class> classes, List<Association> associations, List<Enumeration> enumerations, List<Interaction> interactions) throws IOException {
         System.out.println("Generating Java CLI App...");
 
         // limpar output anterior
@@ -49,7 +46,7 @@ public class JavaProjectGenerator {
         generateInputUtils();
 
         // entidades
-        JavaEntityGenerator entityGenerator = new JavaEntityGenerator(outputDirectory);
+        JavaEntityGenerator entityGenerator = new JavaEntityGenerator(outputDirectory, interactions);
         entityGenerator.generateEntities(classes, associations, enumerations);
 
         // repositórios
@@ -57,7 +54,7 @@ public class JavaProjectGenerator {
         repoGenerator.generateRepositories(classes);
 
         // menus
-        JavaMenuGenerator menuGenerator = new JavaMenuGenerator(outputDirectory);
+        JavaMenuGenerator menuGenerator = new JavaMenuGenerator(outputDirectory, interactions);
         menuGenerator.generateMenus(classes, associations, enumerations);
 
         System.out.println("CLI Application generated in: " + outputDirectory);
@@ -104,7 +101,7 @@ public class JavaProjectGenerator {
             w.println("            scanner.next();");
             w.println("        }");
             w.println("        int value = scanner.nextInt();");
-            w.println("        scanner.nextLine();");
+             w.println("        scanner.nextLine();");
             w.println("        return value;");
             w.println("    }");
             w.println();

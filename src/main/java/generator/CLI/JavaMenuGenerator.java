@@ -4,6 +4,10 @@ import model.Association;
 import model.Attribute;
 import model.Class;
 import model.Enumeration;
+import model.Operation;
+import model.Parameter;
+import model.sequence.Interaction;
+import generator.OperationGenerator;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,9 +18,11 @@ public class JavaMenuGenerator {
 
     private String baseOutputPath;
     private Set<String> enumNames = new HashSet<>();
+    private List<Interaction> interactions;
 
-    public JavaMenuGenerator(String baseOutputPath) {
+    public JavaMenuGenerator(String baseOutputPath, List<Interaction> interactions) {
         this.baseOutputPath = baseOutputPath;
+        this.interactions = interactions;
     }
 
     /**
@@ -52,7 +58,7 @@ public class JavaMenuGenerator {
 
         // verificar que repos este menu precisa
 
-        Set<String> neededRepos = getNeededRepositories(cls, associations);
+        Set<String> neededRepos = getNeededRepositories(cls, associations, allClasses);
 
         try (PrintWriter w = new PrintWriter(filename)) {
             w.println("package menus;");
@@ -160,6 +166,14 @@ public class JavaMenuGenerator {
                     options.add(new String[]{"Assign " + other, "assign" + other});
                     options.add(new String[]{"Remove " + other, "remove" + other});
                 }
+            }
+        }
+
+        for (Operation op : cls.getOperations()) {
+            Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
+            if (interaction != null) {
+                String label = op.getName().substring(0, 1).toUpperCase() + op.getName().substring(1);
+                options.add(new String[]{label, op.getName()});
             }
         }
 
@@ -490,7 +504,7 @@ public class JavaMenuGenerator {
             w.println("            switch (option) {");
             for (int i = 0; i < classes.size(); i++) {
                 Class cls = classes.get(i);
-                Set<String> neededRepos = getNeededRepositories(cls, associations);
+                Set<String> neededRepos = getNeededRepositories(cls, associations, classes);
 
                 w.print("                case " + (i + 1) + ": new " + cls.getName() + "Menu(scanner, " +
                         repoVariable(cls.getName()));
@@ -608,7 +622,7 @@ public class JavaMenuGenerator {
     }
 
 
-    private Set<String> getNeededRepositories(Class cls, List<Association> associations) {
+    private Set<String> getNeededRepositories(Class cls, List<Association> associations, List<Class> allClasses) {
         Set<String> related = new LinkedHashSet<>();
         for (Association assoc : associations) {
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
@@ -616,6 +630,19 @@ public class JavaMenuGenerator {
             }
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
                 related.add(assoc.getSourceClass());
+            }
+        }
+        for (Operation op : cls.getOperations()) {
+            Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
+            if (interaction == null) continue;
+            for (Parameter param : op.getParameters()) {
+                String type = param.getType();
+                // only include if it's a domain class (matches one of the known classes)
+                for (Class other : allClasses) {
+                    if (other.getName().equals(type) && !type.equals(cls.getName())) {
+                        related.add(type);
+                    }
+                }
             }
         }
         return related;

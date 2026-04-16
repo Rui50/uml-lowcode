@@ -3,6 +3,7 @@ package generator;
 import model.Class;
 import model.Enumeration;
 import model.*;
+import model.sequence.Interaction;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -17,10 +18,17 @@ import java.util.List;
 public class ClassGenerator {
     private String outputDirectory;
     private ValidationGenerator validationGenerator;
+    private List<Interaction> interactions;
 
     public ClassGenerator(String outputDirectory) {
         this.outputDirectory = outputDirectory;
         this.validationGenerator = new ValidationGenerator();
+    }
+
+    public ClassGenerator(String outputDirectory, List<Interaction> interactions) {
+        this.outputDirectory = outputDirectory;
+        this.validationGenerator = new ValidationGenerator();
+        this.interactions = interactions;
     }
 
     public void generateClasses(List<Class> classes, List<Association> associations) throws IOException {
@@ -92,7 +100,7 @@ public class ClassGenerator {
             writer.println();
 
             // generate operations
-            generateOperations(writer, cls);
+            generateOperations(writer, cls, associations);
             writer.println();
 
             // validation (OCL invariants)
@@ -350,6 +358,41 @@ public class ClassGenerator {
                 (multiplicity.contains("..") && !multiplicity.equals("0..1"));
     }
 
+    private void generateOperations(PrintWriter writer, Class cls, List<Association> associations){
+        if (cls.getOperations().isEmpty()){
+            return;
+        }
+
+        writer.println("    // Operations");
+
+        for (Operation op : cls.getOperations()) {
+            Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
+            if (interaction != null) {
+                OperationGenerator.generateOperation(writer, cls, interaction, associations);
+            } else {
+                // fallback: assinatura + stub
+                String visibility = op.getVisibility();
+                String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
+                String name = op.getName();
+                writer.println("    " + visibility + " " + returnType + " " + name + "(");
+
+                List<Parameter> parameters = op.getParameters();
+                for (int i = 0; i < parameters.size(); i++) {
+                    Parameter param = parameters.get(i);
+                    String paramType = GeneratorUtils.removePackageNames(param.getType());
+                    String paramName = param.getName();
+                    writer.print("        " + paramType + " " + paramName);
+                    writer.println(i < parameters.size() - 1 ? "," : "");
+                }
+
+                writer.println("    ) {");
+                writer.println("        throw new UnsupportedOperationException(\"Not implemented yet\");");
+                writer.println("    }");
+            }
+        }
+    }
+
+    /*
     private void generateOperations(PrintWriter writer, Class cls){
         if (cls.getOperations().isEmpty()){
             return;
@@ -385,5 +428,5 @@ public class ClassGenerator {
             writer.println("    }");
         }
     }
-
+    */
 }
