@@ -46,7 +46,7 @@ public class JavaProjectGenerator {
         generateInputUtils();
 
         // entidades
-        JavaEntityGenerator entityGenerator = new JavaEntityGenerator(outputDirectory, interactions);
+        JavaEntityGenerator entityGenerator = new JavaEntityGenerator(outputDirectory, interactions, enumerations);
         entityGenerator.generateEntities(classes, associations, enumerations);
 
         // repositórios

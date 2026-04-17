@@ -6,7 +6,7 @@ import model.Class;
 import model.Enumeration;
 import model.Operation;
 import model.Parameter;
-import model.sequence.Interaction;
+import model.sequence.*;
 import generator.OperationGenerator;
 
 import java.io.File;
@@ -87,13 +87,16 @@ public class JavaMenuGenerator {
 
             // CRUD
             generateCreateMethod(w, cls);
-            generateViewAllMethod(w, cls);
-            generateViewByIdMethod(w, cls);
+            generateViewAllMethod(w, cls, associations);
+            generateViewByIdMethod(w, cls, associations);
             generateUpdateMethod(w, cls);
             generateDeleteMethod(w, cls);
 
             // methodos de associação
             generateRelationshipMethods(w, cls, associations);
+
+            // metodos para operações custom (ligadas a uma Interaction)
+            generateCustomOperationMethods(w, cls, allClasses);
 
             w.println("}");
         }
@@ -247,14 +250,17 @@ public class JavaMenuGenerator {
     /**
      * viewAll(): lista todas as entidades do repositório.
      */
-    private void generateViewAllMethod(PrintWriter w, Class cls) {
+    private void generateViewAllMethod(PrintWriter w, Class cls, List<Association> associations) {
         w.println("    private void viewAll() {");
         w.println("        List<" + cls.getName() + "> all = " + repoVariable(cls.getName()) + ".findAll();");
         w.println("        if (all.isEmpty()) {");
         w.println("            System.out.println(\"No records found.\");");
         w.println("            return;");
         w.println("        }");
-        w.println("        all.forEach(System.out::println);");
+        w.println("        for (" + cls.getName() + " entity : all) {");
+        w.println("            System.out.println(entity);");
+        generateRelationShipPrints(w, cls, associations, "            ");
+        w.println("        }");
         w.println("    }");
         w.println();
     }
@@ -262,7 +268,7 @@ public class JavaMenuGenerator {
     /**
      * viewById(): pede ID e mostra a entidade.
      */
-    private void generateViewByIdMethod(PrintWriter w, Class cls) {
+    private void generateViewByIdMethod(PrintWriter w, Class cls, List<Association> associations) {
         w.println("    private void viewById() {");
         w.println("        Long id = InputUtils.readLong(scanner, \"ID: \");");
         w.println("        " + cls.getName() + " entity = " + repoVariable(cls.getName()) + ".findById(id);");
@@ -271,8 +277,42 @@ public class JavaMenuGenerator {
         w.println("            return;");
         w.println("        }");
         w.println("        System.out.println(entity);");
+        generateRelationShipPrints(w, cls, associations, "        ");
         w.println("    }");
         w.println();
+    }
+
+    /**
+     * mete os prints das relações
+     */
+    private void generateRelationShipPrints(PrintWriter w, Class cls, List<Association> associations, String indent) {
+        for (Association assoc : associations) {
+            String other = null;
+            String role = null;
+            String mult = null;
+            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
+                other = assoc.getTargetClass();
+                role = assoc.getTargetRole();
+                mult = assoc.getTargetMultiplicity();
+            } else if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
+                other = assoc.getSourceClass();
+                role = assoc.getSourceRole();
+                mult = assoc.getSourceMultiplicity();
+            }
+            if (other == null) continue;
+
+            String fieldName = makeFieldName(other, role, mult);
+            String cap = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+            String getter = "entity.get" + cap + "()";
+
+            if (assoc.hasQualifier()) {
+                w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ".values());");
+            } else if (isMultiple(mult)) {
+                w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ");");
+            } else {
+                w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ");");
+            }
+        }
     }
 
     /**
@@ -463,6 +503,64 @@ public class JavaMenuGenerator {
         w.println("        System.out.println(\"" + otherClass + " removed from \" + owner);");
         w.println("    }");
         w.println();
+    }
+
+    /**
+     * opções para operações custom
+     * pede owner por ID, lê cada parâmetro
+     * invoca owner.op(args) e grava.
+     */
+    private void generateCustomOperationMethods(PrintWriter w, Class cls, List<Class> allClasses) {
+        Set<String> classNames = new HashSet<>();
+        for (Class c : allClasses) classNames.add(c.getName());
+
+        for (Operation op : cls.getOperations()) {
+            Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
+            if (interaction == null) continue;
+
+            // usar a assinatura do entry message do sequence diagram
+            // (e não do class diagram) para ficar consistente
+            Message entry = OperationGenerator.findEntryMessage(interaction, cls);
+            if (entry == null) continue;
+
+            w.println("    private void " + op.getName() + "() {");
+            w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + cls.getName() + " ID: \");");
+            w.println("        " + cls.getName() + " owner = " + repoVariable(cls.getName()) + ".findById(ownerId);");
+            w.println("        if (owner == null) { System.out.println(\"" + cls.getName() + " not found.\"); return; }");
+            w.println();
+
+            List<String> argNames = new ArrayList<>();
+            for (MessageArgument p : entry.getArguments()) {
+                String pName = p.getName();
+                String pType = p.getType();
+                argNames.add(pName);
+
+                if (classNames.contains(pType)) {
+                    // entidade: pedir ID e procurar no repo
+                    w.println("        Long " + pName + "Id = InputUtils.readLong(scanner, \"" + pType + " ID (" + pName + "): \");");
+                    w.println("        " + pType + " " + pName + " = " + repoVariable(pType) + ".findById(" + pName + "Id);");
+                    w.println("        if (" + pName + " == null) { System.out.println(\"" + pType + " not found.\"); return; }");
+                } else {
+                    // primitivo: input direto
+                    Attribute tmp = new Attribute();
+                    tmp.setName(pName);
+                    tmp.setType(pType);
+                    generateReadInputForAttribute(w, tmp);
+                }
+                w.println();
+            }
+
+            w.print("        owner." + op.getName() + "(");
+            for (int i = 0; i < argNames.size(); i++) {
+                if (i > 0) w.print(", ");
+                w.print(argNames.get(i));
+            }
+            w.println(");");
+            w.println("        " + repoVariable(cls.getName()) + ".save(owner);");
+            w.println("        System.out.println(\"" + op.getName() + " executed.\");");
+            w.println("    }");
+            w.println();
+        }
     }
 
     /***

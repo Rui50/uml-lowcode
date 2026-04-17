@@ -16,16 +16,27 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class JavaEntityGenerator {
     private String baseOutputPath;
     private ValidationGenerator validationGenerator;
     private List<Interaction> interactions;
+    private List<Enumeration> enumerations;
+    // nomes das enumerações para saber quando um atributo é enum
+    private Set<String> enumNames = new HashSet<>();
 
-    public JavaEntityGenerator(String baseOutputPath, List<Interaction> interactions) {
+    public JavaEntityGenerator(String baseOutputPath, List<Interaction> interactions, List<Enumeration> enumerations) {
         this.baseOutputPath = baseOutputPath;
         this.interactions = interactions;
+        this.enumerations = enumerations;
+        if (enumerations != null) {
+            for (Enumeration e : enumerations) {
+                enumNames.add(e.getName());
+            }
+        }
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations) throws IOException {
@@ -138,6 +149,10 @@ public class JavaEntityGenerator {
         for (Attribute attr : cls.getAttributes()) {
             if (attr.hasInit()) {
                 String javaInit = translateOclToJava(attr.getInitExpression());
+                // se o tipo é um enum, meter com o nome do enum como prefixo (ATIVO -> EstadoAluno.ATIVO)
+                if (enumNames.contains(attr.getType())) {
+                    javaInit = attr.getType() + "." + javaInit;
+                }
                 writer.println("    private " + attr.getType() + " " + attr.getName() + " = " + javaInit + ";");
             } else {
                 writer.println("    private " + attr.getType() + " " + attr.getName() + ";");

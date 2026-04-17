@@ -46,7 +46,7 @@ public class Main {
         //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
         //String xmiFilePath = "test-models/aluno_turma_class_sequence_test.uml";
         //String xmiFilePath = "test-models/aluno_turma_class_sequence_ocl_init.uml";
-        String xmiFilePath = "test-models/aluno_turma_class_seq_full.uml";
+        String xmiFilePath = "test-models/aluno_turma_class_seq_full_test.uml";
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 

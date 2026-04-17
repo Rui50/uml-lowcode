@@ -8,6 +8,32 @@ import model.sequence.*;
 import java.io.PrintWriter;
 import java.util.List;
 
+/**
+ * Esta classe pega numa interação (diag sequencia) que está ligado a uma class e gera o corpo da função
+ *
+ * 1 - generateOperation -> pega na mensagem de entrada (ator para lifeline) e usa os argumentos
+ * 2 - generateElements -> itera as mensagens e fragmentos da interação e delega a função respetiva
+ * 3 - generateMessage -> gera o codigo correspondente a uma mensagem
+ * 4 - generateFragment -> gera o código correspondente a um fragmento (loop, alt, opt) (usa recursão)
+ *
+ * Heuristicas para facilitar
+ * - Se o target de uma mensagem é o mesmo da mensagem de entrada, traduzir para "this"
+ *   Senão usa o nome da lifeline (se tiver)
+ *
+ * - add / remove: mensagens com nome começado por add/remove e 1 argumento, sao consideras para uma coleção
+ *                 Usado o tipo do receiver com o tipo do argumento para encontrar a associação correspondente
+ *
+ * - loops em maps sao automaticamente adaptados para iterar .values()
+ *
+ * Regras
+ *
+ * - tudo deve ter o tipo explicado, argumentos, returns etc
+ * - para ja é o actor que chama a operação a lifeline em que a operação vive
+ * - mensagem da chamada do actor tem de dar match a uma operação da classe
+ * - nomes tem de dar match, entre lifelines e mensagens etc
+ *
+ */
+
 public class OperationGenerator {
     // gera a operação PIM
     public static void generateOperation(PrintWriter writer, Class cls, Interaction interaction,
@@ -36,14 +62,15 @@ public class OperationGenerator {
             if (el instanceof Message) {
                 Message msg = (Message) el;
                 if (msg.getSource() == null || msg.getSource().getType() == null) continue;
-                generateMessage(writer, msg, entry, indentStr);
+                generateMessage(writer, msg, entry, cls, associations, indentStr);
             } else if (el instanceof Fragment) {
                 generateFragment(writer, (Fragment) el, entry, cls, associations, indent);
             }
         }
     }
 
-    private static void generateMessage(PrintWriter writer, Message msg, Message entry, String indent) {
+    private static void generateMessage(PrintWriter writer, Message msg, Message entry,
+                                        Class cls, List<Association> associations, String indent) {
         String receiver;
         if (msg.getTarget().getId().equals(entry.getTarget().getId())) {
             receiver = "this";
@@ -54,9 +81,37 @@ public class OperationGenerator {
             }
         }
 
-        StringBuilder call = new StringBuilder();
-        call.append(receiver).append(".").append(msg.getName()).append("(");
+        // heurística: add(x) / remove(x) com 1 argumento -> traduzir para acesso à coleção
+        String name = msg.getName();
         List<MessageArgument> args = msg.getArguments();
+        if(args != null && args.size() == 1 && (name.startsWith("add") || name.startsWith("remove"))) {
+            MessageArgument arg = args.get(0);
+            String ownerType = msg.getTarget().getType();
+            Association assoc = findAssoc(associations, ownerType, arg.getType());
+
+            if (assoc != null) {
+                String field = fieldNameFor(assoc, ownerType, arg.getType());
+                String base = receiver + "." + field;
+                String code;
+                if (assoc.hasQualifier()){
+                    // MAP: PUT(key, value) ou REMOVE(key) — key via getter do qualifier
+                    String q = assoc.getQualifierName();
+                    String getter = "get" + Character.toUpperCase(q.charAt(0)) + q.substring(1) + "()";
+                    code = "add".equals(name)
+                            ? base + ".put(" + arg.getName() + "." + getter + ", " + arg.getName() + ");"
+                            : base + ".remove(" + arg.getName() + "." + getter + ");";
+                } else {
+                    // coleção simples: ADD/REMOVE
+                    code = base + "." + name + "(" + arg.getName() + ");";
+                }
+                writer.println(indent + code);
+                return;
+            }
+        }
+
+        // fallback: chamada literal receiver.name(args)
+        StringBuilder call = new StringBuilder();
+        call.append(receiver).append(".").append(name).append("(");
         if (args != null) {
             for (int i = 0; i < args.size(); i++) {
                 if (i > 0) call.append(", ");
@@ -152,6 +207,25 @@ public class OperationGenerator {
         return expr;
     }
 
+    private static Association findAssoc(List<Association> assocs, String ownerType, String otherType) {
+        for (Association a : assocs){
+            if (a.getSourceClass().equals(ownerType) && a.getTargetClass().equals(otherType) && a.isTargetNavigable())
+                return a;
+            if (a.getTargetClass().equals(ownerType) && a.getSourceClass().equals(otherType) && a.isSourceNavigable())
+                return a;
+        }
+        return null;
+    }
+
+    private static String fieldNameFor(Association a, String ownerType, String otherType) {
+        // lado a partir do owner: se owner é source, o campo refere o target, e vice-versa
+        if (a.getSourceClass().equals(ownerType)) {
+            return makeFieldName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
+        }
+        return makeFieldName(a.getSourceClass(), a.getSourceRole(), a.getSourceMultiplicity());
+    }
+
+
     private static String makeFieldName(String className, String role, String multiplicity) {
         if (role != null && !role.trim().isEmpty()) return role.trim();
         String base = className.substring(0, 1).toLowerCase() + className.substring(1);
@@ -171,7 +245,7 @@ public class OperationGenerator {
     }
 
     // a mensagem do actor para lifeline: source pode ser null ou um Actor (type == null)
-    private static Message findEntryMessage(Interaction interaction, Class cls) {
+    public static Message findEntryMessage(Interaction interaction, Class cls) {
         for (Message msg : interaction.getMessages()) {
             if (msg.getTarget() == null) continue;
             if (!cls.getName().equals(msg.getTarget().getType())) continue;
