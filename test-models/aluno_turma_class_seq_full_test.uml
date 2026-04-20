@@ -18125,7 +18125,7 @@
 					<afilterByViewpointLegend value="true"/>
 					<apmAuthor value="nonam"/>
 					<apmCreateDateTime value="1776090026519"/>
-					<apmLastModified value="1776437091886"/>
+					<apmLastModified value="1776440697997"/>
 					<ateamworkCreateDateTime value="0"/>
 					<ashowShapeLegend value="false"/>
 					<ashowConnectorLegend value="false"/>
@@ -18172,8 +18172,8 @@
 					<amaximized value="true"/>
 					<ax value="0"/>
 					<ay value="0"/>
-					<awidth value="980"/>
-					<aheight value="686"/>
+					<awidth value="1845"/>
+					<aheight value="869"/>
 					<aqualityScore value="-1"/>
 					<aparentModel value="vwSXhjmGAqACRwXB"/>
 					<a_globalPaletteOption value="true"/>
@@ -18598,8 +18598,8 @@
 					<amaximized value="false"/>
 					<ax value="0"/>
 					<ay value="0"/>
-					<awidth value="980"/>
-					<aheight value="686"/>
+					<awidth value="0"/>
+					<aheight value="0"/>
 					<aqualityScore value="-1"/>
 					<aparentModel value="vwSXhjmGAqACRwXB"/>
 					<a_globalPaletteOption value="true"/>

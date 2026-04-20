@@ -3,9 +3,9 @@ package parser;
 import com.sdmetrics.model.Model;
 import com.sdmetrics.model.ModelElement;
 
-import javax.annotation.processing.Filer;
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -129,6 +129,52 @@ public class VpParser {
         return typeId != null ? typeId : "Object";
     }
 
+
+    /**
+     * Extrai o numero de visualização do VP (<number xmi:value="1.1.2"/>) de cada mensagem.
+     * SDMetrics nao consegue extrair direito porque ha varios xmi:value irmaos dentro de <xmi:Extension>.
+     */
+    public static Map<String, String> extractMessageNumbers(String filePath) throws IOException {
+        System.out.println("Parsing message numbers from file: " + filePath);
+
+        Map<String, String> idToNumber = new HashMap<>();
+
+        Pattern messagePattern = Pattern.compile("<message[^>]+xmi:id=\"([^\"]+)\"");
+        Pattern numberPattern = Pattern.compile("<number xmi:value=\"([^\"]+)\"/>");
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            String currentMessageId = null;
+            boolean captured = false;
+
+            while ((line = reader.readLine()) != null) {
+                // detetar inicio de mensagem
+                Matcher messageMatcher = messagePattern.matcher(line);
+                if (messageMatcher.find()) {
+                    currentMessageId = messageMatcher.group(1);
+                    captured = false;
+                }
+
+                // detetar number dentro da mensagem (so o primeiro)
+                if (currentMessageId != null && !captured) {
+                    Matcher numberMatcher = numberPattern.matcher(line);
+                    if (numberMatcher.find()) {
+                        idToNumber.put(currentMessageId, numberMatcher.group(1));
+                        captured = true;
+                    }
+                }
+
+                // detetar fim de mensagem
+                if (line.contains("</message>")) {
+                    currentMessageId = null;
+                    captured = false;
+                }
+            }
+        }
+
+        System.out.println("Parsed " + idToNumber.size() + " message numbers");
+        return idToNumber;
+    }
 }
 
 

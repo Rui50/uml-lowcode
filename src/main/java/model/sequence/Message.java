@@ -14,6 +14,7 @@ public class Message {
     private Lifeline target;
     private List<MessageArgument> arguments;
     private int sequenceNumber;             // Order
+    private String vpNumber;
 
 
     public Message(){
@@ -100,6 +101,14 @@ public class Message {
         this.sequenceNumber = sequenceNumber;
     }
 
+    public String getVpNumber() {
+        return vpNumber;
+    }
+
+    public void setVpNumber(String vpNumber) {
+        this.vpNumber = vpNumber;
+    }
+
     @Override
     public String toString() {
         return "Message {" +
@@ -108,6 +117,7 @@ public class Message {
                 ", messageSort:'" + messageSort + '\'' +
                 ", source:" + (source != null ? source.getType() : "null") +
                 ", target:" + (target != null ? target.getType() : "null") +
+                ", vpNumber:'" + vpNumber + '\'' +
                 ", arguments:" + arguments +
                 (returnType != null ? ", returnType:'" + returnType + "'" : "") +
                 '}';

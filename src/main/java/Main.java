@@ -1,7 +1,6 @@
-import generator.OperationGenerator;
 import model.Attribute;
 import model.annotations.Invariant;
-import model.sequence.*;;
+import model.sequence.*;
 import ocl.OCLTranslator;
 import parser.SequenceDiagramParser;
 import parser.SequenceDiagramParser2;
@@ -18,15 +17,12 @@ import generator.spring.SpringProjectSettings;
 
 import generator.CLI.JavaProjectGenerator;
 
-import java.io.PrintWriter;
 import java.util.List;
 
 import model.Class;
 import model.Association;
 import model.Enumeration;
 import model.Generalization;
-
-import javax.swing.*;
 
 import ocl.OCLLexer;
 import ocl.OCLParser;
@@ -137,7 +133,6 @@ public class Main {
             }
         }
 
-        // por omissão o spring usa PSM; se não houver _psm cai para todas (compat com modelos antigos)
         // debug: imprimir interactions parseadas
         for (Interaction inter : allInteractions) {
             System.out.println("\n=== Interaction: " + inter.getName() + " ===");
@@ -146,94 +141,71 @@ public class Main {
             printElements(inter.getElements(), 1);
         }
 
-        List<Interaction> interactions = null;
-
-        // gerar código
         String outputDir = "output";
+        String generateWhat = "plain"; // "plain" "spring" "cli" "none"
 
-        String generateWhat = "cli"; // "plain" "spring" "cli" "none"
-
-        // plain java classes
-        if (generateWhat.equals("plain")) {
-            interactions = pimInteractions;
-
-            CodeGenerator codeGenerator = new CodeGenerator(classes, associations, enumerations, outputDir, pimInteractions);
-            codeGenerator.generate();
+        switch (generateWhat) {
+            case "plain"  -> generatePlain(classes, associations, enumerations, pimInteractions, outputDir);
+            case "spring" -> generateSpring(classes, associations, enumerations, psmInteractions, outputDir);
+            case "cli"    -> generateCli(classes, associations, enumerations, pimInteractions, outputDir);
         }
 
-        if (generateWhat.equals("spring")) {
-            interactions = psmInteractions;
+        printOclTranslations(classes);
+    }
 
-            // spring boot - settings
-            SpringProjectSettings settings = new SpringProjectSettings();
-            // settings.setBasePackage("pt.uminho.app");
-            // settings.setDatabaseType(DatabaseType.POSTGRESQL);
-            // settings.setApplicationName("my-app");
-            // settings.setServerPort(9090);
+    private static void generatePlain(List<Class> classes, List<Association> associations,
+                                      List<Enumeration> enumerations, List<Interaction> interactions,
+                                      String outputDir) throws Exception {
+        CodeGenerator codeGenerator = new CodeGenerator(classes, associations, enumerations, outputDir, interactions);
+        codeGenerator.generate();
+    }
 
-            SpringProjectGenerator project = new SpringProjectGenerator(settings, outputDir);
-            project.generateProjectStructure();
+    private static void generateSpring(List<Class> classes, List<Association> associations,
+                                       List<Enumeration> enumerations, List<Interaction> interactions,
+                                       String outputDir) throws Exception {
+        SpringProjectSettings settings = new SpringProjectSettings();
+        // settings.setBasePackage("pt.uminho.app");
+        // settings.setDatabaseType(DatabaseType.POSTGRESQL);
+        // settings.setApplicationName("my-app");
+        // settings.setServerPort(9090);
 
-            String basePackage = settings.getBasePackage();
+        SpringProjectGenerator project = new SpringProjectGenerator(settings, outputDir);
+        project.generateProjectStructure();
 
-            // gerar entidades
-            SpringEntityGenerator entityGenerator = new SpringEntityGenerator(outputDir, basePackage);
-            entityGenerator.generateEntities(classes, associations, enumerations);
+        String basePackage = settings.getBasePackage();
 
-            // gerar DTOs
-            SpringDTOGenerator dtoGenerator = new SpringDTOGenerator(outputDir, basePackage);
-            dtoGenerator.generateDTOs(classes, associations, enumerations);
+        new SpringEntityGenerator(outputDir, basePackage).generateEntities(classes, associations, enumerations);
+        new SpringDTOGenerator(outputDir, basePackage).generateDTOs(classes, associations, enumerations);
+        new SpringRepositoryGenerator(outputDir, basePackage).generateRepositories(classes);
+        new SpringServiceGenerator(outputDir, basePackage).generateServices(classes, associations, interactions, enumerations);
+        new SpringControllerGenerator(outputDir, basePackage).generateControllers(classes, associations, interactions);
+    }
 
-            // gerar repositórios
-            SpringRepositoryGenerator repositoryGenerator = new SpringRepositoryGenerator(outputDir, basePackage);
-            repositoryGenerator.generateRepositories(classes);
+    private static void generateCli(List<Class> classes, List<Association> associations,
+                                    List<Enumeration> enumerations, List<Interaction> interactions,
+                                    String outputDir) throws Exception {
+        new JavaProjectGenerator(outputDir).generate(classes, associations, enumerations, interactions);
+    }
 
-            // gerar serviços
-            SpringServiceGenerator serviceGenerator = new SpringServiceGenerator(outputDir, basePackage);
-            serviceGenerator.generateServices(classes, associations, interactions, enumerations);
-
-            // gerar controllers
-            SpringControllerGenerator controllerGenerator = new SpringControllerGenerator(outputDir, basePackage);
-            controllerGenerator.generateControllers(classes, associations, interactions);
-        }
-
-        if (generateWhat.equals("cli")) {
-            interactions = pimInteractions;
-            JavaProjectGenerator cliGenerator = new JavaProjectGenerator(outputDir);
-            cliGenerator.generate(classes, associations, enumerations, interactions);
-        }
-
-        // ver as operações OCL (invariantes para ja)
-        OCLTranslator translator = new OCLTranslator();
-        for (Class c : classes) {
-            for(Invariant i : c.getInvariants()){
-                String java = translator.translateToJava(i.getOclExpression());
-                System.out.println("OCL: " + i.getOclExpression());
-                System.out.println("Java: " + java);
-            }
-        }
-
+    private static void printOclTranslations(List<Class> classes) {
         for (Class c : classes) {
             for (Invariant i : c.getInvariants()) {
-                OCLLexer lexer = new OCLLexer(CharStreams.fromString(i.getOclExpression()));
-                OCLParser parser2 = new OCLParser(new CommonTokenStream(lexer));
-                String java = new OCLToJavaVisitor().visit(parser2.standaloneExpression());
                 System.out.println("OCL:   " + i.getOclExpression());
-                System.out.println("ANTLR: " + java);
+                System.out.println("ANTLR: " + translateOcl(i.getOclExpression()));
             }
-        }
-
-        for (Class c : classes) {
             for (Attribute a : c.getAttributes()) {
                 if (a.getInitExpression() != null) {
-                    OCLLexer lexer = new OCLLexer(CharStreams.fromString(a.getInitExpression()));
-                    OCLParser parser2 = new OCLParser(new CommonTokenStream(lexer));
-                    String java = new OCLToJavaVisitor().visit(parser2.standaloneExpression());
                     System.out.println("OCL:   " + a.getInitExpression());
-                    System.out.println("ANTLR: " + java);
+                    System.out.println("ANTLR: " + translateOcl(a.getInitExpression()));
                 }
             }
         }
+    }
+
+    private static String translateOcl(String expr) {
+        OCLLexer lexer = new OCLLexer(CharStreams.fromString(expr));
+        OCLParser p = new OCLParser(new CommonTokenStream(lexer));
+        return new OCLToJavaVisitor().visit(p.standaloneExpression());
     }
 
     // para ja fica aqui, depois meter num parser helper
