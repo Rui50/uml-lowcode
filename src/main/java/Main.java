@@ -5,7 +5,7 @@ import ocl.OCLTranslator;
 import parser.SequenceDiagramParser;
 import parser.SequenceDiagramParser2;
 import parser.XMIParser;
-import generator.CodeGenerator;
+import generator.plain.CodeGenerator;
 import generator.GeneratorUtils;
 import generator.spring.SpringProjectGenerator;
 import generator.spring.SpringEntityGenerator;

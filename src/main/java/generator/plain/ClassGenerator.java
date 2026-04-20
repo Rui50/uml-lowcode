@@ -1,5 +1,8 @@
-package generator;
+package generator.plain;
 
+import generator.GeneratorUtils;
+import generator.OperationGenerator;
+import generator.ValidationGenerator;
 import model.Class;
 import model.Enumeration;
 import model.*;
@@ -392,41 +395,4 @@ public class ClassGenerator {
         }
     }
 
-    /*
-    private void generateOperations(PrintWriter writer, Class cls){
-        if (cls.getOperations().isEmpty()){
-            return;
-        }
-
-        writer.println("    // Operations");
-
-        for (Operation op : cls.getOperations()) {
-            // assinatura
-            String visibility = op.getVisibility();
-            String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
-            String name = op.getName();
-            writer.println("    " + visibility + " " + returnType + " " + name + "(");
-
-            // parâmetros
-            List<Parameter> parameters = op.getParameters();
-            for (int i = 0; i < parameters.size(); i++) {
-                Parameter param = parameters.get(i);
-                String paramType = GeneratorUtils.removePackageNames(param.getType());
-                String paramName = param.getName();
-                writer.print("        " + paramType + " " + paramName);
-                if (i < parameters.size() - 1) {
-                    writer.println(",");
-                } else {
-                    writer.println();
-                }
-            }
-
-            writer.println("    ) {");
-
-            writer.println("        throw new UnsupportedOperationException(\"Not implemented yet\");");
-
-            writer.println("    }");
-        }
-    }
-    */
 }

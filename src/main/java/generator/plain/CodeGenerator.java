@@ -1,4 +1,4 @@
-package generator;
+package generator.plain;
 
 import model.Class;
 import model.Enumeration;

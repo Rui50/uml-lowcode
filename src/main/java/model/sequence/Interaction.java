@@ -56,8 +56,7 @@ public class Interaction {
     }
 
     /**
-     * Compatibilidade temporária — extrai só as Messages (root-level) da lista de elements.
-     * TODO: remover quando os generators forem atualizados para usar getElements()
+     * Devolve apenas as Messages root-level
      */
     public List<Message> getMessages() {
         List<Message> msgs = new ArrayList<>();

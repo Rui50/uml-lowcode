@@ -142,22 +142,25 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             // O operador está entre as equalityExpressions
             // pos : 0=expr, 1=op, 2=expr, 3=op, 4=expr...
             String op = ctx.getChild(2 * i - 1).getText();
+            String right = visit(ctx.equalityExpression(i));
             switch (op) {
                 case "and":
                 case "&":
-                    sb.append(" && ");
+                    sb.append(" && ").append(right);
                     break;
                 case "or":
-                    sb.append(" || ");
+                    sb.append(" || ").append(right);
                     break;
                 case "implies":
-                    sb.append(" || !");
-                    break; // a implies b  ->  !a || b (simplificado)
+                    // a implies b -> !(a) || (b)
+                    String left = sb.toString();
+                    sb.setLength(0);
+                    sb.append("!(").append(left).append(") || (").append(right).append(")");
+                    break;
                 default:
-                    sb.append(" " + op + " ");
+                    sb.append(" ").append(op).append(" ").append(right);
                     break;
             }
-            sb.append(visit(ctx.equalityExpression(i)));
         }
         return sb.toString();
     }
