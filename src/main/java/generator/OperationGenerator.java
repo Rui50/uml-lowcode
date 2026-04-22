@@ -3,6 +3,7 @@ package generator;
 import model.Association;
 import model.Class;
 import model.Operation;
+import model.annotations.Precondition;
 import model.sequence.*;
 
 import java.io.PrintWriter;
@@ -50,6 +51,14 @@ public class OperationGenerator {
             writer.print(type + " " + arg.getName());
         }
         writer.println(") {");
+
+        Operation operation = cls.getOperations().stream().filter(op -> op.getName().equals(entry.getName())).findFirst().orElse(null);
+
+        for (Precondition pre : operation.getPreconditions()){
+            writer.println("        if (!(" + pre.getJavaExpression() + ")) {");
+            writer.println("            throw new IllegalStateException(\"" + pre.getMessage() + "\");");
+            writer.println("        }");
+        }
 
         generateElements(writer, interaction.getElements(), entry, cls, associations, 2);
 

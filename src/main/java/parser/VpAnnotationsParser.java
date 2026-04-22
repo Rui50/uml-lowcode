@@ -1,6 +1,7 @@
 package parser;
 
 import model.annotations.Invariant;
+import ocl.OCLToJavaVisitor;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +36,9 @@ public class VpAnnotationsParser {
 
             System.out.println("Parsed Invariant - Name: " + name + ", OCL Expression: " + oclExpression);
 
-            return new Invariant(name, oclExpression, message);
+            Invariant inv = new Invariant(name, oclExpression, message);
+            inv.setJavaExpression(OCLToJavaVisitor.toJava(oclExpression));
+            return inv;
         }
 
         return null;

@@ -9,6 +9,7 @@ public class Attribute {
     private String visibility;
 
     private String initExpression; // expressão ocl para inicialização do atributo
+    private String javaInitExpression; // expressão java
 
     public Attribute() {
         this.name = "";
@@ -57,6 +58,9 @@ public class Attribute {
     public boolean hasInit() {
         return initExpression != null && !initExpression.isEmpty();
     }
+
+    public String getJavaInitExpression() { return javaInitExpression; }
+    public void setJavaInitExpression(String javaInitExpression) { this.javaInitExpression = javaInitExpression; }
 
     @Override
     public String toString() {

@@ -10,6 +10,7 @@ public class Invariant {
     private String name;
     private String oclExpression;
     private String message;
+    private String javaExpression;
 
     public Invariant (String name, String oclExpression, String message) {
         this.name = name;
@@ -40,6 +41,9 @@ public class Invariant {
     public void setMessage(String message) {
         this.message = message;
     }
+
+    public String getJavaExpression() { return javaExpression; }
+    public void setJavaExpression(String javaExpression) { this.javaExpression = javaExpression; }
 
     @Override
     public String toString() {

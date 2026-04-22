@@ -1,6 +1,15 @@
 package ocl;
 
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+
 public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
+
+    public static String toJava(String oclExpression) {
+        OCLLexer lexer = new OCLLexer(CharStreams.fromString(oclExpression));
+        OCLParser parser = new OCLParser(new CommonTokenStream(lexer));
+        return new OCLToJavaVisitor().visit(parser.standaloneExpression());
+    }
 
     // standalone foi adicionado ao .g4 original, para ignorar a parte do "context X inv Y:"
     // context nao vai ser necessário porque ja vai estar associado a classe

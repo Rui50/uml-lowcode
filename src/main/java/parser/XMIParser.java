@@ -21,6 +21,7 @@ import model.Generalization;
 
 import model.annotations.Invariant;
 import model.annotations.Precondition;
+import ocl.OCLToJavaVisitor;
 import parser.VpParser;
 import parser.VpParser.Qualifier;
 import parser.VpAnnotationsParser;
@@ -149,6 +150,7 @@ public class XMIParser {
                 for (Attribute attr : cl.getAttributes()) {
                     if (attr.getName().equals(attrName)) {
                         attr.setInitExpression(expression);
+                        attr.setJavaInitExpression(OCLToJavaVisitor.toJava(expression));
                         System.out.println("Class " + cl.getName() + " attribute '" + attrName + "' init: " + expression);
                         break;
                     }
@@ -167,7 +169,9 @@ public class XMIParser {
                 // encontrar a operação correspondente
                 for (Operation op : cl.getOperations()) {
                     if (op.getName().equals(operationName)) {
-                        op.addPrecondition(new Precondition(preName, expression, "Precondition '" + preName + "' violated."));
+                        Precondition precondition = new Precondition(preName, expression, "Precondition '" + preName + "' violated.");
+                        precondition.setJavaExpression(OCLToJavaVisitor.toJava(expression));
+                        op.addPrecondition(precondition);
                         System.out.println("Class " + cl.getName() + " operation '" + operationName + "' pre: " + preName);
                         break;
                     }

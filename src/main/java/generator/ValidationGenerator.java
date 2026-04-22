@@ -3,11 +3,6 @@ package generator;
 import model.Association;
 import model.Class;
 import model.annotations.Invariant;
-import ocl.OCLLexer;
-import ocl.OCLParser;
-import ocl.OCLToJavaVisitor;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -24,20 +19,13 @@ public class ValidationGenerator {
     }
 
     /**
-     * traduz OCL para java utilizando o ANTLR "visitor"
-     * corrige maps: .stream() -> .values().stream()
+     * corrige acesso a Maps (campos com qualifier): .stream() -> .values().stream()
      */
-    private String translateOclToJava(String oclExpression, Class cls) {
-        String java = translateOclToJava(oclExpression);
-
-        // Map (têm qualifier), o .stream() não funciona
-        // passa para .values().stream()
+    private String fixMapAccess(String java, Class cls) {
         List<String> mapFields = getMapFieldNames(cls);
         for (String field : mapFields) {
             java = java.replace("this." + field + ".stream()", "this." + field + ".values().stream()");
-            java = java.replace("this." + field + ".size()", "this." + field + ".size()"); // .size() funciona em Map
         }
-
         return java;
     }
 
@@ -69,19 +57,6 @@ public class ValidationGenerator {
         return mapFields;
     }
 
-    /**
-     * traduz OCL para Java usando o ANTLR4 visitor
-     */
-    private String translateOclToJava(String oclExpression) {
-        try {
-            OCLLexer lexer = new OCLLexer(CharStreams.fromString(oclExpression));
-            OCLParser parser = new OCLParser(new CommonTokenStream(lexer));
-            return new OCLToJavaVisitor().visit(parser.standaloneExpression());
-        } catch (Exception e) {
-            System.err.println("Warning: Could not translate OCL expression: " + oclExpression);
-            return oclExpression;
-        }
-    }
     /**
      * gera função validate() para uma classe
      * public java.util.List<String> validate() {
@@ -121,7 +96,7 @@ public class ValidationGenerator {
 
         // Generate validation for each invariant (ANTLR4 OCL -> Java)
         for (Invariant inv : cls.getInvariants()) {
-            String javaExpression = translateOclToJava(inv.getOclExpression(), cls);
+            String javaExpression = fixMapAccess(inv.getJavaExpression(), cls);
             String errorMessage = (inv.getMessage() != null && !inv.getMessage().isEmpty())
                     ? inv.getMessage()
                     : "Invariant '" + inv.getName() + "' violated.";
@@ -158,7 +133,8 @@ public class ValidationGenerator {
         writer.println();
 
         for (Invariant inv : invariants) {
-            String javaExpression = translateOclToJava(inv.getOclExpression(), cls);
+            // fixMapAcess para casos de Maps
+            String javaExpression = fixMapAccess(inv.getJavaExpression(), cls);
             String errorMessage = (inv.getMessage() != null && !inv.getMessage().isEmpty())
                     ? inv.getMessage()
                     : "Invariant '" + inv.getName() + "' violated.";

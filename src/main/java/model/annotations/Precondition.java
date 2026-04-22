@@ -4,6 +4,7 @@ public class Precondition {
     private String name;
     private String oclExpression;
     private String message;
+    private String javaExpression;
 
     public Precondition(String name, String oclExpression, String message) {
         this.name = name;
@@ -19,6 +20,9 @@ public class Precondition {
 
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
+
+    public String getJavaExpression() { return javaExpression; }
+    public void setJavaExpression(String javaExpression) { this.javaExpression = javaExpression; }
 
     @Override
     public String toString() {

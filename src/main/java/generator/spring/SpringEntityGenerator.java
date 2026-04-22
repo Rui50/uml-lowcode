@@ -205,7 +205,7 @@ public class SpringEntityGenerator {
             }
             writer.println("    @Column(name = \"" + atr.getName() + "\")");
             if (atr.hasInit()) {
-                String javaInit = translateOclToJava(atr.getInitExpression());
+                String javaInit = atr.getJavaInitExpression();
                 if (enumNames.contains(atr.getType())) {
                     javaInit = atr.getType() + "." + javaInit;
                 }
@@ -215,17 +215,6 @@ public class SpringEntityGenerator {
                 writer.println("    private " + atr.getType() + " " + atr.getName() + ";");
             }
             writer.println();
-        }
-    }
-
-    private String translateOclToJava(String oclExpression) {
-        try {
-            ocl.OCLLexer lexer = new ocl.OCLLexer(org.antlr.v4.runtime.CharStreams.fromString(oclExpression));
-            ocl.OCLParser parser = new ocl.OCLParser(new org.antlr.v4.runtime.CommonTokenStream(lexer));
-            return new ocl.OCLToJavaVisitor().visit(parser.standaloneExpression());
-        } catch (Exception e) {
-            System.err.println("Warning: Could not translate init expression: " + oclExpression);
-            return oclExpression;
         }
     }
 

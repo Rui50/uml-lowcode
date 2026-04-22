@@ -892,7 +892,7 @@ public class SpringServiceGenerator {
 
         // preconditions
         for (Precondition pre : op.getPreconditions()) {
-            String javaExpr = translateOclToJava(pre.getOclExpression());
+            String javaExpr = pre.getJavaExpression();
             writer.println("        if (!(" + javaExpr + ")) {");
             writer.println("            throw new IllegalStateException(\"" + pre.getMessage() + "\");");
             writer.println("        }");
@@ -1043,19 +1043,6 @@ public class SpringServiceGenerator {
                 generateElements(writer, operand.getElements(), serviceLifeline, lifelineVarMap, indent + 1);
             }
             writer.println(indentStr + "}");
-        }
-    }
-
-
-
-    private String translateOclToJava(String oclExpression) {
-        try {
-            ocl.OCLLexer lexer = new ocl.OCLLexer(org.antlr.v4.runtime.CharStreams.fromString(oclExpression));
-            ocl.OCLParser parser = new ocl.OCLParser(new org.antlr.v4.runtime.CommonTokenStream(lexer));
-            return new ocl.OCLToJavaVisitor().visit(parser.standaloneExpression());
-        } catch (Exception e) {
-            System.err.println("Warning: Could not translate precondition: " + oclExpression);
-            return oclExpression;
         }
     }
 }

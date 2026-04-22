@@ -148,8 +148,7 @@ public class JavaEntityGenerator {
     private void generateAttributes(PrintWriter writer, Class cls) {
         for (Attribute attr : cls.getAttributes()) {
             if (attr.hasInit()) {
-                String javaInit = translateOclToJava(attr.getInitExpression());
-                // se o tipo é um enum, meter com o nome do enum como prefixo (ATIVO -> EstadoAluno.ATIVO)
+                String javaInit = attr.getJavaInitExpression();                // se o tipo é um enum, meter com o nome do enum como prefixo (ATIVO -> EstadoAluno.ATIVO)
                 if (enumNames.contains(attr.getType())) {
                     javaInit = attr.getType() + "." + javaInit;
                 }
@@ -159,17 +158,6 @@ public class JavaEntityGenerator {
             }
         }
         if (!cls.getAttributes().isEmpty()) writer.println();
-    }
-
-    private String translateOclToJava(String oclExpression) {
-        try {
-            ocl.OCLLexer lexer = new ocl.OCLLexer(org.antlr.v4.runtime.CharStreams.fromString(oclExpression));
-            ocl.OCLParser parser = new ocl.OCLParser(new org.antlr.v4.runtime.CommonTokenStream(lexer));
-            return new ocl.OCLToJavaVisitor().visit(parser.standaloneExpression());
-        } catch (Exception e) {
-            System.err.println("Warning: Could not translate init expression: " + oclExpression);
-            return oclExpression;
-        }
     }
 
     private void generateRelationships(PrintWriter writer, Class cls, List<Association> associations) {
