@@ -11,6 +11,9 @@ public class Attribute {
     private String initExpression; // expressão ocl para inicialização do atributo
     private String javaInitExpression; // expressão java
 
+    private String deriveExpression;
+    private String javaDeriveExpression;
+
     public Attribute() {
         this.name = "";
         this.type = "";
@@ -61,6 +64,19 @@ public class Attribute {
 
     public String getJavaInitExpression() { return javaInitExpression; }
     public void setJavaInitExpression(String javaInitExpression) { this.javaInitExpression = javaInitExpression; }
+
+    public String getDeriveExpression() {
+        return deriveExpression;
+    }
+
+    public void setDeriveExpression(String deriveExpression) {
+        this.deriveExpression = deriveExpression;
+    }
+
+    public String getJavaDeriveExpression() { return javaDeriveExpression; }
+    public void setJavaDeriveExpression(String javaDeriveExpression) { this.javaDeriveExpression = javaDeriveExpression; }
+
+    public boolean isDerived() { return deriveExpression != null; }
 
     @Override
     public String toString() {

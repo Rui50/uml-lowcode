@@ -121,6 +121,7 @@ public class ClassGenerator {
         writer.println("    // Attributes");
 
         for (Attribute attribute : cls.getAttributes()){
+            if (attribute.isDerived()) continue; // este é gerado por expressão
             writer.println("    " + attribute.getVisibility() + " " + attribute.getType() + " " + attribute.getName() + ";");
         }
     }
@@ -226,6 +227,14 @@ public class ClassGenerator {
             String name = attribute.getName();
             String type = attribute.getType();
             String capitalizedName = name.substring(0, 1).toUpperCase() + name.substring(1);
+
+            if (attribute.isDerived()){
+                writer.println();
+                writer.println("    public " + type + " get" + capitalizedName + "() {");
+                writer.println("        return " + attribute.getJavaDeriveExpression() + ";");
+                writer.println("    }");
+                continue; // no setter for derived attributes
+            }
 
             // get
             writer.println();

@@ -6,7 +6,7 @@ import ocl.OCLToJavaVisitor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/*
+/*https://st.inf.tu-dresden.de/files/general/OCLByExampleLecture.pdf
  * parsing OCL de notas
  * formato:
  *   context <ClassName> inv <InvariantName>: <OCLExpression>
@@ -99,6 +99,28 @@ public class VpAnnotationsParser {
                     ", Name: " + preName + ", Expression: " + expression);
 
             return new String[]{operationName, preName, expression};
+        }
+
+        return null;
+    }
+
+    public static String[] parseDerive(String noteBody){
+        if(noteBody == null || noteBody.isEmpty()){
+            return null;
+        }
+
+        Pattern pattern = Pattern.compile(
+                "context\\s+\\w+::(\\w+)\\s*:\\s*\\w+\\s+derive\\s*:\\s*(.*)",
+                Pattern.DOTALL
+        );
+        Matcher matcher = pattern.matcher(noteBody.trim());
+        if (matcher.find()) {
+            String attrName = matcher.group(1);
+            String expression = matcher.group(2).replaceAll("\\s+", " ").trim();
+
+            System.out.println("Parsed Derive - Attribute: " + attrName + ", Expression: " + expression);
+
+            return new String[]{attrName, expression};
         }
 
         return null;

@@ -13504,6 +13504,20 @@
 						<property name="qualityScore" type="int" value="-1"/>
 					</properties>
 				</vpumlModel>
+				<vpumlModel id="PJQZrbmGAqACRwsg" modelType="Anchor">
+					<properties>
+						<property name="modelType" type="string" value="Anchor"/>
+						<property modelRef="iBfprbmGAqACRwsI" name="from" type="fromTo"/>
+						<property modelRef="oErXhjmGAqACRwX4" name="to" type="fromTo"/>
+						<property name="documentation" type="htmlString" value=""/>
+						<property name="pmAuthor" type="string" value="nonam"/>
+						<property name="pmCreateDateTime" type="string" value="1776868141372"/>
+						<property name="pmLastModified" type="string" value="1776868152722"/>
+						<property name="userIDLastNumericValue" type="int" value="0"/>
+						<property name="backlogActivityId" type="int" value="0"/>
+						<property name="qualityScore" type="int" value="-1"/>
+					</properties>
+				</vpumlModel>
 			</vpumlChildModels>
 		</xmi:Extension>
 		<packagedElement isAbstract="false" isLeaf="false" name="Teste" xmi:id="vwSXhjmGAqACRwXB" xmi:type="uml:Model">
@@ -13811,6 +13825,14 @@
 						<qualityScore value="-1"/>
 					</xmi:Extension>
 				</ownedAttribute>
+				<ownedAttribute aggregation="none" isDerived="false" isDerivedUnion="false" isID="false" isLeaf="false" isReadOnly="false" isStatic="false" name="numAlunos" type="int_id" visibility="private" xmi:id="DA_vrbmGAqACRwtd" xmi:type="uml:Property">
+					<xmi:Extension extender="Visual Paradigm">
+						<attribute/>
+						<isAbstract xmi:value="false"/>
+						<isVisble xmi:value="true"/>
+						<qualityScore value="-1"/>
+					</xmi:Extension>
+				</ownedAttribute>
 				<ownedOperation isAbstract="false" isLeaf="false" isOrdered="false" isQuery="false" isStatic="false" isUnique="true" name="totalAlunos" visibility="public" xmi:id="pcsZgTmGAqACRwtN" xmi:type="uml:Operation">
 					<ownedParameter direction="return" type="int_id" xmi:id="pcsZgTmGAqACRwtN_return" xmi:type="uml:Parameter"/>
 					<xmi:Extension extender="Visual Paradigm">
@@ -13963,13 +13985,13 @@
 					</xmi:Extension>
 				</ownedAttribute>
 				<ownedOperation isAbstract="false" isLeaf="false" isOrdered="false" isQuery="false" isStatic="false" isUnique="true" name="comprovativo" visibility="public" xmi:id="LYhh4TmGAqACRwp." xmi:type="uml:Operation">
-					<ownedParameter direction="return" type="boolean_id" xmi:id="LYhh4TmGAqACRwp._return" xmi:type="uml:Parameter"/>
+					<ownedParameter direction="return" type="Boolean_id" xmi:id="LYhh4TmGAqACRwp._return" xmi:type="uml:Parameter"/>
 					<xmi:Extension extender="Visual Paradigm">
 						<returnTypeDocumentation xmi:value=""/>
 						<properties>
 							<property name="pmAuthor" type="string" value="nonam"/>
 							<property name="pmCreateDateTime" type="string" value="1771800236468"/>
-							<property name="pmLastModified" type="string" value="1771802914007"/>
+							<property name="pmLastModified" type="string" value="1776872914595"/>
 							<property name="userIDLastNumericValue" type="int" value="0"/>
 							<property name="backlogActivityId" type="int" value="0"/>
 							<property name="static" type="boolean" value="false"/>
@@ -14011,13 +14033,13 @@
 					</xmi:Extension>
 				</ownedAttribute>
 				<ownedOperation isAbstract="false" isLeaf="false" isOrdered="false" isQuery="false" isStatic="false" isUnique="true" name="temVaga" visibility="public" xmi:id="_O6X0TmGAqACRwoz" xmi:type="uml:Operation">
-					<ownedParameter direction="return" type="boolean_id" xmi:id="_O6X0TmGAqACRwoz_return" xmi:type="uml:Parameter"/>
+					<ownedParameter direction="return" type="Boolean_id" xmi:id="_O6X0TmGAqACRwoz_return" xmi:type="uml:Parameter"/>
 					<xmi:Extension extender="Visual Paradigm">
 						<returnTypeDocumentation xmi:value=""/>
 						<properties>
 							<property name="pmAuthor" type="string" value="nonam"/>
 							<property name="pmCreateDateTime" type="string" value="1771873859391"/>
-							<property name="pmLastModified" type="string" value="1771873875579"/>
+							<property name="pmLastModified" type="string" value="1776872914588"/>
 							<property name="userIDLastNumericValue" type="int" value="0"/>
 							<property name="backlogActivityId" type="int" value="0"/>
 							<property name="static" type="boolean" value="false"/>
@@ -15154,6 +15176,13 @@
 					<qualityScore value="-1"/>
 				</xmi:Extension>
 			</ownedComment>
+			<ownedComment annotatedElement="oErXhjmGAqACRwX4" body="context Turma::numAlunos : Integer derive: self.alunos-&gt;size()" name="" xmi:id="iBfprbmGAqACRwsI" xmi:type="uml:Comment">
+				<xmi:Extension extender="Visual Paradigm">
+					<htmlValue value="&lt;head&gt;&#13;&#10;    &lt;style type=&quot;text/css&quot;&gt;&#10;      &lt;!--&#10;        body { color: #000000; font-family: Dialog; font-size: 12px }&#10;      --&gt;&#10;    &lt;/style&gt;&#13;&#10;    &#13;&#10;  &lt;/head&gt;&#13;&#10;  &lt;body&gt;&#13;&#10;    &lt;p&gt;&#13;&#10;      context Turma::numAlunos : Integer derive: self.alunos-&amp;gt;size()&#13;&#10;    &lt;/p&gt;&#13;&#10;  &lt;/body&gt;"/>
+					<type value="NOTE"/>
+					<qualityScore value="-1"/>
+				</xmi:Extension>
+			</ownedComment>
 		</packagedElement>
 		<packagedElement aggregation="none" isDerived="false" isDerivedUnion="false" isID="false" isLeaf="false" isReadOnly="false" isStatic="false" name="numero" type="Integer_id" visibility="private" xmi:id="7mrpMTmGAqACRwgl" xmi:type="uml:Property">
 			<xmi:Extension extender="Visual Paradigm">
@@ -15173,7 +15202,7 @@
 					<afilterByViewpointLegend value="true"/>
 					<apmAuthor value="nonam"/>
 					<apmCreateDateTime value="1771169209477"/>
-					<apmLastModified value="1776864520724"/>
+					<apmLastModified value="1776874514134"/>
 					<ateamworkCreateDateTime value="0"/>
 					<ashowShapeLegend value="false"/>
 					<ashowConnectorLegend value="false"/>
@@ -15258,7 +15287,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="2"/>
+							<azOrder value="4"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15299,7 +15328,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="4"/>
+							<azOrder value="6"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15340,7 +15369,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="6"/>
+							<azOrder value="8"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<aselectable value="true"/>
@@ -15418,7 +15447,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="8"/>
+							<azOrder value="10"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15459,7 +15488,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="10"/>
+							<azOrder value="12"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15500,7 +15529,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="12"/>
+							<azOrder value="14"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15541,7 +15570,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="14"/>
+							<azOrder value="16"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15582,7 +15611,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="16"/>
+							<azOrder value="18"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15623,7 +15652,7 @@
 						<captionVisible value="false"/>
 						<captionSide value="7"/>
 						<properties>
-							<azOrder value="18"/>
+							<azOrder value="20"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<aselectable value="true"/>
@@ -15663,7 +15692,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="20"/>
+							<azOrder value="22"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15742,7 +15771,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="22"/>
+							<azOrder value="24"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15813,7 +15842,7 @@
 					<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
 					<CompartmentFont value="none"/>
 				</uml:DiagramElement>
-				<uml:DiagramElement geometry="566,109,281,103" preferredShapeType="Class" subject="oErXhjmGAqACRwX4" xmi:id="IErXhjmGAqACRwX3">
+				<uml:DiagramElement geometry="566,109,281,118" preferredShapeType="Class" subject="oErXhjmGAqACRwX4" xmi:id="IErXhjmGAqACRwX3">
 					<xmi:Extension extender="Visual Paradigm">
 						<captionBounds value="0,0,282,16"/>
 						<captionInternalWidth value="-2147483648"/>
@@ -15821,7 +15850,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="24"/>
+							<azOrder value="26"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15900,7 +15929,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="12"/>
 						<properties>
-							<azOrder value="26"/>
+							<azOrder value="28"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -15981,7 +16010,7 @@
 						<roleA multiplicity="466,152,27,15"/>
 						<roleB multiplicity="385,117,40,15" roleName="386,144,54,15"/>
 						<properties>
-							<azOrder value="28"/>
+							<azOrder value="30"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -16057,7 +16086,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="1"/>
 						<properties>
-							<azOrder value="30"/>
+							<azOrder value="32"/>
 							<abackground value="Cr:255,255,255,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -16099,7 +16128,7 @@
 						<roleA multiplicity="528,315,27,15"/>
 						<roleB multiplicity="375,188,38,15"/>
 						<properties>
-							<azOrder value="32"/>
+							<azOrder value="34"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -16165,17 +16194,17 @@
 					<elementFont bold="false" color="Cr:0,0,0,255" italic="false" name="Dialog" size="11" style="0"/>
 					<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
 				</uml:DiagramElement>
-				<uml:DiagramElement fromDiagramElement="IErXhjmGAqACRwX3" geometry="700,212;700,315;" preferredShapeType="Association" subject="7d1n0TmGAqACRwfn" toDiagramElement="0tpn0TmGAqACRwfF" xmi:id="I91n0TmGAqACRwfs">
+				<uml:DiagramElement fromDiagramElement="IErXhjmGAqACRwX3" geometry="700,227;700,315;" preferredShapeType="Association" subject="7d1n0TmGAqACRwfn" toDiagramElement="0tpn0TmGAqACRwfF" xmi:id="I91n0TmGAqACRwfs">
 					<xmi:Extension extender="Visual Paradigm">
-						<captionBounds value="701,264,20,0"/>
+						<captionBounds value="701,273,20,0"/>
 						<captionInternalWidth value="-2147483648"/>
 						<captionInternalHeight value="-2147483648"/>
 						<captionVisible value="true"/>
 						<captionSide value="1"/>
-						<roleA multiplicity="695,217,27,15"/>
+						<roleA multiplicity="695,231,27,15"/>
 						<roleB multiplicity="665,295,38,15"/>
 						<properties>
-							<azOrder value="34"/>
+							<azOrder value="36"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -16206,7 +16235,7 @@
 							<ahasRoleBShape value="false"/>
 							<ashowMultiplicityConstraints value="false"/>
 							<amultiplicityBRectangle value="Re:665.0,295.0,38.0,15.0"/>
-							<amultiplicityARectangle value="Re:695.0,217.0,27.0,15.0"/>
+							<amultiplicityARectangle value="Re:695.0,231.0,27.0,15.0"/>
 							<ahasMultiplicityAShape value="true"/>
 							<ahasMultiplicityBShape value="true"/>
 							<ashowOrderedMultiplicityConstraint value="true"/>
@@ -16249,7 +16278,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="1"/>
 						<properties>
-							<azOrder value="36"/>
+							<azOrder value="38"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -16283,13 +16312,13 @@
 				</uml:DiagramElement>
 				<uml:DiagramElement fromDiagramElement="VH5rfTmGAqACRwfo" geometry="708,75;708,108;" preferredShapeType="Anchor" subject="dc3rfTmGAqACRwhu" toDiagramElement="IErXhjmGAqACRwX3" xmi:id="bc3rfTmGAqACRwhv">
 					<xmi:Extension extender="Visual Paradigm">
-						<captionBounds value="710,92,20,0"/>
+						<captionBounds value="710,93,20,0"/>
 						<captionInternalWidth value="-2147483648"/>
 						<captionInternalHeight value="-2147483648"/>
 						<captionVisible value="true"/>
 						<captionSide value="1"/>
 						<properties>
-							<azOrder value="38"/>
+							<azOrder value="40"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -16329,7 +16358,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="1"/>
 						<properties>
-							<azOrder value="40"/>
+							<azOrder value="42"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -16369,7 +16398,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="1"/>
 						<properties>
-							<azOrder value="42"/>
+							<azOrder value="44"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -16409,7 +16438,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="1"/>
 						<properties>
-							<azOrder value="44"/>
+							<azOrder value="46"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -16449,7 +16478,7 @@
 						<captionVisible value="true"/>
 						<captionSide value="1"/>
 						<properties>
-							<azOrder value="46"/>
+							<azOrder value="48"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -16481,15 +16510,96 @@
 					<elementFont bold="false" color="Cr:0,0,0,255" italic="false" name="Dialog" size="11" style="0"/>
 					<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
 				</uml:DiagramElement>
-				<uml:DiagramElement fromDiagramElement="L7xITbmGAqACRwmn" geometry="410,630;410,455;565,212;" preferredShapeType="Anchor" subject="2.pITbmGAqACRwm_" toDiagramElement="IErXhjmGAqACRwX3" xmi:id="B.pITbmGAqACRwnA">
+				<uml:DiagramElement fromDiagramElement="L7xITbmGAqACRwmn" geometry="410,630;410,455;565,227;" preferredShapeType="Anchor" subject="2.pITbmGAqACRwm_" toDiagramElement="IErXhjmGAqACRwX3" xmi:id="B.pITbmGAqACRwnA">
 					<xmi:Extension extender="Visual Paradigm">
-						<captionBounds value="440,426,20,0"/>
+						<captionBounds value="437,433,20,0"/>
 						<captionInternalWidth value="-2147483648"/>
 						<captionInternalHeight value="-2147483648"/>
 						<captionVisible value="true"/>
 						<captionSide value="1"/>
 						<properties>
-							<azOrder value="48"/>
+							<azOrder value="50"/>
+							<abackground value="Cr:122,207,245,255"/>
+							<aforeground value="Cr:0,0,0,255"/>
+							<acreatorDiagramType value="ClassDiagram"/>
+							<aselectable value="true"/>
+							<arequestResetCaption value="false"/>
+							<arequestResetCaptionSize value="false"/>
+							<arequestResetCaptionFitWidth value="false"/>
+							<amodelElementNameAlignment value="9"/>
+							<aconnectorStyle value="3"/>
+							<aconnectorLineJumps value="4"/>
+							<aconnectorLabelOrientation value="4"/>
+							<afromShapeXDiff value="0"/>
+							<afromShapeYDiff value="0"/>
+							<atoShapeXDiff value="0"/>
+							<atoShapeYDiff value="0"/>
+							<afromConnectType value="0"/>
+							<atoConnectType value="0"/>
+							<auseFromShapeCenter value="true"/>
+							<auseToShapeCenter value="true"/>
+							<afromPinType value="1"/>
+							<atoPinType value="1"/>
+							<arequestRebuild value="false"/>
+							<arequestRebuildFromEnd value="false"/>
+							<arequestRebuildToEnd value="false"/>
+							<ashowConnectorName value="2"/>
+							<apaintThroughLabel value="2"/>
+						</properties>
+					</xmi:Extension>
+					<elementFont bold="false" color="Cr:0,0,0,255" italic="false" name="Dialog" size="11" style="0"/>
+					<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
+				</uml:DiagramElement>
+				<uml:DiagramElement geometry="927,652,384,47" preferredShapeType="NOTE" subject="iBfprbmGAqACRwsI" xmi:id="8BfprbmGAqACRwsH">
+					<xmi:Extension extender="Visual Paradigm">
+						<captionBounds value="0,0,369,0"/>
+						<captionInternalWidth value="-2147483648"/>
+						<captionInternalHeight value="-2147483648"/>
+						<captionVisible value="true"/>
+						<captionSide value="12"/>
+						<properties>
+							<azOrder value="2"/>
+							<abackground value="Cr:122,207,245,255"/>
+							<aforeground value="Cr:0,0,0,255"/>
+							<acreatorDiagramType value="ClassDiagram"/>
+							<aselectable value="true"/>
+							<arequestResetCaption value="false"/>
+							<arequestResetCaptionSize value="false"/>
+							<arequestResetCaptionFitWidth value="false"/>
+							<amodelElementNameAlignment value="9"/>
+							<apresentationOption value="4"/>
+							<aprimitiveShapeType value="0"/>
+							<ashowStereotypeIconName value="0"/>
+							<ashowAllocatedFrom value="0"/>
+							<ashowAllocatedTo value="0"/>
+							<aoverrideAppearanceWithStereotypeIcon value="true"/>
+							<ashowTaggedValues value="0"/>
+							<arequestSetSizeOption value="0"/>
+							<aparentConnectorHeaderLength value="40"/>
+							<aparentConnectorLineLength value="10"/>
+							<aconnectToPoint value="true"/>
+							<aparentConnectorDTheta value="0.0"/>
+							<aconnectionPointType value="2"/>
+							<acoverConnector value="false"/>
+							<arequestDefaultSize value="false"/>
+							<arequestFitSize value="false"/>
+							<arequestFitSizeFromCenter value="false"/>
+							<aangle value="0"/>
+						</properties>
+					</xmi:Extension>
+					<elementFill color1="Cr:122,207,245,255" color2="" style="1" transparency="0" type="1"/>
+					<elementFont bold="false" color="Cr:0,0,0,255" italic="false" name="Dialog" size="12" style="0"/>
+					<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
+				</uml:DiagramElement>
+				<uml:DiagramElement fromDiagramElement="8BfprbmGAqACRwsH" geometry="927,656;846,227;" preferredShapeType="Anchor" subject="PJQZrbmGAqACRwsg" toDiagramElement="IErXhjmGAqACRwX3" xmi:id="vJQZrbmGAqACRwsh">
+					<xmi:Extension extender="Visual Paradigm">
+						<captionBounds value="887,440,20,0"/>
+						<captionInternalWidth value="-2147483648"/>
+						<captionInternalHeight value="-2147483648"/>
+						<captionVisible value="true"/>
+						<captionSide value="1"/>
+						<properties>
+							<azOrder value="52"/>
 							<abackground value="Cr:122,207,245,255"/>
 							<aforeground value="Cr:0,0,0,255"/>
 							<acreatorDiagramType value="ClassDiagram"/>
@@ -19270,6 +19380,7 @@
 		<packagedElement name="boolean" visibility="public" xmi:id="boolean_id" xmi:type="uml:DataType"/>
 		<packagedElement name="List" visibility="public" xmi:id="List_id" xmi:type="uml:DataType"/>
 		<packagedElement name="String" visibility="public" xmi:id="String_id" xmi:type="uml:DataType"/>
+		<packagedElement name="Boolean" visibility="public" xmi:id="Boolean_id" xmi:type="uml:DataType"/>
 		<packagedElement name="int" visibility="public" xmi:id="int_id" xmi:type="uml:DataType"/>
 	</uml:Model>
 	<Escola_profile:enumeration base_Enumeration=".wN3yrmGAqACRwmI" xmi:id=".wN3yrmGAqACRwmI_enumeration"/>

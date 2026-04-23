@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class JavaMenuGenerator {
 
@@ -211,9 +212,13 @@ public class JavaMenuGenerator {
         // recolher atributos do pai + próprios (mesma ordem que o construtor)
         List<Attribute> allAttrs = new ArrayList<>();
         if (cls.getParentClass() != null) {
-            allAttrs.addAll(cls.getParentClass().getAttributes());
+            allAttrs.addAll(cls.getParentClass().getAttributes().stream()
+                    .filter(a -> !a.isDerived())
+                    .collect(Collectors.toList()));
         }
-        allAttrs.addAll(cls.getAttributes());
+        allAttrs.addAll(cls.getAttributes().stream()
+                .filter(a -> !a.isDerived())
+                .collect(Collectors.toList()));
 
         // ler cada atributo
         for (Attribute attr : allAttrs) {
@@ -336,9 +341,13 @@ public class JavaMenuGenerator {
         // para cada atributo (pai + próprios) ler novo valor ou manter atual
         List<Attribute> allAttrs = new ArrayList<>();
         if (cls.getParentClass() != null) {
-            allAttrs.addAll(cls.getParentClass().getAttributes());
+            allAttrs.addAll(cls.getParentClass().getAttributes().stream()
+                    .filter(a -> !a.isDerived())
+                    .collect(Collectors.toList()));
         }
-        allAttrs.addAll(cls.getAttributes());
+        allAttrs.addAll(cls.getAttributes().stream()
+                .filter(a -> !a.isDerived())
+                .collect(Collectors.toList()));
         for (Attribute attr : allAttrs) {
             generateUpdateAttribute(w, attr);
         }

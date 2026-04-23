@@ -39,6 +39,8 @@ public class XMIParser {
     private Map<String, List<String[]>> initsCache = new HashMap<>();
     // pre cond
     private Map<String, List<String[]>> preconditionsCache = new HashMap<>();
+    // derives
+    private Map<String, List<String[]>> derivesCache = new HashMap<>();
 
     public void loadModel(String xmiFile) throws Exception{
 
@@ -162,17 +164,37 @@ public class XMIParser {
         List<String[]> preconditions = preconditionsCache.get(classId);
         if (preconditions != null) {
             for (String[] pre : preconditions) {
+                System.out.println("Processing precondition for class " + cl.getName() + ": " + Arrays.toString(pre));
                 String operationName = pre[0];
                 String preName = pre[1];
                 String expression = pre[2];
 
                 // encontrar a operação correspondente
                 for (Operation op : cl.getOperations()) {
+                    System.out.println("checking operation " + op.getName() + " against precondition for operation " + operationName);
                     if (op.getName().equals(operationName)) {
+                        System.out.println("Match found for operation " + op.getName() + ". Adding precondition: " + preName);
                         Precondition precondition = new Precondition(preName, expression, "Precondition '" + preName + "' violated.");
                         precondition.setJavaExpression(OCLToJavaVisitor.toJava(expression));
                         op.addPrecondition(precondition);
                         System.out.println("Class " + cl.getName() + " operation '" + operationName + "' pre: " + preName);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // derive part
+        List<String[]> derives = derivesCache.get(classId);
+        if (derives != null) {
+            for (String[] derive : derives) {
+                String attrName = derive[0];
+                String expression = derive[1];
+                for (Attribute attr : cl.getAttributes()) {
+                    if (attr.getName().equals(attrName)) {
+                        attr.setDeriveExpression(expression);
+                        attr.setJavaDeriveExpression(OCLToJavaVisitor.toJava(expression));
+                        System.out.println("Class " + cl.getName() + " attribute '" + attrName + "' derive: " + expression);
                         break;
                     }
                 }
@@ -233,7 +255,6 @@ public class XMIParser {
                     } else {
                         // fallback
                         ModelElement type = (ModelElement) paramElement.getRefAttribute("parametertype");
-                        System.out.println("had to use fallback for return type of operation " + operation.getName() + ".");
                         if (type != null) {
                             operation.setReturnType(type.getName());
                         }
@@ -271,7 +292,6 @@ public class XMIParser {
         } else {
             // fallback
             ModelElement type = (ModelElement) element.getRefAttribute("parametertype");
-            System.out.println("had to use fallback for return type of parameter " + parameter.getName() + ".");
             if (type != null) {
                 parameter.setType(type.getName());
             } else {
@@ -490,9 +510,13 @@ public class XMIParser {
             // tentar parsing de init se não for invariante
             String[] init = (invariant == null) ? VpAnnotationsParser.parseInit(body) : null;
 
+            // tentar precond
             String[] precondition = (invariant == null && init == null) ? VpAnnotationsParser.parsePreCondition(body) : null;
 
-            if (invariant == null && init == null && precondition == null) {
+            // tentar derive
+            String[] derive = (invariant == null && init == null && precondition == null) ? VpAnnotationsParser.parseDerive(body) : null;
+
+            if (invariant == null && init == null && precondition == null && derive == null) {
                 continue;
             }
 
@@ -504,8 +528,10 @@ public class XMIParser {
                     System.out.println("Invariant '" + invariant.getName() + "' has no annotated elements.");
                 } else if (init != null) {
                     System.out.println("Init for '" + init[0] + "' has no annotated elements.");
-                } else {
+                } else if (precondition != null) {
                     System.out.println("Precondition '" + precondition[1] + "' has no annotated elements.");
+                } else if (derive != null) {
+                    System.out.println("Derive for '" + derive[0] + "' has no annotated elements.");
                 }
                 continue;
             }
@@ -529,10 +555,18 @@ public class XMIParser {
                 }
 
                 if (precondition != null) {
+                    System.out.println("precondition found with element id " + elementId + ": " + precondition[1]);
                     if (!preconditionsCache.containsKey(elementId)) {
                         preconditionsCache.put(elementId, new ArrayList<>());
                     }
                     preconditionsCache.get(elementId).add(precondition);
+                }
+
+                if (derive != null) {
+                    if (!derivesCache.containsKey(elementId)) {
+                        derivesCache.put(elementId, new ArrayList<>());
+                    }
+                    derivesCache.get(elementId).add(derive);
                 }
             }
 

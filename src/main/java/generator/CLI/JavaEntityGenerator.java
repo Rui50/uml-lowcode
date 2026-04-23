@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class JavaEntityGenerator {
     private String baseOutputPath;
@@ -126,7 +127,11 @@ public class JavaEntityGenerator {
                 generateGetterSetter(writer, "Long", "id");
             }
             for (Attribute attr : cls.getAttributes()) {
-                generateGetterSetter(writer, attr.getType(), attr.getName());
+                if (attr.isDerived()) {
+                    generateDerivedGetter(writer, attr);
+                } else {
+                    generateGetterSetter(writer, attr.getType(), attr.getName());
+                }
             }
 
             generateRelationshipGettersSetters(writer, cls, associations);
@@ -147,6 +152,7 @@ public class JavaEntityGenerator {
 
     private void generateAttributes(PrintWriter writer, Class cls) {
         for (Attribute attr : cls.getAttributes()) {
+            if (attr.isDerived()) continue;  // no storage
             if (attr.hasInit()) {
                 String javaInit = attr.getJavaInitExpression();                // se o tipo é um enum, meter com o nome do enum como prefixo (ATIVO -> EstadoAluno.ATIVO)
                 if (enumNames.contains(attr.getType())) {
@@ -191,7 +197,9 @@ public class JavaEntityGenerator {
         if (cls.getParentClass() != null) {
             parentAttrs = cls.getParentClass().getAttributes();
         }
-        List<Attribute> ownAttrs = cls.getAttributes();
+        List<Attribute> ownAttrs = cls.getAttributes().stream()
+                .filter(a -> !a.isDerived())
+                .collect(Collectors.toList());
 
         // se não tem atributos nenhuns, não gera
         if (parentAttrs.isEmpty() && ownAttrs.isEmpty()) return;
@@ -241,6 +249,15 @@ public class JavaEntityGenerator {
         // setter
         writer.println("    public void set" + capitalized + "(" + type + " " + name + ") {");
         writer.println("        this." + name + " = " + name + ";");
+        writer.println("    }");
+        writer.println();
+    }
+
+    private void generateDerivedGetter(PrintWriter writer, Attribute attr) {
+        String name = attr.getName();
+        String capitalized = name.substring(0, 1).toUpperCase() + name.substring(1);
+        writer.println("    public " + attr.getType() + " get" + capitalized + "() {");
+        writer.println("        return " + attr.getJavaDeriveExpression() + ";");
         writer.println("    }");
         writer.println();
     }
@@ -309,12 +326,24 @@ public class JavaEntityGenerator {
 
         for (Attribute attr : cls.getAttributes()) {
             writer.println(" +");
+            String capitalized = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
+            String expr;
+            if (attr.isDerived()) {
+                expr = "get" + capitalized + "()";
+            } else {
+                expr = attr.getName();
+            }
             if (attr.getType().equals("String")) {
+                writer.print("            \", " + attr.getName() + "='\" + " + expr + " + \"'\"");
+            } else {
+                writer.print("            \", " + attr.getName() + "=\" + " + expr);
+            }
+            /*if (attr.getType().equals("String")) {
                 writer.print("            \", " + attr.getName() + "='\" + " + attr.getName() + " +" +
                         "\"'\"");
             } else {
                 writer.print("            \", " + attr.getName() + "=\" + " + attr.getName());
-            }
+            }*/
         }
 
         writer.println(" +");
