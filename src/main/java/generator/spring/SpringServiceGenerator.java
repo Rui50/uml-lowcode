@@ -17,6 +17,8 @@ public class SpringServiceGenerator {
     public String baseOutputPath;
     public String basePackage;
 
+    private Set<String> preDeclaredVars = new HashSet<>();
+    
     public SpringServiceGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
@@ -755,9 +757,9 @@ public class SpringServiceGenerator {
     private List<Attribute> getAllAttributes(Class cls) {
         List<Attribute> all = new ArrayList<>();
         if (cls.getParentClass() != null) {
-            all.addAll(cls.getParentClass().getAttributes());
+            cls.getParentClass().getAttributes().stream().filter(a -> !a.isDerived()).forEach(all::add);
         }
-        all.addAll(cls.getAttributes());
+        cls.getAttributes().stream().filter(a -> !a.isDerived()).forEach(all::add);
         return all;
     }
 
@@ -890,12 +892,22 @@ public class SpringServiceGenerator {
         }
         writer.println(") {");
 
-        // preconditions
-        for (Precondition pre : op.getPreconditions()) {
-            String javaExpr = pre.getJavaExpression();
-            writer.println("        if (!(" + javaExpr + ")) {");
-            writer.println("            throw new IllegalStateException(\"" + pre.getMessage() + "\");");
-            writer.println("        }");
+        preDeclaredVars.clear();
+
+        // if there are preconditions, pre-load the entity so `this.X` rewrites have something to reference
+        String selfVar = GeneratorUtils.lowercaseFirst(className);
+        if (!op.getPreconditions().isEmpty()) {
+            String repoName = selfVar + "Repository";
+            writer.println("        " + className + " " + selfVar + " = " + repoName + ".findById(id)");
+            writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found\"));");
+            preDeclaredVars.add(selfVar);
+
+            for (Precondition pre : op.getPreconditions()) {
+                String javaExpr = pre.getJavaExpression(selfVar);
+                writer.println("        if (!(" + javaExpr + ")) {");
+                writer.println("            throw new IllegalStateException(\"" + pre.getMessage() + "\");");
+                writer.println("        }");
+            }
         }
 
         generateMethodBodyFromInteraction(writer, cls, op, interaction);
@@ -983,6 +995,9 @@ public class SpringServiceGenerator {
             String varName = msg.getAssignVariable() != null
                     ? msg.getAssignVariable()
                     : GeneratorUtils.lowercaseFirst(returnType);
+
+            // skip cuz this message would duplicate a variable already declared by a precondition check at the start of the method
+            if (preDeclaredVars.contains(varName)) return;
 
             if (methodName.equals("findById")) {
                 writer.println(indent + returnType + " " + varName + " = " + targetVar + "." +

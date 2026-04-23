@@ -30,8 +30,7 @@ import ocl.OCLToJavaVisitor;
 import org.antlr.v4.runtime.*;
 /**
  * TODO
- * - fix em coisas como List<Aluno> porque fica como Teste.Aluno (nome do proj)
- * - decidir como fazer os maps, "Qualifiers?"
+ * O init deveria OBRIGAR aquele a ser valor inicial, oque não é possivel so com 1 dto, seria preciso adicionar UPDATEDTO
  */
 
 public class Main {

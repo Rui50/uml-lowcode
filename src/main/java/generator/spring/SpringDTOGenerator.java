@@ -53,7 +53,7 @@ public class SpringDTOGenerator {
             w.println("import " + basePackage + ".models." + className + ";");
 
             // check if any attribute is an enum
-            for (Attribute attr : getAllAttributes(cls)) {
+            for (Attribute attr : getAllAttributes(cls).stream().filter(a -> !a.isDerived()).toList()) {
                 if (enumNames.contains(attr.getType())) {
                     w.println("import " + basePackage + ".models." + attr.getType() + ";");
                 }
@@ -68,8 +68,7 @@ public class SpringDTOGenerator {
             w.println("public class " + className + "CreateDTO {");
             w.println();
 
-            // all attributes (including inherited)
-            List<Attribute> allAttrs = getAllAttributes(cls);
+            List<Attribute> allAttrs = getAllAttributes(cls).stream().filter(a -> !a.isDerived()).toList();
             for (Attribute attr : allAttrs) {
                 w.println("    private " + attr.getType() + " " + attr.getName() + ";");
             }
@@ -82,7 +81,12 @@ public class SpringDTOGenerator {
             for (Attribute attr : allAttrs) {
                 String cap = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
                 String prefix = "boolean".equals(attr.getType()) ? "is" : "get";
-                w.println("        " + varName + ".set" + cap + "(this." + prefix + cap + "());");
+                if (attr.getInitExpression() != null) {
+                    // preserve entity's init default when client didn't send a value
+                    w.println("        if (this." + prefix + cap + "() != null) " + varName + ".set" + cap + "(this." + prefix + cap + "());");
+                } else {
+                    w.println("        " + varName + ".set" + cap + "(this." + prefix + cap + "());");
+                }
             }
             w.println("        return " + varName + ";");
             w.println("    }");
@@ -248,7 +252,6 @@ public class SpringDTOGenerator {
     private List<Attribute> getAllAttributes(Class cls) {
         List<Attribute> all = new ArrayList<>();
         if (cls.getParentClass() != null) {
-
             all.addAll(cls.getParentClass().getAttributes());
         }
         all.addAll(cls.getAttributes());

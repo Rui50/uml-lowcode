@@ -122,6 +122,9 @@ public class SpringEntityGenerator {
             // atributos
             generateAttributes(writer, cls);
 
+            // getters derivados
+            generateDerivedGetters(writer, cls);
+
             // relações
             generateRelationships(writer, cls, associations, allClasses);
 
@@ -200,6 +203,9 @@ public class SpringEntityGenerator {
     private void generateAttributes(PrintWriter writer, Class cls) {
         writer.println("    // attributes");
         for (Attribute atr : cls.getAttributes()){
+            // skip derived
+            if (atr.isDerived()) continue;
+
             if (enumNames.contains(atr.getType())) {
                 writer.println("    @Enumerated(EnumType.STRING)");
             }
@@ -214,6 +220,17 @@ public class SpringEntityGenerator {
             } else {
                 writer.println("    private " + atr.getType() + " " + atr.getName() + ";");
             }
+            writer.println();
+        }
+    }
+
+    private void generateDerivedGetters(PrintWriter writer, Class cls) {
+        for (Attribute atr : cls.getAttributes()) {
+            if (!atr.isDerived()) continue;
+            String cap = atr.getName().substring(0,1).toUpperCase() + atr.getName().substring(1);
+            writer.println("    public " + atr.getType() + " get" + cap + "() {");
+            writer.println("        return " + atr.getJavaDeriveExpression() + ";");
+            writer.println("    }");
             writer.println();
         }
     }

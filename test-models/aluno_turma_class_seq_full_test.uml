@@ -14016,7 +14016,7 @@
 					<businessModel xmi:value="false"/>
 					<qualityScore value="-1"/>
 				</xmi:Extension>
-				<ownedAttribute aggregation="none" isDerived="false" isDerivedUnion="false" isID="false" isLeaf="false" isReadOnly="false" isStatic="false" name="capacidade" type="int_id" visibility="private" xmi:id="ifQX0TmGAqACRwoi" xmi:type="uml:Property">
+				<ownedAttribute aggregation="none" isDerived="false" isDerivedUnion="false" isID="false" isLeaf="false" isReadOnly="false" isStatic="false" name="capacidade" type="Integer_id" visibility="private" xmi:id="ifQX0TmGAqACRwoi" xmi:type="uml:Property">
 					<xmi:Extension extender="Visual Paradigm">
 						<attribute/>
 						<isAbstract xmi:value="false"/>
@@ -15202,7 +15202,7 @@
 					<afilterByViewpointLegend value="true"/>
 					<apmAuthor value="nonam"/>
 					<apmCreateDateTime value="1771169209477"/>
-					<apmLastModified value="1776874514134"/>
+					<apmLastModified value="1776956336353"/>
 					<ateamworkCreateDateTime value="0"/>
 					<ashowShapeLegend value="false"/>
 					<ashowConnectorLegend value="false"/>
@@ -15279,6 +15279,47 @@
 				</properties>
 			</xmi:Extension>
 			<uml:Diagram.element>
+				<uml:DiagramElement geometry="927,652,384,47" preferredShapeType="NOTE" subject="iBfprbmGAqACRwsI" xmi:id="8BfprbmGAqACRwsH">
+					<xmi:Extension extender="Visual Paradigm">
+						<captionBounds value="0,0,369,0"/>
+						<captionInternalWidth value="-2147483648"/>
+						<captionInternalHeight value="-2147483648"/>
+						<captionVisible value="true"/>
+						<captionSide value="12"/>
+						<properties>
+							<azOrder value="2"/>
+							<abackground value="Cr:122,207,245,255"/>
+							<aforeground value="Cr:0,0,0,255"/>
+							<acreatorDiagramType value="ClassDiagram"/>
+							<aselectable value="true"/>
+							<arequestResetCaption value="false"/>
+							<arequestResetCaptionSize value="false"/>
+							<arequestResetCaptionFitWidth value="false"/>
+							<amodelElementNameAlignment value="9"/>
+							<apresentationOption value="4"/>
+							<aprimitiveShapeType value="0"/>
+							<ashowStereotypeIconName value="0"/>
+							<ashowAllocatedFrom value="0"/>
+							<ashowAllocatedTo value="0"/>
+							<aoverrideAppearanceWithStereotypeIcon value="true"/>
+							<ashowTaggedValues value="0"/>
+							<arequestSetSizeOption value="0"/>
+							<aparentConnectorHeaderLength value="40"/>
+							<aparentConnectorLineLength value="10"/>
+							<aconnectToPoint value="true"/>
+							<aparentConnectorDTheta value="0.0"/>
+							<aconnectionPointType value="2"/>
+							<acoverConnector value="false"/>
+							<arequestDefaultSize value="false"/>
+							<arequestFitSize value="false"/>
+							<arequestFitSizeFromCenter value="false"/>
+							<aangle value="0"/>
+						</properties>
+					</xmi:Extension>
+					<elementFill color1="Cr:122,207,245,255" color2="" style="1" transparency="0" type="1"/>
+					<elementFont bold="false" color="Cr:0,0,0,255" italic="false" name="Dialog" size="12" style="0"/>
+					<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
+				</uml:DiagramElement>
 				<uml:DiagramElement geometry="131,630,395,40" preferredShapeType="NOTE" subject="r7xITbmGAqACRwmo" xmi:id="L7xITbmGAqACRwmn">
 					<xmi:Extension extender="Visual Paradigm">
 						<captionBounds value="0,0,380,0"/>
@@ -16548,47 +16589,6 @@
 						</properties>
 					</xmi:Extension>
 					<elementFont bold="false" color="Cr:0,0,0,255" italic="false" name="Dialog" size="11" style="0"/>
-					<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
-				</uml:DiagramElement>
-				<uml:DiagramElement geometry="927,652,384,47" preferredShapeType="NOTE" subject="iBfprbmGAqACRwsI" xmi:id="8BfprbmGAqACRwsH">
-					<xmi:Extension extender="Visual Paradigm">
-						<captionBounds value="0,0,369,0"/>
-						<captionInternalWidth value="-2147483648"/>
-						<captionInternalHeight value="-2147483648"/>
-						<captionVisible value="true"/>
-						<captionSide value="12"/>
-						<properties>
-							<azOrder value="2"/>
-							<abackground value="Cr:122,207,245,255"/>
-							<aforeground value="Cr:0,0,0,255"/>
-							<acreatorDiagramType value="ClassDiagram"/>
-							<aselectable value="true"/>
-							<arequestResetCaption value="false"/>
-							<arequestResetCaptionSize value="false"/>
-							<arequestResetCaptionFitWidth value="false"/>
-							<amodelElementNameAlignment value="9"/>
-							<apresentationOption value="4"/>
-							<aprimitiveShapeType value="0"/>
-							<ashowStereotypeIconName value="0"/>
-							<ashowAllocatedFrom value="0"/>
-							<ashowAllocatedTo value="0"/>
-							<aoverrideAppearanceWithStereotypeIcon value="true"/>
-							<ashowTaggedValues value="0"/>
-							<arequestSetSizeOption value="0"/>
-							<aparentConnectorHeaderLength value="40"/>
-							<aparentConnectorLineLength value="10"/>
-							<aconnectToPoint value="true"/>
-							<aparentConnectorDTheta value="0.0"/>
-							<aconnectionPointType value="2"/>
-							<acoverConnector value="false"/>
-							<arequestDefaultSize value="false"/>
-							<arequestFitSize value="false"/>
-							<arequestFitSizeFromCenter value="false"/>
-							<aangle value="0"/>
-						</properties>
-					</xmi:Extension>
-					<elementFill color1="Cr:122,207,245,255" color2="" style="1" transparency="0" type="1"/>
-					<elementFont bold="false" color="Cr:0,0,0,255" italic="false" name="Dialog" size="12" style="0"/>
 					<elementLine color="Cr:0,0,0,255" style="1" transparency="0" weight="1.0"/>
 				</uml:DiagramElement>
 				<uml:DiagramElement fromDiagramElement="8BfprbmGAqACRwsH" geometry="927,656;846,227;" preferredShapeType="Anchor" subject="PJQZrbmGAqACRwsg" toDiagramElement="IErXhjmGAqACRwX3" xmi:id="vJQZrbmGAqACRwsh">
