@@ -13,10 +13,22 @@ import java.sql.Array;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ *  Gera um serviço por classe
+ *
+ *  cada service tem:
+ *   - dependencias de outr repos
+ *   - CRUD básico (findAll, findById, create, update, deleteById)
+ *   - metodos das operações:
+ *     Sao handled por ids, em bactch,
+ *
+ *   Invariantes OCL são validados antes de cada save
+ */
 public class SpringServiceGenerator {
     public String baseOutputPath;
     public String basePackage;
 
+    // vars ja declaradads pela preconditions, para evitar redeclaração no corpo do método
     private Set<String> preDeclaredVars = new HashSet<>();
     
     public SpringServiceGenerator(String baseOutputPath, String basePackage) {
@@ -82,6 +94,11 @@ public class SpringServiceGenerator {
         System.out.println("Generated: " + className + "Service.java");
     }
 
+    /**
+     * Imports de um serviço:
+     *  - seu modelo, repo, dtos, e coisas do spring
+     *  - add imports de classes refs em operações e entidades associadas
+     */
     private void generateImports(PrintWriter writer, Class cls, List<Class> classes, List<Association> associations, List<model.Enumeration> enumerations) {
         // importar a classe do modelo
         writer.println("import " + basePackage + ".models." + cls.getName() + ";");
@@ -121,6 +138,7 @@ public class SpringServiceGenerator {
         }
     }
 
+    // pega nas entidades referencias nos parametros e return de operações
     private List<String> getModelsToImportFromOperations(Class cls, List<Class> classes) {
         Set<String> entityNames = new HashSet<>();
 
@@ -149,6 +167,7 @@ public class SpringServiceGenerator {
         return new ArrayList<>(entitiesToImport);
     }
 
+    // pega nas entidades referenciadas nas assocs navegaveis
     private List<String> getModelsToImportFromAssociations(Class cls, List<Association> associations) {
         Set<String> entitiesToImport = new HashSet<>();
 
@@ -172,6 +191,7 @@ public class SpringServiceGenerator {
     }
 
 
+    // dependencias de repositórios: o próprio + os das entidades
     private void generateDependencies(PrintWriter writer, String className, List<Association> associations, List<Class> classes) {
         writer.println("    // Dependencies");
         writer.println("    private final " + className + "Repository " +
@@ -199,6 +219,11 @@ public class SpringServiceGenerator {
         writer.println();
     }
 
+    /**
+     *CRUD: findAll, findById, create, update, deleteById, existsById
+      - findAll e findById retornam DTOs (map from entities)
+      - create e update recebem DTOs (map to entities)
+     */
     private void generateCrudMethods(PrintWriter writer, String className, Class cls, List<Association> associations) {
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
@@ -253,6 +278,11 @@ public class SpringServiceGenerator {
         writer.println();
     }
 
+    /**
+     * Ve os tipos de relações, para cada navegavel, decide a forma
+     * (ManyToOne, ManyToMany, OneToMany unidirectional)
+     * e manda a função respetiva
+     */
     private void generateRelationShipMethods(PrintWriter writer, Class cls, List<Association> associations, List<Class> classes) {
         boolean hasRelationships = false;
 
@@ -700,6 +730,9 @@ public class SpringServiceGenerator {
         }
     }
 
+    /**
+     * create() recebe um DTO, converte para entidade, valida invariantes, guarda e retorna DTO
+     */
     private void generateCreateMethod(PrintWriter writer, String className, Class cls, List<Association> associations){
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
@@ -718,6 +751,9 @@ public class SpringServiceGenerator {
         writer.println();
     }
 
+    /**
+     * - update() procura a entidade por ID, atualiza os atributos a partir do DTO, valida e guarda
+     */
     private void generateUpdateMethod(PrintWriter writer, String className, Class cls) {
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
@@ -754,6 +790,7 @@ public class SpringServiceGenerator {
         writer.println();
     }
 
+    // atributos proprios + parent - derivados
     private List<Attribute> getAllAttributes(Class cls) {
         List<Attribute> all = new ArrayList<>();
         if (cls.getParentClass() != null) {
@@ -763,6 +800,7 @@ public class SpringServiceGenerator {
         return all;
     }
 
+    // gera a arte de validação de invariantes OCL antes de guardar a entidade, se existirem
     private void generateValidationBeforeSave(PrintWriter writer, Class cls, String varName) {
         if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
             writer.println("        // Validate OCL invariants");
@@ -894,7 +932,7 @@ public class SpringServiceGenerator {
 
         preDeclaredVars.clear();
 
-        // if there are preconditions, pre-load the entity so `this.X` rewrites have something to reference
+        // if there are preconditions, preload the entity so `this.X` rewrites have something to reference
         String selfVar = GeneratorUtils.lowercaseFirst(className);
         if (!op.getPreconditions().isEmpty()) {
             String repoName = selfVar + "Repository";

@@ -36,7 +36,8 @@ import java.util.List;
  */
 
 public class OperationGenerator {
-    // gera a operação PIM
+
+    // gera a operação PIM, assinatura, precondições e corpo
     public static void generateOperation(PrintWriter writer, Class cls, Interaction interaction,
                                          List<Association> associations) {
         Message entry = findEntryMessage(interaction, cls);
@@ -64,6 +65,8 @@ public class OperationGenerator {
 
         writer.println("    }");
     }
+
+    // Itera as messages e fragments, delegando para generateMessage / generateFragment
     private static void generateElements(PrintWriter writer, List<Object> elements,
                                          Message entry, Class cls, List<Association> associations, int indent) {
         String indentStr = "    ".repeat(indent);
@@ -78,6 +81,13 @@ public class OperationGenerator {
         }
     }
 
+    /**
+     * Gera o codiog da mensagem
+     * - target igual ao entry -> "this"
+     *   nome da lifeline se tiver, ou comentário se não tiver
+     * - add / remove com 1 argumento e ascociação correspondente -> acesso à coleção (add/remove ou put/remove para map)
+     * - caso geral: receiver.name(args) com assign se tiver variável de atribuição e tipo de retorno
+     */
     private static void generateMessage(PrintWriter writer, Message msg, Message entry,
                                         Class cls, List<Association> associations, String indent) {
         String receiver;
@@ -103,7 +113,7 @@ public class OperationGenerator {
                 String base = receiver + "." + field;
                 String code;
                 if (assoc.hasQualifier()){
-                    // MAP: PUT(key, value) ou REMOVE(key) — key via getter do qualifier
+                    // MAP com PUT(key, value) ou REMOVE(key) — key via getter do qualifier
                     String q = assoc.getQualifierName();
                     String getter = "get" + Character.toUpperCase(q.charAt(0)) + q.substring(1) + "()";
                     code = "add".equals(name)
@@ -137,6 +147,13 @@ public class OperationGenerator {
         }
     }
 
+    /**
+     * fragments para estruturas Java:
+     *  - loop com guard "x: coll"  -> for (x : coll)
+     *  - loop sem iterador         -> while (guard)
+     *  - opt                       -> if (guard)
+     *  - alt                       -> if / else if / else conforme os guards dos operandos
+     */
     private static void generateFragment(PrintWriter writer, Fragment frag, Message entry,
                                          Class cls, List<Association> associations, int indent) {
         String indentStr = "    ".repeat(indent);
@@ -216,6 +233,7 @@ public class OperationGenerator {
         return expr;
     }
 
+    // procura a associação entre ownerType e otherType, navegável do lado do owner
     private static Association findAssoc(List<Association> assocs, String ownerType, String otherType) {
         for (Association a : assocs){
             if (a.getSourceClass().equals(ownerType) && a.getTargetClass().equals(otherType) && a.isTargetNavigable())

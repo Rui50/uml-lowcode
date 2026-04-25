@@ -6,7 +6,6 @@ import parser.SequenceDiagramParser;
 import parser.SequenceDiagramParser2;
 import parser.XMIParser;
 import generator.plain.CodeGenerator;
-import generator.GeneratorUtils;
 import generator.spring.SpringProjectGenerator;
 import generator.spring.SpringEntityGenerator;
 import generator.spring.SpringRepositoryGenerator;
@@ -31,6 +30,11 @@ import org.antlr.v4.runtime.*;
 /**
  * TODO
  * O init deveria OBRIGAR aquele a ser valor inicial, oque não é possivel so com 1 dto, seria preciso adicionar UPDATEDTO
+ * Configurar mensagens de violação de invariantes
+ *
+ * - features da parte do parser de uml
+ *  - abstract classes
+ *  - interfaces + realizations
  */
 
 public class Main {
@@ -47,18 +51,11 @@ public class Main {
 
         // Parsing do diagrama de classes
         XMIParser parser = new XMIParser();
-        System.out.println("Loading model...");
         parser.loadModel(xmiFilePath);
 
         // Extrair classes
         System.out.println("Extracting classes...");
         List<Class> classes = parser.getClasses();
-
-        System.out.println("Parsing completed successfully!");
-
-        // quantas classes para debug
-        System.out.println("Classes extracted: "  + classes.size());
-
         // detalhes
         if (classes.isEmpty()) {
             System.out.println("No classes found");
@@ -68,11 +65,9 @@ public class Main {
             }
         }
 
-        // relações (ainda so associações)
-        System.out.println("Parsing relationships...");
+        // relações
         List<Association> associations = parser.getAssociations();
         System.out.println("Relationships extracted: " + associations.size());
-
         if (associations.isEmpty()) {
             System.out.println("No relationships found");
         } else {
@@ -94,16 +89,9 @@ public class Main {
             }
         }
 
-        if (!generalizations.isEmpty()) {
-            System.out.println("\nResolving inheritance references...");
-            fillGeneralizations(classes, generalizations);
-        }
-
         // Parsing das enumerações
-        System.out.println("Parsing enumerations...");
         List<Enumeration> enumerations = parser.getEnumerations();
         System.out.println("Enumerations extracted: " + enumerations.size());
-
         if (enumerations.isEmpty()) {
             System.out.println("No enumerations found");
         } else {
@@ -112,10 +100,7 @@ public class Main {
             }
         }
 
-        // Parsing dos diagramas de sequencia
-        SequenceDiagramParser sequenceParser = new SequenceDiagramParser();
-        sequenceParser.loadModel(xmiFilePath);
-        List<Interaction> allInteractions = sequenceParser.parseInteractions();
+        List<Interaction> allInteractions = parser.getInteractions();
 
         // separar PSM (Spring) e PIM (CLI/plain)
         List<Interaction> psmInteractions = new java.util.ArrayList<>();
@@ -141,7 +126,7 @@ public class Main {
         }
 
         String outputDir = "output";
-        String generateWhat = "plain"; // "plain" "spring" "cli" "none"
+        String generateWhat = "spring"; // "plain" "spring" "cli" "none"
 
         switch (generateWhat) {
             case "plain"  -> generatePlain(classes, associations, enumerations, pimInteractions, outputDir);
@@ -205,18 +190,6 @@ public class Main {
         OCLLexer lexer = new OCLLexer(CharStreams.fromString(expr));
         OCLParser p = new OCLParser(new CommonTokenStream(lexer));
         return new OCLToJavaVisitor().visit(p.standaloneExpression());
-    }
-
-    // para ja fica aqui, depois meter num parser helper
-    private static void fillGeneralizations(List<Class> classes, List<Generalization> generalizations){
-        for (Generalization gen : generalizations) {
-            Class child = GeneratorUtils.findClassByName(classes, gen.getChildClass());
-            Class parent = GeneratorUtils.findClassByName(classes, gen.getParentClass());
-
-            if (child != null && parent != null) {
-                child.setParentClass(parent);
-            }
-        }
     }
 
     private static void printElements(java.util.List<Object> elements, int depth) {

@@ -29,6 +29,14 @@ public class JavaEntityGenerator {
     // nomes das enumerações para saber quando um atributo é enum
     private Set<String> enumNames = new HashSet<>();
 
+    /**
+     * Para ja
+     * - todas as classes sem pai recebem um campo Long id
+     *  - atributos com init OCL têm inicialização inline (= valor)
+     *  - tipos enum são prefixados com o nome do enum (ATIVO -> EstadoAluno.ATIVO)
+     *  - gera construtor vazio + construtor com todos os atributos, herdado via super
+     *  - gera toString()
+     */
     public JavaEntityGenerator(String baseOutputPath, List<Interaction> interactions, List<Enumeration> enumerations) {
         this.baseOutputPath = baseOutputPath;
         this.interactions = interactions;
@@ -63,6 +71,7 @@ public class JavaEntityGenerator {
         System.out.println("Java entity generation completed.");
     }
 
+    // gera enum
     private void generateEnum(Enumeration enumeration, String modelsDir) throws IOException {
         String filename = modelsDir + "/" + enumeration.getName() + ".java";
 
@@ -83,6 +92,8 @@ public class JavaEntityGenerator {
         }
     }
 
+    // gera classe de entitdade, com imports, id, atributos, relaçoes,
+    // construtores, getters/setters, toString, validação e operações
     private void generateEntity(Class cls, List<Class> allClasses, List<Association> associations, String modelsDir) throws IOException {
         String filename = modelsDir + "/" + cls.getName() + ".java";
 
@@ -150,6 +161,8 @@ public class JavaEntityGenerator {
         }
     }
 
+    // gera os atributos nao derivados
+    // para atributos de tipo enum, prefixa com o nome do enum
     private void generateAttributes(PrintWriter writer, Class cls) {
         for (Attribute attr : cls.getAttributes()) {
             if (attr.isDerived()) continue;  // no storage
@@ -166,6 +179,7 @@ public class JavaEntityGenerator {
         if (!cls.getAttributes().isEmpty()) writer.println();
     }
 
+    // gera os campos para as relações navegáveis
     private void generateRelationships(PrintWriter writer, Class cls, List<Association> associations) {
         List<String> generatedFields = new ArrayList<>();
 
@@ -237,6 +251,7 @@ public class JavaEntityGenerator {
         writer.println();
     }
 
+
     private void generateGetterSetter(PrintWriter writer, String type, String name) {
         String capitalized = name.substring(0, 1).toUpperCase() + name.substring(1);
 
@@ -298,6 +313,7 @@ public class JavaEntityGenerator {
             if (interaction != null) {
                 OperationGenerator.generateOperation(writer, cls, interaction, associations);
             } else {
+                // fallback, se a operação nao tiver diagrama sequencia respetivo
                 String visibility = op.getVisibility();
                 String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
                 writer.println("    " + visibility + " " + returnType + " " + op.getName() + "(");
@@ -317,6 +333,7 @@ public class JavaEntityGenerator {
         }
     }
 
+    // gera um metodo toString para a classe
     private void generateToString(PrintWriter writer, Class cls) {
         writer.println("    @Override");
         writer.println("    public String toString() {");
@@ -338,12 +355,6 @@ public class JavaEntityGenerator {
             } else {
                 writer.print("            \", " + attr.getName() + "=\" + " + expr);
             }
-            /*if (attr.getType().equals("String")) {
-                writer.print("            \", " + attr.getName() + "='\" + " + attr.getName() + " +" +
-                        "\"'\"");
-            } else {
-                writer.print("            \", " + attr.getName() + "=\" + " + attr.getName());
-            }*/
         }
 
         writer.println(" +");
@@ -352,6 +363,7 @@ public class JavaEntityGenerator {
         writer.println();
     }
 
+    // gera com base se é map list ou normal
     private void generateRelationshipField(PrintWriter writer, String otherClass, String fieldName, String multiplicity, Association assoc) {
         if (assoc.hasQualifier()) {
             String qualifierType = assoc.getQualifierType();
@@ -363,6 +375,7 @@ public class JavaEntityGenerator {
         }
     }
 
+    // nome do campo se existir senao cria com base na mult e noem classe
     private String makeFieldName(String className, String role, String multiplicity) {
         if (role != null && !role.trim().isEmpty()) {
             return role.trim();
@@ -371,6 +384,7 @@ public class JavaEntityGenerator {
         return isMultiple(multiplicity) ? base + "s" : base;
     }
 
+    // se é map ou list
     private String getRelationshipType(String otherClass, String multiplicity, Association assoc) {
         if (assoc.hasQualifier()) {
             return "Map<" + assoc.getQualifierType() + ", " + otherClass + ">";

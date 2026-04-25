@@ -22,8 +22,8 @@ public class JavaProjectGenerator {
     }
 
     /**
-     * 1 - estrutura
-     * 2 - main
+     * 1 - estrutura (wipe e criar pastas)
+     * 2 - main e util
      * 3 - entidades
      * 4 - repos
      * 5 - menus
@@ -132,6 +132,7 @@ public class JavaProjectGenerator {
         System.out.println("Generated: InputUtils.java");
     }
 
+    // apaga recursivamente
     private void deleteDirectory(File directory) {
         File[] files = directory.listFiles();
         if (files != null) {

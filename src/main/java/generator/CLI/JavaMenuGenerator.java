@@ -15,6 +15,14 @@ import java.io.PrintWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Gera os menus CLI
+ *
+ * para cada classe gera um menu com:
+ *  - CRUD
+ *  - opções de associação (add/remove ou assign/remove)
+ *  - opções para operações custom (ligadas a uma Interaction)
+ */
 public class JavaMenuGenerator {
 
     private String baseOutputPath;
@@ -51,7 +59,7 @@ public class JavaMenuGenerator {
     }
 
     /*
-    * gerar menu para cada entidade, com opções de CRUD
+    * gerar menu para cada entidade
      */
     private void generateEntityMenu(Class cls, List<Class> allClasses, List<Association> associations, String menusDir) throws IOException {
         String className = cls.getName() + "Menu";
@@ -204,7 +212,9 @@ public class JavaMenuGenerator {
     }
 
     /**
-     * Metodos CRUD, assoc separadas
+     * create(), le cada atributo (pai + proprio)
+     * nao le atributos derivados
+     * valida invariantes
      */
     private void generateCreateMethod(PrintWriter w, Class cls) {
         w.println("    private void create() {");
@@ -635,7 +645,6 @@ public class JavaMenuGenerator {
     /***
      * UTILS HERE
      */
-
     private void generateReadInputForAttribute(PrintWriter w, Attribute attr) {
         String name = attr.getName();
 
@@ -728,7 +737,10 @@ public class JavaMenuGenerator {
         }
     }
 
-
+    /**
+     * pega no conjunto de outras classes cujos repositórios este menu precisa
+     * as associadas (navegáveis) + as usadas como parâmetro de operações custom.
+     */
     private Set<String> getNeededRepositories(Class cls, List<Association> associations, List<Class> allClasses) {
         Set<String> related = new LinkedHashSet<>();
         for (Association assoc : associations) {
@@ -755,6 +767,7 @@ public class JavaMenuGenerator {
         return related;
     }
 
+    // nome da variável do repositório: classe com letra minúscula + "Repository"
     private String repoVariable(String className) {
         return className.substring(0, 1).toLowerCase() + className.substring(1) + "Repository";
     }

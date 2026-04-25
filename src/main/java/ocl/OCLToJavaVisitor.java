@@ -3,6 +3,14 @@ package ocl;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
+/**
+ * Traduz uma expressão OCL para java
+ * utilizando o parser gerado pelo ANTLR4 a partir da gramática OCL.g4
+ *
+ * existe um metodo visit para cada regra da gramática, e a tradução é feita recursivamente
+ *
+ * assume sempre sempre listas ou sets na tradução, se for maps o ValidationGenerator da fix a isso
+ */
 public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
     public static String toJava(String oclExpression) {
@@ -11,7 +19,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         return new OCLToJavaVisitor().visit(parser.standaloneExpression());
     }
 
-    // standalone foi adicionado ao .g4 original, para ignorar a parte do "context X inv Y:"
+    // standalone adicionado ao .g4 original, para ignorar a parte do "context X inv Y:"
     // context nao vai ser necessário porque ja vai estar associado a classe
     // standaloneExpression : expression EOF
     @Override
@@ -45,7 +53,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
     //    | '(' expression ')'        -> expressão entre parênteses
     //
     // ctx.XXXX() retorna o token se esta alternativa foi a que deu match, ou null se não foi.
-    // Exemplo: se a expressão é "30", ctx.INT() retorna o token "30", e ctx.ID() retorna null.
+    // se a expressão é "30", ctx.INT() retorna o token "30", e ctx.ID() retorna null.
     @Override
     public String visitBasicExpression(OCLParser.BasicExpressionContext ctx) {
 
@@ -257,7 +265,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
     }
 
     // Regra: navigationExpression : primaryFactor (postfixSuffix)*
-    // aqui juntamos base + sufixos
+    // constroi expressao da esquerda para a direita, aplicando cada sufixo sobre o resultado anterior
     // self.alunos->size() é o primaryFactor(self.alunos) + postfixSuffix(->size())
     @Override
     public String visitNavigationExpression(OCLParser.NavigationExpressionContext ctx) {

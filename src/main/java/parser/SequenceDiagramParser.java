@@ -11,38 +11,13 @@ import model.sequence.*;
 public class SequenceDiagramParser {
     private Model model;
     private MetaModel metaModel;
-    private Map<String, String> messageNumbers = new HashMap<>();
+    private Map<String, String> messageNumbers;
 
-
-    // igual al class parser, tenho de mudar a estrutura para os dois usarem o mesmo
-    public void loadModel(String xmiFile) throws Exception{
-
-        // caminhos dos ficheiros de configuração do SDMetrics (para uml 2.0)
-        String metaModelURL  = "lib/metamodel2.xml";
-        String xmiTransURL = "lib/xmiTrans2_0.xml";
-
-        // parser do SDMetrics
-        XMLParser parser = new XMLParser();
-
-        // carregar o metamodelo UML
-        System.out.println("Loading meta-model from: " + metaModelURL );
-        metaModel = new MetaModel();
-        parser.parse(metaModelURL , metaModel.getSAXParserHandler());
-
-        // carregar as trasnformações
-        System.out.println("Loading transformations from: " + xmiTransURL);
-        XMITransformations trans=new XMITransformations(metaModel);
-        parser.parse(xmiTransURL, trans.getSAXParserHandler());
-
-        // ler o ficheiro XMI com o modelo UML
-        System.out.println("Loading model from: " + xmiFile);
-        model = new Model(metaModel);
-        XMIReader xmiReader = new XMIReader(trans, model);
-        parser.parse(xmiFile, xmiReader);
-
+    public SequenceDiagramParser(Model model, MetaModel metaModel, String xmiFile) throws java.io.IOException {
+        this.model = model;
+        this.metaModel = metaModel;
         // extrai os numeros das mensagens do VP (extension "vpnumber" do Message)
-        messageNumbers = VpParser.extractMessageNumbers(xmiFile);
-        System.out.println("Model loaded successfully!");
+        this.messageNumbers = VpParser.extractMessageNumbers(xmiFile);
     }
 
     // pega nas "interacations" (diagramas de sequencia) do modelo
@@ -229,7 +204,7 @@ public class SequenceDiagramParser {
                 lifeline.setType(vpType);
             }
 
-            System.out.println("Parsed lifeline with represents: " + lifeline);
+            //System.out.println("Parsed lifeline with represents: " + lifeline);
         }
         // fallback mas n deve sequer funcionar
         else {
@@ -253,7 +228,7 @@ public class SequenceDiagramParser {
             }
         }
 
-        System.out.println("Parsed lifeline: " + lifeline);
+        //System.out.println("Parsed lifeline: " + lifeline);
 
         return lifeline;
     }
@@ -296,7 +271,7 @@ public class SequenceDiagramParser {
             }
         }
 
-        System.out.println("Parsed message: " + message);
+        //System.out.println("Parsed message: " + message);
 
         return message;
     }
@@ -362,10 +337,10 @@ public class SequenceDiagramParser {
             }
         }
 
-        System.out.println("Parsed message signature - Name: " + message.getName()
+        /*System.out.println("Parsed message signature - Name: " + message.getName()
                 + ", Arguments: " + message.getArguments()
                 + ", Return Type: " + message.getReturnType()
-                + ", AssignVariable: " + message.getAssignVariable());
+                + ", AssignVariable: " + message.getAssignVariable());*/
     }
 
     private void parseMessageSignature2(Message message, String rawName) {
@@ -406,10 +381,10 @@ public class SequenceDiagramParser {
             message.setName(rawName.trim());
         }
 
-        System.out.println("Parsed message signature2 - Name: " + message.getName()
+        /*System.out.println("Parsed message signature2 - Name: " + message.getName()
                 + ", Arguments: " + message.getArguments()
                 + ", Return Type: " + message.getReturnType()
-                + ", AssignVariable: " + message.getAssignVariable());
+                + ", AssignVariable: " + message.getAssignVariable());*/
     }
 
     /**

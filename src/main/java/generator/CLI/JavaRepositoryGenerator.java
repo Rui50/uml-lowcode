@@ -7,12 +7,18 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
+/**
+ * Para ja gera repositorio em memoria por classe
+ * Cada repositório usa um Map<Long, T> com auto-incremento de id,
+ * e expõe save / findById / findAll / deleteById / existsById.
+ */
 public class JavaRepositoryGenerator {
     private String baseOutputPath;
 
     public JavaRepositoryGenerator(String baseOutputPath) {
         this.baseOutputPath = baseOutputPath;
     }
+
     public void generateRepositories(List<Class> classes) throws IOException {
         System.out.println("Generating Java repositories...");
 

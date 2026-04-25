@@ -10,6 +10,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 
+/**
+ * gerar os dtos, por classe, dois:
+ * - CreateDTO: para POST/PUT. apenas atributos, sem id, relações
+ * - ResponseDTO: para GET. id + atributos + relacionamento IDs
+ */
 public class SpringDTOGenerator {
     private String baseOutputPath;
     private String basePackage;

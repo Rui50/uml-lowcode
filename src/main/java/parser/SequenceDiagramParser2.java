@@ -236,7 +236,7 @@ public class SequenceDiagramParser2 {
             }
         }
 
-        System.out.println("Parsed lifeline: " + lifeline);
+        //System.out.println("Parsed lifeline: " + lifeline);
 
         return lifeline;
     }

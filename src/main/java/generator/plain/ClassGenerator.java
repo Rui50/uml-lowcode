@@ -15,7 +15,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /*
-* Gerar a esturura das classes
+* Gera uma class java por UML Classe do modelo
+* Por classe, em ordem:
+*  - atributos base
+*  - atributos de associação e inicilização no construtor
+*  - getters e setters para atributos base
+*  - métodos de associação (add/remove para multiplicidade *, set para 1)
+*  - operações (com base em interações, se existirem)
+*
+*  - OCL Part
+*  - invariants: metodo validate + mensagens de erro
+*  - derived: getter com expressão java equivalente
+*  - init: atribuição no construtor
+
 * */
 
 public class ClassGenerator {
@@ -25,12 +37,10 @@ public class ClassGenerator {
 
     public ClassGenerator(String outputDirectory) {
         this.outputDirectory = outputDirectory;
-        this.validationGenerator = new ValidationGenerator();
     }
 
     public ClassGenerator(String outputDirectory, List<Interaction> interactions) {
         this.outputDirectory = outputDirectory;
-        this.validationGenerator = new ValidationGenerator();
         this.interactions = interactions;
     }
 
@@ -39,6 +49,8 @@ public class ClassGenerator {
     }
 
     public void generateClasses(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
+        this.validationGenerator = new ValidationGenerator(associations);
+        // Gerar as "classes enum"
         for (Enumeration enumeration : enumerations) {
             generateEnum(enumeration);
         }
@@ -117,15 +129,24 @@ public class ClassGenerator {
         System.out.println("Generated class: " + filename);
     }
 
+    /*
+    * Gera os atributos base da classe,
+    * ignora os derivados, sao criados depois
+     */
     private void generateAttributes(PrintWriter writer, Class cls){
         writer.println("    // Attributes");
 
         for (Attribute attribute : cls.getAttributes()){
-            if (attribute.isDerived()) continue; // este é gerado por expressão
+            if (attribute.isDerived()) continue;
             writer.println("    " + attribute.getVisibility() + " " + attribute.getType() + " " + attribute.getName() + ";");
         }
     }
 
+    /**
+     * Gera as associações (navegaveis) da classe
+     * Verifica para cada associação a classe target/source e multiplicaideda para decidir o atributo
+     * Verifica tambem por qualifiers (maps)
+     */
     private void generateAssociations(PrintWriter writer, Class cls, List<Association> associations){
         List<String> generatedAttributes = new ArrayList<>();
 
@@ -178,6 +199,9 @@ public class ClassGenerator {
         }
     }
 
+    /**
+     * Construtur base apenas, sem parametros, mas inicializa associaçºoes
+     */
     private void generateConstructors(PrintWriter writer, Class cls, List<Association> associations){
         writer.println("    // Constructor");
         // only the default for now at least
@@ -220,6 +244,10 @@ public class ClassGenerator {
         writer.println("    }");
     }
 
+    /*
+    * Gera getters e setters para os atributos da classe
+    * Para atributos derivados, gera apenas o getter com a expressão java equivalente
+     */
     private void generateGettersSetters(PrintWriter writer, Class cls){
         writer.print("    // Getters and Setters");
 
@@ -250,6 +278,13 @@ public class ClassGenerator {
         }
     }
 
+    /**
+     *
+     * Gera os métodos de associação (add/remove/get) com base na multiplicidade e qualifiers
+     * Para multiplicidade *, gera add/remove/getAll
+     * Para multiplicidade 1, gera get/set
+     * Para qualifiers, gera put/get/remove por chave e getAll
+     */
     private void generateAssociationMethods(PrintWriter writer, Class cls, List<Association> associations) {
         for (Association association: associations) {
 
@@ -292,6 +327,10 @@ public class ClassGenerator {
         }
     }
 
+    /*
+    *  métodos de associação para associações com qualifiers (maps)
+    * put / get / remove / getAll
+     */
     private void generateMapAssociationMethods(PrintWriter writer, String targetClass, String attributeName, String keyType){
         // put method
         writer.println();
@@ -318,6 +357,10 @@ public class ClassGenerator {
         writer.println("    }");
     }
 
+    /*
+    *  métodos de associação para associações com multiplicidade * (listas)
+    *  add / remove / getXs
+     */
     private void generateListAssociationMethods(PrintWriter wrriter, String className, String attributeName){
         // add method
         wrriter.println();
@@ -338,6 +381,10 @@ public class ClassGenerator {
         wrriter.println("    }");
     }
 
+    /*
+    *  métodos de associação para associações com multiplicidade 1 (atributo simples)
+    * get / set
+     */
     private void generateSingleAssociationMethods(PrintWriter wrriter, String className, String attributeName){
         // get method
         wrriter.println();
@@ -352,10 +399,8 @@ public class ClassGenerator {
         wrriter.println("    }");
     }
 
+    // gera o nome do atributo, se tiver role usa isso senao cria um com base no nome da var
     private String generateAssociationAttributeName(String targetClass, String multiplicity, String roleName) {
-        // make first letter lowercase
-        //String base = targetClass.substring(0, 1).toLowerCase() + targetClass.substring(1);
-
         if (roleName != null && !roleName.trim().isEmpty()) {
             return roleName.trim(); // role is field name
         }
@@ -364,12 +409,17 @@ public class ClassGenerator {
         return checkMultiplicity(multiplicity) ? base + "s" : base;
     }
 
+    // verifica se a multiplicidade indica coleção
     private boolean checkMultiplicity(String multiplicity) {
         if (multiplicity == null) return false;
         return multiplicity.contains("*") ||
                 (multiplicity.contains("..") && !multiplicity.equals("0..1"));
     }
 
+    /**
+     *
+     * Gera os métodos das operações da classe, com base nas interações do modelo
+     */
     private void generateOperations(PrintWriter writer, Class cls, List<Association> associations){
         if (cls.getOperations().isEmpty()){
             return;

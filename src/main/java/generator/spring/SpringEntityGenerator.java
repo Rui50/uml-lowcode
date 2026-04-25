@@ -14,6 +14,18 @@ import model.Class;
 import model.Enumeration;
 import model.Association;
 
+/**
+ * Gera as entidades JPA
+ * - por classe: anotações base de entity table etc, id
+ * - atributos: tipo, coluna, enumeração, init
+ * - relações: @OneToMany, @ManyToOne, @ManyToMany,
+ * - getters derivados
+ * - validate() se invs
+ *
+ * - Herança: por agora só SINGLE_TABLE, depois podemos configurar para JOINED
+ *
+ * Bidirecionalidade: se for bidirecional, gerar @JsonIgnoreProperties para evitar loop infinito na serialização JSON
+ */
 public class SpringEntityGenerator {
     private String baseOutputPath;
     private String basePackage;
@@ -61,6 +73,7 @@ public class SpringEntityGenerator {
         System.out.println("Entity generation completed.");
     }
 
+    // gera os enums como enums Java normais, com @Enumerated nos atributos que os usam
     private void generateEnum(Enumeration enumeration, String modelsDir) throws IOException {
         String filename = modelsDir + "/" + enumeration.getName() + ".java";
 
@@ -84,7 +97,6 @@ public class SpringEntityGenerator {
     /**
      * gerar uma entidade
      * */
-
     private void generateEntity(Class cls, List<Class> allClasses, List<Association> associations, String modelsDir) throws IOException {
         String filename = modelsDir + "/" + cls.getName() + ".java";
 
@@ -138,6 +150,9 @@ public class SpringEntityGenerator {
         }
     }
 
+    /**
+     *  anotações base
+     */
     private void generateClassBaseAnnotations(PrintWriter writer, Class cls, List<Class> allClasses) {
         // Lombok para nao termos que gerar construtores, getters e setters
         writer.println("@Getter");
@@ -235,6 +250,9 @@ public class SpringEntityGenerator {
         }
     }
 
+    /**
+     * Intera as associações navegáveis e emite o campo de relação.
+     */
     private void generateRelationships(PrintWriter writer, Class cls, List<Association> associations, List<Class> allClasses) {
         List<String> generatedRelations = new ArrayList<>();
 
@@ -247,8 +265,7 @@ public class SpringEntityGenerator {
                 String fieldName = makeAttributeName(targetClass, targetRole, targetMultiplicity);
 
                 if(!generatedRelations.contains(fieldName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass,
-                            fieldName, targetMultiplicity, association, "target", allClasses);
+                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, fieldName, targetMultiplicity, association, "target", allClasses);
                     generatedRelations.add(fieldName);
                 }
             }
@@ -261,15 +278,14 @@ public class SpringEntityGenerator {
                 String fieldName = makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
 
                 if(!generatedRelations.contains(fieldName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass,
-                            fieldName, sourceMultiplicity, association, "source", allClasses);
+                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, fieldName, sourceMultiplicity, association, "source", allClasses);
                     generatedRelations.add(fieldName);
                 }
             }
         }
     }
 
-
+    // para saber se a classe é pai de outra, para gerar @Inheritance
     private boolean isParent(Class cls, List<Class> allClasses) {
         for (Class c : allClasses) {
             if (c.getParentClass() != null && c.getParentClass().getName().equals(cls.getName())) {
@@ -279,6 +295,10 @@ public class SpringEntityGenerator {
         return false;
     }
 
+    /**
+     * Gerar as anotações de relacionamento (@OneToMany, @ManyToOne, @ManyToMany)
+     * com base na multiplicidade e navegabilidade da associação.
+     */
     private void generateRelationshipBaseAnnotations(PrintWriter writer, String thisClass,
                                                      String otherClass, String fieldName,
                                                      String multiplicity, Association assoc,
@@ -333,6 +353,11 @@ public class SpringEntityGenerator {
         writer.println();
     }
 
+    /**
+     * @ManyToOne: bidirecional: owner tem @JoinColumn, inverse tem mappedBy
+     * unidirecional: @JoinColumn
+     * Com qualifier: @MapKey e Map<qualifier, otherClass>
+     */
     private void generateManyToMany(PrintWriter writer,
                                     String thisClass,
                                     String otherClass,
@@ -377,6 +402,11 @@ public class SpringEntityGenerator {
         }
     }
 
+    /**
+     * @OneToMany: se for bidirecional, tem mappedBy, senão tem @JoinColumn
+     * se for composição, tem cascade all e orphanRemoval
+     * se assoc tiver qualifier, é Map<qualifier, otherClass>, senão é List<otherClass>
+     */
     private void generateOneToMany(PrintWriter writer,
                                    String thisClass,
                                    String otherClass,
@@ -413,6 +443,10 @@ public class SpringEntityGenerator {
         }
     }
 
+    /**
+     * @ManyToOne com @JoinColumn
+     * se assoc tiver qualifier, é Map<qualifier, otherClass>, senão é só otherClass
+     */
     private void generateManyToOne(PrintWriter writer,
                                    String otherClass,
                                    String fieldName,
@@ -431,6 +465,11 @@ public class SpringEntityGenerator {
         }
     }
 
+    /**
+     * @OneToOne: se tiver qualifier, é OneToMany, senão é OneToOne normal
+     * sem qualifie: owner tem @JoinColumn, inverse tem mappedBy
+     * unidirecional: @JoinColumn
+     */
     private void generateOneToOne(PrintWriter writer,
                                   String thisClass,
                                   String otherClass,
@@ -485,12 +524,14 @@ public class SpringEntityGenerator {
         return checkMultiplicity(multiplicity) ? base + "s" : base;
     }
 
+
     private boolean checkMultiplicity(String multiplicity) {
         if (multiplicity == null) return false;
         return multiplicity.contains("*") ||
                 (multiplicity.contains("..") && !multiplicity.equals("0..1"));
     }
 
+    // nome do campo do outro lado da associação, para usarmos em mappedBy e @JsonIgnorePropertie
     private String getOtherSideAttributeName(Association assoc, String side) {
         if (side.equals("source")) {
             return makeAttributeName(

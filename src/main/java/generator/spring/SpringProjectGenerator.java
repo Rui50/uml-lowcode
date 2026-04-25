@@ -9,6 +9,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
+/**
+ * Gera o esqueleto do projecto Spring
+ * - cria estrutura de pastas
+ * - copia templates base (pom.xml, application.properties, main class, test class)
+ * - gera pom.xml com dependências (Spring Web, Spring Data JPA, driver do banco)
+ * - gera application.properties com configuração de datasource
+ * - gera classe principal com @SpringBootApplication
+ *
+ *  depos os geradores entidades/DTOs/repos/services/controllersescrevem por cima desta base.
+ */
+
 public class SpringProjectGenerator {
     private SpringProjectSettings settings;
     private String outputDirectory;
@@ -95,7 +106,7 @@ public class SpringProjectGenerator {
             int lastDot = basePackage.lastIndexOf('.');
             String groupId = lastDot > 0 ? basePackage.substring(0, lastDot) : basePackage;
             String artifactId = lastDot > 0 ? basePackage.substring(lastDot + 1) : basePackage;
-
+            //spring-boot-starter-webmvc | spring-boot-starter-web decidir
             w.println("    <groupId>" + groupId + "</groupId>");
             w.println("    <artifactId>" + artifactId + "</artifactId>");
             w.println("    <version>0.0.1-SNAPSHOT</version>");
