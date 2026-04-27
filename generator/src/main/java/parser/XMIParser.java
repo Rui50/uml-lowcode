@@ -54,8 +54,9 @@ public class XMIParser {
     public void loadModel(String xmiFile) throws Exception{
 
         // caminhos dos ficheiros de configuração do SDMetrics (para uml 2.0)
-        String metaModelURL  = "lib/metamodel2.xml";
-        String xmiTransURL = "lib/xmiTrans2_0.xml";
+        // carregados dos resources
+        String metaModelURL  = getClass().getResource("/metamodel2.xml").toString();
+        String xmiTransURL = getClass().getResource("/xmiTrans2_0.xml").toString();
 
         // parser do SDMetrics
         XMLParser parser = new XMLParser();

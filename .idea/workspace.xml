@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/generator/lib/SDMetrics.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/generator/src/main/java/model/ParsedModel.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/generator/src/main/java/service/GenerationService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/generator/src/main/java/service/ParsingService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/controller/ModelController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AssociationDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AttributeDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/ClassDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/ParseResponse.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tool-backend/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/remote-targets.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/remote-targets.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/SDMetrics.jar:Zone.Identifier" beforeDir="false" afterPath="$PROJECT_DIR$/generator/lib/SDMetrics.jar:Zone.Identifier" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/metamodel2.xml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/lib/metamodel2.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/metamodel2.xml:Zone.Identifier" beforeDir="false" afterPath="$PROJECT_DIR$/generator/lib/metamodel2.xml:Zone.Identifier" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/sdmetrics.jar" beforeDir="false" afterPath="$PROJECT_DIR$/generator/lib/sdmetrics.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/xmiTrans2_0.xml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/lib/xmiTrans2_0.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/xmiTrans2_0.xml:Zone.Identifier" beforeDir="false" afterPath="$PROJECT_DIR$/generator/lib/xmiTrans2_0.xml:Zone.Identifier" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/antlr4/ocl/OCL.g4" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/antlr4/ocl/OCL.g4" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/CLI/JavaEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaEntityGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/CLI/JavaMenuGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaMenuGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/CLI/JavaProjectGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaProjectGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/CLI/JavaRepositoryGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaRepositoryGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/GeneratorUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/OperationGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/OperationGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/ValidationGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/ValidationGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/plain/ClassGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/plain/ClassGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/plain/CodeGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/plain/CodeGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/spring/DatabaseType.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/DatabaseType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/spring/SpringControllerGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/spring/SpringDTOGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/spring/SpringEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/spring/SpringProjectGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/spring/SpringProjectGenerator2.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectGenerator2.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/spring/SpringProjectSettings.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectSettings.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/spring/SpringRepositoryGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringRepositoryGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/spring/SpringServiceGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/generator/spring/SpringUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringUtils.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/Association.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Association.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/Attribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Attribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/Class.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Class.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/Enumeration.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Enumeration.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/Generalization.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Generalization.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/Operation.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Operation.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/Parameter.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Parameter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/Relationship.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Relationship.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/annotations/Invariant.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/annotations/Invariant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/annotations/Precondition.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/annotations/Precondition.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/sequence/Fragment.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/sequence/Fragment.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/sequence/Interaction.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/sequence/Interaction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/sequence/Lifeline.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/sequence/Lifeline.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/sequence/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/sequence/Message.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/sequence/MessageArgument.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/sequence/MessageArgument.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/model/sequence/Operand.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/sequence/Operand.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ocl/OCLToJavaVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/ocl/OCLToJavaVisitor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/ocl/OCLTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/ocl/OCLTranslator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/parser/ClassDiagramParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/ClassDiagramParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/parser/SequenceDiagramParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/SequenceDiagramParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/parser/SequenceDiagramParser2.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/SequenceDiagramParser2.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/parser/VpAnnotationsParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/VpAnnotationsParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/parser/VpParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/VpParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/parser/XMIParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/XMIParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-static/.gitattributes" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-static/.gitattributes" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-static/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-static/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-static/.mvn/wrapper/maven-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-static/.mvn/wrapper/maven-wrapper.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-static/mvnw" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-static/mvnw" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-static/mvnw.cmd" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-static/mvnw.cmd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-h2/.gitattributes" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-h2/.gitattributes" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-h2/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-h2/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-h2/.mvn/wrapper/maven-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-h2/.mvn/wrapper/maven-wrapper.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-h2/mvnw" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-h2/mvnw" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-h2/mvnw.cmd" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-h2/mvnw.cmd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-h2/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-h2/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-h2/src/main/java/com/example/app/SpringTemplateAppApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-h2/src/main/java/com/example/app/SpringTemplateAppApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-h2/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-h2/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-h2/src/test/java/com/example/app/SpringTemplateAppApplicationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-h2/src/test/java/com/example/app/SpringTemplateAppApplicationTests.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-plain/.gitattributes" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-plain/.gitattributes" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-plain/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-plain/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-plain/.mvn/wrapper/maven-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-plain/.mvn/wrapper/maven-wrapper.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-plain/mvnw" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-plain/mvnw" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-plain/mvnw.cmd" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-plain/mvnw.cmd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-plain/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-plain/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-plain/src/main/java/com/example/app/SpringBootTemplateApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-plain/src/main/java/com/example/app/SpringBootTemplateApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-plain/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-plain/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/spring-boot-template-plain/src/test/java/com/example/app/SpringBootTemplateApplicationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/templates/spring-boot-template-plain/src/test/java/com/example/app/SpringBootTemplateApplicationTests.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_class_enum.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_class_enum.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_class_seq.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_class_seq.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_class_seq_full.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_class_seq_full.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_class_seq_full_test.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_class_seq_full_test.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_class_seq_loop.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_class_seq_loop.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_class_sequence.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_class_sequence.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_class_sequence_ocl.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_class_sequence_ocl.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_class_sequence_ocl_init.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_class_sequence_ocl_init.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_class_sequence_test.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_class_sequence_test.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_her.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_her.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_her_full.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_her_full.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_map.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_map.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_ocl.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_ocl.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_ocl_fix.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_ocl_fix.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_op.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_op.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/aluno_turma_op2.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/aluno_turma_op2.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/ecommerce_class_ocl.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/ecommerce_class_ocl.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/livraria_class_ocl.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/livraria_class_ocl.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/test_classe_1.xmi" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/test_classe_1.xmi" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/test_classe_1_2.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/test_classe_1_2.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/test_classe_1_2_test.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/test_classe_1_2_test.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/test_classe_1_3.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/test_classe_1_3.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/teste_com_uml2.uml" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/teste_com_uml2.uml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-models/teste_sem_uml2.xmi" beforeDir="false" afterPath="$PROJECT_DIR$/generator/test-models/teste_sem_uml2.xmi" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_//wsl.localhost/Ubuntu/home/rui/projects/UML-LowCode" value="39lI7MAPnbN36JZ9rVAtn5ist0R" />
+      <entry key="_//wsl.localhost/Ubuntu/home/rui/projects/UML-LowCode/generator" value="3CwcBn4zGPmQp6uy1k4NPZLFHIp" />
+    </persistenceIdMap>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 3
+}</component>
+  <component name="ProjectId" id="39lI7MAPnbN36JZ9rVAtn5ist0R" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_MARK_IGNORED_FILES_AS_EXCLUDED&quot;: &quot;true&quot;,
+    &quot;Application.Main.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;//wsl.localhost/Ubuntu/home/rui/projects/UML-LowCode&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.keymap&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="\\wsl.localhost\Ubuntu\home\rui\projects\UML-LowCode\test-models" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="\\wsl.localhost\Ubuntu\home\rui\projects\UML-LowCode\test-models" />
+      <recent name="\\wsl.localhost\Ubuntu\home\rui\projects\UML-LowCode\templates" />
+      <recent name="\\wsl.localhost\Ubuntu\home\rui\projects\UML-LowCode" />
+    </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="parser" />
+      <recent name="generator.spring" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="ALTERNATIVE_JRE_PATH" value="$PROJECT_DIR$/../../../../usr/lib/jvm/java-1.17.0-openjdk-amd64" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="MAIN_CLASS_NAME" value="Main" />
+      <module name="UML-LowCode" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/generator/" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.Main" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.30387.90" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="" />
+      <created>1771264061487</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1771264061487</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>

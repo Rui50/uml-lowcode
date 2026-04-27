@@ -1,4 +1,5 @@
-import model.Attribute;
+import model.*;
+import model.Class;
 import model.annotations.Invariant;
 import model.sequence.*;
 import ocl.OCLTranslator;
@@ -18,34 +19,25 @@ import generator.CLI.JavaProjectGenerator;
 
 import java.util.List;
 
-import model.Class;
-import model.Association;
-import model.Enumeration;
-import model.Generalization;
-
 import ocl.OCLLexer;
 import ocl.OCLParser;
 import ocl.OCLToJavaVisitor;
 import org.antlr.v4.runtime.*;
-/**
- * TODO
- * O init deveria OBRIGAR aquele a ser valor inicial, oque não é possivel so com 1 dto, seria preciso adicionar UPDATEDTO
- * Configurar mensagens de violação de invariantes
- *
- * - features da parte do parser de uml
- *  - abstract classes
- *  - interfaces + realizations
- */
+import service.GenerationService;
+import service.ParsingService;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-
-        // paths for the parser
-        //String xmiFilePath = "test-models/test_classe_1_2.uml";
-        //String xmiFilePath = "test-models/aluno_turma_ocl_fix.uml";
-        //String xmiFilePath = "test-models/aluno_turma_class_sequence_test.uml";
-        //String xmiFilePath = "test-models/aluno_turma_class_sequence_ocl_init.uml";
         String xmiFilePath = "test-models/aluno_turma_class_seq_full_test.uml";
+        String outputDir = "output";
+        String target = "spring";
+
+        ParsedModel model = new ParsingService().parse(xmiFilePath);
+        new GenerationService().generate(model, target, outputDir);
+
+    }
+
+        /*String xmiFilePath = "test-models/aluno_turma_class_seq_full_test.uml";
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 
@@ -214,5 +206,5 @@ public class Main {
                 }
             }
         }
-    }
+    }*/
 }
