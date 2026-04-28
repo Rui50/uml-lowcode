@@ -9,6 +9,12 @@ export const useModelStore = defineStore('model', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
+  const selectedClassName = ref<string | null>(null)
+
+  const selectedClass = computed(() =>
+    model.value?.classes.find(c => c.name === selectedClassName.value) ?? null
+  );
+
   async function parseFile(file: File) {
     loading.value = true;
     error.value = null;
@@ -22,10 +28,15 @@ export const useModelStore = defineStore('model', () => {
     }
   }
 
+  function selectClass(className: string) {
+    selectedClassName.value = className;
+  }
+
   function reset(){
     fileName.value = null
     model.value = null
     error.value = null
+    selectedClassName.value = null
   }
 
 
@@ -35,6 +46,9 @@ export const useModelStore = defineStore('model', () => {
     reset,  
     parseFile,
     loading,
-    error
+    error,
+    selectedClassName,
+    selectedClass,
+    selectClass
   }
 })

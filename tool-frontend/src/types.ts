@@ -1,15 +1,15 @@
-export interface AttributeDto {
+export interface AttributeDTO {
   name: string
   type: string
 }
 
-export interface ClassDto {
+export interface ClassDTO {
   name: string
   parent: string | null
-  attributes: AttributeDto[]
+  attributes: AttributeDTO[]
 }
 
-export interface AssociationDto {
+export interface AssociationDTO {
   source: string
   target: string
   sourceMultiplicity: string
@@ -19,6 +19,6 @@ export interface AssociationDto {
 }
 
 export interface ParseResponse {
-  classes: ClassDto[]
-  associations: AssociationDto[]
+  classes: ClassDTO[]
+  associations: AssociationDTO[]
 }
