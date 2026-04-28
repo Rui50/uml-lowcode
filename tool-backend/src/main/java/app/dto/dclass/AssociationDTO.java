@@ -1,4 +1,4 @@
-package app.dto;
+package app.dto.dclass;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

@@ -1,5 +1,8 @@
 package app.dto;
 
+import app.dto.dclass.AssociationDTO;
+import app.dto.dclass.ClassDTO;
+import app.dto.dsequence.InteractionDTO;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import java.util.List;
@@ -9,4 +12,5 @@ import java.util.List;
 public class ParseResponse {
     private List<ClassDTO> classes;
     private List<AssociationDTO> associations;
+    private List<InteractionDTO> interactions;
 }

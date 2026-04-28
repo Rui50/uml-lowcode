@@ -5,6 +5,7 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/generator/pom.xml" />
+        <option value="$PROJECT_DIR$/tool-backend/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">

@@ -22,17 +22,16 @@ const store = useModelStore()
 
 <style scoped>
   .class-list {
-    border-right: 1px solid #ddd;
     padding: 1rem;
-    min-width: 220px;
     height: 100%;
     overflow-y: auto;
+    color: var(--color-text);
   }
   .class-list h3 {
     margin-top: 0;
     font-size: 0.9rem;
     text-transform: uppercase;
-    color: #666;
+    opacity: 0.6;
   }
   ul {
     list-style: none;
@@ -45,14 +44,15 @@ const store = useModelStore()
     border-radius: 4px;
   }
   li:hover {
-    background: #f0f0f0;
+    background: var(--color-secondary-hover);
   }
   li.selected {
-    background: #e3f2fd;
+    background: var(--color-primary);
+    color: #000;
     font-weight: 600;
   }
   .parent {
-    color: #888;
+    opacity: 0.6;
     font-size: 0.85em;
   }
-  </style>
+</style>
