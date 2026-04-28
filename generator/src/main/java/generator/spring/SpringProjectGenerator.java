@@ -23,7 +23,7 @@ import java.nio.file.StandardCopyOption;
 public class SpringProjectGenerator {
     private SpringProjectSettings settings;
     private String outputDirectory;
-    private String baseTemplateDir = "templates/spring-boot-static";
+    private String baseTemplateDir = "../generator/templates/spring-boot-static";
 
     public SpringProjectGenerator(SpringProjectSettings settings, String outputDirectory) {
         this.settings = settings;

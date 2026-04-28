@@ -16,3 +16,14 @@ export async function parseModel(file: File): Promise<ParseResponse> {
   return res.json() as Promise<ParseResponse>
 }
 
+export async function generateCode(target: string): Promise<Blob> {
+  const res = await fetch(`/api/model/generate?target=${encodeURIComponent(target)}`, {
+    method: 'POST'
+  }) 
+
+  if (!res.ok) {
+    throw new Error(`Code generation failed (${res.status}): ${res.statusText}`)
+  }
+
+  return res.blob()
+}

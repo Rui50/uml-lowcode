@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useModelStore } from '@/stores/model'
 
 import DiagramList from '@/components/DiagramList.vue'
@@ -6,6 +7,7 @@ import DiagramCanvas from '@/components/DiagramCanvas.vue'
 import RightPanel from '@/components/RightPanel.vue'
 
 const modelStore = useModelStore()
+const target = ref('plain')
 </script>
 
 <template>
@@ -13,9 +15,16 @@ const modelStore = useModelStore()
     <header class="topbar">
       <h1>UML-LowCode</h1>
       <span class="filename">{{ modelStore.fileName }}</span>
+
+      <select v-model="target">
+        <option value="plain">Plain Java</option>
+        <option value="cli">CLI</option>
+        <option value="spring">Spring Boot</option>
+      </select>
+      <button @click="modelStore.generate(target)">Generate</button>
+
       <button @click="modelStore.reset()">Upload another</button>
     </header>
-
     <div class="layout">
       <DiagramList />
       <DiagramCanvas />

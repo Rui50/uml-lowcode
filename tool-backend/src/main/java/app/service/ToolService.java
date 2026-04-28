@@ -16,16 +16,46 @@ import model.sequence.Interaction;
 import model.sequence.Message;
 import model.sequence.MessageArgument;
 import org.springframework.stereotype.Service;
+import org.springframework.util.FileSystemUtils;
+import service.GenerationService;
 import service.ParsingService;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import static org.springframework.util.FileSystemUtils.deleteRecursively;
 
 @Service
 public class ToolService {
+    // para ja suportar 1, melhor par test
+    private ParsedModel cachedModel;
     private final ParsingService parsingService = new ParsingService();
+    private final GenerationService generationService = new GenerationService();
+
+    public byte[] generate(String target) throws Exception {
+        if (cachedModel == null) {
+            throw new IllegalStateException("No model parsed yet. Upload an XMI first.");
+        }
+
+        Path tempDir = Files.createTempDirectory("uml-gen-");
+        try {
+            generationService.generate(cachedModel, target, tempDir.toString());
+            return zipDirectory(tempDir);
+        } finally {
+            FileSystemUtils.deleteRecursively(tempDir);
+        }
+    }
 
     public ParseResponse parse(String xmiFile) throws Exception{
         ParsedModel model = parsingService.parse(xmiFile);
+        this.cachedModel = model;
         return toResponse(model);
         
     }
@@ -106,5 +136,26 @@ public class ToolService {
         return new MessageArgumentDTO(a.getName(), a.getValue(), a.getType());
     }
 
+    /**
+     * Mete todos os ficheiros do dir num zip e retorna como byte array para enviar na resposta
+     */
+    private byte[] zipDirectory(Path dir) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos);
+             Stream<Path> paths = Files.walk(dir)) {
+
+            paths.filter(Files::isRegularFile).forEach(path -> {
+                String entryName = dir.relativize(path).toString().replace('\\', '/');
+                try {
+                    zos.putNextEntry(new ZipEntry(entryName));
+                    Files.copy(path, zos);
+                    zos.closeEntry();
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        }
+        return baos.toByteArray();
+    }
 
 }

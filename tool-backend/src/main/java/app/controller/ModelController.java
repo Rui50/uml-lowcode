@@ -2,6 +2,9 @@ package app.controller;
 
 import app.dto.ParseResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,4 +32,14 @@ public class ModelController {
         }
     }
 
+    @PostMapping("/generate")
+    public ResponseEntity<byte[]> generate(@RequestParam(name = "target", defaultValue = "plain")String target) throws Exception {
+        byte[] zip = toolService.generate(target);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"generated-" + target + ".zip\"")
+                .body(zip);
+    }
 }

@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { ParseResponse } from '../types'
-import { parseModel } from '@/api/model'
+import { parseModel, generateCode } from '@/api/model'
 
 export type SelectedDiagram = 
   | { type: 'class' }
@@ -43,6 +43,23 @@ export const useModelStore = defineStore('model', () => {
     }
   }
 
+  async function generate(target: string) {
+    try {
+      const blob = await generateCode(target);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `generated_code_${target}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      error.value = (err as Error).message;
+    }
+  }
+  
+
   function selectClass(className: string) {
     selectedClassName.value = className;
   }
@@ -57,16 +74,22 @@ export const useModelStore = defineStore('model', () => {
 
 
   return { 
+    // vars
     model,
     fileName,
-    reset,  
-    parseFile,
     loading,
     error,
     selectedClassName,
-    selectedClass,
-    selectClass,
     selectedDiagram,
-    selectDiagram
+
+    // get/set
+    selectedClass,
+
+    // actions
+    reset,  
+    parseFile,
+    selectClass,
+    selectDiagram,
+    generate
   }
 })
