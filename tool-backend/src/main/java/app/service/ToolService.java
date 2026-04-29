@@ -8,10 +8,8 @@ import app.dto.dsequence.InteractionDTO;
 import app.dto.dsequence.LifelineDTO;
 import app.dto.dsequence.MessageArgumentDTO;
 import app.dto.dsequence.MessageDTO;
-import model.Association;
-import model.Attribute;
+import model.*;
 import model.Class;
-import model.ParsedModel;
 import model.sequence.Interaction;
 import model.sequence.Message;
 import model.sequence.MessageArgument;
@@ -26,11 +24,10 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import static org.springframework.util.FileSystemUtils.deleteRecursively;
 
 @Service
 public class ToolService {
@@ -77,7 +74,7 @@ public class ToolService {
     }
 
     /**
-     * MAPPERS DEPOIS PODEM SER MOVIDOS
+     * MOVER DEPOIS PARA MAPPERSW
 
      */
     private ClassDTO toClassDto(Class c) {
@@ -85,7 +82,12 @@ public class ToolService {
         List<AttributeDTO> attrs = c.getAttributes().stream()
                 .map(this::toAttributeDto)
                 .toList();
-        return new ClassDTO(c.getName(), parent, attrs);
+
+        List<String> ops = c.getOperations().stream()
+                .map(this::formatOperation)
+                .toList();
+
+        return new ClassDTO(c.getName(), parent, attrs, ops);
     }
 
     private AttributeDTO toAttributeDto(Attribute a) {
@@ -99,7 +101,9 @@ public class ToolService {
                 a.getSourceMultiplicity(),
                 a.getTargetMultiplicity(),
                 a.getSourceRole(),
-                a.getTargetRole()
+                a.getTargetRole(),
+                a.isSourceNavigable(),
+                a.isTargetNavigable()
         );
     }
 
@@ -158,4 +162,10 @@ public class ToolService {
         return baos.toByteArray();
     }
 
+    private String formatOperation(Operation o) {
+        String params = o.getParameters().stream()
+                .map(p -> p.getName() + ": " + p.getType())
+                .collect(Collectors.joining(", "));
+        return o.getName() + "(" + params + "): " + o.getReturnType();
+    }
 }

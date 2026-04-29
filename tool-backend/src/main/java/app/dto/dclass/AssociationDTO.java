@@ -14,4 +14,7 @@ public class AssociationDTO {
 
     private String sourceRole;
     private String targetRole;
+
+    private boolean sourceNavigable;
+    private boolean targetNavigable;
 }

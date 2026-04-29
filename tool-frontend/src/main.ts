@@ -1,4 +1,5 @@
 import './assets/main.css'
+import '@vue-flow/controls/dist/style.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import PrimeVue from 'primevue/config'

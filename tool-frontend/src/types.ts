@@ -12,6 +12,7 @@ export interface ClassDTO {
   name: string
   parent: string | null
   attributes: AttributeDTO[]
+  operations: string[]
 }
 
 export interface AssociationDTO {
@@ -21,6 +22,8 @@ export interface AssociationDTO {
   targetMultiplicity: string
   sourceRole: string
   targetRole: string
+  sourceNavigable: boolean
+  targetNavigable: boolean
 }
 
 ////////////////////////
