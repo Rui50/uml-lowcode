@@ -7,8 +7,7 @@ const store = useModelStore()
 
 <template>
   <aside class="right-panel">
-    <ClassDetail v-if="store.selectedClass" />
-    <div v-else class="empty">
+    <div class="empty">
       Select an element in the diagram
     </div>
   </aside>

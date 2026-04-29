@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useModelStore } from '@/stores/model'
 import ClassList from '@/components/ClassList.vue'
+import ClassDetail from './ClassDetail.vue';
 
 const store = useModelStore()
 </script>
@@ -11,7 +12,10 @@ const store = useModelStore()
       Select a diagram on the left.
     </div>
 
-    <ClassList v-else-if="store.selectedDiagram.type === 'class'" />
+    <template v-else-if="store.selectedDiagram.type === 'class'">
+      <ClassList />
+      <ClassDetail />
+    </template>
 
     <div v-else-if="store.selectedDiagram.type === 'sequence'" class="placeholder">
       <h2>Sequence diagram</h2>

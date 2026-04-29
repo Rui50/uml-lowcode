@@ -5,27 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dsequence/InteractionDTO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dsequence/LifelineDTO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dsequence/MessageArgumentDTO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dsequence/MessageDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/controller/ModelController.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/controller/ModelController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AssociationDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dclass/AssociationDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AttributeDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dclass/AttributeDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/ClassDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dclass/ClassDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/ParseResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/ParseResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/ToolService.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/ToolService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/assets/main.css" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/assets/main.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/ClassDetail.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/ClassDetail.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/ClassList.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/ClassList.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/main.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/stores/model.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/stores/model.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/views/WorkspaceView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/views/WorkspaceView.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/DiagramCanvas.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/DiagramCanvas.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
