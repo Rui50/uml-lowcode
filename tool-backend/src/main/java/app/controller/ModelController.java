@@ -1,14 +1,12 @@
 package app.controller;
 
+import app.dto.AnnotationsDTO;
 import app.dto.ParseResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import app.service.ToolService;
 
@@ -33,8 +31,11 @@ public class ModelController {
     }
 
     @PostMapping("/generate")
-    public ResponseEntity<byte[]> generate(@RequestParam(name = "target", defaultValue = "plain")String target) throws Exception {
-        byte[] zip = toolService.generate(target);
+    public ResponseEntity<byte[]> generate(
+            @RequestParam(name = "target", defaultValue = "plain") String target,
+            @RequestBody(required = false) AnnotationsDTO annotations
+    ) throws Exception {
+        byte[] zip = toolService.generate(target, annotations);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)

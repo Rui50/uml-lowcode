@@ -10,52 +10,51 @@ const props = defineProps<{
   targetY: number
   sourcePosition: Position
   targetPosition: Position
-  data?: {
-    sourceMultiplicity?: string
-    targetMultiplicity?: string
-    sourceRole?: string
-    targetRole?: string
+  markerEnd?: string
+  markerStart?: string
+  data?: { 
+    sourceLabel?: string; 
+    targetLabel?: string 
   }
 }>()
 
-const path = computed(() => getSmoothStepPath(props)[0])
+const path = computed(() => getSmoothStepPath({
+  sourceX: props.sourceX,
+  sourceY: props.sourceY,
+  targetX: props.targetX,
+  targetY: props.targetY,
+  sourcePosition: props.sourcePosition,
+  targetPosition: props.targetPosition,
+}))
 
-const sourceLabel = computed(() => {
-  const m = props.data?.sourceMultiplicity ?? ''
-  const r = props.data?.sourceRole ?? ''
-  return [m, r].filter(Boolean).join(' ')
-})
-
-const targetLabel = computed(() => {
-  const m = props.data?.targetMultiplicity ?? ''
-  const r = props.data?.targetRole ?? ''
-  return [m, r].filter(Boolean).join(' ')
-})
+const pathString = computed(() => path.value[0])
 </script>
 
 <template>
-  <BaseEdge :id="id" :path="path" />
+  <BaseEdge :id="id" :path="pathString" :marker-end="markerEnd" :marker-start="markerStart" />
+
   <EdgeLabelRenderer>
     <div
-      v-if="sourceLabel"
-      class="end-label nodrag nopan"
-      :style="{ transform: `translate(-50%, -50%) translate(${sourceX}px, ${sourceY}px)` }"
+      v-if="data?.sourceLabel"
+      class="edge-label"
+      :style="{ transform: `translate(-50%, -50%) translate(${sourceX}px, ${sourceY + 14}px)`}"
     >
-      {{ sourceLabel }}
+      {{ data.sourceLabel }}
     </div>
     <div
-      v-if="targetLabel"
-      class="end-label nodrag nopan"
-      :style="{ transform: `translate(-50%, -50%) translate(${targetX}px, ${targetY}px)` }"
+      v-if="data?.targetLabel"
+      class="edge-label"
+      :style="{ transform: `translate(-50%, -50%) translate(${targetX}px, ${targetY - 14}px)`}"
     >
-      {{ targetLabel }}
+      {{ data.targetLabel }}
     </div>
   </EdgeLabelRenderer>
 </template>
 
 <style scoped>
-.end-label {
+.edge-label {
   position: absolute;
+  pointer-events: all;
   background: var(--color-secondary);
   color: var(--color-text);
   border: 1px solid var(--color-border);
@@ -63,7 +62,12 @@ const targetLabel = computed(() => {
   padding: 1px 5px;
   font-size: 11px;
   font-family: monospace;
-  pointer-events: all;
   white-space: nowrap;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.edge-label:hover {
+  opacity: 1;
+  z-index: 10;
 }
 </style>

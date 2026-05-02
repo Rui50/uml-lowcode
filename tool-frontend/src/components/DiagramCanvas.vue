@@ -21,13 +21,12 @@ const view = ref<'list' | 'diagram'>('diagram')
           <button :class="{ active: view === 'diagram' }" @click="view ='diagram'">Diagram</button>
         </div>
 
-        <div v-if="view === 'list'" class="empty">
-          <ClassList v-if="view === 'list'" />
+        <div v-if="view === 'list'" class="canvas-body">
+          <ClassList />
           <ClassDetail />
         </div>
-        <div v-else class="empty">
+        <div v-else class="canvas-body">
           <ClassDiagram />
-          <ClassDetail />
         </div>
       </template>
 
@@ -52,6 +51,13 @@ const view = ref<'list' | 'diagram'>('diagram')
   .placeholder {
     padding: 2rem;
     opacity: 0.7;
+  }
+
+  .canvas-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
   .placeholder h2 {
     margin-top: 0;

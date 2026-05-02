@@ -27,7 +27,6 @@ export const useModelStore = defineStore('model', () => {
     selectedClassName.value = null
   }
 
-
   async function parseFile(file: File) {
     loading.value = true;
     error.value = null;
@@ -60,7 +59,7 @@ export const useModelStore = defineStore('model', () => {
   }
   
 
-  function selectClass(className: string) {
+  function selectClass(className: string | null) {
     selectedClassName.value = className;
   }
 

@@ -3,28 +3,37 @@ import { computed, markRaw } from 'vue'
 import { useModelStore } from '@/stores/model'
 import { VueFlow } from '@vue-flow/core';
 import ClassNode from './ClassNode.vue';
-import type { ClassDTO, AssociationDTO } from '@/types'
+import EnumNode from './EnumNode.vue';
+import UmlEdge from './UmlEdge.vue';
+import type { ClassDTO, AssociationDTO, EnumerationDTO } from '@/types'
 import type { NodeMouseEvent } from '@vue-flow/core'
 import { MarkerType } from '@vue-flow/core'
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
+import { associationName } from '@/utils/associationName'
 
 
 const store = useModelStore()
 
 const classes = computed<ClassDTO[]>(() => store.model?.classes ?? [])
 const associations = computed<AssociationDTO[]>(() => store.model?.associations ?? [])
+const enumerations = computed<EnumerationDTO[]>(() => store.model?.enumerations ?? [])
 
 /**
  * umlClass para as classes
  * vou precisar de edges para assoc normais e qualifiers
  */
-const nodeTypes = { 
-	umlClass: markRaw(ClassNode) 
+const nodeTypes = {
+	umlClass: markRaw(ClassNode),
+	umlEnum: markRaw(EnumNode),
+} as any
+
+const edgeTypes = {
+  uml: markRaw(UmlEdge),
 } as any
 
 // para os nodes nao ficarem em cima dos outros fazemos tipo 4 counas
-const nodes = computed(() =>
+const classNodes = computed(() =>
 	classes.value.map((c, i) => ({
 		id: c.name,
 		type: 'umlClass',
@@ -33,6 +42,50 @@ const nodes = computed(() =>
 	}))
 )
 
+const enumNodes = computed(() => {
+	const baseY = Math.ceil(classes.value.length / 4) * 160
+	return enumerations.value.map((e, i) => ({
+		id: `enum-${e.name}`,
+		type: 'umlEnum',
+		position: { x: (i % 4) * 220, y: baseY + Math.floor(i / 4) * 140 },
+		data: e,
+	}))
+})
+
+const nodes = computed(() => [...classNodes.value, ...enumNodes.value])
+
+const edges = computed(() =>
+  associations.value.map((a, i) => {
+    let sourceLabel = ''
+    let targetLabel = ''
+
+    if (a.sourceNavigable) {
+      const name = associationName(a.source, a.sourceMultiplicity, a.sourceRole)
+      const mult = a.sourceMultiplicity ?? ''
+      sourceLabel = (name + ' ' + mult).trim()
+    }
+    if (a.targetNavigable) {
+      const name = associationName(a.target, a.targetMultiplicity, a.targetRole)
+      const mult = a.targetMultiplicity ?? ''
+      targetLabel = (name + ' ' + mult).trim()
+    }
+
+    return {
+      id: `e${i}`,
+      type: 'uml',
+      source: a.source,
+      target: a.target,
+      data: { sourceLabel, targetLabel },
+      markerEnd: a.targetNavigable
+        ? { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#53fc18' }
+        : undefined,
+      markerStart: a.sourceNavigable
+        ? { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#53fc18' }
+        : undefined,
+    }
+  })
+)
+/*
 const edges = computed(() =>
 	associations.value.map((a, i) => ({
 		id: `e${i}`,
@@ -47,7 +100,7 @@ const edges = computed(() =>
       ? { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#53fc18' }
       : undefined,
   }))
-)
+)*/
 
 const inheritanceEdges = computed(() =>
   classes.value
@@ -65,6 +118,7 @@ const inheritanceEdges = computed(() =>
 const allEdges = computed(() => [...edges.value, ...inheritanceEdges.value])
 
 function onNodeClick(event: NodeMouseEvent) {
+  if (event.node.type !== 'umlClass') return
   store.selectClass(event.node.id)
 }
 </script>
@@ -75,8 +129,10 @@ function onNodeClick(event: NodeMouseEvent) {
 			:nodes="nodes"
       :edges="allEdges"
       :node-types="nodeTypes"
+      :edge-types="edgeTypes"
       fit-view-on-init
       @node-click="onNodeClick"
+      @node-drag-start="onNodeClick"
     >
       <Background />
       <Controls />

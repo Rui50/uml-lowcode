@@ -82,8 +82,8 @@ public class XMIParser {
         System.out.println();
         qualifiers = VpParser.parseQualifiers(xmiFile, model);
 
-        System.out.println();
-        loadAnnotationsFromComments();
+        // this was for testing, ocl came from notes in vp xmi
+        //loadAnnotationsFromComments();
 
         // class diagram
         ClassDiagramParser cdp = new ClassDiagramParser(

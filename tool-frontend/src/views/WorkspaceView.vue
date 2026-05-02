@@ -4,7 +4,7 @@ import { useModelStore } from '@/stores/model'
 
 import DiagramList from '@/components/DiagramList.vue'
 import DiagramCanvas from '@/components/DiagramCanvas.vue'
-import RightPanel from '@/components/RightPanel.vue'
+import Annotations from '@/components/Annotations.vue'
 
 const modelStore = useModelStore()
 const target = ref('plain')
@@ -28,7 +28,7 @@ const target = ref('plain')
     <div class="layout">
       <DiagramList />
       <DiagramCanvas />
-      <RightPanel />
+      <Annotations />
     </div>
   </div>
 </template>

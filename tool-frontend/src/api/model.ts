@@ -1,3 +1,4 @@
+import { useAnnotationsStore } from '@/stores/annotations'
 import type { ParseResponse } from '@/types'
 
 export async function parseModel(file: File): Promise<ParseResponse> {
@@ -17,8 +18,19 @@ export async function parseModel(file: File): Promise<ParseResponse> {
 }
 
 export async function generateCode(target: string): Promise<Blob> {
+  const annotations = useAnnotationsStore()
+  const payload = {
+    invariantsByClass: annotations.invariantsByClass,
+    initByAttribute: annotations.initByAttribute,
+    deriveByAttribute: annotations.deriveByAttribute,
+    preconditionsByOperation: {},
+  }
   const res = await fetch(`/api/model/generate?target=${encodeURIComponent(target)}`, {
-    method: 'POST'
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
   }) 
 
   if (!res.ok) {

@@ -86,6 +86,11 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             return "\"" + s.substring(1, s.length() - 1) + "\"";
         }
 
+        // enum literal: EstadoAluno::ATIVO -> EstadoAluno.ATIVO
+        if (ctx.ENUMERATION_LITERAL() != null) {
+            return ctx.ENUMERATION_LITERAL().getText().replace("::", ".");
+        }
+
         //  ( expressão )
         if (ctx.expression() != null && ctx.getChild(0).getText().equals("(")) {
             return "(" + visit(ctx.expression()) + ")";
@@ -198,9 +203,22 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         for (int i = 1; i < ctx.additiveExpression().size(); i++) {
             String op = ctx.getChild(2 * i - 1).getText();
             String right = visit(ctx.additiveExpression(i));
+
+            // = and <> usam Objects.equals para nao haver problemas com null ou strings etc
+            if (op.equals("=")) {
+                String left = sb.toString();
+                sb.setLength(0);
+                sb.append("java.util.Objects.equals(").append(left).append(", ").append(right).append(")");
+                continue;
+            }
+            if (op.equals("<>") || op.equals("/=")) {
+                String left = sb.toString();
+                sb.setLength(0);
+                sb.append("!java.util.Objects.equals(").append(left).append(", ").append(right).append(")");
+                continue;
+            }
+
             switch (op) {
-                case "=":  sb.append(" == "); break;
-                case "<>": sb.append(" != "); break;
                 case "<":  sb.append(" < "); break;
                 case ">":  sb.append(" > "); break;
                 case "<=": sb.append(" <= "); break;
@@ -358,7 +376,102 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             return base + "." + ctx.ID(0).getText();
         }
 
+        // ->first() -> .get(0)
+        //if (text.equals("->first()")) return base + ".get(0)";
+
+        // ->first() -> .stream().findFirst().orElse(null)
+        // ->first().nome -> .stream().findFirst().orElse(null).getNome()
+        if (text.startsWith("->first()")) {
+            String result = base + ".stream().findFirst().orElse(null)";
+            if (!ctx.ID().isEmpty()) {
+                String prop = ctx.ID(0).getText();
+                String getter = "get" + prop.substring(0, 1).toUpperCase() + prop.substring(1);
+                result = result + "." + getter + "()";
+            }
+            return result;
+        }
+
+        // ->last() -> .get(<base>.size() - 1)
+        //if (text.equals("->last()")) return base + ".get(" + base + ".size() - 1)";
+
+
+        // ->last() -> .stream().reduce((a, b) -> b).orElse(null)
+        if (text.startsWith("->last()")) {
+            String result = base + ".stream().reduce((__a, __b) -> __b).orElse(null)";
+            if (!ctx.ID().isEmpty()) {
+                String prop = ctx.ID(0).getText();
+                String getter = "get" + prop.substring(0, 1).toUpperCase() + prop.substring(1);
+                result = result + "." + getter + "()";
+            }
+            return result;
+        }
+
+        // ->any() -> .stream().findAny().orElse(null)
+        //if (text.equals("->any()")) return base + ".stream().findAny().orElse(null)";
+        // ->any() -> .stream().findAny().orElse(null)
+        if (text.startsWith("->any()")) {
+            String result = base + ".stream().findAny().orElse(null)";
+            if (!ctx.ID().isEmpty()) {
+                String prop = ctx.ID(0).getText();
+                String getter = "get" + prop.substring(0, 1).toUpperCase() + prop.substring(1);
+                result = result + "." + getter + "()";
+            }
+            return result;
+        }
+
+        // ->asSet() -> new HashSet<>(base)
+        if (text.equals("->asSet()")) return "new HashSet<>(" + base + ")";
+
+        // ->asSequence() -> new ArrayList<>(base)
+        if (text.equals("->asSequence()")) return "new ArrayList<>(" + base + ")";
+
+        // ->including(x) -> Stream.concat(base.stream(), Stream.of(x)).collect(toList())
+        if (text.startsWith("->including(")) {
+            String item = visit(ctx.expression(0));
+            return "java.util.stream.Stream.concat(" + base + ".stream(), java.util.stream.Stream.of("
+                    + item + ")).collect(java.util.stream.Collectors.toList())";
+        }
+
+        // ->excluding(x) -> base.stream().filter(v -> !java.util.Objects.equals(v,x)).collect(toList())
+        if (text.startsWith("->excluding(")) {
+            String item = visit(ctx.expression(0));
+            return base + ".stream().filter(__v -> !java.util.Objects.equals(__v, " + item +
+                    ")).collect(java.util.stream.Collectors.toList())";
+        }
+
         // fallback
         return base + text;
+    }
+
+    // Regra: conditionalExpression : 'if' expression 'then' expression 'else' expression 'endif'
+    // -> ((cond) ? (then) : (else))
+    @Override
+    public String visitConditionalExpression(OCLParser.ConditionalExpressionContext ctx) {
+        String condition = visit(ctx.expression(0));
+        String thenPart = visit(ctx.expression(1));
+        String elsePart = visit(ctx.expression(2));
+        return "((" + condition + ") ? (" + thenPart + ") : (" + elsePart + "))";
+    }
+
+    // Regra: setExpression : 'Set{' expressionList? '}' | 'Sequence{' ... | etc
+    // -> new HashSet<>() / new ArrayList<>() / new HashMap<>() (with optional Arrays.asList for non-empty)
+    @Override
+    public String visitSetExpression(OCLParser.SetExpressionContext ctx) {
+        String first = ctx.getChild(0).getText();
+        String javaCollection;
+
+        if (first.equals("Set{")) javaCollection = "HashSet";
+        else if (first.equals("Sequence{")) javaCollection = "ArrayList";
+        else if (first.equals("Bag{")) javaCollection = "ArrayList";
+        else if (first.equals("OrderedSet{")) javaCollection = "LinkedHashSet";
+        else if (first.equals("Map{")) javaCollection = "HashMap";
+        else javaCollection = "ArrayList";
+
+        if (ctx.expressionList() == null) {
+            return "new " + javaCollection + "<>()";
+        }
+
+        String items = visit(ctx.expressionList());
+        return "new " + javaCollection + "<>(java.util.Arrays.asList(" + items + "))";
     }
 }

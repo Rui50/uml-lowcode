@@ -1,9 +1,11 @@
 package app.service;
 
+import app.dto.AnnotationsDTO;
 import app.dto.ParseResponse;
 import app.dto.dclass.AssociationDTO;
 import app.dto.dclass.AttributeDTO;
 import app.dto.dclass.ClassDTO;
+import app.dto.dclass.EnumerationDTO;
 import app.dto.dsequence.InteractionDTO;
 import app.dto.dsequence.LifelineDTO;
 import app.dto.dsequence.MessageArgumentDTO;
@@ -23,6 +25,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,11 +38,13 @@ public class ToolService {
     private ParsedModel cachedModel;
     private final ParsingService parsingService = new ParsingService();
     private final GenerationService generationService = new GenerationService();
+    private final AnnotationService annotationService = new AnnotationService();
 
-    public byte[] generate(String target) throws Exception {
+    public byte[] generate(String target, AnnotationsDTO annotations) throws Exception {
         if (cachedModel == null) {
             throw new IllegalStateException("No model parsed yet. Upload an XMI first.");
         }
+        annotationService.apply(cachedModel.getClasses(), annotations);
 
         Path tempDir = Files.createTempDirectory("uml-gen-");
         try {
@@ -70,7 +75,12 @@ public class ToolService {
                 .map(this::toInteractionDTO)
                 .toList();
 
-        return new ParseResponse(classes, associations, interactions);
+        List<EnumerationDTO> enumerations = new ArrayList<>();
+        for (Enumeration e : model.getEnumerations()) {
+            enumerations.add(new EnumerationDTO(e.getName(), e.getLiterals()));
+        }
+
+        return new ParseResponse(classes, associations, interactions, enumerations);
     }
 
     /**

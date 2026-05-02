@@ -1,0 +1,96 @@
+package app.service;
+
+import app.dto.AnnotationsDTO;
+import app.dto.OclDTO;
+
+import model.Attribute;
+import model.Class;
+import model.Operation;
+import parser.AnnotationParser;
+
+import java.util.List;
+import java.util.Map;
+
+public class AnnotationService {
+    public void apply(List<Class> classes, AnnotationsDTO payload) {
+        if (payload == null) return;
+
+        clearAnnotations(classes);
+
+        applyInvariants(classes, payload.getInvariantsByClass());
+        applyInits(classes, payload.getInitByAttribute());
+        applyDerives(classes, payload.getDeriveByAttribute());
+    }
+
+    private void applyInvariants(List<Class> classes, Map<String, List<OclDTO>> map) {
+        map.forEach((className, list) -> {
+            Class c = findClass(classes, className);
+            if (c == null) return;
+            for (int i = 0; i < list.size(); i++) {
+                OclDTO dto = list.get(i);
+                String name;
+
+                if (dto.getName() == null || dto.getName().isEmpty()) {
+                    name = "inv" + (i + 1);
+                } else {
+                    name = dto.getName();
+                }
+
+                String err_message;
+
+                if (dto.getMessage() == null || dto.getMessage().isEmpty()) {
+                    err_message = "Invariant " + name + " failed";
+                } else {
+                    err_message = dto.getMessage();
+                }
+
+                c.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message));
+            }
+        });
+    }
+
+    private void applyInits(List<Class> classes, Map<String, String> map) {
+        map.forEach((key, expr) -> {
+            if (expr == null || expr.isBlank()) return;
+            Attribute a = findAttribute(classes, key);
+            if (a != null) AnnotationParser.applyInit(a, expr);
+        });
+    }
+
+    private void applyDerives(List<Class> classes, Map<String, String> map) {
+        map.forEach((key, expr) -> {
+            if (expr == null || expr.isBlank()) return;
+            Attribute a = findAttribute(classes, key);
+            if (a != null) AnnotationParser.applyDerive(a, expr);
+        });
+    }
+
+    private Class findClass(List<Class> classes, String name) {
+        return classes.stream().filter(c -> c.getName().equals(name)).findFirst().orElse(null);
+    }
+
+    private Attribute findAttribute(List<Class> classes, String key) {
+        String[] parts = key.split("\\.", 2);
+        if (parts.length != 2) return null;
+        Class c = findClass(classes, parts[0]);
+        if (c == null) return null;
+        for (Attribute a : c.getAttributes()) if (a.getName().equals(parts[1])) return a;
+        return null;
+    }
+
+    private void clearAnnotations(List<Class> classes) {
+        for (Class c : classes) {
+            c.getInvariants().clear();
+            /*
+            for (Operation op : c.getOperations()) {
+                op.getPreconditions().clear();
+            }*/
+            for (Attribute a : c.getAttributes()) {
+                a.setInitExpression(null);
+                a.setJavaInitExpression(null);
+                a.setDeriveExpression(null);
+                a.setJavaDeriveExpression(null);
+            }
+        }
+    }
+}

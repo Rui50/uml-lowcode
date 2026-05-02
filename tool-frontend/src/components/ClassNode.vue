@@ -1,36 +1,67 @@
 <script setup lang="ts">
 // https://vueflow.dev/examples/nodes/
 // https://www.mintlify.com/bcakmakoglu/vue-flow/guides/custom-nodes
+import { computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core';
 import type { ClassDTO } from '@/types'
+import { useAnnotationsStore } from '@/stores/annotations';
 
 const props = defineProps<{
   data: ClassDTO
 }>()
+
+function splitOp(op: string) {
+  const i = op.lastIndexOf('): ')
+  if (i === -1) return { sig: op, ret: '' }
+  return { sig: op.slice(0, i + 1), ret: op.slice(i + 3) }
+}
+
+const annotations = useAnnotationsStore()
+
+const classAnnotated = computed(() => {
+  const cn = props.data.name
+  const hasInvs = (annotations.invariantsByClass[cn]?.length ?? 0) > 0
+  //const hasAttrs = props.data.attributes.some(a => attrAnnotated(a.name))
+  return hasInvs
+})
+
+function attrAnnotated(attrName: string): boolean {
+  const k = `${props.data.name}.${attrName}`
+  return k in annotations.initByAttribute || k in annotations.deriveByAttribute
+}
 </script>
 
 <template>
-  <div class="class-node">
-    <Handle type="target" :position="Position.Top" />
+    <div class="class-node">
+      <Handle type="target" :position="Position.Top" />
 
-    <div class="class-name">{{ data.name }}</div>    
+      <div class="header">
+        <span v-if="classAnnotated" class="dot" />
+        <div class="class-name">{{ data.name }}</div>
+        <div v-if="data.parent" class="parent">: {{ data.parent }}</div>
+      </div>
 
-    <div v-if="data.parent" class="parent">: {{ data.parent }}</div>
-
-    <ul class="attributes">
-      <li v-for="a in data.attributes" :key="a.name">
+      <ul class="compartment attributes">
+        <li v-for="a in data.attributes" :key="a.name">
+          <span v-if="attrAnnotated(a.name)" class="dot" />
           {{ a.name }}: <span class="type">{{ a.type }}</span>
         </li>
         <li v-if="!data.attributes.length" class="empty">—</li>
-    </ul>
+      </ul>
 
-    <ul class="operations">
-      <li v-for="op in data.operations" :key="op">{{ op }}</li>
-    </ul>
-    
-    <Handle type="source" :position="Position.Bottom" />
-  </div>
-</template>
+      <ul class="compartment operations">
+        <li v-for="op in data.operations" :key="op">
+          <template v-if="splitOp(op).ret">
+            {{ splitOp(op).sig }}: <span class="type">{{ splitOp(op).ret }}</span>
+          </template>
+          <template v-else>{{ op }}</template>
+        </li>
+        <li v-if="!data.operations?.length" class="empty">—</li>
+      </ul>
+
+      <Handle type="source" :position="Position.Bottom" />
+    </div>
+  </template>
 
 <style scoped>
   .class-node {
@@ -38,47 +69,60 @@ const props = defineProps<{
     color: var(--color-text);
     border: 1px solid var(--color-border);
     border-radius: 4px;
-    min-width: 160px;
+    min-width: 180px;
     font-size: 12px;
+    overflow: hidden;          
   }
+
   .header {
     background: var(--color-secondary-hover);
-    padding: 4px 8px;
-    font-weight: 600;
-    border-bottom: 1px solid var(--color-border);
+    padding: 6px 8px;
+    text-align: center;
+    border-bottom: 2px solid var(--color-border);
+  }
+  .class-name {
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.3px;
   }
   .parent {
-    padding: 2px 8px;
-    opacity: 0.7;
+    margin-top: 2px;
+    font-size: 11px;
     font-style: italic;
-    border-bottom: 1px solid var(--color-border);
+    opacity: 0.7;
   }
-  .attributes {
-    list-style: none;
-    margin: 0;
-    padding: 4px 8px;
-  }
-  .attributes li {
-    padding: 2px 0;
-  }
-  .type {
-    color: var(--color-primary);
-    font-family: monospace;
-  }
-  .empty { opacity: 0.4; }
 
-  .operations {
+  .compartment {
     list-style: none;
     margin: 0;
     padding: 4px 8px;
+    min-height: 18px;         
+  }
+  .compartment li { 
+    padding: 2px 0; 
+  }
+  .compartment + .compartment {
     border-top: 1px solid var(--color-border);
   }
-  .operations li {
-    padding: 2px 0;
-    font-family: monospace;
-    font-size: 11px;
+
+  .operations li { 
+    font-family: monospace; font-size: 11px;
   }
-  .operations .empty {
-    opacity: 0.4;
+
+  .type { 
+    color: var(--color-primary); font-family: monospace; 
+  }
+  .empty { 
+    opacity: 0.4; 
+  }
+
+  .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    margin-right: 4px;
+    vertical-align: middle;
   }
 </style>

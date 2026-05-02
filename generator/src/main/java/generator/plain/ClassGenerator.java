@@ -241,6 +241,14 @@ public class ClassGenerator {
             }
         }
 
+        // attribute inits (OCL)
+        for (Attribute attribute : cls.getAttributes()) {
+            if (attribute.isDerived()) continue;
+            if (attribute.hasInit()) {
+                writer.println("        this." + attribute.getName() + " = " + attribute.getJavaInitExpression() + ";");
+            }
+        }
+
         writer.println("    }");
     }
 
