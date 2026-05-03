@@ -10,5 +10,5 @@ public class ClassDTO {
     private String name;
     private String parent;
     private List<AttributeDTO> attributes;
-    private List<String> operations;
+    private List<OperationDTO> operations;
 }

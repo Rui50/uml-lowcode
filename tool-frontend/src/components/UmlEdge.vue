@@ -16,6 +16,27 @@ const props = defineProps<{
     sourceLabel?: string; 
     targetLabel?: string 
   }
+
+  // typescript tava a teimar por nao tarem definidos, os abaixo nao sao usados para naada
+  sourceNode?: any
+  targetNode?: any
+  source?: string
+  target?: string
+  type?: string
+  updatable?: boolean
+  selected?: boolean
+  animated?: boolean
+  label?: string
+  labelStyle?: any
+  labelShowBg?: boolean
+  labelBgStyle?: any
+  labelBgPadding?: any
+  labelBgBorderRadius?: number
+  events?: any
+  style?: any
+  sourceHandleId?: string
+  targetHandleId?: string
+  interactionWidth?: number
 }>()
 
 const path = computed(() => getSmoothStepPath({

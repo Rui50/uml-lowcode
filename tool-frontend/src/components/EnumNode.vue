@@ -14,7 +14,7 @@ defineProps<{ data: EnumerationDTO }>()
       <div class="enum-name">{{ data.name }}</div>
     </div>
 
-    <ul class="compartment literals">
+    <ul class="section literals">
       <li v-for="lit in data.literals" :key="lit">{{ lit }}</li>
       <li v-if="!data.literals.length" class="empty">—</li>
     </ul>
@@ -49,13 +49,13 @@ defineProps<{ data: EnumerationDTO }>()
   font-size: 13px;
   letter-spacing: 0.3px;
 }
-.compartment {
+.section {
   list-style: none;
   margin: 0;
   padding: 4px 8px;
   min-height: 18px;
 }
-.compartment li {
+.section li {
   padding: 2px 0;
   font-family: monospace;
   font-size: 11px;

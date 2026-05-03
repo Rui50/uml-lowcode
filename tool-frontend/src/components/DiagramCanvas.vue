@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useModelStore } from '@/stores/model'
 import ClassList from '@/components/ClassList.vue'
 import ClassDetail from './ClassDetail.vue';
 import ClassDiagram from './ClassDiagram.vue';
+import SequenceDiagram from './SequenceDiagram.vue';
 
 const store = useModelStore()
 const view = ref<'list' | 'diagram'>('diagram')
+
+const currentInteraction = computed(() => {
+  const sel = store.selectedDiagram
+  if (sel?.type !== 'sequence') return null
+  return store.model?.interactions.find(i => i.id === sel.interactionId) ?? null
+})
 </script>
 
 <template>
@@ -30,10 +37,16 @@ const view = ref<'list' | 'diagram'>('diagram')
         </div>
       </template>
 
-      <div v-else-if="store.selectedDiagram.type === 'sequence'" class="placeholder">
-        <h2>Sequence diagram</h2>
-        <p>Interaction id: <code>{{ store.selectedDiagram.interactionId }}</code></p>
-      </div>
+        <template v-else-if="store.selectedDiagram.type === 'sequence'">
+          <div class="canvas-body">
+            <SequenceDiagram
+              v-if="currentInteraction"
+              :key="currentInteraction.id"
+              :interaction="currentInteraction"
+            />
+            <div v-else class="empty">Interaction not found.</div>
+          </div>
+        </template>
     </section>
   </template>
 

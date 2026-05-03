@@ -2,19 +2,12 @@ package app.service;
 
 import app.dto.AnnotationsDTO;
 import app.dto.ParseResponse;
-import app.dto.dclass.AssociationDTO;
-import app.dto.dclass.AttributeDTO;
-import app.dto.dclass.ClassDTO;
-import app.dto.dclass.EnumerationDTO;
-import app.dto.dsequence.InteractionDTO;
-import app.dto.dsequence.LifelineDTO;
-import app.dto.dsequence.MessageArgumentDTO;
-import app.dto.dsequence.MessageDTO;
+import app.dto.dclass.*;
+import app.dto.dsequence.*;
+import generator.GeneratorUtils;
 import model.*;
 import model.Class;
-import model.sequence.Interaction;
-import model.sequence.Message;
-import model.sequence.MessageArgument;
+import model.sequence.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 import service.GenerationService;
@@ -93,11 +86,31 @@ public class ToolService {
                 .map(this::toAttributeDto)
                 .toList();
 
-        List<String> ops = c.getOperations().stream()
-                .map(this::formatOperation)
+        List<OperationDTO> ops = c.getOperations().stream()
+                .map(o -> toOperationDTO(c.getName(), o))
                 .toList();
 
         return new ClassDTO(c.getName(), parent, attrs, ops);
+    }
+
+    private OperationDTO toOperationDTO(String className, Operation o) {
+        List<Parameter> raw = o.getParameters() != null ? o.getParameters() : List.of();
+        List<ParameterDTO> params = raw.stream()
+                .map(p -> new ParameterDTO(p.getName(), GeneratorUtils.removePackageNames(p.getType())))
+                .toList();
+
+
+        String paramTypes = o.getParameters().stream()
+                .map(p -> GeneratorUtils.removePackageNames(p.getType()))
+                .collect(Collectors.joining(","));
+        String id = className + "." + o.getName() + "(" + paramTypes + ")";
+        return new OperationDTO(
+                id,
+                o.getName(),
+                GeneratorUtils.removePackageNames(o.getReturnType()),
+                o.getVisibility(),
+                params
+        );
     }
 
     private AttributeDTO toAttributeDto(Attribute a) {
@@ -117,32 +130,44 @@ public class ToolService {
         );
     }
 
-    private InteractionDTO toInteractionDTO(Interaction i){
+    private InteractionDTO toInteractionDTO(Interaction i) {
         List<LifelineDTO> lifelines = i.getLifelines().stream().map(this::toLifelineDTO).toList();
-        List<MessageDTO> messages = i.getMessages().stream().map(this::toMessageDTO).toList();
-        return new InteractionDTO(i.getId(), i.getName(), i.getContextClass(), lifelines, messages);
+        List<Object> elements = toElements(i.getElements());
+        return new InteractionDTO(i.getId(), i.getName(), i.getContextClass(), lifelines, elements);
     }
 
     private LifelineDTO toLifelineDTO(model.sequence.Lifeline l){
         return new LifelineDTO(l.getId(), l.getName(), l.getRepresents(), l.getType());
     }
 
+    private List<Object> toElements(List<Object> domainElements) {
+        List<Object> result = new ArrayList<>();
+        for (Object el : domainElements) {
+            if (el instanceof Message m) {
+                result.add(toMessageDTO(m));
+            } else if (el instanceof Fragment f) {
+                result.add(toFragmentDTO(f));
+            }
+        }
+        return result;
+
+    }
+
+    private FragmentDTO toFragmentDTO(Fragment f) {
+        List<OperandDTO> operands = new ArrayList<>();
+        for (Operand op : f.getOperands()) {
+            operands.add(new OperandDTO(op.getGuard(), toElements(op.getElements())));
+        }
+        return new FragmentDTO(f.getOperator(), operands);
+    }
+
     private MessageDTO toMessageDTO(Message m) {
-        List<MessageArgumentDTO> args = m.getArguments().stream()
-                .map(this::toMessageArgumentDTO)
-                .toList();
         return new MessageDTO(
-                m.getId(),
-                m.getName(),
-                m.getRawName(),
-                m.getMessageSort(),
-                m.getReturnType(),
-                m.getAssignVariable(),
-                m.getSource() != null ? m.getSource().getId() : null,
-                m.getTarget() != null ? m.getTarget().getId() : null,
-                m.getSequenceNumber(),
-                m.getVpNumber(),
-                args
+            m.getId(),
+            m.getRawName(),
+            m.getMessageSort(),
+            m.getSource() != null ? m.getSource().getId() : null,
+            m.getTarget() != null ? m.getTarget().getId() : null
         );
     }
 
@@ -172,10 +197,11 @@ public class ToolService {
         return baos.toByteArray();
     }
 
+    /*
     private String formatOperation(Operation o) {
         String params = o.getParameters().stream()
                 .map(p -> p.getName() + ": " + p.getType())
                 .collect(Collectors.joining(", "));
         return o.getName() + "(" + params + "): " + o.getReturnType();
-    }
+    }*/
 }

@@ -10,12 +10,13 @@ const props = defineProps<{
   data: ClassDTO
 }>()
 
+/*
 function splitOp(op: string) {
   const i = op.lastIndexOf('): ')
   if (i === -1) return { sig: op, ret: '' }
   return { sig: op.slice(0, i + 1), ret: op.slice(i + 3) }
 }
-
+*/
 const annotations = useAnnotationsStore()
 
 const classAnnotated = computed(() => {
@@ -41,7 +42,7 @@ function attrAnnotated(attrName: string): boolean {
         <div v-if="data.parent" class="parent">: {{ data.parent }}</div>
       </div>
 
-      <ul class="compartment attributes">
+      <ul class="section attributes">
         <li v-for="a in data.attributes" :key="a.name">
           <span v-if="attrAnnotated(a.name)" class="dot" />
           {{ a.name }}: <span class="type">{{ a.type }}</span>
@@ -49,12 +50,10 @@ function attrAnnotated(attrName: string): boolean {
         <li v-if="!data.attributes.length" class="empty">—</li>
       </ul>
 
-      <ul class="compartment operations">
-        <li v-for="op in data.operations" :key="op">
-          <template v-if="splitOp(op).ret">
-            {{ splitOp(op).sig }}: <span class="type">{{ splitOp(op).ret }}</span>
-          </template>
-          <template v-else>{{ op }}</template>
+      <ul class="section operations">
+        <li v-for="op in data.operations" :key="op.id">
+          {{ op.name }}({{ op.parameters.map(p => `${p.name}: ${p.type}`).join(', ') }}){{ op.returnType ? ':' : '' }}
+          <span v-if="op.returnType" class="type"> {{ op.returnType }}</span>
         </li>
         <li v-if="!data.operations?.length" class="empty">—</li>
       </ul>
@@ -92,16 +91,16 @@ function attrAnnotated(attrName: string): boolean {
     opacity: 0.7;
   }
 
-  .compartment {
+  .section {
     list-style: none;
     margin: 0;
     padding: 4px 8px;
     min-height: 18px;         
   }
-  .compartment li { 
+  .section li { 
     padding: 2px 0; 
   }
-  .compartment + .compartment {
+  .section + .section {
     border-top: 1px solid var(--color-border);
   }
 

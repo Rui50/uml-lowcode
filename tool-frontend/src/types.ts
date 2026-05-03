@@ -3,6 +3,8 @@
 // Class stuff
 ///////////////////////////////
 
+import type { O } from "vue-router/dist/index-D_VEAp3P.js"
+
 export interface AttributeDTO {
   name: string
   type: string
@@ -12,7 +14,7 @@ export interface ClassDTO {
   name: string
   parent: string | null
   attributes: AttributeDTO[]
-  operations: string[]
+  operations: OperationDTO[]
 }
 
 export interface EnumerationDTO {
@@ -31,45 +33,57 @@ export interface AssociationDTO {
   targetNavigable: boolean
 }
 
+export interface ParameterDTO { 
+  name: string; type: string 
+}
+
+export interface OperationDTO {
+  id: string
+  name: string
+  returnType: string
+  visibility: string
+  parameters: ParameterDTO[]
+}
+
 ////////////////////////
 // Sequence diagram
 ////////////////////////
-
-export interface MessageArgumentDTO {
-  name: string
-  value: string
-  type: string
-}
-
 export interface LifelineDTO {
   id: string
   name: string
   represents: string
-  type: string
+  type: string | null
 }
 
 export interface MessageDTO {
+  type: 'message'
   id: string
-  name: string
-  rawName: string
-  messageSort: string
-  returnType: string | null
-  assignVariable: string | null
+  label: string              // = rawName na backend
+  messageSort: string        // synchCall
   sourceLifelineId: string | null
   targetLifelineId: string | null
-  sequenceNumber: number
-  vpNumber: string | null
-  arguments: MessageArgumentDTO[]
 }
+
+export interface OperandDTO {
+  guard: string | null
+  elements: SequenceElement[]
+}
+
+export interface FragmentDTO {
+  type: 'fragment'
+  operator: string           // loop etc
+  operands: OperandDTO[]
+}
+
+export type SequenceElement = MessageDTO | FragmentDTO
 
 export interface InteractionDTO {
   id: string
   name: string
   contextClass: string
   lifelines: LifelineDTO[]
-  messages: MessageDTO[]
+  elements: SequenceElement[]
 }
-
 //////////
 // Annotations
 //////////

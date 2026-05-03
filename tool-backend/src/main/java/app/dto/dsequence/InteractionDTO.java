@@ -11,5 +11,5 @@ public class InteractionDTO {
     private String name;
     private String contextClass;
     private List<LifelineDTO> lifelines;
-    private List<MessageDTO> messages;
+    private List<Object> elements;
 }

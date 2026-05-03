@@ -16,6 +16,27 @@ const props = defineProps<{
     sourceRole?: string
     targetRole?: string
   }
+  sourceNode?: any
+  targetNode?: any
+  source?: string
+  target?: string
+  type?: string
+  updatable?: boolean
+  selected?: boolean
+  animated?: boolean
+  label?: string
+  labelStyle?: any
+  labelShowBg?: boolean
+  labelBgStyle?: any
+  labelBgPadding?: any
+  labelBgBorderRadius?: number
+  events?: any
+  style?: any
+  sourceHandleId?: string
+  targetHandleId?: string
+  interactionWidth?: number
+  markerEnd?: string
+  markerStart?: string
 }>()
 
 const path = computed(() => getSmoothStepPath(props)[0])

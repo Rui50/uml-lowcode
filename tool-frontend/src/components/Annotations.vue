@@ -206,7 +206,7 @@ function close() {
   margin-bottom: 8px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: var(--color-background, #1a1a1a);
+  background: var(--background);
 }
 .entry .remove-btn {
   align-self: flex-end;
@@ -252,7 +252,7 @@ function close() {
   flex: 1;
   min-height: 0;
   /*background: var(--color-secondary);*/
-  background: var(--color-background, #1a1a1a);
+  background: var(--background);
 }
 :deep(.p-tabpanel) {
   height: 100%;

@@ -2,6 +2,7 @@
   import FileUploader from '@/components/FileUploader.vue';
   import { useModelStore } from '@/stores/model';
   import ProgressSpinner from 'primevue/progressspinner';
+  import Message from 'primevue/message';
 
   const modelStore = useModelStore();
 

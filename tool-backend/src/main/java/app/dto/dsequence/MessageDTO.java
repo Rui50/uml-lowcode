@@ -7,6 +7,14 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public class MessageDTO {
+    private final String type = "message";
+    private String id;
+    private String label;
+    private String messageSort;
+    private String sourceLifelineId;
+    private String targetLifelineId;
+
+    /*private String kind = "message";
     private String id;
     private String name;             // method name only
     private String rawName;          // full original signature
@@ -17,5 +25,5 @@ public class MessageDTO {
     private String targetLifelineId;
     private int sequenceNumber;
     private String vpNumber;
-    private List<MessageArgumentDTO> arguments;
+    private List<MessageArgumentDTO> arguments;*/
 }
