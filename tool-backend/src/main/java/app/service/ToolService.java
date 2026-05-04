@@ -37,7 +37,7 @@ public class ToolService {
         if (cachedModel == null) {
             throw new IllegalStateException("No model parsed yet. Upload an XMI first.");
         }
-        annotationService.apply(cachedModel.getClasses(), annotations);
+        annotationService.apply(cachedModel, annotations);
 
         Path tempDir = Files.createTempDirectory("uml-gen-");
         try {
@@ -64,7 +64,10 @@ public class ToolService {
                 .map(this::toAssociationDto)
                 .toList();
 
-        List<InteractionDTO> interactions = model.getPimInteractions().stream()
+        List<Interaction> allInteractions = new ArrayList<>();
+        allInteractions.addAll(model.getPimInteractions());
+        allInteractions.addAll(model.getPsmInteractions());
+        List<InteractionDTO> interactions = allInteractions.stream()
                 .map(this::toInteractionDTO)
                 .toList();
 
@@ -99,13 +102,8 @@ public class ToolService {
                 .map(p -> new ParameterDTO(p.getName(), GeneratorUtils.removePackageNames(p.getType())))
                 .toList();
 
-
-        String paramTypes = o.getParameters().stream()
-                .map(p -> GeneratorUtils.removePackageNames(p.getType()))
-                .collect(Collectors.joining(","));
-        String id = className + "." + o.getName() + "(" + paramTypes + ")";
         return new OperationDTO(
-                id,
+                o.getId(),
                 o.getName(),
                 GeneratorUtils.removePackageNames(o.getReturnType()),
                 o.getVisibility(),

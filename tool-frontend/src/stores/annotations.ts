@@ -18,6 +18,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   // key: "ClassName.attrName" -> derive expression
   const deriveByAttribute = ref<Record<string, string>>({})
 
+  const operationToSeqDiagram = ref<Record<string, string>>({})
+
   function addInvariant(className: string) {
     if (!invariantsByClass.value[className]) invariantsByClass.value[className] = []
     invariantsByClass.value[className].push({
@@ -52,6 +54,14 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     delete deriveByAttribute.value[key]
   }
 
+  function linkOperationToSeqDiagram(operationKey: string, diagramId: string) {
+    operationToSeqDiagram.value[operationKey] = diagramId
+  }
+
+  function unlinkOperationFromSeqDiagram(operationKey: string) {
+    delete operationToSeqDiagram.value[operationKey]
+  }
+
   // Storage
   const STORAGE_KEY = 'annotations'
 
@@ -60,6 +70,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       invariantsByClass.value = {}
       initByAttribute.value = {}
       deriveByAttribute.value = {}
+      operationToSeqDiagram.value = {}
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -67,6 +78,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     invariantsByClass.value = data.invariantsByClass || {}
     initByAttribute.value = data.initByAttribute || {}
     deriveByAttribute.value = data.deriveByAttribute || {}
+    operationToSeqDiagram.value = data.operationToSeqDiagram || {}
   }
 
   function saveForModel(name: string | null) {
@@ -76,6 +88,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       invariantsByClass: invariantsByClass.value,
       initByAttribute: initByAttribute.value,
       deriveByAttribute: deriveByAttribute.value,
+      operationToSeqDiagram: operationToSeqDiagram.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
@@ -91,7 +104,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // save current bucket on any annotation change
   watch(
-    [invariantsByClass, initByAttribute, deriveByAttribute],
+    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram],
     () => saveForModel(modelStore.fileName),
     { deep: true }
   )
@@ -100,6 +113,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     invariantsByClass.value = {}
     initByAttribute.value = {}
     deriveByAttribute.value = {}
+    operationToSeqDiagram.value = {}
   }
 
   return {
@@ -107,6 +121,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     invariantsByClass,
     initByAttribute,
     deriveByAttribute,
+    operationToSeqDiagram,
 
     // actions
     addInvariant,
@@ -115,6 +130,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     deleteInit,
     addDerive,
     deleteDerive,
+    linkOperationToSeqDiagram,
+    unlinkOperationFromSeqDiagram,
     reset,
   }
 })

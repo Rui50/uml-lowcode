@@ -187,6 +187,7 @@ public class ClassDiagramParser {
     private Operation parseOperation(ModelElement element) {
         Operation operation = new Operation();
 
+        operation.setId(element.getXMIID());
         operation.setName(element.getName());
 
         String visibility = element.getPlainAttribute("visibility");

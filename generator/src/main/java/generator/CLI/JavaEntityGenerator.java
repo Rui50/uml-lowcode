@@ -311,7 +311,7 @@ public class JavaEntityGenerator {
         for (Operation op : cls.getOperations()) {
             Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
             if (interaction != null) {
-                OperationGenerator.generateOperation(writer, cls, interaction, associations);
+                OperationGenerator.generateOperation(writer, cls, op, interaction, associations);
             } else {
                 // fallback, se a operação nao tiver diagrama sequencia respetivo
                 String visibility = op.getVisibility();

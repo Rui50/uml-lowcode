@@ -19,6 +19,8 @@ public class AnnotationsDTO {
     private Map<String, String> initByAttribute = new HashMap<>();
     private Map<String, String> deriveByAttribute = new HashMap<>();
 
+    private Map<String, String> operationToSeqDiagram = new HashMap<>();
+
     // key "ClassName.opName"
     private Map<String, List<OclDTO>> preconditionsByOperation = new HashMap<>();
 }

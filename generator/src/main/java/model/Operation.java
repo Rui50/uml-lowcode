@@ -3,20 +3,27 @@ package model;
 import java.util.ArrayList;
 import java.util.List;
 import model.annotations.Precondition;
+import model.sequence.Interaction;
 
 /**
  * Representa uma operação de uma classe UML.
  *
  */
 public class Operation {
+    private String id;
     private String name;
     private String returnType;
     private String visibility;
     private List<Parameter> parameters;
 
+    private Interaction sequenceDiagram;
+
     private List<Precondition> preconditions = new ArrayList<>();
 
+
+
     public Operation() {
+        this.id = "";
         this.name = "";
         this.returnType = "void";
         this.visibility = "";
@@ -24,12 +31,21 @@ public class Operation {
         this.preconditions = new ArrayList<>();
     }
 
-    public Operation(String name, String returnType, String visibility) {
+    public Operation(String id, String name, String returnType, String visibility) {
+        this.id = id;
         this.name = name;
         this.returnType = returnType;
         this.visibility = visibility;
         this.parameters = new ArrayList<>();
         this.preconditions = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -70,6 +86,14 @@ public class Operation {
 
     public void addPrecondition(Precondition precondition) {
         this.preconditions.add(precondition);
+    }
+
+    public Interaction getSequenceDiagram() {
+        return sequenceDiagram;
+    }
+
+    public void setSequenceDiagram(Interaction sequenceDiagram) {
+        this.sequenceDiagram = sequenceDiagram;
     }
 
     @Override

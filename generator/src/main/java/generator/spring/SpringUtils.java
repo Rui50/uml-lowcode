@@ -2,8 +2,10 @@ package generator.spring;
 
 import model.Class;
 import model.Operation;
+import model.sequence.Fragment;
 import model.sequence.Interaction;
 import model.sequence.Message;
+import model.sequence.Operand;
 
 import java.util.List;
 import java.util.Set;
@@ -17,6 +19,8 @@ public class SpringUtils {
     public static Interaction findInteractionForOperation(Class cls, Operation op,
                                                           List<Interaction> interactions,
                                                           List<Class> allClasses) {
+        /*if (op.getSequenceDiagram() != null) return op.getSequenceDiagram();
+
         Set<String> classNames = allClasses.stream()
                 .map(Class::getName)
                 .collect(Collectors.toSet());
@@ -40,7 +44,8 @@ public class SpringUtils {
                 break;
             }
         }
-        return null;
+        return null;*/
+        return op.getSequenceDiagram();
     }
 
     // encontra a mensagem de entrada Controller -> Service (ou equivalente) dentro da interação
@@ -57,4 +62,22 @@ public class SpringUtils {
         }
         return null;
     }
+    /*
+    public static Message findEntryMessage(Interaction interaction) {
+        if (interaction == null) return null;
+        return firstMessage(interaction.getElements());
+    }
+
+    private static Message firstMessage(List<Object> elements) {
+        for (Object el : elements) {
+            if (el instanceof Message m) return m;
+            if (el instanceof Fragment f) {
+                for (Operand op : f.getOperands()) {
+                    Message inner = firstMessage(op.getElements());
+                    if (inner != null) return inner;
+                }
+            }
+        }
+        return null;
+    }*/
 }

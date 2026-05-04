@@ -438,7 +438,7 @@ public class ClassGenerator {
         for (Operation op : cls.getOperations()) {
             Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
             if (interaction != null) {
-                OperationGenerator.generateOperation(writer, cls, interaction, associations);
+                OperationGenerator.generateOperation(writer, cls, op, interaction, associations);
             } else {
                 // fallback: assinatura + stub
                 String visibility = op.getVisibility();

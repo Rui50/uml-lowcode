@@ -6,20 +6,30 @@ import app.dto.OclDTO;
 import model.Attribute;
 import model.Class;
 import model.Operation;
+import model.ParsedModel;
+import model.sequence.Interaction;
 import parser.AnnotationParser;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class AnnotationService {
-    public void apply(List<Class> classes, AnnotationsDTO payload) {
+    public void apply(ParsedModel model, AnnotationsDTO payload) {
         if (payload == null) return;
 
+        List<Class> classes = model.getClasses();
         clearAnnotations(classes);
 
         applyInvariants(classes, payload.getInvariantsByClass());
         applyInits(classes, payload.getInitByAttribute());
         applyDerives(classes, payload.getDeriveByAttribute());
+
+        List<Interaction> allInteractions = new ArrayList<>();
+        allInteractions.addAll(model.getPimInteractions());
+        allInteractions.addAll(model.getPsmInteractions());
+        applyOperationLinks(classes, allInteractions, payload.getOperationToSeqDiagram());
     }
 
     private void applyInvariants(List<Class> classes, Map<String, List<OclDTO>> map) {
@@ -76,6 +86,19 @@ public class AnnotationService {
         if (c == null) return null;
         for (Attribute a : c.getAttributes()) if (a.getName().equals(parts[1])) return a;
         return null;
+    }
+
+    private void applyOperationLinks(List<Class> classes, List<Interaction> interactions, Map<String, String> map) {
+        if (map == null || map.isEmpty()) return;
+        Map<String, Interaction> interactionsById = interactions.stream()
+                .collect(Collectors.toMap(Interaction::getId, i -> i));
+
+        for (Class c : classes) {
+            for (Operation op : c.getOperations()) {
+                String interactionId = map.get(op.getId());
+                if (interactionId != null) op.setSequenceDiagram(interactionsById.get(interactionId));
+            }
+        }
     }
 
     private void clearAnnotations(List<Class> classes) {

@@ -38,9 +38,9 @@ import java.util.List;
 public class OperationGenerator {
 
     // gera a operação PIM, assinatura, precondições e corpo
-    public static void generateOperation(PrintWriter writer, Class cls, Interaction interaction,
-                                         List<Association> associations) {
-        Message entry = findEntryMessage(interaction, cls);
+    public static void generateOperation(PrintWriter writer, Class cls, Operation operation,
+                                         Interaction interaction, List<Association> associations) {
+        Message entry = findEntryMessage(interaction);
         if (entry == null) return;
 
         writer.println();
@@ -53,7 +53,7 @@ public class OperationGenerator {
         }
         writer.println(") {");
 
-        Operation operation = cls.getOperations().stream().filter(op -> op.getName().equals(entry.getName())).findFirst().orElse(null);
+        //Operation operation = cls.getOperations().stream().filter(op -> op.getName().equals(entry.getName())).findFirst().orElse(null);
 
         for (Precondition pre : operation.getPreconditions()){
             writer.println("        if (!(" + pre.getJavaExpression() + ")) {");
@@ -261,23 +261,31 @@ public class OperationGenerator {
     }
 
     public static Interaction findInteractionForOperation(Class cls, Operation op, List<Interaction> interactions) {
-        if (interactions == null) return null;
+        /*if (interactions == null) return null;
         for (Interaction interaction : interactions) {
             Message entry = findEntryMessage(interaction, cls);
             if (entry != null && entry.getName().equals(op.getName())) {
                 return interaction;
             }
         }
-        return null;
+        return null;*/
+        return op.getSequenceDiagram();
     }
 
     // a mensagem do actor para lifeline: source pode ser null ou um Actor (type == null)
-    public static Message findEntryMessage(Interaction interaction, Class cls) {
-        for (Message msg : interaction.getMessages()) {
-            if (msg.getTarget() == null) continue;
-            if (!cls.getName().equals(msg.getTarget().getType())) continue;
-            if (msg.getSource() == null || msg.getSource().getType() == null) {
-                return msg;
+    public static Message findEntryMessage(Interaction interaction) {
+        if (interaction == null) return null;
+        return firstMessage(interaction.getElements());
+    }
+
+    private static Message firstMessage(List<Object> elements) {
+        for (Object el : elements) {
+            if (el instanceof Message m) return m;
+            if (el instanceof Fragment f) {
+                for (Operand op : f.getOperands()) {
+                    Message inner = firstMessage(op.getElements());
+                    if (inner != null) return inner;
+                }
             }
         }
         return null;

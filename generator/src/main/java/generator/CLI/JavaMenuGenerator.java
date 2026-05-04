@@ -539,7 +539,7 @@ public class JavaMenuGenerator {
 
             // usar a assinatura do entry message do sequence diagram
             // (e não do class diagram) para ficar consistente
-            Message entry = OperationGenerator.findEntryMessage(interaction, cls);
+            Message entry = OperationGenerator.findEntryMessage(interaction);
             if (entry == null) continue;
 
             w.println("    private void " + op.getName() + "() {");

@@ -11,6 +11,7 @@ import TabPanel from 'primevue/tabpanel'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
+import Select from 'primevue/select';
 
 /**
  * POSSIVEIS MUDANÇAS:
@@ -33,6 +34,9 @@ const invariants = computed(() =>
 
 const attributes = computed(() => model.selectedClass?.attributes ?? [])
 
+const operations = computed(() => model.selectedClass?.operations ?? [])  
+const interactions = computed(() => model.model?.interactions ?? [])
+
 const enumsText = computed<Record<string, string[]>>(() => {
   const enums = model.model?.enumerations ?? []
   const map: Record<string, string[]> = {}
@@ -43,6 +47,13 @@ const enumsText = computed<Record<string, string[]>>(() => {
 
   return map
 })
+
+const interactionOptions = computed(() =>
+  interactions.value.map(i => ({
+    id: i.id,
+    label: i.contextClass ? `${i.name} [${i.contextClass}]` : i.name,
+  }))
+  )
 
 function key(name: string) {
   return `${className.value}.${name}`
@@ -145,6 +156,30 @@ function close() {
             </div>
             <p v-if="!attributes.length" class="empty">No attributes.</p>
           </section>
+
+
+          <!-- Operations -->
+          <section class="block">
+            <header class="block-head">
+              <h4>Operations</h4>
+            </header>
+            <div v-for="op in operations" :key="op.id" class="entry">
+              <div class="attr-label">
+                {{ op.name }}
+              </div>
+              <div class="sub-entry">
+              <Select
+                v-model="annotations.operationToSeqDiagram[op.id]"
+                :options="interactionOptions"
+                optionLabel="label"
+                optionValue="id"
+                placeholder="— no sequence linked —"
+                showClear
+              />
+              </div>
+            </div>
+          </section>
+
         </TabPanel>
 
         <TabPanel value="spring">
