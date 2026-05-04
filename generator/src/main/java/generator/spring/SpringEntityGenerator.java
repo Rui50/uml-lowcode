@@ -227,9 +227,6 @@ public class SpringEntityGenerator {
             writer.println("    @Column(name = \"" + atr.getName() + "\")");
             if (atr.hasInit()) {
                 String javaInit = atr.getJavaInitExpression();
-                if (enumNames.contains(atr.getType())) {
-                    javaInit = atr.getType() + "." + javaInit;
-                }
                 writer.println("    @Builder.Default");
                 writer.println("    private " + atr.getType() + " " + atr.getName() + " = " + javaInit + ";");
             } else {

@@ -177,6 +177,33 @@ function close() {
                 showClear
               />
               </div>
+
+              <div class="sub-block">
+                <header class="sub-head">
+                  <span>Preconditions</span>
+                  <Button label="Add" icon="pi pi-plus" size="small" text
+                          @click="annotations.addPrecondition(op.id)" />
+                </header>
+
+                <div
+                  v-for="pre in annotations.preconditionsByOperation[op.id] ?? []"
+                  :key="pre.id"
+                  class="entry"
+                >
+                  <InputText placeholder="name (optional)" v-model="pre.name" />
+                  <Textarea
+                    v-model="pre.expression"
+                    placeholder="self.alunos->size() > 0"
+                    rows="2" auto-resize
+                  />
+                  <InputText placeholder="error message (optional)" v-model="pre.message" />
+                  <Button
+                    label="Remove" icon="pi pi-trash" size="small" severity="danger" text
+                    class="remove-btn"
+                    @click="annotations.deletePrecondition(op.id, pre.id)"
+                  />
+                </div>
+              </div>
             </div>
           </section>
 
@@ -194,7 +221,8 @@ function close() {
 <style scoped>
 .right-panel {
   border-left: 1px solid var(--color-border);
-  background: var(--color-secondary);
+  /*background: var(--color-secondary);*/
+  background: var(--background);
   color: var(--color-text);
   width: 360px;
   flex-shrink: 0;
@@ -292,4 +320,20 @@ function close() {
 :deep(.p-tabpanel) {
   height: 100%;
 }
+
+.sub-block {
+    margin-top: 6px;
+    padding-left: 8px;
+    border-left: 2px solid var(--color-border);
+  }
+  .sub-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+  }
 </style>

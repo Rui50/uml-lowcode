@@ -30,6 +30,7 @@ public class AnnotationService {
         allInteractions.addAll(model.getPimInteractions());
         allInteractions.addAll(model.getPsmInteractions());
         applyOperationLinks(classes, allInteractions, payload.getOperationToSeqDiagram());
+        applyPreconditions(classes, payload.getPreconditionsByOperation());
     }
 
     private void applyInvariants(List<Class> classes, Map<String, List<OclDTO>> map) {
@@ -101,13 +102,37 @@ public class AnnotationService {
         }
     }
 
+    private void applyPreconditions(List<Class> classes, Map<String, List<OclDTO>> map) {
+        if (map == null || map.isEmpty()) return;
+        map.forEach((operationId, list) -> {
+            Operation op = findOperation(classes, operationId);
+            if (op == null) return;
+            for (int i = 0; i < list.size(); i++) {
+                OclDTO dto = list.get(i);
+                String name = (dto.getName() == null || dto.getName().isEmpty()) ? "pre" + (i + 1) : dto.getName();
+                String errMsg = (dto.getMessage() == null || dto.getMessage().isEmpty())
+                        ? "Precondition " + name + " failed" : dto.getMessage();
+                op.addPrecondition(AnnotationParser.parsePrecondition(name, dto.getExpression(), errMsg));
+            }
+        });
+    }
+
+    private Operation findOperation(List<Class> classes, String opId) {
+        for (Class c : classes) {
+            for (Operation op : c.getOperations()) {
+                if (opId.equals(op.getId())) return op;
+            }
+        }
+        return null;
+    }
+
     private void clearAnnotations(List<Class> classes) {
         for (Class c : classes) {
             c.getInvariants().clear();
-            /*
+
             for (Operation op : c.getOperations()) {
                 op.getPreconditions().clear();
-            }*/
+            }
             for (Attribute a : c.getAttributes()) {
                 a.setInitExpression(null);
                 a.setJavaInitExpression(null);

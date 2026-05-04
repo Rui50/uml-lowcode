@@ -23,8 +23,8 @@ export async function generateCode(target: string): Promise<Blob> {
     invariantsByClass: annotations.invariantsByClass,
     initByAttribute: annotations.initByAttribute,
     deriveByAttribute: annotations.deriveByAttribute,
-    preconditionsByOperation: {},
     operationToSeqDiagram: annotations.operationToSeqDiagram,
+    preconditionsByOperation: annotations.preconditionsByOperation,
   }
   const res = await fetch(`/api/model/generate?target=${encodeURIComponent(target)}`, {
     method: 'POST',

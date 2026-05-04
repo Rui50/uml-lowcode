@@ -165,16 +165,8 @@ public class JavaEntityGenerator {
     // para atributos de tipo enum, prefixa com o nome do enum
     private void generateAttributes(PrintWriter writer, Class cls) {
         for (Attribute attr : cls.getAttributes()) {
-            if (attr.isDerived()) continue;  // no storage
-            if (attr.hasInit()) {
-                String javaInit = attr.getJavaInitExpression();                // se o tipo é um enum, meter com o nome do enum como prefixo (ATIVO -> EstadoAluno.ATIVO)
-                if (enumNames.contains(attr.getType())) {
-                    javaInit = attr.getType() + "." + javaInit;
-                }
-                writer.println("    private " + attr.getType() + " " + attr.getName() + " = " + javaInit + ";");
-            } else {
-                writer.println("    private " + attr.getType() + " " + attr.getName() + ";");
-            }
+            if (attr.isDerived()) continue;
+            writer.println("    private " + attr.getType() + " " + attr.getName() + ";");
         }
         if (!cls.getAttributes().isEmpty()) writer.println();
     }
@@ -211,9 +203,19 @@ public class JavaEntityGenerator {
         if (cls.getParentClass() != null) {
             parentAttrs = cls.getParentClass().getAttributes();
         }
+        // só os params do pai (sem derivados nem init)
+        List<Attribute> paramParentAttrs = parentAttrs.stream()
+                .filter(a -> !a.isDerived() && !a.hasInit()).toList();
+
+        // filtrar os nao derivados
         List<Attribute> ownAttrs = cls.getAttributes().stream()
-                .filter(a -> !a.isDerived())
-                .collect(Collectors.toList());
+                .filter(a -> !a.isDerived()).toList();
+
+        // os que tem init e que nao
+        List<Attribute> paramAttrs = ownAttrs.stream()
+                .filter(a -> !a.hasInit()).toList();
+        List<Attribute> initAttrs = ownAttrs.stream()
+                .filter(Attribute::hasInit).toList();
 
         // se não tem atributos nenhuns, não gera
         if (parentAttrs.isEmpty() && ownAttrs.isEmpty()) return;
@@ -221,32 +223,43 @@ public class JavaEntityGenerator {
         // construtor com atributos do pai + próprios
         writer.print("    public " + cls.getName() + "(");
         boolean first = true;
-        for (Attribute attr : parentAttrs) {
+        for (Attribute attr : paramParentAttrs) {
             if (!first) writer.print(", ");
             writer.print(attr.getType() + " " + attr.getName());
             first = false;
         }
-        for (Attribute attr : ownAttrs) {
+        for (Attribute attr : paramAttrs) {
             if (!first) writer.print(", ");
             writer.print(attr.getType() + " " + attr.getName());
             first = false;
         }
         writer.println(") {");
 
-        // super() com atributos do pai
-        if (!parentAttrs.isEmpty()) {
+        // super() com atributos do pai (sem init)
+        if (!paramParentAttrs.isEmpty()) {
             writer.print("        super(");
-            for (int i = 0; i < parentAttrs.size(); i++) {
+            for (int i = 0; i < paramParentAttrs.size(); i++) {
                 if (i > 0) writer.print(", ");
-                writer.print(parentAttrs.get(i).getName());
+                writer.print(paramParentAttrs.get(i).getName());
             }
             writer.println(");");
         }
 
         // atributos próprios
-        for (Attribute attr : ownAttrs) {
+        /*for (Attribute attr : ownAttrs) {
+            if (attr.hasInit()) {
+                writer.println("        this." + attr.getName() + " = " + attr.getJavaInitExpression() + ";");
+            }
+        }*/
+
+        for (Attribute attr : paramAttrs) {
             writer.println("        this." + attr.getName() + " = " + attr.getName() + ";");
         }
+
+        for (Attribute attr : initAttrs) {
+            writer.println("        this." + attr.getName() + " = " + attr.getJavaInitExpression() + ";");
+        }
+
         writer.println("    }");
         writer.println();
     }

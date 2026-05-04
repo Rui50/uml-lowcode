@@ -223,11 +223,11 @@ public class JavaMenuGenerator {
         List<Attribute> allAttrs = new ArrayList<>();
         if (cls.getParentClass() != null) {
             allAttrs.addAll(cls.getParentClass().getAttributes().stream()
-                    .filter(a -> !a.isDerived())
+                    .filter(a -> !a.isDerived() && !a.hasInit())
                     .collect(Collectors.toList()));
         }
         allAttrs.addAll(cls.getAttributes().stream()
-                .filter(a -> !a.isDerived())
+                .filter(a -> !a.isDerived() && !a.hasInit())
                 .collect(Collectors.toList()));
 
         // ler cada atributo
@@ -352,11 +352,11 @@ public class JavaMenuGenerator {
         List<Attribute> allAttrs = new ArrayList<>();
         if (cls.getParentClass() != null) {
             allAttrs.addAll(cls.getParentClass().getAttributes().stream()
-                    .filter(a -> !a.isDerived())
+                    .filter(a -> !a.isDerived() && !a.hasInit())
                     .collect(Collectors.toList()));
         }
         allAttrs.addAll(cls.getAttributes().stream()
-                .filter(a -> !a.isDerived())
+                .filter(a -> !a.isDerived() && !a.hasInit())
                 .collect(Collectors.toList()));
         for (Attribute attr : allAttrs) {
             generateUpdateAttribute(w, attr);
