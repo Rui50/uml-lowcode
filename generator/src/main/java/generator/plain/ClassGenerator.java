@@ -49,7 +49,7 @@ public class ClassGenerator {
     }
 
     public void generateClasses(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
-        this.validationGenerator = new ValidationGenerator(associations);
+        this.validationGenerator = new ValidationGenerator();
         // Gerar as "classes enum"
         for (Enumeration enumeration : enumerations) {
             generateEnum(enumeration);
@@ -436,7 +436,7 @@ public class ClassGenerator {
         writer.println("    // Operations");
 
         for (Operation op : cls.getOperations()) {
-            Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
+            Interaction interaction = op.getSequenceDiagram();
             if (interaction != null) {
                 OperationGenerator.generateOperation(writer, cls, op, interaction, associations);
             } else {

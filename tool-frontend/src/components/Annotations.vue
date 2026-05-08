@@ -168,14 +168,14 @@ function close() {
                 {{ op.name }}
               </div>
               <div class="sub-entry">
-              <Select
-                v-model="annotations.operationToSeqDiagram[op.id]"
-                :options="interactionOptions"
-                optionLabel="label"
-                optionValue="id"
-                placeholder="— no sequence linked —"
-                showClear
-              />
+                <Select
+                  v-model="annotations.operationToSeqDiagram[op.id]"
+                  :options="interactionOptions"
+                  optionLabel="label"
+                  optionValue="id"
+                  placeholder="— no sequence linked —"
+                  showClear
+                />
               </div>
 
               <div class="sub-block">
@@ -201,6 +201,33 @@ function close() {
                     label="Remove" icon="pi pi-trash" size="small" severity="danger" text
                     class="remove-btn"
                     @click="annotations.deletePrecondition(op.id, pre.id)"
+                  />
+                </div>
+              </div>
+
+              <div class="sub-block">
+                <header class="sub-head">
+                  <span>Postconditions</span>
+                  <Button label="Add" icon="pi pi-plus" size="small" text
+                          @click="annotations.addPostcondition(op.id)" />
+                </header>
+
+                <div
+                  v-for="post in annotations.postconditionsByOperation[op.id] ?? []"
+                  :key="post.id"
+                  class="entry"
+                >
+                  <InputText placeholder="name (optional)" v-model="post.name" />
+                  <Textarea
+                    v-model="post.expression"
+                    placeholder="self.alunos->size() = self.alunos@pre->size() + 1"
+                    rows="2" auto-resize
+                  />
+                  <InputText placeholder="error message (optional)" v-model="post.message" />
+                  <Button
+                    label="Remove" icon="pi pi-trash" size="small" severity="danger" text
+                    class="remove-btn"
+                    @click="annotations.deletePostcondition(op.id, post.id)"
                   />
                 </div>
               </div>

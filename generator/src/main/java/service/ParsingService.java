@@ -33,7 +33,8 @@ public class ParsingService {
             parser.getGeneralizations(),
             parser.getEnumerations(),
             psm,
-            pim
+            pim,
+            all
         );
 
     }

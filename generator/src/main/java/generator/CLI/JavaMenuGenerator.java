@@ -182,7 +182,7 @@ public class JavaMenuGenerator {
         }
 
         for (Operation op : cls.getOperations()) {
-            Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
+            Interaction interaction = op.getSequenceDiagram();
             if (interaction != null) {
                 String label = op.getName().substring(0, 1).toUpperCase() + op.getName().substring(1);
                 options.add(new String[]{label, op.getName()});
@@ -534,7 +534,7 @@ public class JavaMenuGenerator {
         for (Class c : allClasses) classNames.add(c.getName());
 
         for (Operation op : cls.getOperations()) {
-            Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
+            Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
 
             // usar a assinatura do entry message do sequence diagram
@@ -752,7 +752,7 @@ public class JavaMenuGenerator {
             }
         }
         for (Operation op : cls.getOperations()) {
-            Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
+            Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
             for (Parameter param : op.getParameters()) {
                 String type = param.getType();

@@ -65,8 +65,9 @@ public class ToolService {
                 .toList();
 
         List<Interaction> allInteractions = new ArrayList<>();
-        allInteractions.addAll(model.getPimInteractions());
-        allInteractions.addAll(model.getPsmInteractions());
+        //allInteractions.addAll(model.getPimInteractions());
+       // allInteractions.addAll(model.getPsmInteractions());
+        allInteractions.addAll(model.getAllInteractions());
         List<InteractionDTO> interactions = allInteractions.stream()
                 .map(this::toInteractionDTO)
                 .toList();

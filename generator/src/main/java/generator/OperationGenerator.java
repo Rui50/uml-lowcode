@@ -3,36 +3,51 @@ package generator;
 import model.Association;
 import model.Class;
 import model.Operation;
+import model.annotations.Postcondition;
+import model.annotations.PreSnapshot;
 import model.annotations.Precondition;
 import model.sequence.*;
 
 import java.io.PrintWriter;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Esta classe pega numa interação (diag sequencia) que está ligado a uma class e gera o corpo da função
+ * Pega numa interação (diagrama de sequência) ligada a uma operação de uma classe
+ * e gera o corpo do metodo correspondente.
  *
- * 1 - generateOperation -> pega na mensagem de entrada (ator para lifeline) e usa os argumentos
- * 2 - generateElements -> itera as mensagens e fragmentos da interação e delega a função respetiva
- * 3 - generateMessage -> gera o codigo correspondente a uma mensagem
- * 4 - generateFragment -> gera o código correspondente a um fragmento (loop, alt, opt) (usa recursão)
+ * processo:
+ *   1. generateOperation — cria metodo, emite preconditions, @pre snapshots,
+ *      corpo (via generateElements), result alias, postconditions, return
+ *   2. generateElements — itera mensagens e fragmentos; só processa
+ *      mensagens enviadas pelo dono da operação
+ *   3. generateMessage — gera código para uma mensagem (heurística + fallback)
+ *   4. generateFragment — gera código para loop / alt / opt (recursivo)
  *
- * Heuristicas para facilitar
- * - Se o target de uma mensagem é o mesmo da mensagem de entrada, traduzir para "this"
- *   Senão usa o nome da lifeline (se tiver)
+ * Heurísticas:
+ *   - target == entry.target -> "this"; senão usa o nome da lifeline
+ *   - <attr>.add(x) ou <attr>.remove(x) -> put/remove para Map (com qualifier),
+ *     senão add/remove para coleção simples
+ *   - addX(x) / removeX(x) (legacy) -> mesma tradução, lookup por par de tipos
+ *   - loops sobre Map -> adaptados para iterar .values()
+ *   - reply para o actor -> return statement; sem reply -> sem return (void)
  *
- * - add / remove: mensagens com nome começado por add/remove e 1 argumento, sao consideras para uma coleção
- *                 Usado o tipo do receiver com o tipo do argumento para encontrar a associação correspondente
+ * OCL:
+ *   - preconditions e postconditions são emitidas como if (!(...)) throw IllegalStateException
+ *   - @pre nas postconditions -> snapshot do estado declarado antes do corpo
+ *   - "result" nas postconditions -> alias declarado depois do corpo, antes das checks
  *
- * - loops em maps sao automaticamente adaptados para iterar .values()
+ * Convenções (UML que o utilizador desenha):
+ *   - Tipos explícitos em todos os argumentos e returns (a: Aluno, não apenas a)
+ *   - Actor (lifeline sem tipo) chama a operação
+ *   - Nome da mensagem do actor === nome da operação
+ *   - Nome da lifeline === nome do parâmetro (para cross-lifeline calls)
+ *   - Lifelines do owner devem ser tipadas (turma:Turma)
  *
- * Regras
  *
- * - tudo deve ter o tipo explicado, argumentos, returns etc
- * - para ja é o actor que chama a operação a lifeline em que a operação vive
- * - mensagem da chamada do actor tem de dar match a uma operação da classe
- * - nomes tem de dar match, entre lifelines e mensagens etc
- *
+ *   TODO
+ *   - POST CONDS REVERTER NO CLI/PLAIN
  */
 
 public class OperationGenerator {
@@ -43,8 +58,11 @@ public class OperationGenerator {
         Message entry = findEntryMessage(interaction);
         if (entry == null) return;
 
+        //writer.print("    public void " + entry.getName() + "(");
+        String returnType = operation.getReturnType() != null ? operation.getReturnType() : "void";
+
         writer.println();
-        writer.print("    public void " + entry.getName() + "(");
+        writer.print("    public " + returnType + " " + entry.getName() + "(");
         for (int i = 0; i < entry.getArguments().size(); i++) {
             if (i > 0) writer.print(", ");
             MessageArgument arg = entry.getArguments().get(i);
@@ -61,12 +79,61 @@ public class OperationGenerator {
             writer.println("        }");
         }
 
+        // @pre snapshots - capturar o estado antes de executar
+        // dedup por varName: várias postconditions na mesma op podem mencionar o mesmo @pre
+        Map<String, PreSnapshot> snapshots = new LinkedHashMap<>();
+        for (Postcondition post : operation.getPostconditions()) {
+            for (PreSnapshot snap : post.getPreSnapshots()) {
+                snapshots.putIfAbsent(snap.getVarName(), snap);
+            }
+        }
+        for (PreSnapshot snap : snapshots.values()) {
+            writer.println("        " + snap.getJavaType() + " " + snap.getVarName()
+                    + " = " + snap.getJavaInit() + ";");
+        }
+
         generateElements(writer, interaction.getElements(), entry, cls, associations, 2);
+
+        // a expressão de return vem da reply-message para o actor;
+        // sem reply, não é feito return
+        String returnExpr = findReplyToActor(interaction.getElements());
+
+        // OCL postcondition pode referir "result" — declaramos alias se algum a usar
+        boolean needsResult = operation.getPostconditions().stream()
+                .anyMatch(p -> p.getJavaExpression() != null
+                        && p.getJavaExpression().matches(".*\\bresult\\b.*"));
+
+        // TODO: estes erros deviam ser apanhados na validação do frontend
+        if (!"void".equals(returnType) && returnExpr == null) {
+            throw new IllegalStateException(
+                    "Operation '" + entry.getName() + "' declares return type '" + returnType
+                            + "' but its sequence diagram has no reply message to the actor.");
+        }
+        if (needsResult && returnExpr == null) {
+            throw new IllegalStateException(
+                    "Operation '" + entry.getName() + "' has a postcondition referencing 'result' "
+                            + "but its sequence diagram has no reply message to the actor.");
+        }
+
+        if (needsResult && returnExpr != null && !"void".equals(returnType)) {
+            writer.println("        " + returnType + " result = " + returnExpr + ";");
+        }
+
+        for (Postcondition post : operation.getPostconditions()) {
+            writer.println("        if (!(" + post.getJavaExpression() + ")) {");
+            writer.println("            throw new IllegalStateException(\"" + post.getMessage() + "\");");
+            writer.println("        }");
+        }
+
+        if (!"void".equals(returnType) && returnExpr != null) {
+            writer.println("        return " + (needsResult ? "result" : returnExpr) + ";");
+        }
 
         writer.println("    }");
     }
 
     // Itera as messages e fragments, delegando para generateMessage / generateFragment
+    // so emite mensages enviadas pelo dono do metodo o resto ignora, o resto seria outro diagrama
     private static void generateElements(PrintWriter writer, List<Object> elements,
                                          Message entry, Class cls, List<Association> associations, int indent) {
         String indentStr = "    ".repeat(indent);
@@ -74,6 +141,8 @@ public class OperationGenerator {
             if (el instanceof Message) {
                 Message msg = (Message) el;
                 if (msg.getSource() == null || msg.getSource().getType() == null) continue;
+                if (!msg.getSource().getId().equals(entry.getTarget().getId())) continue;
+                if ("reply".equals(msg.getMessageSort())) continue; // replies só serverm para o return — tratadas em findReplyToActor
                 generateMessage(writer, msg, entry, cls, associations, indentStr);
             } else if (el instanceof Fragment) {
                 generateFragment(writer, (Fragment) el, entry, cls, associations, indent);
@@ -96,12 +165,14 @@ public class OperationGenerator {
         } else {
             receiver = msg.getTarget().getName();
             if (receiver == null || receiver.isEmpty()) {
-                receiver = "/* lifeline has no name: " + msg.getTarget().getType() + " */";
+                throw new IllegalStateException(
+                        "Lifeline has no name (type=" + msg.getTarget().getType()
+                        + ") in interaction; lifeline name must equal the parameter/local name being called");
             }
         }
 
         // heurística: add(x) / remove(x) com 1 argumento -> traduzir para acesso à coleção
-        String name = msg.getName();
+        /*String name = msg.getName();
         List<MessageArgument> args = msg.getArguments();
         if(args != null && args.size() == 1 && (name.startsWith("add") || name.startsWith("remove"))) {
             MessageArgument arg = args.get(0);
@@ -109,7 +180,7 @@ public class OperationGenerator {
             Association assoc = findAssoc(associations, ownerType, arg.getType());
 
             if (assoc != null) {
-                String field = fieldNameFor(assoc, ownerType, arg.getType());
+                String field = fieldNameFor(assoc, ownerType);
                 String base = receiver + "." + field;
                 String code;
                 if (assoc.hasQualifier()){
@@ -122,6 +193,51 @@ public class OperationGenerator {
                 } else {
                     // coleção simples: ADD/REMOVE
                     code = base + "." + name + "(" + arg.getName() + ");";
+                }
+                writer.println(indent + code);
+                return;
+            }
+        }*/
+
+        // heurística: <xx>.add(x) / <xx>.remove(x) ou addX/removeX -> acesso à coleção
+        String name = msg.getName();
+        List<MessageArgument> args = msg.getArguments();
+
+        // "alunos.add(a)" -> attrName="alunos", op="add"
+        String attrName = null;
+        String op = name;
+        int sep = name.indexOf(".");
+        if (sep > 0) {
+            attrName = name.substring(0, sep);
+            op = name.substring(sep + 1);
+        }
+
+        if (args != null && args.size() == 1 && ("add".equals(op) || "remove".equals(op))) {
+            MessageArgument arg = args.get(0);
+            String ownerType = msg.getTarget().getType();
+
+            // field-style: lookup direto por attrName; antes: lookup por par de tipos
+            Association assoc;
+            if (attrName != null) {
+                assoc = findAssocByField(associations, ownerType, attrName);
+            } else {
+                assoc = findAssoc(associations, ownerType, arg.getType());
+                if (assoc != null) attrName = fieldNameFor(assoc, ownerType);
+            }
+
+            if (assoc != null) {
+                String base = receiver + "." + attrName;
+                String code;
+                if (assoc.hasQualifier()) {
+                    // MAP com PUT(key, value) ou REMOVE(key) — key via getter do qualifier
+                    String q = assoc.getQualifierName();
+                    String getter = "get" + Character.toUpperCase(q.charAt(0)) + q.substring(1) + "()";
+                    code = "add".equals(op)
+                            ? base + ".put(" + arg.getName() + "." + getter + ", " + arg.getName() + ");"
+                            : base + ".remove(" + arg.getName() + "." + getter + ");";
+                } else {
+                    // coleção simples: ADD/REMOVE
+                    code = base + "." + op + "(" + arg.getName() + ");";
                 }
                 writer.println(indent + code);
                 return;
@@ -213,7 +329,7 @@ public class OperationGenerator {
         }
     }
 
-    // se a coleção é uma associação qualificada (Map), adiciona .values()
+    // se a coleção é uma associação (Map), adiciona .values()
     private static String adaptCollectionAccess(String expr, Class cls, List<Association> associations) {
         if (!expr.startsWith("this.")) return expr;
         String fieldName = expr.substring("this.".length()).trim();
@@ -244,7 +360,7 @@ public class OperationGenerator {
         return null;
     }
 
-    private static String fieldNameFor(Association a, String ownerType, String otherType) {
+    private static String fieldNameFor(Association a, String ownerType) {
         // lado a partir do owner: se owner é source, o campo refere o target, e vice-versa
         if (a.getSourceClass().equals(ownerType)) {
             return makeFieldName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
@@ -258,18 +374,6 @@ public class OperationGenerator {
         String base = className.substring(0, 1).toLowerCase() + className.substring(1);
         boolean multiple = multiplicity != null && (multiplicity.contains("*") || (multiplicity.contains("..") && !multiplicity.equals("0..1")));
         return multiple ? base + "s" : base;
-    }
-
-    public static Interaction findInteractionForOperation(Class cls, Operation op, List<Interaction> interactions) {
-        /*if (interactions == null) return null;
-        for (Interaction interaction : interactions) {
-            Message entry = findEntryMessage(interaction, cls);
-            if (entry != null && entry.getName().equals(op.getName())) {
-                return interaction;
-            }
-        }
-        return null;*/
-        return op.getSequenceDiagram();
     }
 
     // a mensagem do actor para lifeline: source pode ser null ou um Actor (type == null)
@@ -290,4 +394,41 @@ public class OperationGenerator {
         }
         return null;
     }
+
+    // procura a última reply message cujo target é o actor (lifeline sem tipo)
+    // devolve a expressão (raw name da mensagem) que vai ser usada como return.
+    //
+    // last reply ganha — se houver várias replies, a última é a usada.
+    // limitação: não suporta returns condicionais dentro de alt/opt; replies dentro
+    // de fragmentos são detectadas mas o return é sempre emitido no fim do método,
+    // não no ponto onde a reply aparece no diagrama.
+    private static String findReplyToActor(List<Object> elements) {
+        String last = null;
+        for (Object el : elements) {
+            if (el instanceof Message m
+                    && "reply".equals(m.getMessageSort())
+                    && m.getTarget() != null
+                    && m.getTarget().getType() == null) {
+                String expr = m.getRawName() != null ? m.getRawName() : m.getName();
+                if (expr != null && !expr.isBlank()) last = expr.trim();
+            } else if (el instanceof Fragment f) {
+                for (Operand op : f.getOperands()) {
+                    String inner = findReplyToActor(op.getElements());
+                    if (inner != null) last = inner;
+                }
+            }
+        }
+        return last;
+    }
+
+    // procura associação cujo field name no lado do owner é attrName
+    // reutiliza fieldNameFor para a derivação role-ou-default
+    private static Association findAssocByField(List<Association> assocs, String ownerType, String attrName) {
+        for (Association a : assocs) {
+            if (!ownerType.equals(a.getSourceClass()) && !ownerType.equals(a.getTargetClass())) continue;
+            if (attrName.equals(fieldNameFor(a, ownerType))) return a;
+        }
+        return null;
+    }
+
 }

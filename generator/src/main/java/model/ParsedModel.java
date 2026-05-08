@@ -11,14 +11,24 @@ public class ParsedModel {
     private List<Enumeration> enumerations;
     private List<Interaction> psmInteractions;
     private List<Interaction> pimInteractions;
+    private List<Interaction> allInteractions;
 
-    public ParsedModel(List<Class> classes, List<Association> associations, List<Generalization> generalizations, List<Enumeration> enumerations, List<Interaction> psmInteractions, List<Interaction> pimInteractions) {
+    public ParsedModel(List<Class> classes,
+                       List<Association> associations,
+                       List<Generalization> generalizations,
+                       List<Enumeration> enumerations,
+                       List<Interaction> psmInteractions,
+                       List<Interaction> pimInteractions,
+                       List<Interaction> allInteractions
+    )
+    {
         this.classes = classes;
         this.associations = associations;
         this.generalizations = generalizations;
         this.enumerations = enumerations;
         this.psmInteractions = psmInteractions;
         this.pimInteractions = pimInteractions;
+        this.allInteractions = allInteractions;
     }
 
     public List<Class> getClasses() {
@@ -68,4 +78,10 @@ public class ParsedModel {
     public void setPimInteractions(List<Interaction> pimInteractions) {
         this.pimInteractions = pimInteractions;
     }
+
+    public List<Interaction> getAllInteractions() {
+        return allInteractions;
+    }
+
 }
+

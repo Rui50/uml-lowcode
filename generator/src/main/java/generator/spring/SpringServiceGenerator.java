@@ -3,6 +3,8 @@ package generator.spring;
 import generator.GeneratorUtils;
 import model.*;
 import model.Class;
+import model.annotations.Postcondition;
+import model.annotations.PreSnapshot;
 import model.annotations.Precondition;
 import model.sequence.*;
 import org.w3c.dom.Attr;
@@ -896,7 +898,7 @@ public class SpringServiceGenerator {
         writer.println("    // operations (TODO: implement)");
 
         for (Operation op : cls.getOperations()) {
-            Interaction interaction = SpringUtils.findInteractionForOperation(cls, op, interactions, allClasses);
+            Interaction interaction = op.getSequenceDiagram();
             generateCustomOperation(writer, cls, op, interaction);
         }
     }
@@ -904,10 +906,11 @@ public class SpringServiceGenerator {
     private void generateCustomOperation(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
         String className = cls.getName();
         String operName = op.getName();
+        String returnType = op.getReturnType() != null ? op.getReturnType() : "void";
 
         if (interaction == null) {
             writer.println();
-            writer.println("    public void " + operName + "() {");
+            writer.println("    public " + returnType + " " + operName + "() {");
             writer.println("        throw new UnsupportedOperationException(");
             writer.println("            \"Method '" + operName + "' not yet implemented. \"");
             writer.println("        );");
@@ -919,7 +922,7 @@ public class SpringServiceGenerator {
 
         // assinatura — parâmetros vêm da mensagem de entrada do diagrama de sequência
         writer.println();
-        writer.print("    public void " + operName + "(");
+        writer.print("    public " + returnType + " " + operName + "(");
         if (entryMessage != null && !entryMessage.getArguments().isEmpty()) {
             for (int i = 0; i < entryMessage.getArguments().size(); i++) {
                 if (i > 0) writer.print(", ");
@@ -933,7 +936,7 @@ public class SpringServiceGenerator {
         preDeclaredVars.clear();
 
         // if there are preconditions, preload the entity so `this.X` rewrites have something to reference
-        String selfVar = GeneratorUtils.lowercaseFirst(className);
+        /*String selfVar = GeneratorUtils.lowercaseFirst(className);
         if (!op.getPreconditions().isEmpty()) {
             String repoName = selfVar + "Repository";
             writer.println("        " + className + " " + selfVar + " = " + repoName + ".findById(id)");
@@ -946,11 +949,83 @@ public class SpringServiceGenerator {
                 writer.println("            throw new IllegalStateException(\"" + pre.getMessage() + "\");");
                 writer.println("        }");
             }
+        }*/
+
+        // preload entity if pre/postcond reference
+        String selfVar = GeneratorUtils.lowercaseFirst(className);
+        boolean needsSelf = !op.getPreconditions().isEmpty() || !op.getPostconditions().isEmpty();
+
+        if (needsSelf) {
+            String repoName = selfVar + "Repository";
+            writer.println("        " + className + " " + selfVar + " = " + repoName + ".findById(id)");
+            writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found\"));");
+            preDeclaredVars.add(selfVar);
+
+            for (Precondition pre : op.getPreconditions()) {
+                String javaExpr = pre.getJavaExpression(selfVar);
+                writer.println("        if (!(" + javaExpr + ")) {");
+                writer.println("            throw new IllegalStateException(\"" + pre.getMessage() + "\");");
+                writer.println("        }");
+            }
+
+            // @pre snapshots - declarar uma vez por varName
+            Set<String> preSnapshotVars = new HashSet<>();
+            for (Postcondition post : op.getPostconditions()) {
+                for (PreSnapshot snap : post.getPreSnapshots()) {
+                    if (preSnapshotVars.add(snap.getVarName())) {
+                        writer.println("        " + snap.getJavaType() + " " + snap.getVarName()
+                                + " = " + snap.getJavaInit(selfVar) + ";");
+                    }
+                }
+            }
         }
 
         generateMethodBodyFromInteraction(writer, cls, op, interaction);
 
+        // a expressão de return vem da reply-message para o actor; sem reply, não é feito return
+        String returnExpr = findReplyToActor(interaction.getElements());
+        // OCL postcondition pode referir "result"
+        // se for o caso, declarar variável "result" para o valor de return
+        boolean needsResult = op.getPostconditions().stream()
+                .anyMatch(p -> {
+                    String je = p.getJavaExpression(selfVar);
+                    return je != null && je.matches(".*\\bresult\\b.*");
+                });
+        if (needsResult && returnExpr != null && !"void".equals(returnType)) {
+            writer.println("        " + returnType + " result = " + returnExpr + ";");
+        }
+
+        for (Postcondition post : op.getPostconditions()) {
+            String javaExpr = post.getJavaExpression(selfVar);
+            writer.println("        if (!(" + javaExpr + ")) {");
+            writer.println("            throw new IllegalStateException(\"" + post.getMessage() + "\");");
+            writer.println("        }");
+        }
+
+        if (!"void".equals(returnType) && returnExpr != null) {
+            writer.println("        return " + (needsResult ? "result" : returnExpr) + ";");
+        }
+
         writer.println("    }");
+    }
+
+    private static String findReplyToActor(List<Object> elements) {
+        String last = null;
+        for (Object el : elements) {
+            if (el instanceof Message m
+                    && "reply".equals(m.getMessageSort())
+                    && m.getTarget() != null
+                    && m.getTarget().getType() == null) {
+                String expr = m.getRawName() != null ? m.getRawName() : m.getName();
+                if (expr != null && !expr.isBlank()) last = expr.trim();
+            } else if (el instanceof Fragment f) {
+                for (Operand op : f.getOperands()) {
+                    String inner = findReplyToActor(op.getElements());
+                    if (inner != null) last = inner;
+                }
+            }
+        }
+        return last;
     }
 
     private void generateMethodBodyFromInteraction(PrintWriter writer, Class cls, Operation op, Interaction

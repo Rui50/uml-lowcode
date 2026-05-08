@@ -23,7 +23,8 @@ public class GenerationService {
                 m.getAssociations(),
                 m.getEnumerations(),
                 outputDir,
-                m.getPimInteractions()
+                //m.getPimInteractions()
+                m.getAllInteractions()
         ).generate();
     }
 
@@ -32,7 +33,8 @@ public class GenerationService {
                 m.getClasses(),
                 m.getAssociations(),
                 m.getEnumerations(),
-                m.getPimInteractions()
+                //m.getPimInteractions()
+                m.getAllInteractions()
         );
     }
 
@@ -50,9 +52,9 @@ public class GenerationService {
         new SpringRepositoryGenerator(outputDir, basePackage)
                 .generateRepositories(m.getClasses());
         new SpringServiceGenerator(outputDir, basePackage)
-                .generateServices(m.getClasses(), m.getAssociations(), m.getPsmInteractions(), m.getEnumerations());
+                .generateServices(m.getClasses(), m.getAssociations(), /*m.getPsmInteractions()*/m.getAllInteractions(), m.getEnumerations());
         new SpringControllerGenerator(outputDir, basePackage)
-                .generateControllers(m.getClasses(), m.getAssociations(), m.getPsmInteractions());
+                .generateControllers(m.getClasses(), m.getAssociations(), m.getAllInteractions());//m.getPsmInteractions());
 
     }
 }

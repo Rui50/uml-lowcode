@@ -508,7 +508,7 @@ public class SpringControllerGenerator {
         writer.println("    // Custom Operation Endpoints dos diagramas sequencia");
 
         for (Operation op : cls.getOperations()) {
-            Interaction interaction = SpringUtils.findInteractionForOperation(cls, op, interactions, allClasses);
+            Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
 
             Message entryMessage = SpringUtils.findEntryMessage(interaction, cls, op);

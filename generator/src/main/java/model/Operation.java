@@ -2,6 +2,8 @@ package model;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import model.annotations.Postcondition;
 import model.annotations.Precondition;
 import model.sequence.Interaction;
 
@@ -20,6 +22,7 @@ public class Operation {
 
     private List<Precondition> preconditions = new ArrayList<>();
 
+    private List<Postcondition> postconditions = new ArrayList<>();
 
 
     public Operation() {
@@ -29,6 +32,7 @@ public class Operation {
         this.visibility = "";
         this.parameters = new ArrayList<>();
         this.preconditions = new ArrayList<>();
+        this.postconditions = new ArrayList<>();
     }
 
     public Operation(String id, String name, String returnType, String visibility) {
@@ -38,6 +42,7 @@ public class Operation {
         this.visibility = visibility;
         this.parameters = new ArrayList<>();
         this.preconditions = new ArrayList<>();
+        this.postconditions = new ArrayList<>();
     }
 
     public String getId() {
@@ -94,6 +99,14 @@ public class Operation {
 
     public void setSequenceDiagram(Interaction sequenceDiagram) {
         this.sequenceDiagram = sequenceDiagram;
+    }
+
+    public List<Postcondition> getPostconditions() {
+        return postconditions;
+    }
+
+    public void addPostcondition(Postcondition postcondition) {
+        this.postconditions.add(postcondition);
     }
 
     @Override

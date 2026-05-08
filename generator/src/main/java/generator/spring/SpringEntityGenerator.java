@@ -54,7 +54,7 @@ public class SpringEntityGenerator {
         String domainPath = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/models";
         new File(domainPath).mkdirs();
 
-        this.validationGenerator = new ValidationGenerator(associations);
+        this.validationGenerator = new ValidationGenerator();
 
         // guardar nomes das enumerações
         for (Enumeration enumeration : enumerations) {

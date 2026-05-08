@@ -58,7 +58,7 @@ public class JavaEntityGenerator {
         String modelsPath = baseOutputPath + "/src/models";
         new File(modelsPath).mkdirs();
 
-        this.validationGenerator = new ValidationGenerator(associations);
+        this.validationGenerator = new ValidationGenerator();
 
         for (Enumeration enumeration : enumerations) {
             generateEnum(enumeration, modelsPath);
@@ -322,7 +322,7 @@ public class JavaEntityGenerator {
         writer.println("    // Operations");
 
         for (Operation op : cls.getOperations()) {
-            Interaction interaction = OperationGenerator.findInteractionForOperation(cls, op, interactions);
+            Interaction interaction = op.getSequenceDiagram();
             if (interaction != null) {
                 OperationGenerator.generateOperation(writer, cls, op, interaction, associations);
             } else {

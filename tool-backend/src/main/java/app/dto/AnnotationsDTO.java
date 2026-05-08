@@ -23,4 +23,6 @@ public class AnnotationsDTO {
 
     // key "ClassName.opName"
     private Map<String, List<OclDTO>> preconditionsByOperation = new HashMap<>();
+
+    private Map<String, List<OclDTO>> postconditionsByOperation = new HashMap<>();
 }

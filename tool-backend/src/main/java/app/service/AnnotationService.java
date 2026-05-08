@@ -3,6 +3,7 @@ package app.service;
 import app.dto.AnnotationsDTO;
 import app.dto.OclDTO;
 
+import model.Association;
 import model.Attribute;
 import model.Class;
 import model.Operation;
@@ -20,20 +21,19 @@ public class AnnotationService {
         if (payload == null) return;
 
         List<Class> classes = model.getClasses();
+        List<Association> associations = model.getAssociations();
         clearAnnotations(classes);
 
-        applyInvariants(classes, payload.getInvariantsByClass());
-        applyInits(classes, payload.getInitByAttribute());
-        applyDerives(classes, payload.getDeriveByAttribute());
+        applyInvariants(classes, associations, payload.getInvariantsByClass());
+        applyInits(classes, associations, payload.getInitByAttribute());
+        applyDerives(classes, associations, payload.getDeriveByAttribute());
 
-        List<Interaction> allInteractions = new ArrayList<>();
-        allInteractions.addAll(model.getPimInteractions());
-        allInteractions.addAll(model.getPsmInteractions());
-        applyOperationLinks(classes, allInteractions, payload.getOperationToSeqDiagram());
-        applyPreconditions(classes, payload.getPreconditionsByOperation());
+        applyOperationLinks(classes, model.getAllInteractions(), payload.getOperationToSeqDiagram());
+        applyPreconditions(classes, associations, payload.getPreconditionsByOperation());
+        applyPostconditions(classes, associations, payload.getPostconditionsByOperation());
     }
 
-    private void applyInvariants(List<Class> classes, Map<String, List<OclDTO>> map) {
+    private void applyInvariants(List<Class> classes, List<Association> associations, Map<String, List<OclDTO>> map) {
         map.forEach((className, list) -> {
             Class c = findClass(classes, className);
             if (c == null) return;
@@ -55,24 +55,28 @@ public class AnnotationService {
                     err_message = dto.getMessage();
                 }
 
-                c.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message));
+                c.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message, c, associations));
             }
         });
     }
 
-    private void applyInits(List<Class> classes, Map<String, String> map) {
+    private void applyInits(List<Class> classes, List<Association> associations, Map<String, String> map) {
         map.forEach((key, expr) -> {
             if (expr == null || expr.isBlank()) return;
             Attribute a = findAttribute(classes, key);
-            if (a != null) AnnotationParser.applyInit(a, expr);
+            // owner class needed by parser for map detection
+            Class c = findClass(classes, key.split("\\.", 2)[0]);
+            if (a != null) AnnotationParser.applyInit(a, expr, c, associations);
         });
     }
 
-    private void applyDerives(List<Class> classes, Map<String, String> map) {
+    private void applyDerives(List<Class> classes, List<Association> associations, Map<String, String> map) {
         map.forEach((key, expr) -> {
             if (expr == null || expr.isBlank()) return;
             Attribute a = findAttribute(classes, key);
-            if (a != null) AnnotationParser.applyDerive(a, expr);
+            // owner class needed by parser for map detection
+            Class c = findClass(classes, key.split("\\.", 2)[0]);
+            if (a != null) AnnotationParser.applyDerive(a, expr, c, associations);
         });
     }
 
@@ -93,7 +97,6 @@ public class AnnotationService {
         if (map == null || map.isEmpty()) return;
         Map<String, Interaction> interactionsById = interactions.stream()
                 .collect(Collectors.toMap(Interaction::getId, i -> i));
-
         for (Class c : classes) {
             for (Operation op : c.getOperations()) {
                 String interactionId = map.get(op.getId());
@@ -102,9 +105,10 @@ public class AnnotationService {
         }
     }
 
-    private void applyPreconditions(List<Class> classes, Map<String, List<OclDTO>> map) {
+    private void applyPreconditions(List<Class> classes, List<Association> associations, Map<String, List<OclDTO>> map) {
         if (map == null || map.isEmpty()) return;
         map.forEach((operationId, list) -> {
+            Class owner = findClassForOperation(classes, operationId);
             Operation op = findOperation(classes, operationId);
             if (op == null) return;
             for (int i = 0; i < list.size(); i++) {
@@ -112,9 +116,34 @@ public class AnnotationService {
                 String name = (dto.getName() == null || dto.getName().isEmpty()) ? "pre" + (i + 1) : dto.getName();
                 String errMsg = (dto.getMessage() == null || dto.getMessage().isEmpty())
                         ? "Precondition " + name + " failed" : dto.getMessage();
-                op.addPrecondition(AnnotationParser.parsePrecondition(name, dto.getExpression(), errMsg));
+                op.addPrecondition(AnnotationParser.parsePrecondition(name, dto.getExpression(), errMsg, owner, associations));
             }
         });
+    }
+
+    private void applyPostconditions(List<Class> classes, List<Association> associations, Map<String, List<OclDTO>> map) {
+        if (map == null || map.isEmpty()) return;
+        map.forEach((operationId, list) -> {
+            Class owner = findClassForOperation(classes, operationId);
+            Operation op = findOperation(classes, operationId);
+            if (op == null) return;
+            for (int i = 0; i < list.size(); i++) {
+                OclDTO dto = list.get(i);
+                String name = (dto.getName() == null || dto.getName().isEmpty()) ? "post" + (i + 1) : dto.getName();
+                String errMsg = (dto.getMessage() == null || dto.getMessage().isEmpty())
+                        ? "Postcondition " + name + " failed" : dto.getMessage();
+                op.addPostcondition(AnnotationParser.parsePostcondition(name, dto.getExpression(), errMsg, owner, associations));
+            }
+        });
+    }
+
+    private Class findClassForOperation(List<Class> classes, String opId) {
+        for (Class c : classes) {
+            for (Operation op : c.getOperations()) {
+                if (opId.equals(op.getId())) return c;
+            }
+        }
+        return null;
     }
 
     private Operation findOperation(List<Class> classes, String opId) {
@@ -132,6 +161,7 @@ public class AnnotationService {
 
             for (Operation op : c.getOperations()) {
                 op.getPreconditions().clear();
+                op.getPostconditions().clear();
             }
             for (Attribute a : c.getAttributes()) {
                 a.setInitExpression(null);
