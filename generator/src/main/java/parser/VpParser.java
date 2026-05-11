@@ -1,8 +1,5 @@
 package parser;
 
-import com.sdmetrics.model.Model;
-import com.sdmetrics.model.ModelElement;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -38,9 +35,7 @@ public class VpParser {
      * <ownedEnd> -> <qualifier> -> <modelRef value="id"/> -> <packagedElement xmi:id="id">
      */
 
-    public static Map<String, Qualifier> parseQualifiers(String filePath, Model sdMetricsModel) throws Exception {
-        System.out.println("Parsing qualifiers from file: " + filePath);
-
+    public static Map<String, Qualifier> parseQualifiers(String filePath) throws Exception {
         Map<String, Qualifier> qualifiers = new HashMap<>();
 
         // extrai todos packagedElements que tenham name type e id
@@ -67,7 +62,6 @@ public class VpParser {
             }
         }
 
-        System.out.println("  Found " + elementsById.size() + " potential qualifier elements");
         Pattern modelRefPattern = Pattern.compile("<modelRef value=\"([^\"]+)\"/>");
         Pattern ownedEndPattern = Pattern.compile("<ownedEnd[^>]+xmi:id=\"([^\"]+)\"");
 
@@ -97,9 +91,6 @@ public class VpParser {
                         Qualifier qualifier = elementsById.get(refId);
                         if (qualifier != null) {
                             qualifiers.put(currentOwnedEndId, qualifier);
-                            System.out.println("  Found qualifier for ownedEnd " + currentOwnedEndId + ": " + qualifier);
-                        } else {
-                            System.out.println("  No matching qualifier found for modelRef id: " + refId);
                         }
                     }
                 }
@@ -115,7 +106,6 @@ public class VpParser {
 
                 }
             }
-            System.out.println("Parsed " + qualifiers.size() + " qualifiers");
             return qualifiers;
         }
     }
@@ -135,8 +125,6 @@ public class VpParser {
      * SDMetrics nao consegue extrair direito porque ha varios xmi:value irmaos dentro de <xmi:Extension>.
      */
     public static Map<String, String> extractMessageNumbers(String filePath) throws IOException {
-        System.out.println("Parsing message numbers from file: " + filePath);
-
         Map<String, String> idToNumber = new HashMap<>();
 
         Pattern messagePattern = Pattern.compile("<message[^>]+xmi:id=\"([^\"]+)\"");
@@ -172,10 +160,6 @@ public class VpParser {
             }
         }
 
-        System.out.println("Parsed " + idToNumber.size() + " message numbers");
         return idToNumber;
     }
 }
-
-
-

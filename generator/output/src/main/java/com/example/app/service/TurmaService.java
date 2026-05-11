@@ -55,14 +55,6 @@ public class TurmaService {
     public TurmaResponseDTO create(TurmaCreateDTO dto) {
         Turma turma = dto.toEntity();
 
-        // Validate OCL invariants
-        List<String> errors = turma.validate();
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Validation failed: " + String.join(", ", errors)
-            );
-        }
-
         Turma saved = turmaRepository.save(turma);
         return TurmaResponseDTO.fromEntity(saved);
     }
@@ -78,14 +70,7 @@ public class TurmaService {
 
         // Update attributes from DTO
         existing.setNome(dto.getNome());
-
-        // Validate OCL invariants
-        List<String> errors = existing.validate();
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Validation failed: " + String.join(", ", errors)
-            );
-        }
+        existing.setNumAlunos(dto.getNumAlunos());
 
         Turma saved = turmaRepository.save(existing);
         return TurmaResponseDTO.fromEntity(saved);
@@ -123,14 +108,6 @@ public class TurmaService {
             turma.getAlunos().put(aluno.getNumero(), aluno);
         }
 
-        // Validate OCL invariants
-        List<String> errors = turma.validate();
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Validation failed: " + String.join(", ", errors)
-            );
-        }
-
         Turma saved = turmaRepository.save(turma);
         return TurmaResponseDTO.fromEntity(saved);
     }
@@ -148,14 +125,6 @@ public class TurmaService {
         List<Aluno> alunos = alunoRepository.findAllById(alunoIds);
         for (Aluno aluno : alunos) {
             turma.getAlunos().remove(aluno.getNumero());
-        }
-
-        // Validate OCL invariants
-        List<String> errors = turma.validate();
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Validation failed: " + String.join(", ", errors)
-            );
         }
 
         Turma saved = turmaRepository.save(turma);
@@ -176,14 +145,6 @@ public class TurmaService {
 
         turma.getTurnos().addAll(turnos);
 
-        // Validate OCL invariants
-        List<String> errors = turma.validate();
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Validation failed: " + String.join(", ", errors)
-            );
-        }
-
         Turma saved = turmaRepository.save(turma);
         return TurmaResponseDTO.fromEntity(saved);
     }
@@ -200,46 +161,11 @@ public class TurmaService {
 
         turma.getTurnos().removeIf(turno -> turnoIds.contains(turno.getId()));
 
-        // Validate OCL invariants
-        List<String> errors = turma.validate();
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Validation failed: " + String.join(", ", errors)
-            );
-        }
-
         Turma saved = turmaRepository.save(turma);
         return TurmaResponseDTO.fromEntity(saved);
     }
 
     // operations (TODO: implement)
-
-    public void transferirAluno(Long id, Long alunoId, Long destino) {
-        Turma turma = turmaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Turma not found"));
-        Turma turmaDestino = turmaRepository.findById(destino)
-            .orElseThrow(() -> new RuntimeException("Turma not found"));
-        Aluno aluno = alunoRepository.findById(alunoId)
-            .orElseThrow(() -> new RuntimeException("Aluno not found"));
-        turma.getAlunos().remove(aluno.getNumero());
-        turmaDestino.getAlunos().put(aluno.getNumero(), aluno);
-        turmaRepository.save(turma);
-        turmaRepository.save(turmaDestino);
-    }
-
-    public void fecharTurma(Long id) {
-        Turma turma = turmaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Turma not found"));
-        if (!(!turma.getAlunos().isEmpty())) {
-            throw new IllegalStateException("Precondition 'naoVazia' violated.");
-        }
-        for (var aluno : turma.getAlunos().values()) {
-            if (aluno.getEstado() == EstadoAluno.ATIVO) {
-                aluno.setEstado(EstadoAluno.INATIVO);
-            }
-        }
-        turmaRepository.save(turma);
-    }
 
     public void inicializarAlunosParaTeste() {
         throw new UnsupportedOperationException(
@@ -247,9 +173,21 @@ public class TurmaService {
         );
     }
 
-    public void totalAlunos() {
+    public int totalAlunos() {
         throw new UnsupportedOperationException(
             "Method 'totalAlunos' not yet implemented. "
+        );
+    }
+
+    public void fecharTurma() {
+        throw new UnsupportedOperationException(
+            "Method 'fecharTurma' not yet implemented. "
+        );
+    }
+
+    public boolean transferirAluno() {
+        throw new UnsupportedOperationException(
+            "Method 'transferirAluno' not yet implemented. "
         );
     }
 }

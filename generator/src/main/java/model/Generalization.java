@@ -12,19 +12,19 @@ public class Generalization extends Relationship {
         super(childClass, parentClass);
     }
 
-    public String getChildClass() {
+    public String getChildClassName() {
         return getSourceClass();
     }
 
-    public String getParentClass() {
+    public String getParentClassName() {
         return getTargetClass();
     }
 
-    public void setChildClass(String childClass) {
+    public void setChildClassName(String childClass) {
         setSourceClass(childClass);
     }
 
-    public void setParentClass(String parentClass) {
+    public void setParentClassName(String parentClass) {
         setTargetClass(parentClass);
     }
 

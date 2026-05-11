@@ -62,11 +62,11 @@ public class AlunoTEService {
             .orElseThrow(() -> new RuntimeException("AlunoTE not found: " + id));
 
         // Update attributes from DTO
+        existing.setEmpresa(dto.getEmpresa());
+        existing.setEmail(dto.getEmail());
         existing.setEstado(dto.getEstado());
         existing.setNome(dto.getNome());
-        existing.setEmail(dto.getEmail());
         existing.setNumero(dto.getNumero());
-        existing.setEmpresa(dto.getEmpresa());
 
         AlunoTE saved = alunoTERepository.save(existing);
         return AlunoTEResponseDTO.fromEntity(saved);
@@ -89,7 +89,7 @@ public class AlunoTEService {
 
     // operations (TODO: implement)
 
-    public void comprovativo() {
+    public Boolean comprovativo() {
         throw new UnsupportedOperationException(
             "Method 'comprovativo' not yet implemented. "
         );

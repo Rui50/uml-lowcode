@@ -135,22 +135,4 @@ public class TurmaController {
 
 
     // Custom Operation Endpoints dos diagramas sequencia
-
-    @PostMapping("/{id}/transferirAluno")
-    public ResponseEntity<?> transferirAluno(
-            @PathVariable Long id,
-            @RequestParam Long alunoId,
-            @RequestParam Long destino) {
-
-        turmaService.transferirAluno(id, alunoId, destino);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/{id}/fecharTurma")
-    public ResponseEntity<?> fecharTurma(
-            @PathVariable Long id) {
-
-        turmaService.fecharTurma(id);
-        return ResponseEntity.ok().build();
-    }
 }

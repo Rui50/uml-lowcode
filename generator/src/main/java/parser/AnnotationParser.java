@@ -109,7 +109,7 @@ public class AnnotationParser {
                         "new HashMap<>(this." + attrName + ")",
                         "Map<" + assoc.getQualifierType() + ", " + otherClass + ">");
             }
-            if (mult.contains("*")) {
+            if (mult != null && mult.contains("*")) {
                 return new PreSnapshot(varName, "new ArrayList<>(this." + attrName + ")", "List<" + otherClass + ">");
             }
             return new PreSnapshot(varName, "this." + attrName, otherClass);

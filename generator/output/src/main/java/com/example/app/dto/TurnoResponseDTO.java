@@ -15,16 +15,16 @@ public class TurnoResponseDTO {
 
     private Long id;
 
-    private int numero;
     private Integer capacidade;
+    private int numero;
 
     private List<Long> alunosIds;
 
     public static TurnoResponseDTO fromEntity(Turno turno) {
         TurnoResponseDTO dto = new TurnoResponseDTO();
         dto.setId(turno.getId());
-        dto.setNumero(turno.getNumero());
         dto.setCapacidade(turno.getCapacidade());
+        dto.setNumero(turno.getNumero());
         dto.setAlunosIds(turno.getAlunos() != null
             ? turno.getAlunos().stream().map(Aluno::getId).collect(Collectors.toList())
             : new ArrayList<>());

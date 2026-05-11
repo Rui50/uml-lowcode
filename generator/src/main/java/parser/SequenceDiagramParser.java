@@ -1,11 +1,9 @@
 package parser;
 
 import java.util.*;
-import java.util.List;
 
 import com.sdmetrics.model.*;
 
-import com.sdmetrics.util.XMLParser;
 import model.sequence.*;
 
 public class SequenceDiagramParser {
@@ -27,8 +25,6 @@ public class SequenceDiagramParser {
         List<ModelElement> interactionElements = model.getAcceptedElements(
                 metaModel.getType("interaction")
         );
-
-        System.out.println("Found " + interactionElements.size() + " interactions in the model.");
 
         for (ModelElement element : interactionElements) {
             Interaction interaction = parseInteraction(element);
@@ -203,8 +199,6 @@ public class SequenceDiagramParser {
             if (vpType != null && !vpType.isEmpty()) {
                 lifeline.setType(vpType);
             }
-
-            //System.out.println("Parsed lifeline with represents: " + lifeline);
         }
         // fallback mas n deve sequer funcionar
         else {
@@ -227,8 +221,6 @@ public class SequenceDiagramParser {
                 }
             }
         }
-
-        //System.out.println("Parsed lifeline: " + lifeline);
 
         return lifeline;
     }
@@ -270,8 +262,6 @@ public class SequenceDiagramParser {
                 message.setTarget(findLifeline(interaction, receiverLifelineId));
             }
         }
-
-        //System.out.println("Parsed message: " + message);
 
         return message;
     }
@@ -337,10 +327,6 @@ public class SequenceDiagramParser {
             }
         }
 
-        /*System.out.println("Parsed message signature - Name: " + message.getName()
-                + ", Arguments: " + message.getArguments()
-                + ", Return Type: " + message.getReturnType()
-                + ", AssignVariable: " + message.getAssignVariable());*/
     }
 
     private void parseMessageSignature2(Message message, String rawName) {
@@ -381,10 +367,6 @@ public class SequenceDiagramParser {
             message.setName(rawName.trim());
         }
 
-        /*System.out.println("Parsed message signature2 - Name: " + message.getName()
-                + ", Arguments: " + message.getArguments()
-                + ", Return Type: " + message.getReturnType()
-                + ", AssignVariable: " + message.getAssignVariable());*/
     }
 
     /**

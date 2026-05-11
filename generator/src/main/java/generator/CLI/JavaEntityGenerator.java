@@ -8,7 +8,6 @@ import model.Enumeration;
 import model.sequence.Interaction;
 import model.Operation;
 import model.Parameter;
-import model.sequence.Interaction;
 import generator.OperationGenerator;
 import generator.GeneratorUtils;
 
@@ -16,18 +15,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class JavaEntityGenerator {
     private String baseOutputPath;
     private ValidationGenerator validationGenerator;
     private List<Interaction> interactions;
-    private List<Enumeration> enumerations;
-    // nomes das enumerações para saber quando um atributo é enum
-    private Set<String> enumNames = new HashSet<>();
 
     /**
      * Para ja
@@ -37,19 +30,9 @@ public class JavaEntityGenerator {
      *  - gera construtor vazio + construtor com todos os atributos, herdado via super
      *  - gera toString()
      */
-    public JavaEntityGenerator(String baseOutputPath, List<Interaction> interactions, List<Enumeration> enumerations) {
+    public JavaEntityGenerator(String baseOutputPath, List<Interaction> interactions) {
         this.baseOutputPath = baseOutputPath;
         this.interactions = interactions;
-        this.enumerations = enumerations;
-        if (enumerations != null) {
-            for (Enumeration e : enumerations) {
-                enumNames.add(e.getName());
-            }
-        }
-    }
-
-    public void generateEntities(List<Class> classes, List<Association> associations) throws IOException {
-        generateEntities(classes, associations, new ArrayList<>());
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
@@ -138,7 +121,7 @@ public class JavaEntityGenerator {
                 generateGetterSetter(writer, "Long", "id");
             }
             for (Attribute attr : cls.getAttributes()) {
-                if (attr.isDerived()) {
+                if (attr.hasDerive()) {
                     generateDerivedGetter(writer, attr);
                 } else {
                     generateGetterSetter(writer, attr.getType(), attr.getName());
@@ -165,7 +148,7 @@ public class JavaEntityGenerator {
     // para atributos de tipo enum, prefixa com o nome do enum
     private void generateAttributes(PrintWriter writer, Class cls) {
         for (Attribute attr : cls.getAttributes()) {
-            if (attr.isDerived()) continue;
+            if (attr.hasDerive()) continue;
             writer.println("    private " + attr.getType() + " " + attr.getName() + ";");
         }
         if (!cls.getAttributes().isEmpty()) writer.println();
@@ -178,7 +161,7 @@ public class JavaEntityGenerator {
         for (Association assoc : associations) {
             // source side
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
-                String fieldName = makeFieldName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
+                String fieldName = GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
                 if (!generatedFields.contains(fieldName)) {
                     generateRelationshipField(writer, assoc.getTargetClass(), fieldName, assoc.getTargetMultiplicity(), assoc);
@@ -187,7 +170,7 @@ public class JavaEntityGenerator {
             }
             // target side
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String fieldName = makeFieldName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
+                String fieldName = GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
                 if (!generatedFields.contains(fieldName)) {
                     generateRelationshipField(writer, assoc.getSourceClass(), fieldName, assoc.getSourceMultiplicity(), assoc);
@@ -205,11 +188,11 @@ public class JavaEntityGenerator {
         }
         // só os params do pai (sem derivados nem init)
         List<Attribute> paramParentAttrs = parentAttrs.stream()
-                .filter(a -> !a.isDerived() && !a.hasInit()).toList();
+                .filter(a -> !a.hasDerive() && !a.hasInit()).toList();
 
         // filtrar os nao derivados
         List<Attribute> ownAttrs = cls.getAttributes().stream()
-                .filter(a -> !a.isDerived()).toList();
+                .filter(a -> !a.hasDerive()).toList();
 
         // os que tem init e que nao
         List<Attribute> paramAttrs = ownAttrs.stream()
@@ -244,13 +227,6 @@ public class JavaEntityGenerator {
             }
             writer.println(");");
         }
-
-        // atributos próprios
-        /*for (Attribute attr : ownAttrs) {
-            if (attr.hasInit()) {
-                writer.println("        this." + attr.getName() + " = " + attr.getJavaInitExpression() + ";");
-            }
-        }*/
 
         for (Attribute attr : paramAttrs) {
             writer.println("        this." + attr.getName() + " = " + attr.getName() + ";");
@@ -296,7 +272,7 @@ public class JavaEntityGenerator {
 
         for (Association assoc : associations) {
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
-                String fieldName = makeFieldName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
+                String fieldName = GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
                 if (!generatedFields.contains(fieldName)) {
                     String type = getRelationshipType(assoc.getTargetClass(), assoc.getTargetMultiplicity(), assoc);
@@ -305,7 +281,7 @@ public class JavaEntityGenerator {
                 }
             }
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String fieldName = makeFieldName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
+                String fieldName = GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
                 if (!generatedFields.contains(fieldName)) {
                     String type = getRelationshipType(assoc.getSourceClass(), assoc.getSourceMultiplicity(), assoc);
@@ -358,7 +334,7 @@ public class JavaEntityGenerator {
             writer.println(" +");
             String capitalized = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
             String expr;
-            if (attr.isDerived()) {
+            if (attr.hasDerive()) {
                 expr = "get" + capitalized + "()";
             } else {
                 expr = attr.getName();
@@ -381,37 +357,23 @@ public class JavaEntityGenerator {
         if (assoc.hasQualifier()) {
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " + fieldName + " = new HashMap<>();");
-        } else if (isMultiple(multiplicity)) {
+        } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
             writer.println("    private List<" + otherClass + "> " + fieldName + " = new ArrayList<>();");
         } else {
             writer.println("    private " + otherClass + " " + fieldName + ";");
         }
     }
 
-    // nome do campo se existir senao cria com base na mult e noem classe
-    private String makeFieldName(String className, String role, String multiplicity) {
-        if (role != null && !role.trim().isEmpty()) {
-            return role.trim();
-        }
-        String base = className.substring(0, 1).toLowerCase() + className.substring(1);
-        return isMultiple(multiplicity) ? base + "s" : base;
-    }
-
     // se é map ou list
     private String getRelationshipType(String otherClass, String multiplicity, Association assoc) {
         if (assoc.hasQualifier()) {
             return "Map<" + assoc.getQualifierType() + ", " + otherClass + ">";
-        } else if (isMultiple(multiplicity)) {
+        } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
             return "List<" + otherClass + ">";
         } else {
             return otherClass;
         }
     }
 
-    private boolean isMultiple(String multiplicity) {
-        if (multiplicity == null) return false;
-        return multiplicity.contains("*") ||
-                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
-    }
 }
 

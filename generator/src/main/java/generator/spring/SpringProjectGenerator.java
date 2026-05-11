@@ -307,7 +307,7 @@ public class SpringProjectGenerator {
     /**
      * Deleta dir recursivamente, para ja apaga para ser mais facil seguir mudanças
      * */
-    private void deleteDirectory(File directory) throws IOException {
+    private void deleteDirectory(File directory) {
         File[] files = directory.listFiles();
         if (files != null) {
             for (File file : files) {

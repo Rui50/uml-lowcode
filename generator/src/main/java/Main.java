@@ -1,28 +1,5 @@
 import model.*;
-import model.Class;
-import model.annotations.Invariant;
-import model.sequence.*;
-import ocl.OCLTranslator;
-import parser.SequenceDiagramParser;
-import parser.SequenceDiagramParser2;
-import parser.XMIParser;
-import generator.plain.CodeGenerator;
-import generator.spring.SpringProjectGenerator;
-import generator.spring.SpringEntityGenerator;
-import generator.spring.SpringRepositoryGenerator;
-import generator.spring.SpringServiceGenerator;
-import generator.spring.SpringControllerGenerator;
-import generator.spring.SpringDTOGenerator;
-import generator.spring.SpringProjectSettings;
 
-import generator.CLI.JavaProjectGenerator;
-
-import java.util.List;
-
-import ocl.OCLLexer;
-import ocl.OCLParser;
-import ocl.OCLToJavaVisitor;
-import org.antlr.v4.runtime.*;
 import service.GenerationService;
 import service.ParsingService;
 

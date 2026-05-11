@@ -17,11 +17,9 @@ import model.Class;
 import model.Enumeration;
 import model.Operation;
 import model.Parameter;
-import model.Relationship;
 import model.Generalization;
 
 import model.annotations.Invariant;
-import model.annotations.Precondition;
 import model.sequence.Interaction;
 import ocl.OCLToJavaVisitor;
 import parser.VpParser;
@@ -80,7 +78,7 @@ public class XMIParser {
         System.out.println("Model loaded successfully!");
 
         System.out.println();
-        qualifiers = VpParser.parseQualifiers(xmiFile, model);
+        qualifiers = VpParser.parseQualifiers(xmiFile);
 
         // this was for testing, ocl came from notes in vp xmi
         //loadAnnotationsFromComments();
@@ -90,10 +88,10 @@ public class XMIParser {
                 model, metaModel, qualifiers,
                 invariantsCache, initsCache, preconditionsCache, derivesCache
         );
-        classes = cdp.getClasses();
+        classes = cdp.parseClasses();
         associations = cdp.parseAssociations();
         generalizations = cdp.parseGeneralizations();
-        enumerations = cdp.getEnumerations();
+        enumerations = cdp.parseEnumerations();
 
         fillGeneralizations(classes, generalizations);
 
@@ -111,8 +109,8 @@ public class XMIParser {
     // para preencher as heranças entre as classes
     private static void fillGeneralizations(List<Class> classes, List<Generalization> generalizations) {
         for (Generalization gen : generalizations) {
-            Class child = GeneratorUtils.findClassByName(classes, gen.getChildClass());
-            Class parent = GeneratorUtils.findClassByName(classes, gen.getParentClass());
+            Class child = GeneratorUtils.findClassByName(classes, gen.getChildClassName());
+            Class parent = GeneratorUtils.findClassByName(classes, gen.getParentClassName());
             if (child != null && parent != null) {
                 child.setParentClass(parent);
             }
@@ -206,18 +204,6 @@ public class XMIParser {
             }
 
         }
-    }
-
-    /**
-     * Auxiliares
-     */
-
-    public Model getModel() {
-        return model;
-    }
-
-    public MetaModel getMetaModel() {
-        return metaModel;
     }
 
 }

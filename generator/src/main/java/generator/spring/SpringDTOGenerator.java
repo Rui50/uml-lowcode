@@ -1,5 +1,6 @@
 package generator.spring;
 
+import generator.GeneratorUtils;
 import model.Association;
 import model.Attribute;
 import model.Class;
@@ -31,6 +32,7 @@ public class SpringDTOGenerator {
         String dtoDir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/dto";
         new File(dtoDir).mkdirs();
 
+        enumNames.clear();
         for (Enumeration e : enumerations) {
             enumNames.add(e.getName());
         }
@@ -57,8 +59,10 @@ public class SpringDTOGenerator {
             w.println("import lombok.*;");
             w.println("import " + basePackage + ".models." + className + ";");
 
+            List<Attribute> allAttrs = cls.getAllAttributes().stream().filter(a -> !a.hasDerive()).toList();
+
             // check if any attribute is an enum
-            for (Attribute attr : getAllAttributes(cls).stream().filter(a -> !a.isDerived()).toList()) {
+            for (Attribute attr : allAttrs) {
                 if (enumNames.contains(attr.getType())) {
                     w.println("import " + basePackage + ".models." + attr.getType() + ";");
                 }
@@ -72,8 +76,6 @@ public class SpringDTOGenerator {
             w.println("@Builder");
             w.println("public class " + className + "CreateDTO {");
             w.println();
-
-            List<Attribute> allAttrs = getAllAttributes(cls).stream().filter(a -> !a.isDerived()).toList();
             for (Attribute attr : allAttrs) {
                 w.println("    private " + attr.getType() + " " + attr.getName() + ";");
             }
@@ -120,7 +122,7 @@ public class SpringDTOGenerator {
 
             // import enums and related entity classes for fromEntity
             Set<String> extraImports = new LinkedHashSet<>();
-            for (Attribute attr : getAllAttributes(cls)) {
+            for (Attribute attr : cls.getAllAttributes()) {
                 if (enumNames.contains(attr.getType())) {
                     extraImports.add(attr.getType());
                 }
@@ -153,7 +155,7 @@ public class SpringDTOGenerator {
             w.println();
 
             // attributes
-            List<Attribute> allAttrs = getAllAttributes(cls);
+            List<Attribute> allAttrs = cls.getAllAttributes();
             for (Attribute attr : allAttrs) {
                 w.println("    private " + attr.getType() + " " + attr.getName() + ";");
             }
@@ -209,9 +211,9 @@ public class SpringDTOGenerator {
 
     private void generateRelationshipIdField(PrintWriter w, String otherClass, String role,
                                               String multiplicity, Association assoc) {
-        String fieldName = makeFieldName(otherClass, role, multiplicity);
+        String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, multiplicity);
 
-        if (checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
+        if (GeneratorUtils.checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
             // collection -> List<Long> of IDs
             w.println("    private List<Long> " + fieldName + "Ids;");
         } else {
@@ -222,10 +224,10 @@ public class SpringDTOGenerator {
 
     private void generateRelationshipIdMapping(PrintWriter w, String varName, String otherClass,
                                                 String role, String multiplicity, Association assoc) {
-        String fieldName = makeFieldName(otherClass, role, multiplicity);
+        String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, multiplicity);
         String capitalizedField = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
 
-        if (checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
+        if (GeneratorUtils.checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
             if (assoc.hasQualifier()) {
                 w.println("        dto.set" + capitalizedField + "Ids(" + varName + ".get" + capitalizedField + "() != null");
                 w.println("            ? " + varName + ".get" + capitalizedField + "().values().stream().map(" + otherClass + "::getId).collect(Collectors.toList())");
@@ -254,26 +256,4 @@ public class SpringDTOGenerator {
         }
     }
 
-    private List<Attribute> getAllAttributes(Class cls) {
-        List<Attribute> all = new ArrayList<>();
-        if (cls.getParentClass() != null) {
-            all.addAll(cls.getParentClass().getAttributes());
-        }
-        all.addAll(cls.getAttributes());
-        return all;
-    }
-
-    private String makeFieldName(String className, String role, String multiplicity) {
-        if (role != null && !role.trim().isEmpty()) {
-            return role.trim();
-        }
-        String base = className.substring(0, 1).toLowerCase() + className.substring(1);
-        return checkMultiplicity(multiplicity) ? base + "s" : base;
-    }
-
-    private boolean checkMultiplicity(String multiplicity) {
-        if (multiplicity == null) return false;
-        return multiplicity.contains("*") ||
-                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
-    }
 }

@@ -43,7 +43,7 @@ public class ClassDiagramParser {
     }
 
     // extrair todos as classes do modelo
-    public List<Class> getClasses() {
+    public List<Class> parseClasses() {
         List<Class> classes = new ArrayList<>();
 
         // obtem todos os elementos do tipo class do modelo do SDMetrics
@@ -102,7 +102,8 @@ public class ClassDiagramParser {
         if (invariants != null) {
             for (Invariant invariant : invariants) {
                 cl.addInvariant(invariant);
-            }}
+            }
+        }
 
         // aplicar inits aos atributos
         List<String[]> inits = initsCache.get(classId);
@@ -285,12 +286,8 @@ public class ClassDiagramParser {
                 ModelElement targetType = (ModelElement) targetEnd.getRefAttribute("propertytype");
 
                 // obter qualifiers de cada lado da associação, se existirem
-                VpParser.Qualifier sourceQualifier = qualifiers.get(sourceEnd.getXMIID());
-                VpParser.Qualifier targetQualifier = qualifiers.get(targetEnd.getXMIID());
-
-                // para obter os qualifiers do parsing Manual do vp
-                String sourceEndId = sourceEnd.getXMIID();
-                String targetEndId = targetEnd.getXMIID();
+                Qualifier sourceQualifier = qualifiers.get(sourceEnd.getXMIID());
+                Qualifier targetQualifier = qualifiers.get(targetEnd.getXMIID());
 
                 if (sourceType != null && targetType != null) {
                     Association association = new Association();
@@ -351,7 +348,7 @@ public class ClassDiagramParser {
     }
 
     // extrair enumerações do modelo
-    public List<Enumeration> getEnumerations() {
+    public List<Enumeration> parseEnumerations() {
         List<Enumeration> enumerations = new ArrayList<>();
 
         List<ModelElement> enumElements = model.getAcceptedElements(metaModel.getType("enumeration"));

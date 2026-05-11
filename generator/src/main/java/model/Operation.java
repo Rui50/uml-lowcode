@@ -31,8 +31,6 @@ public class Operation {
         this.returnType = "void";
         this.visibility = "";
         this.parameters = new ArrayList<>();
-        this.preconditions = new ArrayList<>();
-        this.postconditions = new ArrayList<>();
     }
 
     public Operation(String id, String name, String returnType, String visibility) {
@@ -41,8 +39,6 @@ public class Operation {
         this.returnType = returnType;
         this.visibility = visibility;
         this.parameters = new ArrayList<>();
-        this.preconditions = new ArrayList<>();
-        this.postconditions = new ArrayList<>();
     }
 
     public String getId() {

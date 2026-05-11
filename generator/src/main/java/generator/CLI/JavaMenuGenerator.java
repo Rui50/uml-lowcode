@@ -7,6 +7,7 @@ import model.Enumeration;
 import model.Operation;
 import model.Parameter;
 import model.sequence.*;
+import generator.GeneratorUtils;
 import generator.OperationGenerator;
 
 import java.io.File;
@@ -37,11 +38,8 @@ public class JavaMenuGenerator {
     /**
      * entrada: gera todos os menus (um por entidade + MainMenu)
      */
-    public void generateMenus(List<Class> classes, List<Association> associations) throws IOException {
-        generateMenus(classes, associations, new ArrayList<>());
-    }
-
     public void generateMenus(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
+        enumNames.clear();
         for (Enumeration e : enumerations) {
             enumNames.add(e.getName());
         }
@@ -153,9 +151,8 @@ public class JavaMenuGenerator {
         for (Association assoc : associations) {
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
                 String other = assoc.getTargetClass();
-                String fieldName = makeFieldName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
-                if (isMultiple(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
+                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
                     // OneToMany, ManyToMany ou Map: Add e Remove
                     options.add(new String[]{"Add " + other, "add" + other});
                     options.add(new String[]{"Remove " + other, "remove" + other});
@@ -168,9 +165,8 @@ public class JavaMenuGenerator {
             }
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
                 String other = assoc.getSourceClass();
-                String fieldName = makeFieldName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
-                if (isMultiple(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
+                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
                     options.add(new String[]{"Add " + other, "add" + other});
                     options.add(new String[]{"Remove " + other, "remove" + other});
                 }
@@ -223,11 +219,11 @@ public class JavaMenuGenerator {
         List<Attribute> allAttrs = new ArrayList<>();
         if (cls.getParentClass() != null) {
             allAttrs.addAll(cls.getParentClass().getAttributes().stream()
-                    .filter(a -> !a.isDerived() && !a.hasInit())
+                    .filter(a -> !a.hasDerive() && !a.hasInit())
                     .collect(Collectors.toList()));
         }
         allAttrs.addAll(cls.getAttributes().stream()
-                .filter(a -> !a.isDerived() && !a.hasInit())
+                .filter(a -> !a.hasDerive() && !a.hasInit())
                 .collect(Collectors.toList()));
 
         // ler cada atributo
@@ -316,14 +312,12 @@ public class JavaMenuGenerator {
             }
             if (other == null) continue;
 
-            String fieldName = makeFieldName(other, role, mult);
+            String fieldName = GeneratorUtils.makeAttributeName(other, role, mult);
             String cap = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
             String getter = "entity.get" + cap + "()";
 
             if (assoc.hasQualifier()) {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ".values());");
-            } else if (isMultiple(mult)) {
-                w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ");");
             } else {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ");");
             }
@@ -352,11 +346,11 @@ public class JavaMenuGenerator {
         List<Attribute> allAttrs = new ArrayList<>();
         if (cls.getParentClass() != null) {
             allAttrs.addAll(cls.getParentClass().getAttributes().stream()
-                    .filter(a -> !a.isDerived() && !a.hasInit())
+                    .filter(a -> !a.hasDerive() && !a.hasInit())
                     .collect(Collectors.toList()));
         }
         allAttrs.addAll(cls.getAttributes().stream()
-                .filter(a -> !a.isDerived() && !a.hasInit())
+                .filter(a -> !a.hasDerive() && !a.hasInit())
                 .collect(Collectors.toList()));
         for (Attribute attr : allAttrs) {
             generateUpdateAttribute(w, attr);
@@ -408,9 +402,9 @@ public class JavaMenuGenerator {
         for (Association assoc : associations) {
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
                 String other = assoc.getTargetClass();
-                String fieldName = makeFieldName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
+                String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
-                if (isMultiple(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
+                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
                     generateAddMethod(w, cls.getName(), other, fieldName, assoc);
                     generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc);
                 }
@@ -421,9 +415,9 @@ public class JavaMenuGenerator {
             }
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
                 String other = assoc.getSourceClass();
-                String fieldName = makeFieldName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
+                String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
-                if (isMultiple(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
+                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
                     generateAddMethod(w, cls.getName(), other, fieldName, assoc);
                     generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc);
                 }
@@ -772,17 +766,4 @@ public class JavaMenuGenerator {
         return className.substring(0, 1).toLowerCase() + className.substring(1) + "Repository";
     }
 
-    private String makeFieldName(String className, String role, String multiplicity) {
-        if (role != null && !role.trim().isEmpty()) {
-            return role.trim();
-        }
-        String base = className.substring(0, 1).toLowerCase() + className.substring(1);
-        return isMultiple(multiplicity) ? base + "s" : base;
-    }
-
-    private boolean isMultiple(String multiplicity) {
-        if (multiplicity == null) return false;
-        return multiplicity.contains("*") ||
-                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
-    }
 }

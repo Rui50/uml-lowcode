@@ -23,16 +23,15 @@ public class Aluno{
     private Long id;
 
     // attributes
+    @Column(name = "email")
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado")
-    @Builder.Default
-    private EstadoAluno estado = EstadoAluno.ATIVO;
+    private EstadoAluno estado;
 
     @Column(name = "nome")
     private String nome;
-
-    @Column(name = "email")
-    private String email;
 
     @Column(name = "numero")
     private int numero;

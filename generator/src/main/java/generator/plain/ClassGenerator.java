@@ -35,17 +35,9 @@ public class ClassGenerator {
     private ValidationGenerator validationGenerator;
     private List<Interaction> interactions;
 
-    public ClassGenerator(String outputDirectory) {
-        this.outputDirectory = outputDirectory;
-    }
-
     public ClassGenerator(String outputDirectory, List<Interaction> interactions) {
         this.outputDirectory = outputDirectory;
         this.interactions = interactions;
-    }
-
-    public void generateClasses(List<Class> classes, List<Association> associations) throws IOException {
-        generateClasses(classes, associations, new ArrayList<>());
     }
 
     public void generateClasses(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
@@ -137,7 +129,7 @@ public class ClassGenerator {
         writer.println("    // Attributes");
 
         for (Attribute attribute : cls.getAttributes()){
-            if (attribute.isDerived()) continue;
+            if (attribute.hasDerive()) continue;
             writer.println("    " + attribute.getVisibility() + " " + attribute.getType() + " " + attribute.getName() + ";");
         }
     }
@@ -160,14 +152,14 @@ public class ClassGenerator {
                 String multiplicity = association.getTargetMultiplicity();
                 String roleName = association.getTargetRole();
                 // get the attribute name based on the target class and multiplicity
-                String attributeName = generateAssociationAttributeName(targetClass, multiplicity, roleName);
+                String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
 
                 if (!generatedAttributes.contains(attributeName)){
                     if (association.hasQualifier() ){
                         String keyType = association.getQualifierType();
                         writer.println("   " + "private Map<" + keyType + ", " + targetClass + "> " + attributeName + ";");
                     }
-                    else if (checkMultiplicity(multiplicity)){
+                    else if (GeneratorUtils.checkMultiplicity(multiplicity)){
                         writer.println("    " + "private List<" + targetClass + "> " + attributeName + ";");
                     } else {
                         writer.println("    " + "private " + targetClass + " " + attributeName + ";");
@@ -181,14 +173,14 @@ public class ClassGenerator {
                 String sourceClass = association.getSourceClass();
                 String multiplicity = association.getSourceMultiplicity();
                 String roleName = association.getSourceRole();
-                String attributeName = generateAssociationAttributeName(sourceClass, multiplicity, roleName);
+                String attributeName = GeneratorUtils.makeAttributeName(sourceClass, roleName, multiplicity);
 
                 if (!generatedAttributes.contains(attributeName)){
                     if (association.hasQualifier() ){
                         String keyType = association.getQualifierType();
                         writer.println("   " + "private Map<" + keyType + ", " + sourceClass + "> " + attributeName + ";");
                     }
-                    else if (checkMultiplicity(multiplicity)){
+                    else if (GeneratorUtils.checkMultiplicity(multiplicity)){
                         writer.println("    " + "private List<" + sourceClass + "> " + attributeName + ";");
                     } else {
                         writer.println("    " + "private " + sourceClass + " " + attributeName + ";");
@@ -217,11 +209,11 @@ public class ClassGenerator {
                 String multiplicity = association.getTargetMultiplicity();
                 String targetClass = association.getTargetClass();
                 String roleName = association.getTargetRole();
-                String attributeName = generateAssociationAttributeName(targetClass, multiplicity, roleName);
+                String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
 
                 if (association.hasQualifier()) {
                     writer.println("        this." + attributeName + " = new HashMap<>();");
-                } else if (checkMultiplicity(multiplicity)) {
+                } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
                     writer.println("        this." + attributeName + " = new ArrayList<>();");
                 }
             }
@@ -231,11 +223,11 @@ public class ClassGenerator {
                 String multiplicity = association.getSourceMultiplicity();
                 String sourceClass = association.getSourceClass();
                 String roleName = association.getSourceRole();
-                String attributeName = generateAssociationAttributeName(sourceClass, multiplicity, roleName);
+                String attributeName = GeneratorUtils.makeAttributeName(sourceClass, roleName, multiplicity);
 
                 if (association.hasQualifier()) {
                     writer.println("        this." + attributeName + " = new HashMap<>();");
-                } else if (checkMultiplicity(multiplicity)) {
+                } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
                     writer.println("        this." + attributeName + " = new ArrayList<>();");
                 }
             }
@@ -243,7 +235,7 @@ public class ClassGenerator {
 
         // attribute inits (OCL)
         for (Attribute attribute : cls.getAttributes()) {
-            if (attribute.isDerived()) continue;
+            if (attribute.hasDerive()) continue;
             if (attribute.hasInit()) {
                 writer.println("        this." + attribute.getName() + " = " + attribute.getJavaInitExpression() + ";");
             }
@@ -264,7 +256,7 @@ public class ClassGenerator {
             String type = attribute.getType();
             String capitalizedName = name.substring(0, 1).toUpperCase() + name.substring(1);
 
-            if (attribute.isDerived()){
+            if (attribute.hasDerive()){
                 writer.println();
                 writer.println("    public " + type + " get" + capitalizedName + "() {");
                 writer.println("        return " + attribute.getJavaDeriveExpression() + ";");
@@ -301,14 +293,13 @@ public class ClassGenerator {
                 String targetClass = association.getTargetClass();
                 String multiplicity = association.getTargetMultiplicity();
                 String roleName = association.getTargetRole();
-                String attributeName = generateAssociationAttributeName(targetClass, multiplicity, roleName);
+                String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
 
                 if (association.hasQualifier()){
                     String keyType = association.getQualifierType();
-                    String qualifierName = association.getQualifierName();
                     generateMapAssociationMethods(writer, targetClass, attributeName, keyType);
                 }
-                else if(checkMultiplicity(multiplicity)) {
+                else if(GeneratorUtils.checkMultiplicity(multiplicity)) {
                     generateListAssociationMethods(writer, targetClass, attributeName);
                 } else {
                     generateSingleAssociationMethods(writer, targetClass, attributeName);
@@ -319,14 +310,13 @@ public class ClassGenerator {
                 String sourceClass = association.getSourceClass();
                 String multiplicity = association.getSourceMultiplicity();
                 String roleName = association.getSourceRole();
-                String attributeName = generateAssociationAttributeName(sourceClass, multiplicity, roleName);
+                String attributeName = GeneratorUtils.makeAttributeName(sourceClass, roleName, multiplicity);
 
                 if (association.hasQualifier()){
                     String keyType = association.getQualifierType();
-                    String qualifierName = association.getQualifierName();
                     generateMapAssociationMethods(writer, sourceClass, attributeName, keyType);
                 }
-                else if (checkMultiplicity(multiplicity)) {
+                else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
                     generateListAssociationMethods(writer, sourceClass, attributeName);
                 } else {
                     generateSingleAssociationMethods(writer, sourceClass, attributeName);
@@ -405,23 +395,6 @@ public class ClassGenerator {
         wrriter.println("    public void set" + className + "(" + className + " " + attributeName + ") {");
         wrriter.println("        this." + attributeName + " = " + attributeName + ";");
         wrriter.println("    }");
-    }
-
-    // gera o nome do atributo, se tiver role usa isso senao cria um com base no nome da var
-    private String generateAssociationAttributeName(String targetClass, String multiplicity, String roleName) {
-        if (roleName != null && !roleName.trim().isEmpty()) {
-            return roleName.trim(); // role is field name
-        }
-
-        String base = targetClass.substring(0, 1).toLowerCase() + targetClass.substring(1);
-        return checkMultiplicity(multiplicity) ? base + "s" : base;
-    }
-
-    // verifica se a multiplicidade indica coleção
-    private boolean checkMultiplicity(String multiplicity) {
-        if (multiplicity == null) return false;
-        return multiplicity.contains("*") ||
-                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
     }
 
     /**

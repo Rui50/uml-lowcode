@@ -8,7 +8,6 @@ import model.sequence.Interaction;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -46,7 +45,7 @@ public class JavaProjectGenerator {
         generateInputUtils();
 
         // entidades
-        JavaEntityGenerator entityGenerator = new JavaEntityGenerator(outputDirectory, interactions, enumerations);
+        JavaEntityGenerator entityGenerator = new JavaEntityGenerator(outputDirectory, interactions);
         entityGenerator.generateEntities(classes, associations, enumerations);
 
         // repositórios
@@ -101,7 +100,7 @@ public class JavaProjectGenerator {
             w.println("            scanner.next();");
             w.println("        }");
             w.println("        int value = scanner.nextInt();");
-             w.println("        scanner.nextLine();");
+            w.println("        scanner.nextLine();");
             w.println("        return value;");
             w.println("    }");
             w.println();

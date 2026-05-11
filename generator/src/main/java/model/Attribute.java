@@ -76,7 +76,7 @@ public class Attribute {
     public String getJavaDeriveExpression() { return javaDeriveExpression; }
     public void setJavaDeriveExpression(String javaDeriveExpression) { this.javaDeriveExpression = javaDeriveExpression; }
 
-    public boolean isDerived() { return deriveExpression != null; }
+    public boolean hasDerive() { return deriveExpression != null; }
 
     @Override
     public String toString() {

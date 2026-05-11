@@ -4,11 +4,8 @@ import model.Class;
 import model.annotations.Invariant;
 
 import java.io.PrintWriter;
-import java.util.List;
 
 public class ValidationGenerator {
-
-    public ValidationGenerator() {}
 
     /**
      * gera função validate() para uma classe
@@ -66,41 +63,4 @@ public class ValidationGenerator {
         writer.println();
     }
 
-    /**
-     * validate() com uma lista especifica de invs
-     * para depois na ferramenta poder selecionar quais
-     */
-    public void generateValidateMethod(PrintWriter writer, Class cls, List<Invariant> invariants) {
-        if (invariants.isEmpty()) {
-            return;
-        }
-
-        writer.println("    // Validation (para ja so invariantes OCL simples");
-
-        writer.println("    /**");
-        writer.println("     * Validate entity OCL");
-        writer.println("     * @return list of validation errors (empty if valid)");
-        writer.println("     */");
-        writer.println("    public List<String> validate() {");
-        writer.println("       List<String> errors = new java.util.ArrayList<>();");
-        writer.println();
-
-        for (Invariant inv : invariants) {
-            // fixMapAcess para casos de Maps
-            String javaExpression = inv.getJavaExpression();
-            String errorMessage = (inv.getMessage() != null && !inv.getMessage().isEmpty())
-                    ? inv.getMessage()
-                    : "Invariant '" + inv.getName() + "' violated.";
-
-            writer.println("        // Invariant: " + inv.getName());
-            writer.println("        if (!(" + javaExpression + ")) {");
-            writer.println("            errors.add(\"" + errorMessage + "\");");
-            writer.println("        }");
-            writer.println();
-        }
-
-        writer.println("        return errors;");
-        writer.println("    }");
-        writer.println();
-    }
 }

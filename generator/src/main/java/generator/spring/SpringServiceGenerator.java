@@ -7,11 +7,9 @@ import model.annotations.Postcondition;
 import model.annotations.PreSnapshot;
 import model.annotations.Precondition;
 import model.sequence.*;
-import org.w3c.dom.Attr;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.Array;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,8 +25,8 @@ import java.util.stream.Collectors;
  *   Invariantes OCL são validados antes de cada save
  */
 public class SpringServiceGenerator {
-    public String baseOutputPath;
-    public String basePackage;
+    private String baseOutputPath;
+    private String basePackage;
 
     // vars ja declaradads pela preconditions, para evitar redeclaração no corpo do método
     private Set<String> preDeclaredVars = new HashSet<>();
@@ -88,7 +86,7 @@ public class SpringServiceGenerator {
             //generateQueryMethods(writer, cls);
 
             // operações do diagrama de classe (TODO: implementar)
-            generateCustomOperations(writer, cls, interactions, classes);
+            generateCustomOperations(writer, cls);
 
             writer.println("}");
         }
@@ -117,8 +115,8 @@ public class SpringServiceGenerator {
         writer.println();
 
         // importar os modelos das entidades se necessário
-        List<String> modelsToImport = getModelsToImportFromOperations(cls, classes);
-        List<String> modelsToImportFromAssociations = getModelsToImportFromAssociations(cls, associations);
+        List<String> modelsToImport = GeneratorUtils.getModelsToImportFromOperations(cls, classes);
+        List<String> modelsToImportFromAssociations = GeneratorUtils.getModelsToImportFromAssociations(cls, associations);
         Set<String> allModelsToImport = new HashSet<>();
         allModelsToImport.addAll(modelsToImport);
         allModelsToImport.addAll(modelsToImportFromAssociations);
@@ -139,59 +137,6 @@ public class SpringServiceGenerator {
             }
         }
     }
-
-    // pega nas entidades referencias nos parametros e return de operações
-    private List<String> getModelsToImportFromOperations(Class cls, List<Class> classes) {
-        Set<String> entityNames = new HashSet<>();
-
-        for (Class c : classes) {
-            entityNames.add(c.getName());
-        }
-
-        Set<String> entitiesToImport = new HashSet<>();
-
-        // nas operações, verificamos returns e params
-        for (Operation op : cls.getOperations()) {
-            for (Parameter param : op.getParameters()) {
-                String baseType = extractBaseType(param.getType());
-
-                if (baseType != null && entityNames.contains(baseType) && !baseType.equals(cls.getName())) {
-                    entitiesToImport.add(baseType);
-                }
-            }
-
-            String returnType = extractBaseType(op.getReturnType());
-            if (returnType != null && entityNames.contains(returnType) && !returnType.equals(cls.getName())) {
-                entitiesToImport.add(returnType);
-            }
-        }
-
-        return new ArrayList<>(entitiesToImport);
-    }
-
-    // pega nas entidades referenciadas nas assocs navegaveis
-    private List<String> getModelsToImportFromAssociations(Class cls, List<Association> associations) {
-        Set<String> entitiesToImport = new HashSet<>();
-
-        for (Association assoc : associations) {
-            if (assoc.getSourceClass().equals(cls.getName())  && assoc.isTargetNavigable()) {
-                String relatedClass = assoc.getTargetClass();
-                if (!relatedClass.equals(cls.getName())) {
-                    entitiesToImport.add(relatedClass);
-                }
-            }
-
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String relatedClass = assoc.getSourceClass();
-                if (!relatedClass.equals(cls.getName())) {
-                    entitiesToImport.add(relatedClass);
-                }
-            }
-        }
-
-        return new ArrayList<>(entitiesToImport);
-    }
-
 
     // dependencias de repositórios: o próprio + os das entidades
     private void generateDependencies(PrintWriter writer, String className, List<Association> associations, List<Class> classes) {
@@ -300,8 +245,8 @@ public class SpringServiceGenerator {
             // multiplicidades do ponto de vista desta classe
             String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
             String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
-            boolean thisMultiple = checkMultiplicity(thisMul);
-            boolean otherMultiple = checkMultiplicity(otherMul);
+            boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
+            boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);
 
             // navegabilidade: esta classe precisa de ter navegabilidade para o outro lado
             boolean navigableToOther = isSource ? assoc.isTargetNavigable() : assoc.isSourceNavigable();
@@ -319,7 +264,7 @@ public class SpringServiceGenerator {
                     hasRelationships = true;
                 }
 
-                String fieldName = makeAttributeName(otherClass,
+                String fieldName = GeneratorUtils.makeAttributeName(otherClass,
                         isSource ? assoc.getTargetRole() : assoc.getSourceRole(), "0..1");
 
                 generateAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource);
@@ -334,7 +279,7 @@ public class SpringServiceGenerator {
                     hasRelationships = true;
                 }
 
-                String fieldName = makeAttributeName(otherClass, assoc.getTargetRole(), otherMul);
+                String fieldName = GeneratorUtils.makeAttributeName(otherClass, assoc.getTargetRole(), otherMul);
 
                 generateManyToManyAddMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional);
                 generateManyToManyRemoveMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional);
@@ -349,7 +294,7 @@ public class SpringServiceGenerator {
                     hasRelationships = true;
                 }
 
-                String fieldName = makeAttributeName(otherClass,
+                String fieldName = GeneratorUtils.makeAttributeName(otherClass,
                         isSource ? assoc.getTargetRole() : assoc.getSourceRole(), otherMul);
 
                 generateOneToManyUniAddMethod(writer, cls, otherClass, fieldName, assoc);
@@ -394,7 +339,7 @@ public class SpringServiceGenerator {
         if (isBidirectional) {
             // determinar o nome do campo coleção no outro lado
             String otherSideMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-            String otherSideField = makeAttributeName(className,
+            String otherSideField = GeneratorUtils.makeAttributeName(className,
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
             String capitalizedOtherField = GeneratorUtils.capitalizeFirst(otherSideField);
 
@@ -446,7 +391,7 @@ public class SpringServiceGenerator {
 
         if (isBidirectional) {
             String otherSideMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-            String otherSideField = makeAttributeName(className,
+            String otherSideField = GeneratorUtils.makeAttributeName(className,
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
             String capitalizedOtherField = GeneratorUtils.capitalizeFirst(otherSideField);
 
@@ -507,7 +452,7 @@ public class SpringServiceGenerator {
                     otherVar + "." + qualifierGetter + "(), " + otherVar + ");");
             if (isBidirectional) {
                 String inverseMul = assoc.getSourceMultiplicity();
-                String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                String inverseField = GeneratorUtils.makeAttributeName(className, assoc.getSourceRole(), inverseMul);
                 writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().put(" +
                         varName + "." + qualifierGetter + "(), " + varName + ");");
             }
@@ -517,7 +462,7 @@ public class SpringServiceGenerator {
             writer.println("            " + varName + ".get" + capitalizedField + "().add(" + otherVar + ");");
             if (isBidirectional) {
                 String inverseMul = assoc.getSourceMultiplicity();
-                String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                String inverseField = GeneratorUtils.makeAttributeName(className, assoc.getSourceRole(), inverseMul);
                 writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().add(" + varName + ");");
             }
             writer.println("        }");
@@ -568,7 +513,7 @@ public class SpringServiceGenerator {
                     otherVar + "." + qualifierGetter + "());");
             if (isBidirectional) {
                 String inverseMul = assoc.getSourceMultiplicity();
-                String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                String inverseField = GeneratorUtils.makeAttributeName(className, assoc.getSourceRole(), inverseMul);
                 writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().remove(" +
                         varName + "." + qualifierGetter + "());");
             }
@@ -578,7 +523,7 @@ public class SpringServiceGenerator {
             writer.println("            " + varName + ".get" + capitalizedField + "().remove(" + otherVar + ");");
             if (isBidirectional) {
                 String inverseMul = assoc.getSourceMultiplicity();
-                String inverseField = makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                String inverseField = GeneratorUtils.makeAttributeName(className, assoc.getSourceRole(), inverseMul);
                 writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().remove(" + varName + ");");
             }
             writer.println("        }");
@@ -771,7 +716,8 @@ public class SpringServiceGenerator {
         writer.println();
 
         // update all attributes from DTO
-        List<Attribute> allAttrs = getAllAttributes(cls);
+        List<Attribute> allAttrs = cls.getAllAttributes().stream()
+                .filter(a -> !a.hasDerive()).toList();
         if (!allAttrs.isEmpty()) {
             writer.println("        // Update attributes from DTO");
             for (Attribute attr : allAttrs) {
@@ -792,16 +738,6 @@ public class SpringServiceGenerator {
         writer.println();
     }
 
-    // atributos proprios + parent - derivados
-    private List<Attribute> getAllAttributes(Class cls) {
-        List<Attribute> all = new ArrayList<>();
-        if (cls.getParentClass() != null) {
-            cls.getParentClass().getAttributes().stream().filter(a -> !a.isDerived()).forEach(all::add);
-        }
-        cls.getAttributes().stream().filter(a -> !a.isDerived()).forEach(all::add);
-        return all;
-    }
-
     // gera a arte de validação de invariantes OCL antes de guardar a entidade, se existirem
     private void generateValidationBeforeSave(PrintWriter writer, Class cls, String varName) {
         if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
@@ -816,81 +752,11 @@ public class SpringServiceGenerator {
         }
     }
 
-    // extrair o tipo "base" de retorno e parametros
-    // simples, nao funciona com tipoes nested, ter de ver com recursividade
-    private String extractBaseType(String type) {
-        if (type == null) return null;
-
-        type = GeneratorUtils.removePackageNames(type.trim());
-
-        if (type.contains("<")) {
-            int start = type.indexOf("<") + 1;
-            int end = type.lastIndexOf(">");
-
-            if (start < end) {
-                String generic = type.substring(start, end).trim();
-
-                // Map<Integer, Turma> -> Turma
-                if (generic.contains(",")) {
-                    String[] parts = generic.split(",");
-                    return extractBaseType(parts[parts.length - 1].trim());
-                }
-
-                // List<Aluno> -> Aluno
-                return extractBaseType(generic);
-            }
-        }
-
-        return type;
-    }
-
-
-    private String getOtherSideAttributeName(Association assoc, boolean isSource, String className) {
-        if (isSource) {
-            String sourceRole = assoc.getSourceRole();
-            if (sourceRole != null && !sourceRole.trim().isEmpty()) {
-                return sourceRole.trim();
-            }
-            return GeneratorUtils.lowercaseFirst(className);
-        } else {
-            String targetClass = assoc.getTargetClass();
-            String targetRole = assoc.getTargetRole();
-            String targetMult = assoc.getTargetMultiplicity();
-
-            return makeAttributeName(targetClass, targetRole, targetMult);
-        }
-    }
-
-    private String makeAttributeName(String className, String role, String multiplicity) {
-        if (role != null && !role.trim().isEmpty()) {
-            return role.trim();
-        }
-
-        String base = className.substring(0, 1).toLowerCase() + className.substring(1);
-        return checkMultiplicity(multiplicity) ? base + "s" : base;
-    }
-
-    private boolean isOtherSideCollection(Association assoc, boolean isSource) {
-        String inverseMult;
-        if (isSource){
-            inverseMult = assoc.getSourceMultiplicity();
-        } else {
-            inverseMult = assoc.getTargetMultiplicity();
-        }
-        return checkMultiplicity(inverseMult);
-    }
-
-    private boolean checkMultiplicity(String multiplicity) {
-        if (multiplicity == null) return false;
-        return multiplicity.contains("*") ||
-                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
-    }
-
     /**
      * Diagramas de sequencia
      * */
 
-    private void generateCustomOperations(PrintWriter writer, Class cls, List<Interaction> interactions, List<Class> allClasses) {
+    private void generateCustomOperations(PrintWriter writer, Class cls) {
         if (cls.getOperations().isEmpty()) {
             return;
         }
@@ -934,22 +800,6 @@ public class SpringServiceGenerator {
         writer.println(") {");
 
         preDeclaredVars.clear();
-
-        // if there are preconditions, preload the entity so `this.X` rewrites have something to reference
-        /*String selfVar = GeneratorUtils.lowercaseFirst(className);
-        if (!op.getPreconditions().isEmpty()) {
-            String repoName = selfVar + "Repository";
-            writer.println("        " + className + " " + selfVar + " = " + repoName + ".findById(id)");
-            writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found\"));");
-            preDeclaredVars.add(selfVar);
-
-            for (Precondition pre : op.getPreconditions()) {
-                String javaExpr = pre.getJavaExpression(selfVar);
-                writer.println("        if (!(" + javaExpr + ")) {");
-                writer.println("            throw new IllegalStateException(\"" + pre.getMessage() + "\");");
-                writer.println("        }");
-            }
-        }*/
 
         // preload entity if pre/postcond reference
         String selfVar = GeneratorUtils.lowercaseFirst(className);

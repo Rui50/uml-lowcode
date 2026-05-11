@@ -52,14 +52,6 @@ public class TurnoService {
     public TurnoResponseDTO create(TurnoCreateDTO dto) {
         Turno turno = dto.toEntity();
 
-        // Validate OCL invariants
-        List<String> errors = turno.validate();
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Validation failed: " + String.join(", ", errors)
-            );
-        }
-
         Turno saved = turnoRepository.save(turno);
         return TurnoResponseDTO.fromEntity(saved);
     }
@@ -74,16 +66,8 @@ public class TurnoService {
             .orElseThrow(() -> new RuntimeException("Turno not found: " + id));
 
         // Update attributes from DTO
-        existing.setNumero(dto.getNumero());
         existing.setCapacidade(dto.getCapacidade());
-
-        // Validate OCL invariants
-        List<String> errors = existing.validate();
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Validation failed: " + String.join(", ", errors)
-            );
-        }
+        existing.setNumero(dto.getNumero());
 
         Turno saved = turnoRepository.save(existing);
         return TurnoResponseDTO.fromEntity(saved);
@@ -106,7 +90,7 @@ public class TurnoService {
 
     // operations (TODO: implement)
 
-    public void temVaga() {
+    public Boolean temVaga() {
         throw new UnsupportedOperationException(
             "Method 'temVaga' not yet implemented. "
         );

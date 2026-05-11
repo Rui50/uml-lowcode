@@ -460,11 +460,15 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         String first = ctx.getChild(0).getText();
         String javaCollection;
 
+        if (first.equals("Map{")) {
+            if (ctx.expressionList() == null) return "new HashMap<>()";
+            throw new UnsupportedOperationException("Map literals with entries not supported");
+        }
+
         if (first.equals("Set{")) javaCollection = "HashSet";
         else if (first.equals("Sequence{")) javaCollection = "ArrayList";
         else if (first.equals("Bag{")) javaCollection = "ArrayList";
         else if (first.equals("OrderedSet{")) javaCollection = "LinkedHashSet";
-        else if (first.equals("Map{")) javaCollection = "HashMap";
         else javaCollection = "ArrayList";
 
         if (ctx.expressionList() == null) {

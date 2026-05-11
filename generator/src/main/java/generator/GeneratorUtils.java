@@ -2,9 +2,13 @@ package generator;
 
 import model.Association;
 import model.Class;
+import model.Operation;
+import model.Parameter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class GeneratorUtils {
 
@@ -22,6 +26,74 @@ public class GeneratorUtils {
     public static String removePackageNames(String type) {
         if (type == null) return null;
         return type.replaceAll("\\b([A-Za-z_$][\\w$]*\\.)+([A-Za-z_$][\\w$]*)\\b", "$2");
+    }
+
+    public static boolean checkMultiplicity(String multiplicity) {
+        if (multiplicity == null) return false;
+        return multiplicity.contains("*") ||
+                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
+    }
+
+    public static String makeAttributeName(String className, String role, String multiplicity) {
+        if (role != null && !role.trim().isEmpty()) return role.trim();
+        String base = lowercaseFirst(className);
+        return checkMultiplicity(multiplicity) ? base + "s" : base;
+    }
+
+    // extrair o tipo "base" de retorno e parametros: List<Aluno> -> Aluno, Map<Integer, Turma> -> Turma
+    public static String extractBaseType(String type) {
+        if (type == null) return null;
+        type = removePackageNames(type.trim());
+        if (type.contains("<")) {
+            int start = type.indexOf("<") + 1;
+            int end = type.lastIndexOf(">");
+            if (start < end) {
+                String generic = type.substring(start, end).trim();
+                if (generic.contains(",")) {
+                    String[] parts = generic.split(",");
+                    return extractBaseType(parts[parts.length - 1].trim());
+                }
+                return extractBaseType(generic);
+            }
+        }
+        return type;
+    }
+
+    // entidades referenciadas em parametros / return de operações
+    public static List<String> getModelsToImportFromOperations(Class cls, List<Class> classes) {
+        Set<String> entityNames = new HashSet<>();
+        for (Class c : classes) entityNames.add(c.getName());
+
+        Set<String> entitiesToImport = new HashSet<>();
+        for (Operation op : cls.getOperations()) {
+            for (Parameter param : op.getParameters()) {
+                String baseType = extractBaseType(param.getType());
+                if (baseType != null && entityNames.contains(baseType) && !baseType.equals(cls.getName())) {
+                    entitiesToImport.add(baseType);
+                }
+            }
+            String returnType = extractBaseType(op.getReturnType());
+            if (returnType != null && entityNames.contains(returnType) && !returnType.equals(cls.getName())) {
+                entitiesToImport.add(returnType);
+            }
+        }
+        return new ArrayList<>(entitiesToImport);
+    }
+
+    // entidades referenciadas em assocs navegaveis
+    public static List<String> getModelsToImportFromAssociations(Class cls, List<Association> associations) {
+        Set<String> entitiesToImport = new HashSet<>();
+        for (Association assoc : associations) {
+            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
+                String relatedClass = assoc.getTargetClass();
+                if (!relatedClass.equals(cls.getName())) entitiesToImport.add(relatedClass);
+            }
+            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
+                String relatedClass = assoc.getSourceClass();
+                if (!relatedClass.equals(cls.getName())) entitiesToImport.add(relatedClass);
+            }
+        }
+        return new ArrayList<>(entitiesToImport);
     }
 
     public static Class findClassByName(List<Class> classes, String name) {

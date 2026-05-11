@@ -66,9 +66,9 @@ public class AlunoService {
             .orElseThrow(() -> new RuntimeException("Aluno not found: " + id));
 
         // Update attributes from DTO
+        existing.setEmail(dto.getEmail());
         existing.setEstado(dto.getEstado());
         existing.setNome(dto.getNome());
-        existing.setEmail(dto.getEmail());
         existing.setNumero(dto.getNumero());
 
         Aluno saved = alunoRepository.save(existing);
@@ -138,7 +138,7 @@ public class AlunoService {
 
     // operations (TODO: implement)
 
-    public void validar() {
+    public List<String> validar() {
         throw new UnsupportedOperationException(
             "Method 'validar' not yet implemented. "
         );

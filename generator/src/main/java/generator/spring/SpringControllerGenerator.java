@@ -181,8 +181,8 @@ public class SpringControllerGenerator {
 
             String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
             String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
-            boolean thisMultiple = checkMultiplicity(thisMul);
-            boolean otherMultiple = checkMultiplicity(otherMul);
+            boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
+            boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);
 
             boolean navigableToOther = isSource ? assoc.isTargetNavigable() : assoc.isSourceNavigable();
             if (!navigableToOther) continue;
@@ -322,8 +322,8 @@ public class SpringControllerGenerator {
         writer.println("import java.util.List;");
 
         // Imports de entidades usadas nas Operations
-        List<String> modelsToImport = getModelsToImportFromOperations(cls, allClasses);
-        List<String> modelsToImportFromAssociations = getModelsToImportFromAssociations(cls, associations);
+        List<String> modelsToImport = GeneratorUtils.getModelsToImportFromOperations(cls, allClasses);
+        List<String> modelsToImportFromAssociations = GeneratorUtils.getModelsToImportFromAssociations(cls, associations);
         Set<String> allModelsToImport = new HashSet<>();
         allModelsToImport.addAll(modelsToImport);
         allModelsToImport.addAll(modelsToImportFromAssociations);
@@ -335,6 +335,15 @@ public class SpringControllerGenerator {
             }
         }
 
+        for (String extra : getExtraServices(cls, allClasses)) {
+            writer.println("import " + basePackage + ".service." + extra + "Service;");
+        }
+
+        writer.println();
+    }
+
+    // entidades referenciadas em parametros de operações (excluindo a propria classe)
+    private Set<String> getExtraServices(Class cls, List<Class> allClasses) {
         Set<String> extraServices = new HashSet<>();
         for (Operation op : cls.getOperations()) {
             for (Parameter param : op.getParameters()) {
@@ -345,11 +354,7 @@ public class SpringControllerGenerator {
                 }
             }
         }
-        for (String extra : extraServices) {
-            writer.println("import " + basePackage + ".service." + extra + "Service;");
-        }
-
-        writer.println();
+        return extraServices;
     }
 
     private void generateDependencies(PrintWriter writer, Class cls, List<Class> allClasses) {
@@ -358,106 +363,11 @@ public class SpringControllerGenerator {
                 GeneratorUtils.lowercaseFirst(className) + "Service;");
 
         // para cada param de cada operação, se for uma entidade, adicionar como dependência
-        Set<String> extraServices = new HashSet<>();
-        for (Operation op : cls.getOperations()) {
-            for (Parameter param : op.getParameters()) {
-                for (Class c : allClasses) {
-                    if (c.getName().equals(param.getType()) && !c.getName().equals(cls.getName())) {
-                        extraServices.add(c.getName());
-                    }
-                }
-            }
-        }
-        for (String extra : extraServices) {
+        for (String extra : getExtraServices(cls, allClasses)) {
             writer.println("    private final " + extra + "Service " + GeneratorUtils.lowercaseFirst(extra) + "Service;");
         }
 
         writer.println();
-    }
-
-    private List<String> getModelsToImportFromOperations(Class cls, List<Class> classes) {
-        Set<String> entityNames = new HashSet<>();
-
-        for (Class c : classes) {
-            entityNames.add(c.getName());
-        }
-
-        Set<String> entitiesToImport = new HashSet<>();
-
-        // nas operações, verificamos returns e params
-        for (Operation op : cls.getOperations()) {
-            for (Parameter param : op.getParameters()) {
-                String baseType = extractBaseType(param.getType());
-
-                if (baseType != null && entityNames.contains(baseType) && !baseType.equals(cls.getName())) {
-                    entitiesToImport.add(baseType);
-                }
-            }
-
-            String returnType = extractBaseType(op.getReturnType());
-            if (returnType != null && entityNames.contains(returnType) && !returnType.equals(cls.getName())) {
-                entitiesToImport.add(returnType);
-            }
-        }
-
-        return new ArrayList<>(entitiesToImport);
-    }
-
-    private List<String> getModelsToImportFromAssociations(Class cls, List<Association> associations) {
-        Set<String> entitiesToImport = new HashSet<>();
-
-        for (Association assoc : associations) {
-            if (assoc.getSourceClass().equals(cls.getName())  && assoc.isTargetNavigable()) {
-                String relatedClass = assoc.getTargetClass();
-                if (!relatedClass.equals(cls.getName())) {
-                    entitiesToImport.add(relatedClass);
-                }
-            }
-
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String relatedClass = assoc.getSourceClass();
-                if (!relatedClass.equals(cls.getName())) {
-                    entitiesToImport.add(relatedClass);
-                }
-            }
-        }
-
-        return new ArrayList<>(entitiesToImport);
-    }
-
-    // extrair para um utils depois
-    // extrair o tipo "base" de retorno e parametros
-    // simples, nao funciona com tipoes nested, ter de ver com recursividade
-    private String extractBaseType(String type) {
-        if (type == null) return null;
-
-        type = GeneratorUtils.removePackageNames(type.trim());
-
-        if (type.contains("<")) {
-            int start = type.indexOf("<") + 1;
-            int end = type.lastIndexOf(">");
-
-            if (start < end) {
-                String generic = type.substring(start, end).trim();
-
-                // Map<Integer, Turma> -> Turma
-                if (generic.contains(",")) {
-                    String[] parts = generic.split(",");
-                    return extractBaseType(parts[parts.length - 1].trim());
-                }
-
-                // List<Aluno> -> Aluno
-                return extractBaseType(generic);
-            }
-        }
-
-        return type;
-    }
-
-    private boolean checkMultiplicity(String multiplicity) {
-        if (multiplicity == null) return false;
-        return multiplicity.contains("*") ||
-                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
     }
 
     private void generateExceptionHandler(String controllerDir) throws IOException {
@@ -504,6 +414,9 @@ public class SpringControllerGenerator {
         String className = cls.getName();
         String serviceName = GeneratorUtils.lowercaseFirst(className) + "Service";
 
+        Set<String> classNames = new HashSet<>();
+        for (Class c : allClasses) classNames.add(c.getName());
+
         writer.println();
         writer.println("    // Custom Operation Endpoints dos diagramas sequencia");
 
@@ -523,14 +436,7 @@ public class SpringControllerGenerator {
                 String argName = arg.getName();
                 if ("id".equals(argName)) continue;
                 String argType = arg.getType() != null ? arg.getType() : "Long";
-                boolean isEntity = false;
-                for (Class c : allClasses) {
-                    if (c.getName().equals(argType)) {
-                        isEntity = true;
-                        break;
-                    }
-                }
-                if (isEntity) {
+                if (classNames.contains(argType)) {
                     writer.print(",\n            @RequestParam Long " + argName + "Id");
                 } else {
                     writer.print(",\n            @RequestParam " + argType + " " + argName);
@@ -542,14 +448,7 @@ public class SpringControllerGenerator {
                 String argName = arg.getName();
                 if ("id".equals(argName)) continue;
                 String argType = arg.getType() != null ? arg.getType() : "Long";
-                boolean isEntity = false;
-                for (Class c : allClasses) {
-                    if (c.getName().equals(argType)) {
-                        isEntity = true;
-                        break;
-                    }
-                }
-                if (isEntity) {
+                if (classNames.contains(argType)) {
                     String paramServiceName = GeneratorUtils.lowercaseFirst(argType) + "Service";
                     writer.println("        " + argType + " " + argName + " = " + paramServiceName
                             + ".findById(" + argName + "Id)");

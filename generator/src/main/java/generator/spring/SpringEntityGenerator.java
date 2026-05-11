@@ -1,18 +1,19 @@
 package generator.spring;
 
+import generator.GeneratorUtils;
 import generator.ValidationGenerator;
 import model.Association;
+import model.Attribute;
+import model.Class;
+import model.Enumeration;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-
-import model.Attribute;
-import model.Class;
-import model.Enumeration;
-import model.Association;
+import java.util.Set;
 
 /**
  * Gera as entidades JPA
@@ -36,15 +37,11 @@ public class SpringEntityGenerator {
     private ValidationGenerator validationGenerator;
 
     // nomes das enumerações para saber quando um atributo é enum
-    private java.util.Set<String> enumNames = new java.util.HashSet<>();
+    private Set<String> enumNames = new HashSet<>();
 
     public SpringEntityGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
-    }
-
-    public void generateEntities(List<Class> classes, List<Association> associations) throws IOException {
-        generateEntities(classes, associations, new ArrayList<>());
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
@@ -57,6 +54,7 @@ public class SpringEntityGenerator {
         this.validationGenerator = new ValidationGenerator();
 
         // guardar nomes das enumerações
+        enumNames.clear();
         for (Enumeration enumeration : enumerations) {
             enumNames.add(enumeration.getName());
         }
@@ -173,7 +171,7 @@ public class SpringEntityGenerator {
              */
 
             writer.println("@Builder");
-        };
+        }
 
         // @Entity
         writer.println("@Entity");
@@ -219,7 +217,7 @@ public class SpringEntityGenerator {
         writer.println("    // attributes");
         for (Attribute atr : cls.getAttributes()){
             // skip derived
-            if (atr.isDerived()) continue;
+            if (atr.hasDerive()) continue;
 
             if (enumNames.contains(atr.getType())) {
                 writer.println("    @Enumerated(EnumType.STRING)");
@@ -238,7 +236,7 @@ public class SpringEntityGenerator {
 
     private void generateDerivedGetters(PrintWriter writer, Class cls) {
         for (Attribute atr : cls.getAttributes()) {
-            if (!atr.isDerived()) continue;
+            if (!atr.hasDerive()) continue;
             String cap = atr.getName().substring(0,1).toUpperCase() + atr.getName().substring(1);
             writer.println("    public " + atr.getType() + " get" + cap + "() {");
             writer.println("        return " + atr.getJavaDeriveExpression() + ";");
@@ -259,7 +257,7 @@ public class SpringEntityGenerator {
                 String targetRole = association.getTargetRole();
                 String targetMultiplicity = association.getTargetMultiplicity();
 
-                String fieldName = makeAttributeName(targetClass, targetRole, targetMultiplicity);
+                String fieldName = GeneratorUtils.makeAttributeName(targetClass, targetRole, targetMultiplicity);
 
                 if(!generatedRelations.contains(fieldName)){
                     generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, fieldName, targetMultiplicity, association, "target", allClasses);
@@ -272,7 +270,7 @@ public class SpringEntityGenerator {
                 String sourceRole = association.getSourceRole();
                 String sourceMultiplicity = association.getSourceMultiplicity();
 
-                String fieldName = makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
+                String fieldName = GeneratorUtils.makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
 
                 if(!generatedRelations.contains(fieldName)){
                     generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, fieldName, sourceMultiplicity, association, "source", allClasses);
@@ -310,40 +308,29 @@ public class SpringEntityGenerator {
                 ? assoc.getTargetMultiplicity()
                 : assoc.getSourceMultiplicity();
 
-        boolean thisMultiple = checkMultiplicity(thisMultiplicity);
-        boolean otherMultiple = checkMultiplicity(otherMultiplicity);
+        boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMultiplicity);
+        boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMultiplicity);
         boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
         // is bidirectional, gerar @JsonIgnoreProperties para evitar loop infinito na serialização JSON
+        if (isBidirectional) {
+            writer.println("    @JsonIgnoreProperties(\"" + getOtherSideAttributeName(assoc, side) + "\")");
+        }
 
         // Many to Many
         if (thisMultiple && otherMultiple) {
-            if (isBidirectional) {
-                writer.println("    @JsonIgnoreProperties(\"" + getOtherSideAttributeName(assoc, side) + "\")");
-            }
             generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
         }
-
         // One to many
         else if (thisMultiple) {
-            if (isBidirectional) {
-                writer.println("    @JsonIgnoreProperties(\"" + getOtherSideAttributeName(assoc, side) + "\")");
-            }
             generateOneToMany(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
         }
         // Many to one
         else if (otherMultiple) {
-            if (isBidirectional) {
-                writer.println("    @JsonIgnoreProperties(\"" + getOtherSideAttributeName(assoc, side) + "\")");
-            }
             generateManyToOne(writer, otherClass, fieldName, assoc);
         }
-
         // One to one
         else {
-            if (isBidirectional) {
-                writer.println("    @JsonIgnoreProperties(\"" + getOtherSideAttributeName(assoc, side) + "\")");
-            }
             generateOneToOne(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
         }
 
@@ -512,32 +499,17 @@ public class SpringEntityGenerator {
     }
 
 
-    private String makeAttributeName(String className, String role, String multiplicity) {
-        if (role != null && !role.trim().isEmpty()) {
-            return role.trim();
-        }
-
-        String base = className.substring(0, 1).toLowerCase() + className.substring(1);
-        return checkMultiplicity(multiplicity) ? base + "s" : base;
-    }
-
-
-    private boolean checkMultiplicity(String multiplicity) {
-        if (multiplicity == null) return false;
-        return multiplicity.contains("*") ||
-                (multiplicity.contains("..") && !multiplicity.equals("0..1"));
-    }
 
     // nome do campo do outro lado da associação, para usarmos em mappedBy e @JsonIgnorePropertie
     private String getOtherSideAttributeName(Association assoc, String side) {
         if (side.equals("source")) {
-            return makeAttributeName(
+            return GeneratorUtils.makeAttributeName(
                     assoc.getTargetClass(),
                     assoc.getTargetRole(),
                     assoc.getTargetMultiplicity()
             );
         } else {
-            return makeAttributeName(
+            return GeneratorUtils.makeAttributeName(
                     assoc.getSourceClass(),
                     assoc.getSourceRole(),
                     assoc.getSourceMultiplicity()

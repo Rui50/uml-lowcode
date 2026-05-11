@@ -58,7 +58,6 @@ public class OperationGenerator {
         Message entry = findEntryMessage(interaction);
         if (entry == null) return;
 
-        //writer.print("    public void " + entry.getName() + "(");
         String returnType = operation.getReturnType() != null ? operation.getReturnType() : "void";
 
         writer.println();
@@ -70,8 +69,6 @@ public class OperationGenerator {
             writer.print(type + " " + arg.getName());
         }
         writer.println(") {");
-
-        //Operation operation = cls.getOperations().stream().filter(op -> op.getName().equals(entry.getName())).findFirst().orElse(null);
 
         for (Precondition pre : operation.getPreconditions()){
             writer.println("        if (!(" + pre.getJavaExpression() + ")) {");
@@ -337,10 +334,10 @@ public class OperationGenerator {
         for (Association assoc : associations) {
             boolean sourceSide = assoc.getSourceClass().equals(cls.getName())
                     && assoc.isTargetNavigable()
-                    && fieldName.equals(makeFieldName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity()));
+                    && fieldName.equals(GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity()));
             boolean targetSide = assoc.getTargetClass().equals(cls.getName())
                     && assoc.isSourceNavigable()
-                    && fieldName.equals(makeFieldName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity()));
+                    && fieldName.equals(GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity()));
 
             if ((sourceSide || targetSide) && assoc.hasQualifier()) {
                 return expr + ".values()";
@@ -363,17 +360,9 @@ public class OperationGenerator {
     private static String fieldNameFor(Association a, String ownerType) {
         // lado a partir do owner: se owner é source, o campo refere o target, e vice-versa
         if (a.getSourceClass().equals(ownerType)) {
-            return makeFieldName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
+            return GeneratorUtils.makeAttributeName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
         }
-        return makeFieldName(a.getSourceClass(), a.getSourceRole(), a.getSourceMultiplicity());
-    }
-
-
-    private static String makeFieldName(String className, String role, String multiplicity) {
-        if (role != null && !role.trim().isEmpty()) return role.trim();
-        String base = className.substring(0, 1).toLowerCase() + className.substring(1);
-        boolean multiple = multiplicity != null && (multiplicity.contains("*") || (multiplicity.contains("..") && !multiplicity.equals("0..1")));
-        return multiple ? base + "s" : base;
+        return GeneratorUtils.makeAttributeName(a.getSourceClass(), a.getSourceRole(), a.getSourceMultiplicity());
     }
 
     // a mensagem do actor para lifeline: source pode ser null ou um Actor (type == null)
