@@ -1,15 +1,8 @@
 package com.example.app.models;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.*;
 import java.util.*;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Builder
 @Entity
 @Table(name = "turma")
 public class Turma{
@@ -19,23 +12,43 @@ public class Turma{
     private Long id;
 
     // attributes
-    @Column(name = "nome")
-    private String nome;
-
     @Column(name = "numAlunos")
     private int numAlunos;
+
+    @Column(name = "nome")
+    private String nome;
 
     // relationship: Turma -> Aluno
     @OneToMany
     @JoinColumn(name = "turma_id")
-    @Builder.Default
     @MapKey(name = "numero")
     private Map<Integer, Aluno> alunos = new HashMap<>();
 
     // relationship: Turma -> Turno
     @OneToMany
     @JoinColumn(name = "turma_id")
-    @Builder.Default
     private List<Turno> turnos = new ArrayList<>();
 
+
+    public Turma() {}
+
+    public int getNumAlunos() { return numAlunos; }
+    public void setNumAlunos(int numAlunos) { this.numAlunos = numAlunos; }
+
+    public String getNome() { return nome; }
+    public void setNome(String nome) { this.nome = nome; }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Map<Integer, Aluno> getAlunos() { return alunos; }
+    public void setAlunos(Map<Integer, Aluno> alunos) { this.alunos = alunos; }
+
+    public List<Turno> getTurnos() { return turnos; }
+    public void setTurnos(List<Turno> turnos) { this.turnos = turnos; }
+
+    @Override
+    public String toString() {
+        return "Turma{id=" + getId() + ", numAlunos=" + numAlunos + ", nome=" + nome + "}";
+    }
 }

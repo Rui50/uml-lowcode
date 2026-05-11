@@ -1,32 +1,38 @@
 package com.example.app.repository;
 
 import com.example.app.models.Aluno;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 
-/**
- * Repository for Aluno entity
- * Spring Data JPA generates a base implementation automatically
- */
-@Repository
-public interface AlunoRepository extends JpaRepository<Aluno, Long> {
+public class AlunoRepository {
 
-    // Automatic CRUD methods provided by JpaRepository:
-    // - save(entity)
-    // - findById(id)
-    // - findAll()
-    // - deleteById(id)
-    // - count()
-    // - existsById(id)
+    private final EntityManager em;
 
-    // Query methods (Spring generates implementation):
-    List<Aluno> findByEmail(String email);
-    List<Aluno> findByEmailContaining(String email);
-    boolean existsByEmail(String email);
+    public AlunoRepository(EntityManager em) {
+        this.em = em;
+    }
 
-    List<Aluno> findByNome(String nome);
-    List<Aluno> findByNomeContaining(String nome);
-    boolean existsByNome(String nome);
+    public Aluno save(Aluno entity) {
+        if (entity.getId() == null) {
+            em.persist(entity);
+            return entity;
+        }
+        return em.merge(entity);
+    }
+
+    public Aluno findById(Long id) {
+        return em.find(Aluno.class, id);
+    }
+
+    public List<Aluno> findAll() {
+        return em.createQuery("from Aluno", Aluno.class).getResultList();
+    }
+
+    public void deleteById(Long id) {
+        Aluno entity = em.find(Aluno.class, id);
+        if (entity != null) {
+            em.remove(entity);
+        }
+    }
 
 }

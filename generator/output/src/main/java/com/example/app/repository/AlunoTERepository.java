@@ -1,36 +1,38 @@
 package com.example.app.repository;
 
 import com.example.app.models.AlunoTE;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 
-/**
- * Repository for AlunoTE entity
- * Spring Data JPA generates a base implementation automatically
- */
-@Repository
-public interface AlunoTERepository extends JpaRepository<AlunoTE, Long> {
+public class AlunoTERepository {
 
-    // Automatic CRUD methods provided by JpaRepository:
-    // - save(entity)
-    // - findById(id)
-    // - findAll()
-    // - deleteById(id)
-    // - count()
-    // - existsById(id)
+    private final EntityManager em;
 
-    // Query methods (Spring generates implementation):
-    List<AlunoTE> findByEmpresa(String empresa);
-    List<AlunoTE> findByEmpresaContaining(String empresa);
-    boolean existsByEmpresa(String empresa);
+    public AlunoTERepository(EntityManager em) {
+        this.em = em;
+    }
 
-    List<AlunoTE> findByEmail(String email);
-    List<AlunoTE> findByEmailContaining(String email);
-    boolean existsByEmail(String email);
+    public AlunoTE save(AlunoTE entity) {
+        if (entity.getId() == null) {
+            em.persist(entity);
+            return entity;
+        }
+        return em.merge(entity);
+    }
 
-    List<AlunoTE> findByNome(String nome);
-    List<AlunoTE> findByNomeContaining(String nome);
-    boolean existsByNome(String nome);
+    public AlunoTE findById(Long id) {
+        return em.find(AlunoTE.class, id);
+    }
+
+    public List<AlunoTE> findAll() {
+        return em.createQuery("from AlunoTE", AlunoTE.class).getResultList();
+    }
+
+    public void deleteById(Long id) {
+        AlunoTE entity = em.find(AlunoTE.class, id);
+        if (entity != null) {
+            em.remove(entity);
+        }
+    }
 
 }

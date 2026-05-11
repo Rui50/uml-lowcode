@@ -1,25 +1,38 @@
 package com.example.app.repository;
 
 import com.example.app.models.Turno;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 
-/**
- * Repository for Turno entity
- * Spring Data JPA generates a base implementation automatically
- */
-@Repository
-public interface TurnoRepository extends JpaRepository<Turno, Long> {
+public class TurnoRepository {
 
-    // Automatic CRUD methods provided by JpaRepository:
-    // - save(entity)
-    // - findById(id)
-    // - findAll()
-    // - deleteById(id)
-    // - count()
-    // - existsById(id)
+    private final EntityManager em;
 
-    // custom query methods TODO
+    public TurnoRepository(EntityManager em) {
+        this.em = em;
+    }
+
+    public Turno save(Turno entity) {
+        if (entity.getId() == null) {
+            em.persist(entity);
+            return entity;
+        }
+        return em.merge(entity);
+    }
+
+    public Turno findById(Long id) {
+        return em.find(Turno.class, id);
+    }
+
+    public List<Turno> findAll() {
+        return em.createQuery("from Turno", Turno.class).getResultList();
+    }
+
+    public void deleteById(Long id) {
+        Turno entity = em.find(Turno.class, id);
+        if (entity != null) {
+            em.remove(entity);
+        }
+    }
 
 }

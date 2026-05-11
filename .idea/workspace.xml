@@ -5,48 +5,55 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIEntityGenerator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIMenuGenerator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIProjectGenerator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIProjectSettings.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIRepositoryGenerator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/DatabaseType.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/TurmaController.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/TurmaController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoCreateDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoCreateDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoResponseDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoResponseDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoTECreateDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoTECreateDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoTEResponseDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoTEResponseDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/TurmaCreateDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/TurmaCreateDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/TurnoCreateDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/TurnoCreateDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/TurnoResponseDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/TurnoResponseDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Aluno.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Aluno.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/EstadoAluno.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/EstadoAluno.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Turma.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Turma.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Turno.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Turno.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/AlunoRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/AlunoRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/AlunoTERepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/AlunoTERepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/AlunoService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/AlunoService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/AlunoTEService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/AlunoTEService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/TurmaService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/TurmaService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/TurnoService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/TurnoService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/.gitattributes" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/.mvn/wrapper/maven-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/Aluno.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/AlunoTE.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/EstadoAluno.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/Turma.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/Turno.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/mvnw" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/mvnw.cmd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/SpringTemplateAppApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/AlunoController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/AlunoTEController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/GlobalExceptionHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/TurmaController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/TurnoController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoCreateDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoResponseDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoTECreateDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/AlunoTEResponseDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/TurmaCreateDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/TurmaResponseDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/TurnoCreateDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/TurnoResponseDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Aluno.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/AlunoTE.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/EstadoAluno.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Turma.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Turno.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/AlunoRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/AlunoTERepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/TurmaRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/TurnoRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/AlunoService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/AlunoTEService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/TurmaService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/TurnoService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/resources/application.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/test/java/com/example/app/SpringTemplateAppApplicationTests.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaEntityGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaMenuGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaMenuGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaProjectGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaProjectGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/OperationGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/OperationGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/ValidationGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/ValidationGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/plain/ClassGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/plain/ClassGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringUtils.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/Attribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Attribute.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/Generalization.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Generalization.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/Operation.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Operation.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/ocl/OCLToJavaVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/ocl/OCLToJavaVisitor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/parser/AnnotationParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/AnnotationParser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/parser/ClassDiagramParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/ClassDiagramParser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/parser/SequenceDiagramParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/SequenceDiagramParser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/parser/VpParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/VpParser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/parser/XMIParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/XMIParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/service/GenerationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/service/GenerationService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -116,6 +123,7 @@
       <recent name="\\wsl.localhost\Ubuntu\home\rui\projects\UML-LowCode" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="generator.CLI_JPA" />
       <recent name="model.annotations" />
       <recent name="parser" />
       <recent name="generator.spring" />
