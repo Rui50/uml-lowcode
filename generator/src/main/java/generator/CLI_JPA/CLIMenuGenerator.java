@@ -49,11 +49,15 @@ public class CLIMenuGenerator {
         String menusPath = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/menus";
         new File(menusPath).mkdirs();
 
-        for (Class cls : classes ){
+        List<Class> classesToBuild = classes.stream()
+                .filter(c -> !c.isAbstract())
+                .collect(Collectors.toList());
+
+        for (Class cls : classesToBuild) {
             generateEntityMenu(cls, classes, associations, menusPath);
         }
 
-        generateMainMenu(classes, associations, menusPath);
+        generateMainMenu(classesToBuild, associations, menusPath);
         System.out.println("Java menu generation completed.");
     }
 
@@ -96,7 +100,7 @@ public class CLIMenuGenerator {
             generateRunMethod(w, cls, associations);
 
             // CRUD
-            generateCreateMethod(w, cls);
+            if (!cls.isAbstract()) generateCreateMethod(w, cls);
             generateViewAllMethod(w, cls, associations);
             generateViewByIdMethod(w, cls, associations);
             generateUpdateMethod(w, cls);
@@ -139,7 +143,7 @@ public class CLIMenuGenerator {
         // menu options
         // [0] = label para o menu, [1] = nome do método a chamar
         List<String[]> options = new ArrayList<>();
-        options.add(new String[]{"Create", "create"});
+        if (!cls.isAbstract()) options.add(new String[]{"Create", "create"});
         options.add(new String[]{"View All", "viewAll"});
         options.add(new String[]{"View by ID", "viewById"});
         options.add(new String[]{"Update", "update"});
@@ -256,6 +260,7 @@ public class CLIMenuGenerator {
         w.println("            System.out.println(\"Created: \" + entity);");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
+        w.println("            em.clear();");
         w.println("            System.out.println(\"Error: \" + ex.getMessage());");
         w.println("        }");
         w.println("    }");
@@ -349,11 +354,11 @@ public class CLIMenuGenerator {
         List<Attribute> allAttrs = new ArrayList<>();
         if (cls.getParentClass() != null) {
             allAttrs.addAll(cls.getParentClass().getAttributes().stream()
-                    .filter(a -> !a.hasDerive() && !a.hasInit())
+                    .filter(a -> !a.hasDerive())
                     .collect(Collectors.toList()));
         }
         allAttrs.addAll(cls.getAttributes().stream()
-                .filter(a -> !a.hasDerive() && !a.hasInit())
+                .filter(a -> !a.hasDerive())
                 .collect(Collectors.toList()));
         for (Attribute attr : allAttrs) {
             generateUpdateAttribute(w, attr);
@@ -378,6 +383,7 @@ public class CLIMenuGenerator {
         w.println("            System.out.println(\"Updated: \" + entity);");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
+        w.println("            em.clear();");
         w.println("            System.out.println(\"Error: \" + ex.getMessage());");
         w.println("        }");
         w.println("    }");
@@ -402,6 +408,7 @@ public class CLIMenuGenerator {
         w.println("            System.out.println(\"Deleted.\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
+        w.println("            em.clear();");
         w.println("            System.out.println(\"Error: \" + ex.getMessage());");
         w.println("        }");
         w.println("    }");
@@ -467,6 +474,7 @@ public class CLIMenuGenerator {
         w.println("            System.out.println(\"Assigned " + otherClass + " to " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
+        w.println("            em.clear();");
         w.println("            System.out.println(\"Error: \" + ex.getMessage());");
         w.println("        }");
         w.println("    }");
@@ -489,6 +497,7 @@ public class CLIMenuGenerator {
         w.println("            System.out.println(\"" + otherClass + " removed from \" + entity);");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
+        w.println("            em.clear();");
         w.println("            System.out.println(\"Error: \" + ex.getMessage());");
         w.println("        }");
         w.println("    }");
@@ -525,6 +534,7 @@ public class CLIMenuGenerator {
         w.println("            System.out.println(\"Added " + otherClass + " to " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
+        w.println("            em.clear();");
         w.println("            System.out.println(\"Error: \" + ex.getMessage());");
         w.println("        }");
         w.println("    }");
@@ -559,6 +569,7 @@ public class CLIMenuGenerator {
         w.println("            System.out.println(\"" + otherClass + " removed from \" + owner);");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
+        w.println("            em.clear();");
         w.println("            System.out.println(\"Error: \" + ex.getMessage());");
         w.println("        }");
         w.println("    }");
@@ -622,6 +633,7 @@ public class CLIMenuGenerator {
             w.println("            System.out.println(\"" + op.getName() + " executed.\");");
             w.println("        } catch (RuntimeException ex) {");
             w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
+            w.println("            em.clear();");
             w.println("            System.out.println(\"Error: \" + ex.getMessage());");
             w.println("        }");
             w.println("    }");
@@ -705,8 +717,12 @@ public class CLIMenuGenerator {
                 break;
             default:
                 if (enumNames.contains(attr.getType())) {
-                    w.println("        System.out.print(\"" + name + " \" + java.util.Arrays.toString(" + attr.getType() + ".values()) + \": \");");
-                    w.println("        " + attr.getType() + " " + name + " = " + attr.getType() + ".valueOf(scanner.nextLine().trim().toUpperCase());");
+                    w.println("        " + attr.getType() + " " + name + " = null;");
+                    w.println("        while (" + name + " == null) {");
+                    w.println("            System.out.print(\"" + name + " \" + java.util.Arrays.toString(" + attr.getType() + ".values()) + \": \");");
+                    w.println("            try { " + name + " = " + attr.getType() + ".valueOf(scanner.nextLine().trim().toUpperCase()); }");
+                    w.println("            catch (IllegalArgumentException ex) { System.out.println(\"Invalid value. Try again.\"); }");
+                    w.println("        }");
                 } else {
                     w.println("        System.out.print(\"" + name + ": \");");
                     w.println("        String " + name + "Str = scanner.nextLine();");
@@ -756,9 +772,13 @@ public class CLIMenuGenerator {
                 break;
             default:
                 if (enumNames.contains(attr.getType())) {
-                    w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() + \"] \" + java.util.Arrays.toString(" + attr.getType() + ".values()) + \": \");");
-                    w.println("        String " + name + "Str = scanner.nextLine();");
-                    w.println("        if (!" + name + "Str.isEmpty()) entity.set" + capitalized + "(" + attr.getType() + ".valueOf(" + name + "Str.trim().toUpperCase()));");
+                    w.println("        while (true) {");
+                    w.println("            System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() + \"] \" + java.util.Arrays.toString(" + attr.getType() + ".values()) + \": \");");
+                    w.println("            String " + name + "Str = scanner.nextLine();");
+                    w.println("            if (" + name + "Str.isEmpty()) break;");
+                    w.println("            try { entity.set" + capitalized + "(" + attr.getType() + ".valueOf(" + name + "Str.trim().toUpperCase())); break; }");
+                    w.println("            catch (IllegalArgumentException ex) { System.out.println(\"Invalid value. Try again.\"); }");
+                    w.println("        }");
                 } else {
                     w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
                             "\"]: \");");

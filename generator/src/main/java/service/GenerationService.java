@@ -4,7 +4,9 @@ import generator.CLI_JPA.*;
 import model.ParsedModel;
 import parser.XMIParser;
 import generator.CLI.JavaProjectGenerator;
+import generator.CLI.JavaEntityGenerator;
 import generator.plain.CodeGenerator;
+import generator.plain.ClassGenerator;
 import generator.spring.*;
 import model.ParsedModel;
 
@@ -29,6 +31,8 @@ public class GenerationService {
                 //m.getPimInteractions()
                 m.getAllInteractions()
         ).generate();
+        new ClassGenerator(outputDir, m.getAllInteractions())
+                .generateInterfaces(m.getInterfaces());
     }
 
     private void generateCli(ParsedModel m, String outputDir) throws Exception {
@@ -39,6 +43,8 @@ public class GenerationService {
                 //m.getPimInteractions()
                 m.getAllInteractions()
         );
+        new JavaEntityGenerator(outputDir, m.getAllInteractions())
+                .generateInterfaces(m.getInterfaces());
     }
 
     private void generateCliJpa(ParsedModel m, String outputDir) throws Exception {
@@ -50,6 +56,8 @@ public class GenerationService {
 
         new CLIEntityGenerator(outputDir, basePackage)
                 .generateEntities(m.getClasses(), m.getAssociations(), m.getEnumerations());
+        new CLIEntityGenerator(outputDir, basePackage)
+                .generateInterfaces(m.getInterfaces());
         new CLIRepositoryGenerator(outputDir, basePackage)
                 .generateRepositories(m.getClasses());
         new CLIMenuGenerator(outputDir, basePackage, m.getAllInteractions())
@@ -65,6 +73,8 @@ public class GenerationService {
 
         new SpringEntityGenerator(outputDir, basePackage)
                 .generateEntities(m.getClasses(), m.getAssociations(), m.getEnumerations());
+        new SpringEntityGenerator(outputDir, basePackage)
+                .generateInterfaces(m.getInterfaces());
         new SpringDTOGenerator(outputDir, basePackage)
                 .generateDTOs(m.getClasses(), m.getAssociations(), m.getEnumerations());
         new SpringRepositoryGenerator(outputDir, basePackage)

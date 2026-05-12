@@ -34,7 +34,8 @@ public class ParsingService {
             parser.getEnumerations(),
             psm,
             pim,
-            all
+            all,
+                parser.getInterfaces()
         );
 
     }

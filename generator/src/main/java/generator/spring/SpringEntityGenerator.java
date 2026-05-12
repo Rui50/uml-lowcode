@@ -6,6 +6,8 @@ import model.Association;
 import model.Attribute;
 import model.Class;
 import model.Enumeration;
+import model.Interface;
+import model.Operation;
 
 import java.io.File;
 import java.io.IOException;
@@ -71,6 +73,31 @@ public class SpringEntityGenerator {
         System.out.println("Entity generation completed.");
     }
 
+    /**
+     * Gera um ficheiro Java por interface UML.
+     * so assinatura — sem JPA.
+     */
+    public void generateInterfaces(List<Interface> interfaces) throws IOException {
+        if (interfaces == null || interfaces.isEmpty()) return;
+
+        String dir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/models";
+        new File(dir).mkdirs();
+
+        for (Interface iface : interfaces) {
+            try (PrintWriter w = new PrintWriter(dir + "/" + iface.getName() + ".java")) {
+                w.println("package " + basePackage + ".models;");
+                w.println();
+                w.println("public interface " + iface.getName() + " {");
+                w.println();
+                for (Operation op : iface.getOperations()) {
+                    w.println("    " + GeneratorUtils.buildSignature(op) + ";");
+                }
+                w.println("}");
+            }
+            System.out.println("Generated interface: " + iface.getName() + ".java");
+        }
+    }
+
     // gera os enums como enums Java normais, com @Enumerated nos atributos que os usam
     private void generateEnum(Enumeration enumeration, String modelsDir) throws IOException {
         String filename = modelsDir + "/" + enumeration.getName() + ".java";
@@ -117,11 +144,18 @@ public class SpringEntityGenerator {
             generateClassBaseAnnotations(writer, cls, allClasses);
 
             // declaração da classe
-            writer.print("public class " + cls.getName());
+            writer.print("public " + (cls.isAbstract() ? "abstract " : "") + "class " + cls.getName());
             if (cls.getParentClass() != null) {
-                writer.print(" extends " + cls.getParentClass().getName() + " ");
+                writer.print(" extends " + cls.getParentClass().getName());
             }
-            writer.println("{");
+            if (!cls.getRealizations().isEmpty()) {
+                writer.print(" implements ");
+                for (int i = 0; i < cls.getRealizations().size(); i++) {
+                    if (i > 0) writer.print(", ");
+                    writer.print(cls.getRealizations().get(i).getName());
+                }
+            }
+            writer.println(" {");
             writer.println();
 
             // se nao tem parent gera id

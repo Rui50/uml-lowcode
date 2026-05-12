@@ -30,6 +30,7 @@ public class SpringControllerGenerator {
         new java.io.File(controllerDir).mkdirs();
 
         for (Class cls : classes) {
+            if (cls.isAbstract()) continue;
             generateController(cls, classes, associations, controllerDir, interactions);
         }
 
@@ -123,19 +124,21 @@ public class SpringControllerGenerator {
         writer.println("    }");
         writer.println();
 
-        // POST /api/entities - Create
-        writer.println("    /**");
-        writer.println("     * POST /api/" + pluralPath);
-        writer.println("     * Create new " + className);
-        writer.println("     * @param dto entity data");
-        writer.println("     * @return created entity");
-        writer.println("     */");
-        writer.println("    @PostMapping");
-        writer.println("    public ResponseEntity<" + className + "ResponseDTO> create(@RequestBody " + className + "CreateDTO dto) {");
-        writer.println("        " + className + "ResponseDTO created = " + serviceName + ".create(dto);");
-        writer.println("        return ResponseEntity.status(HttpStatus.CREATED).body(created);");
-        writer.println("    }");
-        writer.println();
+        // POST /api/entities - Create (skip for abstract classes)
+        if (!cls.isAbstract()) {
+            writer.println("    /**");
+            writer.println("     * POST /api/" + pluralPath);
+            writer.println("     * Create new " + className);
+            writer.println("     * @param dto entity data");
+            writer.println("     * @return created entity");
+            writer.println("     */");
+            writer.println("    @PostMapping");
+            writer.println("    public ResponseEntity<" + className + "ResponseDTO> create(@RequestBody " + className + "CreateDTO dto) {");
+            writer.println("        " + className + "ResponseDTO created = " + serviceName + ".create(dto);");
+            writer.println("        return ResponseEntity.status(HttpStatus.CREATED).body(created);");
+            writer.println("    }");
+            writer.println();
+        }
 
         // PUT /api/entities/{id} - Update
         writer.println("    @PutMapping(\"/{id}\")");

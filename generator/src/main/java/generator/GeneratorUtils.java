@@ -142,4 +142,22 @@ public class GeneratorUtils {
         }
         return mapFields;
     }
+
+    /**
+     * Constrói a assinatura Java de uma operation
+     * para interfaces
+     * Exemplo: "void inscrever(Turma t)"
+     */
+    public static String buildSignature(Operation op) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(op.getReturnType() == null ? "void" : op.getReturnType());
+        sb.append(" ").append(op.getName()).append("(");
+        List<Parameter> params = op.getParameters();
+        for (int i = 0; i < params.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(params.get(i).getType()).append(" ").append(params.get(i).getName());
+        }
+        sb.append(")");
+        return sb.toString();
+    }
 }

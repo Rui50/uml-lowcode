@@ -47,6 +47,7 @@ public class SpringServiceGenerator {
         new java.io.File(serviceDir).mkdirs();
 
         for (Class cls : classes){
+            if (cls.isAbstract()) continue;
             generateService(cls, classes, associations, serviceDir, interactions, enumerations);
         }
 
@@ -199,8 +200,8 @@ public class SpringServiceGenerator {
         writer.println("    }");
         writer.println();
 
-        // create()
-        generateCreateMethod(writer, className, cls, associations);
+        // create() — skip for abstract classes
+        if (!cls.isAbstract()) generateCreateMethod(writer, className, cls, associations);
 
         // update()
         generateUpdateMethod(writer, className, cls);

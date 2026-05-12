@@ -12,6 +12,7 @@ public class ParsedModel {
     private List<Interaction> psmInteractions;
     private List<Interaction> pimInteractions;
     private List<Interaction> allInteractions;
+    private List<Interface> interfaces;
 
     public ParsedModel(List<Class> classes,
                        List<Association> associations,
@@ -19,7 +20,8 @@ public class ParsedModel {
                        List<Enumeration> enumerations,
                        List<Interaction> psmInteractions,
                        List<Interaction> pimInteractions,
-                       List<Interaction> allInteractions
+                       List<Interaction> allInteractions,
+                       List<Interface> interfaces
     )
     {
         this.classes = classes;
@@ -29,6 +31,7 @@ public class ParsedModel {
         this.psmInteractions = psmInteractions;
         this.pimInteractions = pimInteractions;
         this.allInteractions = allInteractions;
+        this.interfaces = interfaces;
     }
 
     public List<Class> getClasses() {
@@ -82,6 +85,8 @@ public class ParsedModel {
     public List<Interaction> getAllInteractions() {
         return allInteractions;
     }
+
+    public List<Interface> getInterfaces() { return interfaces; }
 
 }
 

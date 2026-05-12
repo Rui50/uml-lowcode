@@ -3,8 +3,6 @@
 // Class stuff
 ///////////////////////////////
 
-import type { O } from "vue-router/dist/index-D_VEAp3P.js"
-
 export interface AttributeDTO {
   name: string
   type: string

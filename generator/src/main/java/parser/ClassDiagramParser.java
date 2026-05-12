@@ -3,6 +3,7 @@ package parser;
 import com.sdmetrics.model.MetaModel;
 import com.sdmetrics.model.Model;
 import com.sdmetrics.model.ModelElement;
+import generator.GeneratorUtils;
 import model.*;
 import model.Class;
 import model.Enumeration;
@@ -66,6 +67,9 @@ public class ClassDiagramParser {
                 className,
                 visibility
         );
+
+        String abstractAttr = element.getPlainAttribute("abstract");
+        cl.setAbstract("true".equalsIgnoreCase(abstractAttr));
 
         // attr da classe
         Collection<?> attributes = element.getSetAttribute("ownedattributes");
@@ -160,6 +164,33 @@ public class ClassDiagramParser {
         }
 
         return cl;
+    }
+
+    /**
+     * extrai todas as interfaces do  UML.
+     * interface tem nome, visibilidade e operations.
+     */
+    public List<Interface> parseInterfaces() {
+        List<Interface> interfaces = new ArrayList<>();
+
+        List<ModelElement> interfaceElements = model.getAcceptedElements(metaModel.getType("interface"));
+
+        for (ModelElement element : interfaceElements) {
+            String name = element.getName();
+            Interface iface = new Interface(name, "public");
+
+            // operations
+            Collection<?> operations = element.getSetAttribute("ownedoperations");
+            if (operations != null) {
+                for (Object operationObj : operations) {
+                    ModelElement operationElement = (ModelElement) operationObj;
+                    Operation operation = parseOperation(operationElement);
+                    iface.addOperation(operation);
+                }
+            }
+            interfaces.add(iface);
+        }
+        return interfaces;
     }
 
     // para cada atributo obter nome, tipo e visibilidade
@@ -402,6 +433,41 @@ public class ClassDiagramParser {
 
         return generalizations;
     }
+
+    /**
+     * Liga cada classe às interfaces que realiza.
+     * VP exporta como <packagedElement xmi:type="uml:Realization">, com
+     *  client  = a classe que implementa
+     *  supplier = a interface realizada
+     * Só conta se o supplier for de facto uma interface (não outra classe).
+     */
+    public void fillRealizations(List<Class> classes, List<Interface> interfaces) {
+        List<ModelElement> realizationElements = model.getAcceptedElements(metaModel.getType("realization"));
+
+        for (ModelElement rel : realizationElements) {
+            Collection<?> clients = rel.getSetAttribute("client");
+            Collection<?> suppliers = rel.getSetAttribute("supplier");
+            if (clients == null || suppliers == null) continue;
+
+            for (Object cObj : clients) {
+                ModelElement clientElem = (ModelElement) cObj;
+                Class cl = GeneratorUtils.findClassByName(classes, clientElem.getName());
+                if (cl == null) continue;
+
+                for (Object sObj : suppliers) {
+                    ModelElement supplierElem = (ModelElement) sObj;
+                    // só conta se o supplier for uma interface
+                    for (Interface i : interfaces) {
+                        if (i.getName().equals(supplierElem.getName())) {
+                            cl.addRealization(i);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private String buildMultiplicity(String lower, String upper) {
         // ambos null -> sem multiplicidade
         if (lower == null && upper == null) {

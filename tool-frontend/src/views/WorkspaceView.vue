@@ -19,6 +19,7 @@ const target = ref('plain')
       <select v-model="target">
         <option value="plain">Plain Java</option>
         <option value="cli">CLI</option>
+        <option value="cli-jpa">CLI + JPA</option>
         <option value="spring">Spring Boot</option>
       </select>
       <button @click="modelStore.generate(target)">Generate</button>

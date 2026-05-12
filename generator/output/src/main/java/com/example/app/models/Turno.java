@@ -5,7 +5,7 @@ import java.util.*;
 
 @Entity
 @Table(name = "turno")
-public class Turno{
+public class Turno {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,5 +40,10 @@ public class Turno{
     @Override
     public String toString() {
         return "Turno{id=" + getId() + ", numero=" + numero + ", capacidade=" + capacidade + "}";
+    }
+    // Operations
+    public Boolean temVaga(
+    ) {
+        throw new UnsupportedOperationException("Not implemented yet");
     }
 }

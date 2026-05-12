@@ -8,17 +8,13 @@ import java.util.*;
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "type")
 @DiscriminatorValue("Aluno")
-public class Aluno{
+public class Aluno {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     // attributes
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado")
-    private EstadoAluno estado;
-
     @Column(name = "email")
     private String email;
 
@@ -28,6 +24,10 @@ public class Aluno{
     @Column(name = "numero")
     private int numero;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado")
+    private EstadoAluno estado;
+
     // relationship: Aluno -> Turno
     @ManyToOne
     @JoinColumn(name = "turno_id")
@@ -35,9 +35,6 @@ public class Aluno{
 
 
     public Aluno() {}
-
-    public EstadoAluno getEstado() { return estado; }
-    public void setEstado(EstadoAluno estado) { this.estado = estado; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
@@ -48,6 +45,9 @@ public class Aluno{
     public int getNumero() { return numero; }
     public void setNumero(int numero) { this.numero = numero; }
 
+    public EstadoAluno getEstado() { return estado; }
+    public void setEstado(EstadoAluno estado) { this.estado = estado; }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -56,6 +56,11 @@ public class Aluno{
 
     @Override
     public String toString() {
-        return "Aluno{id=" + getId() + ", estado=" + estado + ", email=" + email + ", nome=" + nome + ", numero=" + numero + "}";
+        return "Aluno{id=" + getId() + ", email=" + email + ", nome=" + nome + ", numero=" + numero + ", estado=" + estado + "}";
+    }
+    // Operations
+    public List<String> validar(
+    ) {
+        throw new UnsupportedOperationException("Not implemented yet");
     }
 }

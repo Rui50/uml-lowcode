@@ -29,6 +29,9 @@ public class Class {
 
     private Class parentClass; // para herança, facilitar geração
 
+    private boolean isAbstract;
+    private List<Interface> realizations;
+
     private List<Invariant> invariants;
 
     public Class(String name, String visibility) {
@@ -38,6 +41,7 @@ public class Class {
         this.operations = new ArrayList<>();
         this.parentClass = null;
         this.invariants = new ArrayList<>();
+        this.realizations = new ArrayList<>();
     }
 
     public String getName() {
@@ -78,6 +82,22 @@ public class Class {
 
     public void setParentClass(Class parentClass) {
         this.parentClass = parentClass;
+    }
+
+    public boolean isAbstract() {
+        return isAbstract;
+    }
+
+    public void setAbstract(boolean isAbstract) {
+        this.isAbstract = isAbstract;
+    }
+
+    public List<Interface> getRealizations() {
+        return realizations;
+    }
+
+    public void addRealization(Interface i) {
+        this.realizations.add(i);
     }
 
     // caso de ser uma classe filha, trazer os atributos e operações da classe pai

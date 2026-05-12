@@ -54,6 +54,31 @@ public class JavaEntityGenerator {
         System.out.println("Java entity generation completed.");
     }
 
+    /**
+     * Gera um ficheiro Java por interface UML (só assinaturas).
+     */
+    public void generateInterfaces(List<model.Interface> interfaces) throws IOException {
+        if (interfaces == null || interfaces.isEmpty()) return;
+
+        String modelsPath = baseOutputPath + "/src/models";
+        new File(modelsPath).mkdirs();
+
+        for (model.Interface iface : interfaces) {
+            String filename = modelsPath + "/" + iface.getName() + ".java";
+            try (PrintWriter w = new PrintWriter(filename)) {
+                w.println("package models;");
+                w.println();
+                w.println("public interface " + iface.getName() + " {");
+                w.println();
+                for (Operation op : iface.getOperations()) {
+                    w.println("    " + GeneratorUtils.buildSignature(op) + ";");
+                }
+                w.println("}");
+            }
+            System.out.println("Generated interface: " + iface.getName() + ".java");
+        }
+    }
+
     // gera enum
     private void generateEnum(Enumeration enumeration, String modelsDir) throws IOException {
         String filename = modelsDir + "/" + enumeration.getName() + ".java";
@@ -90,9 +115,16 @@ public class JavaEntityGenerator {
             writer.println();
 
             // class declaration
-            writer.print("public class " + cls.getName());
+            writer.print("public " + (cls.isAbstract() ? "abstract " : "") + "class " + cls.getName());
             if (cls.getParentClass() != null) {
                 writer.print(" extends " + cls.getParentClass().getName());
+            }
+            if (!cls.getRealizations().isEmpty()) {
+                writer.print(" implements ");
+                for (int i = 0; i < cls.getRealizations().size(); i++) {
+                    if (i > 0) writer.print(", ");
+                    writer.print(cls.getRealizations().get(i).getName());
+                }
             }
             writer.println(" {");
             writer.println();

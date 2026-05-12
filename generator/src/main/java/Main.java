@@ -5,7 +5,8 @@ import service.ParsingService;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        String xmiFilePath = "test-models/aluno_turma_class_seq_full_test.uml";
+        //String xmiFilePath = "test-models/aluno_turma_class_seq_full_test.uml";
+        String xmiFilePath = "test-models/interface.uml";
         String outputDir = "output";
         String target = "cli-jpa";
 

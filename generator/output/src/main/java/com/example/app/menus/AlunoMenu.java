@@ -48,19 +48,23 @@ public class AlunoMenu {
     }
 
     private void create() {
-        System.out.print("estado " + java.util.Arrays.toString(EstadoAluno.values()) + ": ");
-        EstadoAluno estado = EstadoAluno.valueOf(scanner.nextLine().trim().toUpperCase());
         System.out.print("email: ");
         String email = scanner.nextLine();
         System.out.print("nome: ");
         String nome = scanner.nextLine();
         int numero = InputUtils.readInt(scanner, "numero: ");
+        EstadoAluno estado = null;
+        while (estado == null) {
+            System.out.print("estado " + java.util.Arrays.toString(EstadoAluno.values()) + ": ");
+            try { estado = EstadoAluno.valueOf(scanner.nextLine().trim().toUpperCase()); }
+            catch (IllegalArgumentException ex) { System.out.println("Invalid value. Try again."); }
+        }
 
         Aluno entity = new Aluno();
-        entity.setEstado(estado);
         entity.setEmail(email);
         entity.setNome(nome);
         entity.setNumero(numero);
+        entity.setEstado(estado);
 
         em.getTransaction().begin();
         try {
@@ -69,6 +73,7 @@ public class AlunoMenu {
             System.out.println("Created: " + entity);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -106,9 +111,6 @@ public class AlunoMenu {
         System.out.println("Current: " + entity);
         System.out.println("(press Enter to keep current value)");
 
-        System.out.print("estado [" + entity.getEstado() + "] " + java.util.Arrays.toString(EstadoAluno.values()) + ": ");
-        String estadoStr = scanner.nextLine();
-        if (!estadoStr.isEmpty()) entity.setEstado(EstadoAluno.valueOf(estadoStr.trim().toUpperCase()));
         System.out.print("email [" + entity.getEmail() +"]: ");
         String email = scanner.nextLine();
         if (!email.isEmpty()) entity.setEmail(email);
@@ -118,6 +120,13 @@ public class AlunoMenu {
         System.out.print("numero [" + entity.getNumero() +"]: ");
         String numeroStr = scanner.nextLine();
         if (!numeroStr.isEmpty()) entity.setNumero(Integer.parseInt(numeroStr));
+        while (true) {
+            System.out.print("estado [" + entity.getEstado() + "] " + java.util.Arrays.toString(EstadoAluno.values()) + ": ");
+            String estadoStr = scanner.nextLine();
+            if (estadoStr.isEmpty()) break;
+            try { entity.setEstado(EstadoAluno.valueOf(estadoStr.trim().toUpperCase())); break; }
+            catch (IllegalArgumentException ex) { System.out.println("Invalid value. Try again."); }
+        }
 
         em.getTransaction().begin();
         try {
@@ -126,6 +135,7 @@ public class AlunoMenu {
             System.out.println("Updated: " + entity);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -144,6 +154,7 @@ public class AlunoMenu {
             System.out.println("Deleted.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -164,6 +175,7 @@ public class AlunoMenu {
             System.out.println("Assigned Turno to Aluno.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -181,6 +193,7 @@ public class AlunoMenu {
             System.out.println("Turno removed from " + entity);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }

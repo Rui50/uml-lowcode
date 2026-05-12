@@ -62,6 +62,7 @@ public class TurnoMenu {
             System.out.println("Created: " + entity);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -113,6 +114,7 @@ public class TurnoMenu {
             System.out.println("Updated: " + entity);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -131,6 +133,7 @@ public class TurnoMenu {
             System.out.println("Deleted.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -151,6 +154,7 @@ public class TurnoMenu {
             System.out.println("Added Aluno to Turno.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -171,6 +175,7 @@ public class TurnoMenu {
             System.out.println("Aluno removed from " + owner);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }

@@ -1,11 +1,11 @@
 package generator.CLI_JPA;
 
 import generator.GeneratorUtils;
+import generator.OperationGenerator;
 import generator.ValidationGenerator;
-import model.Association;
-import model.Attribute;
+import model.*;
 import model.Class;
-import model.Enumeration;
+import model.sequence.Interaction;
 
 import java.io.File;
 import java.io.IOException;
@@ -110,11 +110,18 @@ public class CLIEntityGenerator {
             generateClassBaseAnnotations(writer, cls, allClasses);
 
             // declaração da classe
-            writer.print("public class " + cls.getName());
+            writer.print("public " + (cls.isAbstract() ? "abstract " : "") + "class " + cls.getName());
             if (cls.getParentClass() != null) {
-                writer.print(" extends " + cls.getParentClass().getName() + " ");
+                writer.print(" extends " + cls.getParentClass().getName());
             }
-            writer.println("{");
+            if (!cls.getRealizations().isEmpty()) {
+                writer.print(" implements ");
+                for (int i = 0; i < cls.getRealizations().size(); i++) {
+                    if (i > 0) writer.print(", ");
+                    writer.print(cls.getRealizations().get(i).getName());
+                }
+            }
+            writer.println(" {");
             writer.println();
 
             // se nao tem parent gera id
@@ -136,6 +143,8 @@ public class CLIEntityGenerator {
             if (!cls.getInvariants().isEmpty()) {
                 validationGenerator.generateValidateMethod(writer, cls);
             }
+
+            generateOperations(writer, cls, associations);
 
             writer.println("}");
 
@@ -232,7 +241,7 @@ public class CLIEntityGenerator {
         }
 
 
-        // toString
+        // toString doesnt include relationships for now, avoids infinite cycle
         writer.println();
         writer.println("    @Override");
         writer.println("    public String toString() {");
@@ -547,6 +556,65 @@ public class CLIEntityGenerator {
         }
     }
 
+    /**
+     * gera os ficheiros para interface UML
+     *
+     */
+    /**
+     * Emite as operações da classe.
+     * Se tiverem sequence diagram, gera o corpo via OperationGenerator.
+     * Caso contrário, gera stub que lança UnsupportedOperationException.
+     * Necessário para satisfazer contratos de interfaces e para o menu poder chamar owner.<op>().
+     */
+    private void generateOperations(PrintWriter writer, Class cls, List<Association> associations) {
+        if (cls.getOperations().isEmpty()) return;
+
+        writer.println("    // Operations");
+
+        for (Operation op : cls.getOperations()) {
+            Interaction interaction = op.getSequenceDiagram();
+            if (interaction != null) {
+                OperationGenerator.generateOperation(writer, cls, op, interaction, associations);
+            } else {
+                String visibility = op.getVisibility();
+                String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
+                writer.println("    " + visibility + " " + returnType + " " + op.getName() + "(");
+
+                List<Parameter> parameters = op.getParameters();
+                for (int i = 0; i < parameters.size(); i++) {
+                    Parameter param = parameters.get(i);
+                    String paramType = GeneratorUtils.removePackageNames(param.getType());
+                    writer.print("        " + paramType + " " + param.getName());
+                    writer.println(i < parameters.size() - 1 ? "," : "");
+                }
+
+                writer.println("    ) {");
+                writer.println("        throw new UnsupportedOperationException(\"Not implemented yet\");");
+                writer.println("    }");
+            }
+        }
+    }
+
+    public void generateInterfaces(List<Interface> interfaces) throws IOException {
+        if (interfaces == null || interfaces.isEmpty()) return;
+
+        String dir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/models";
+        new File(dir).mkdirs();
+
+        for (Interface iface : interfaces) {
+            try (PrintWriter w = new PrintWriter(dir + "/" + iface.getName() + ".java")) {
+                w.println("package " + basePackage + ".models;");
+                w.println();
+                w.println("public interface " + iface.getName() + " {");
+                w.println();
+                for (Operation op : iface.getOperations()) {
+                    w.println("    " + GeneratorUtils.buildSignature(op) + ";");
+                }
+                w.println("}");
+            }
+            System.out.println("Generated interface: " + iface.getName() + ".java");
+        }
+    }
 
 
     // nome do campo do outro lado da associação, para usarmos em mappedBy e @JsonIgnorePropertie

@@ -54,13 +54,13 @@ public class TurmaMenu {
     }
 
     private void create() {
-        int numAlunos = InputUtils.readInt(scanner, "numAlunos: ");
         System.out.print("nome: ");
         String nome = scanner.nextLine();
+        int numAlunos = InputUtils.readInt(scanner, "numAlunos: ");
 
         Turma entity = new Turma();
-        entity.setNumAlunos(numAlunos);
         entity.setNome(nome);
+        entity.setNumAlunos(numAlunos);
 
         em.getTransaction().begin();
         try {
@@ -69,6 +69,7 @@ public class TurmaMenu {
             System.out.println("Created: " + entity);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -108,12 +109,12 @@ public class TurmaMenu {
         System.out.println("Current: " + entity);
         System.out.println("(press Enter to keep current value)");
 
-        System.out.print("numAlunos [" + entity.getNumAlunos() +"]: ");
-        String numAlunosStr = scanner.nextLine();
-        if (!numAlunosStr.isEmpty()) entity.setNumAlunos(Integer.parseInt(numAlunosStr));
         System.out.print("nome [" + entity.getNome() +"]: ");
         String nome = scanner.nextLine();
         if (!nome.isEmpty()) entity.setNome(nome);
+        System.out.print("numAlunos [" + entity.getNumAlunos() +"]: ");
+        String numAlunosStr = scanner.nextLine();
+        if (!numAlunosStr.isEmpty()) entity.setNumAlunos(Integer.parseInt(numAlunosStr));
 
         em.getTransaction().begin();
         try {
@@ -122,6 +123,7 @@ public class TurmaMenu {
             System.out.println("Updated: " + entity);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -140,6 +142,7 @@ public class TurmaMenu {
             System.out.println("Deleted.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -160,6 +163,7 @@ public class TurmaMenu {
             System.out.println("Added Aluno to Turma.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -180,6 +184,7 @@ public class TurmaMenu {
             System.out.println("Aluno removed from " + owner);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -200,6 +205,7 @@ public class TurmaMenu {
             System.out.println("Added Turno to Turma.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }
@@ -220,6 +226,7 @@ public class TurmaMenu {
             System.out.println("Turno removed from " + owner);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            em.clear();
             System.out.println("Error: " + ex.getMessage());
         }
     }

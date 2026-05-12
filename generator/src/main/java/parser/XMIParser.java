@@ -11,14 +11,10 @@ import com.sdmetrics.model.XMITransformations;
 import com.sdmetrics.util.XMLParser;
 
 import generator.GeneratorUtils;
-import model.Association;
-import model.Attribute;
+import model.*;
+
 import model.Class;
 import model.Enumeration;
-import model.Operation;
-import model.Parameter;
-import model.Generalization;
-
 import model.annotations.Invariant;
 import model.sequence.Interaction;
 import ocl.OCLToJavaVisitor;
@@ -48,6 +44,7 @@ public class XMIParser {
     private List<Generalization> generalizations;
     private List<Enumeration> enumerations;
     private List<Interaction> interactions;
+    private List<Interface> interfaces;
 
     public void loadModel(String xmiFile) throws Exception{
 
@@ -92,8 +89,34 @@ public class XMIParser {
         associations = cdp.parseAssociations();
         generalizations = cdp.parseGeneralizations();
         enumerations = cdp.parseEnumerations();
+        interfaces = cdp.parseInterfaces();
 
         fillGeneralizations(classes, generalizations);
+        cdp.fillRealizations(classes, interfaces);
+
+        System.out.println("Interfaces extracted: " + interfaces.size());
+        if (interfaces.isEmpty()) {
+            System.out.println("No interfaces found");
+        } else {
+            for (Interface i : interfaces) {
+                System.out.println(i);
+                for (Operation op : i.getOperations()) {
+                    System.out.println("  " + op);
+                }
+            }
+        }
+
+        System.out.println("Realizations:");
+        boolean anyRealization = false;
+        for (Class c : classes) {
+            if (!c.getRealizations().isEmpty()) {
+                anyRealization = true;
+                for (Interface i : c.getRealizations()) {
+                    System.out.println("  " + c.getName() + " realizes " + i.getName());
+                }
+            }
+        }
+        if (!anyRealization) System.out.println("  none");
 
         // sequence diagrams
         SequenceDiagramParser sdp = new SequenceDiagramParser(model, metaModel, xmiFile);
@@ -105,6 +128,7 @@ public class XMIParser {
     public List<Generalization> getGeneralizations() { return generalizations; }
     public List<Enumeration> getEnumerations()       { return enumerations; }
     public List<Interaction> getInteractions()       { return interactions; }
+    public List<Interface> getInterfaces()              { return interfaces; }
 
     // para preencher as heranças entre as classes
     private static void fillGeneralizations(List<Class> classes, List<Generalization> generalizations) {

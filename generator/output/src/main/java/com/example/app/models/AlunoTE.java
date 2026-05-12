@@ -20,4 +20,9 @@ public class AlunoTE extends Aluno {
     public String toString() {
         return "AlunoTE{id=" + getId() + ", empresa=" + empresa + "}";
     }
+    // Operations
+    public Boolean comprovativo(
+    ) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
 }
