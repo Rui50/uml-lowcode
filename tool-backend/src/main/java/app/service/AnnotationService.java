@@ -3,11 +3,8 @@ package app.service;
 import app.dto.AnnotationsDTO;
 import app.dto.OclDTO;
 
-import model.Association;
-import model.Attribute;
+import model.*;
 import model.Class;
-import model.Operation;
-import model.ParsedModel;
 import model.sequence.Interaction;
 import parser.AnnotationParser;
 
@@ -22,9 +19,9 @@ public class AnnotationService {
 
         List<Class> classes = model.getClasses();
         List<Association> associations = model.getAssociations();
-        clearAnnotations(classes);
+        clearAnnotations(classes, model.getInterfaces());
 
-        applyInvariants(classes, associations, payload.getInvariantsByClass());
+        applyInvariants(classes, associations, payload.getInvariantsByClass(), model.getInterfaces());
         applyInits(classes, associations, payload.getInitByAttribute());
         applyDerives(classes, associations, payload.getDeriveByAttribute());
 
@@ -33,10 +30,14 @@ public class AnnotationService {
         applyPostconditions(classes, associations, payload.getPostconditionsByOperation());
     }
 
-    private void applyInvariants(List<Class> classes, List<Association> associations, Map<String, List<OclDTO>> map) {
+    private void applyInvariants(List<Class> classes, List<Association> associations,
+                                 Map<String, List<OclDTO>> map,
+                                    List<Interface> interfaces
+    ) {
         map.forEach((className, list) -> {
             Class c = findClass(classes, className);
-            if (c == null) return;
+            Interface iface = (c == null) ? findInterface(interfaces, className) : null;
+            if (c == null && iface == null) return;
             for (int i = 0; i < list.size(); i++) {
                 OclDTO dto = list.get(i);
                 String name;
@@ -55,9 +56,20 @@ public class AnnotationService {
                     err_message = dto.getMessage();
                 }
 
-                c.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message, c, associations));
+                if (c != null) {
+                    c.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message, c,
+                            associations));
+                } else {
+                    // interfaces have no attributes/associations of their own — pass empty list
+                    iface.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message,
+                            null, associations));
+                }
             }
         });
+    }
+
+    private Interface findInterface(List<Interface> interfaces, String name) {
+        return interfaces.stream().filter(i -> i.getName().equals(name)).findFirst().orElse(null);
     }
 
     private void applyInits(List<Class> classes, List<Association> associations, Map<String, String> map) {
@@ -155,8 +167,7 @@ public class AnnotationService {
         return null;
     }
 
-    private void clearAnnotations(List<Class> classes) {
-        for (Class c : classes) {
+    private void clearAnnotations(List<Class> classes, List<Interface> interfaces) {        for (Class c : classes) {
             c.getInvariants().clear();
 
             for (Operation op : c.getOperations()) {
@@ -169,6 +180,9 @@ public class AnnotationService {
                 a.setDeriveExpression(null);
                 a.setJavaDeriveExpression(null);
             }
+        }
+        for (Interface iface : interfaces) {
+            iface.getInvariants().clear();
         }
     }
 }

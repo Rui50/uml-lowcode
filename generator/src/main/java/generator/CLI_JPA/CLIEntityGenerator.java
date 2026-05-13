@@ -140,9 +140,7 @@ public class CLIEntityGenerator {
 
             generateBaseStuff(writer, cls, associations);
 
-            if (!cls.getInvariants().isEmpty()) {
-                validationGenerator.generateValidateMethod(writer, cls);
-            }
+            validationGenerator.generateValidateMethod(writer, cls);
 
             generateOperations(writer, cls, associations);
 

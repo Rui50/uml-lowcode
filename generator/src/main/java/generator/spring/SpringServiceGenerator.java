@@ -238,8 +238,8 @@ public class SpringServiceGenerator {
             boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
             // determinar se esta classe é source ou target na associação
-            boolean isSource = assoc.getSourceClass().equals(cls.getName());
-            boolean isTarget = assoc.getTargetClass().equals(cls.getName());
+            boolean isSource = cls.isOrInheritsFrom(assoc.getSourceClass());
+            boolean isTarget = cls.isOrInheritsFrom(assoc.getTargetClass());
 
             if (!isSource && !isTarget) continue;
 
@@ -741,7 +741,7 @@ public class SpringServiceGenerator {
 
     // gera a arte de validação de invariantes OCL antes de guardar a entidade, se existirem
     private void generateValidationBeforeSave(PrintWriter writer, Class cls, String varName) {
-        if (cls.getInvariants() != null && !cls.getInvariants().isEmpty()) {
+        if (cls.hasAnyInvariants()) {
             writer.println("        // Validate OCL invariants");
             writer.println("        List<String> errors = " + varName + ".validate();");
             writer.println("        if (!errors.isEmpty()) {");

@@ -166,9 +166,7 @@ public class JavaEntityGenerator {
             generateToString(writer, cls);
 
             // validation
-            if (!cls.getInvariants().isEmpty()) {
-                validationGenerator.generateValidateMethod(writer, cls);
-            }
+            validationGenerator.generateValidateMethod(writer, cls);
 
             generateOperations(writer, cls, associations);
 

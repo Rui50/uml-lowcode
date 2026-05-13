@@ -178,8 +178,8 @@ public class SpringControllerGenerator {
         for (Association assoc : associations) {
             boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
-            boolean isSource = assoc.getSourceClass().equals(className);
-            boolean isTarget = assoc.getTargetClass().equals(className);
+            boolean isSource = cls.isOrInheritsFrom(assoc.getSourceClass());
+            boolean isTarget = cls.isOrInheritsFrom(assoc.getTargetClass());
             if (!isSource && !isTarget) continue;
 
             String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();

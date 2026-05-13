@@ -108,6 +108,7 @@ public class GeneratorUtils {
      */
     public static String fixMapAccess(String java, Class cls, List<Association> associations) {
         if (java == null) return null;
+        if (cls == null) return java;   // interfaces have no associations/map fields
         List<String> mapFields = getMapFieldNames(cls, associations);
         for (String field : mapFields) {
             java = java.replace("this." + field + ".stream()", "this." + field + ".values().stream()");

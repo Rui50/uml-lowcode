@@ -151,7 +151,7 @@ public class CLIMenuGenerator {
 
         // adicionar das relações
         for (Association assoc : associations) {
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
+            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
                 String other = assoc.getTargetClass();
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
@@ -165,7 +165,7 @@ public class CLIMenuGenerator {
                     options.add(new String[]{"Remove " + other, "remove" + other});
                 }
             }
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
+            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
                 String other = assoc.getSourceClass();
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
@@ -242,7 +242,7 @@ public class CLIMenuGenerator {
         }
 
         // validation
-        if (!cls.getInvariants().isEmpty()) {
+        if (cls.hasAnyInvariants()) {
             w.println();
             w.println("        List<String> errors = entity.validate();");
             w.println("        if (!errors.isEmpty()) {");
@@ -309,11 +309,11 @@ public class CLIMenuGenerator {
             String other = null;
             String role = null;
             String mult = null;
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
+            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
                 other = assoc.getTargetClass();
                 role = assoc.getTargetRole();
                 mult = assoc.getTargetMultiplicity();
-            } else if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
+            } else if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
                 other = assoc.getSourceClass();
                 role = assoc.getSourceRole();
                 mult = assoc.getSourceMultiplicity();
@@ -365,7 +365,7 @@ public class CLIMenuGenerator {
         }
 
         // validation
-        if (!cls.getInvariants().isEmpty()) {
+        if (cls.hasAnyInvariants()) {
             w.println();
             w.println("        List<String> errors = entity.validate();");
             w.println("        if (!errors.isEmpty()) {");
@@ -425,7 +425,7 @@ public class CLIMenuGenerator {
      */
     private void generateRelationshipMethods(PrintWriter w, Class cls, List<Association> associations) {
         for (Association assoc : associations) {
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
+            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
                 String other = assoc.getTargetClass();
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
@@ -438,7 +438,7 @@ public class CLIMenuGenerator {
                     generateRemoveAssignMethod(w, cls.getName(), other, fieldName);
                 }
             }
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
+            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
                 String other = assoc.getSourceClass();
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
@@ -797,10 +797,10 @@ public class CLIMenuGenerator {
     private Set<String> getNeededRepositories(Class cls, List<Association> associations, List<Class> allClasses) {
         Set<String> related = new LinkedHashSet<>();
         for (Association assoc : associations) {
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
+            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
                 related.add(assoc.getTargetClass());
             }
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
+            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
                 related.add(assoc.getSourceClass());
             }
         }

@@ -7,6 +7,7 @@ import app.dto.dsequence.*;
 import generator.GeneratorUtils;
 import model.*;
 import model.Class;
+import model.Interface;
 import model.sequence.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
@@ -77,8 +78,10 @@ public class ToolService {
             enumerations.add(new EnumerationDTO(e.getName(), e.getLiterals()));
         }
 
-        return new ParseResponse(classes, associations, interactions, enumerations);
-    }
+        List<InterfaceDTO> interfaces = model.getInterfaces().stream()
+                .map(this::toInterfaceDto).toList();
+
+        return new ParseResponse(classes, associations, interactions, enumerations, interfaces);    }
 
     /**
      * MOVER DEPOIS PARA MAPPERSW
@@ -94,7 +97,10 @@ public class ToolService {
                 .map(o -> toOperationDTO(c.getName(), o))
                 .toList();
 
-        return new ClassDTO(c.getName(), parent, attrs, ops);
+        List<String> realizations = c.getRealizations().stream()
+                .map(Interface::getName).toList();
+
+        return new ClassDTO(c.getName(), parent, attrs, ops, c.isAbstract(), realizations);
     }
 
     private OperationDTO toOperationDTO(String className, Operation o) {
@@ -127,6 +133,12 @@ public class ToolService {
                 a.isSourceNavigable(),
                 a.isTargetNavigable()
         );
+    }
+
+    private InterfaceDTO toInterfaceDto(Interface i) {
+        List<OperationDTO> ops = i.getOperations().stream()
+                .map(o -> toOperationDTO(i.getName(), o)).toList();
+        return new InterfaceDTO(i.getName(), ops);
     }
 
     private InteractionDTO toInteractionDTO(Interaction i) {

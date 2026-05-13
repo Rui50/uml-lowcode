@@ -1,6 +1,7 @@
 package generator;
 
 import model.Class;
+import model.Interface;
 import model.annotations.Invariant;
 
 import java.io.PrintWriter;
@@ -21,9 +22,14 @@ public class ValidationGenerator {
      * }
      */
     public void generateValidateMethod(PrintWriter writer, Class cls) {
-        if (cls.getInvariants().isEmpty()) {
-            return;
-        }
+        System.out.println("[ValidationGen] " + cls.getName()
+                + " ownInvs=" + cls.getInvariants().size()
+                + " realizations=" + cls.getRealizations().size()
+                + " parent=" + (cls.getParentClass() != null ? cls.getParentClass().getName() : "null")
+                + " hasAny=" + cls.hasAnyInvariants());
+        // gera validate se tiver invariantes proprias, herdadas de interface, ou herdadas de parent
+        if (!cls.hasAnyInvariants()) return;
+        boolean parentHas = cls.getParentClass() != null && cls.getParentClass().hasAnyInvariants();
 
         writer.println("    // Validation (para ja so invariantes OCL simples");
         writer.println();
@@ -35,6 +41,12 @@ public class ValidationGenerator {
         for (Invariant inv : cls.getInvariants()) {
             writer.println("     * - " + inv.getName() + ": " + inv.getOclExpression());
         }
+        for (Interface iface : cls.getRealizations()) {
+            for (Invariant inv : iface.getInvariants()) {
+                writer.println("     * - [" + iface.getName() + "] " + inv.getName() + ": " +
+                        inv.getOclExpression());
+            }
+        }
         writer.println("     * ");
         writer.println("     * @return list of validation errors (empty if valid)");
         writer.println("     */");
@@ -42,24 +54,38 @@ public class ValidationGenerator {
         // Method signature
         writer.println("    public List<String> validate() {");
         writer.println("       List<String> errors = new ArrayList<>();");
+        if (parentHas) {
+            writer.println("        errors.addAll(super.validate());");
+        }
         writer.println();
 
         // Generate validation for each invariant (ANTLR4 OCL -> Java)
         for (Invariant inv : cls.getInvariants()) {
-            String javaExpression = inv.getJavaExpression();
-            String errorMessage = (inv.getMessage() != null && !inv.getMessage().isEmpty())
-                    ? inv.getMessage()
-                    : "Invariant '" + inv.getName() + "' violated.";
-
-            writer.println("        // Invariant: " + inv.getName());
-            writer.println("        if (!(" + javaExpression + ")) {");
-            writer.println("            errors.add(\"" + errorMessage + "\");");
-            writer.println("        }");
-            writer.println();
+            invariantCheck(writer, inv, null);
+        }
+        for (Interface iface : cls.getRealizations()) {
+            for (Invariant inv : iface.getInvariants()) {
+                invariantCheck(writer, inv, iface.getName());
+            }
         }
 
         writer.println("        return errors;");
         writer.println("    }");
+        writer.println();
+    }
+
+    private void invariantCheck(PrintWriter writer, Invariant inv, String fromInterface) {
+        String javaExpression = inv.getJavaExpression();
+        String prefix = (fromInterface != null) ? "[" + fromInterface + "] " : "";
+        String errorMessage = (inv.getMessage() != null && !inv.getMessage().isEmpty())
+                ? prefix + inv.getMessage()
+                : prefix + "Invariant '" + inv.getName() + "' violated.";
+
+        writer.println("        // Invariant: " + (fromInterface != null ? "(from " + fromInterface + ") "
+                : "") + inv.getName());
+        writer.println("        if (!(" + javaExpression + ")) {");
+        writer.println("            errors.add(\"" + errorMessage + "\");");
+        writer.println("        }");
         writer.println();
     }
 

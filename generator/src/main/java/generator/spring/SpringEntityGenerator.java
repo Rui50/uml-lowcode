@@ -172,9 +172,7 @@ public class SpringEntityGenerator {
             // relações
             generateRelationships(writer, cls, associations, allClasses);
 
-            if (!cls.getInvariants().isEmpty()) {
-                validationGenerator.generateValidateMethod(writer, cls);
-            }
+            validationGenerator.generateValidateMethod(writer, cls);
 
             writer.println("}");
 

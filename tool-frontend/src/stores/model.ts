@@ -21,6 +21,14 @@ export const useModelStore = defineStore('model', () => {
     model.value?.classes.find(c => c.name === selectedClassName.value) ?? null
   );
 
+  const selectedInterface = computed(() =>
+    model.value?.interfaces.find(i => i.name === selectedClassName.value) ?? null
+  )
+
+  const selectedKind = computed<'class' | 'interface' | null>(() =>
+    selectedClass.value ? 'class' : selectedInterface.value ? 'interface' : null
+  )
+
   function selectDiagram(d: SelectedDiagram) {
     selectedDiagram.value = d
     // clear element selection when switching diagrams
@@ -83,6 +91,8 @@ export const useModelStore = defineStore('model', () => {
 
     // get/set
     selectedClass,
+    selectedInterface,
+    selectedKind,
 
     // actions
     reset,  

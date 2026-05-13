@@ -26,15 +26,18 @@ const annotations = useAnnotationsStore()
 
 const activeTab = ref<Tab>("ocl")
 
-const className = computed(() => model.selectedClass?.name ?? null)
+const selected = computed(() => model.selectedClass ?? model.selectedInterface)
+const isInterface = computed(() => model.selectedKind === 'interface')
+
+const className = computed(() => selected.value?.name ?? null)
 
 const invariants = computed(() =>
   className.value ? annotations.invariantsByClass[className.value] ?? [] : []
 )
 
-const attributes = computed(() => model.selectedClass?.attributes ?? [])
+const attributes = computed(() => isInterface.value ? [] : model.selectedClass?.attributes ?? [])
 
-const operations = computed(() => model.selectedClass?.operations ?? [])  
+const operations = computed(() => isInterface.value ? [] : model.selectedClass?.operations ?? [])
 const interactions = computed(() => model.model?.interactions ?? [])
 
 const enumsText = computed<Record<string, string[]>>(() => {
@@ -110,7 +113,7 @@ function close() {
           </section>
 
           <!-- Attributes -->
-          <section class="block">
+          <section v-if="!isInterface" class="block">
             <header class="block-head">
               <h4>Attributes</h4>
             </header>
@@ -159,7 +162,7 @@ function close() {
 
 
           <!-- Operations -->
-          <section class="block">
+          <section v-if="!isInterface" class="block">
             <header class="block-head">
               <h4>Operations</h4>
             </header>

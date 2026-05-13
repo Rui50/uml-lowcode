@@ -1,5 +1,7 @@
 package model;
 
+import model.annotations.Invariant;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,6 +13,7 @@ public class Interface {
     private String name;
     private String visibility;
     private List<Operation> operations;
+    private List<Invariant> invariants = new ArrayList<>();
 
     public Interface(String name, String visibility) {
         this.name = name;
@@ -26,6 +29,9 @@ public class Interface {
 
     public List<Operation> getOperations() { return operations; }
     public void addOperation(Operation op) { this.operations.add(op); }
+
+    public List<Invariant> getInvariants() { return invariants; }
+    public void addInvariant(Invariant inv) { this.invariants.add(inv); }
 
     @Override
     public String toString() {

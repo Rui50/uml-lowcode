@@ -138,9 +138,7 @@ public class ClassGenerator {
             writer.println();
 
             // validation (OCL invariants)
-            if (!cls.getInvariants().isEmpty()) {
-                validationGenerator.generateValidateMethod(writer, cls);
-            }
+            validationGenerator.generateValidateMethod(writer, cls);
 
             writer.println("}");
         }

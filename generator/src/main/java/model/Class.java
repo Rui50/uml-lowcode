@@ -34,6 +34,21 @@ public class Class {
 
     private List<Invariant> invariants;
 
+    public boolean isOrInheritsFrom(String name) {
+        Class c = this;
+        while (c != null) {
+            if (c.getName().equals(name)) return true;
+            c = c.getParentClass();
+        }
+        return false;
+    }
+
+    public boolean hasAnyInvariants() {
+        return !invariants.isEmpty()
+                || realizations.stream().anyMatch(i -> !i.getInvariants().isEmpty())
+                || (parentClass != null && parentClass.hasAnyInvariants());
+    }
+
     public Class(String name, String visibility) {
         this.name = name;
         this.visibility = visibility;

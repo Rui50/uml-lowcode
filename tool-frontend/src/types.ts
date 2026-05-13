@@ -13,6 +13,13 @@ export interface ClassDTO {
   parent: string | null
   attributes: AttributeDTO[]
   operations: OperationDTO[]
+  isAbstract: boolean
+  realizations: string[]
+}
+
+export interface InterfaceDTO {
+  name: string
+  operations: OperationDTO[]
 }
 
 export interface EnumerationDTO {
@@ -121,4 +128,5 @@ export interface ParseResponse {
   associations: AssociationDTO[]
   interactions: InteractionDTO[]
   enumerations: EnumerationDTO[]
+  interfaces: InterfaceDTO[]
 }

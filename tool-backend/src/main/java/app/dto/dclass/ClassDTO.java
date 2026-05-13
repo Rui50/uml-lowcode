@@ -11,4 +11,6 @@ public class ClassDTO {
     private String parent;
     private List<AttributeDTO> attributes;
     private List<OperationDTO> operations;
+    private boolean isAbstract;
+    private List<String> realizations;
 }

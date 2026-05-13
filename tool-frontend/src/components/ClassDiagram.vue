@@ -12,12 +12,16 @@ import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
 import { associationName } from '@/utils/associationName'
 
+import InterfaceNode from './InterfaceNode.vue'
+import type { InterfaceDTO } from '@/types'
+
 
 const store = useModelStore()
 
 const classes = computed<ClassDTO[]>(() => store.model?.classes ?? [])
 const associations = computed<AssociationDTO[]>(() => store.model?.associations ?? [])
 const enumerations = computed<EnumerationDTO[]>(() => store.model?.enumerations ?? [])
+  const interfaces = computed<InterfaceDTO[]>(() => store.model?.interfaces ?? [])
 
 /**
  * umlClass para as classes
@@ -26,6 +30,7 @@ const enumerations = computed<EnumerationDTO[]>(() => store.model?.enumerations 
 const nodeTypes = {
 	umlClass: markRaw(ClassNode),
 	umlEnum: markRaw(EnumNode),
+  umlInterface: markRaw(InterfaceNode),
 } as any
 
 const edgeTypes = {
@@ -52,7 +57,20 @@ const enumNodes = computed(() => {
 	}))
 })
 
-const nodes = computed(() => [...classNodes.value, ...enumNodes.value])
+const interfaceNodes = computed(() => {
+  const baseY = Math.ceil(classes.value.length / 4) * 160
+              + Math.ceil(enumerations.value.length / 4) * 140
+  return interfaces.value.map((it, i) => ({
+    id: `iface-${it.name}`,
+    type: 'umlInterface',
+    position: { x: (i % 4) * 220, y: baseY + Math.floor(i / 4) * 160 },
+    data: it,
+  }))
+})
+
+const nodes = computed(() => [
+  ...classNodes.value, ...enumNodes.value, ...interfaceNodes.value,
+])
 
 const edges = computed(() =>
   associations.value.map((a, i) => {
@@ -115,12 +133,32 @@ const inheritanceEdges = computed(() =>
     }))
 )
 
-const allEdges = computed(() => [...edges.value, ...inheritanceEdges.value])
+const realizationEdges = computed(() =>
+    classes.value.flatMap(c =>
+      (c.realizations ?? []).map(iface => ({
+        id: `r-${c.name}-${iface}`,
+        type: 'smoothstep',
+        source: c.name,
+        target: `iface-${iface}`,
+        markerEnd: { type: MarkerType.Arrow, width: 22, height: 22, color: '#888' },
+        style: { stroke: '#888', strokeDasharray: '6 4' },  // dashed para realization
+      }))
+    )
+  )
+
+const allEdges = computed(() => [
+  ...edges.value, ...inheritanceEdges.value, ...realizationEdges.value,
+])
 
 function onNodeClick(event: NodeMouseEvent) {
-  if (event.node.type !== 'umlClass') return
-  store.selectClass(event.node.id)
-}
+    if (event.node.type === 'umlClass') {
+      store.selectClass(event.node.id)
+    } else if (event.node.type === 'umlInterface') {
+      store.selectClass(event.node.data.name)   // interface name
+    } else {
+      return
+    }
+  }
 </script>
 
 <template>
@@ -147,7 +185,8 @@ function onNodeClick(event: NodeMouseEvent) {
 	height: 100%;
 }
 
-:deep(.vue-flow__node.selected) .class-node {
+:deep(.vue-flow__node.selected) .class-node,
+:deep(.vue-flow__node.selected) .iface-node {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 1px var(--color-primary);
 }
