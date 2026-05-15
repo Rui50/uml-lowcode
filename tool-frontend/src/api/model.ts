@@ -1,5 +1,5 @@
 import { useAnnotationsStore } from '@/stores/annotations'
-import type { ParseResponse } from '@/types'
+import type { ParseResponse, ProjectSettings } from '@/types'
 
 export async function parseModel(file: File): Promise<ParseResponse> {
   const form = new FormData()
@@ -17,9 +17,9 @@ export async function parseModel(file: File): Promise<ParseResponse> {
   return res.json() as Promise<ParseResponse>
 }
 
-export async function generateCode(target: string): Promise<Blob> {
+export async function generateCode(target: string, settings?: ProjectSettings): Promise<Blob> {
   const annotations = useAnnotationsStore()
-  const payload = {
+  const annotationsPayload = {
     invariantsByClass: annotations.invariantsByClass,
     initByAttribute: annotations.initByAttribute,
     deriveByAttribute: annotations.deriveByAttribute,
@@ -27,13 +27,14 @@ export async function generateCode(target: string): Promise<Blob> {
     preconditionsByOperation: annotations.preconditionsByOperation,
     postconditionsByOperation: annotations.postconditionsByOperation,
   }
+  const body = JSON.stringify({ annotations: annotationsPayload, settings: settings ?? null })
   const res = await fetch(`/api/model/generate?target=${encodeURIComponent(target)}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(payload)
-  }) 
+    body
+  })
 
   if (!res.ok) {
     throw new Error(`Code generation failed (${res.status}): ${res.statusText}`)

@@ -120,6 +120,17 @@ export interface ClassAnnotations {
 
 
 
+//////////
+// Project settings
+//////////
+
+export interface ProjectSettings {
+  basePackage?: string
+  applicationName?: string
+  databaseType?: 'H2' | 'POSTGRESQL' | 'MYSQL'
+  serverPort?: number
+}
+
 ///////////
 // parsing reply
 ///////////

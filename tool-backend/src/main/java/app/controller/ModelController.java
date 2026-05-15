@@ -1,6 +1,7 @@
 package app.controller;
 
 import app.dto.AnnotationsDTO;
+import app.dto.GenerateRequestDTO;
 import app.dto.ParseResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -33,9 +34,10 @@ public class ModelController {
     @PostMapping("/generate")
     public ResponseEntity<byte[]> generate(
             @RequestParam(name = "target", defaultValue = "plain") String target,
-            @RequestBody(required = false) AnnotationsDTO annotations
+            @RequestBody(required = false) GenerateRequestDTO request
     ) throws Exception {
-        byte[] zip = toolService.generate(target, annotations);
+        if (request == null) request = new GenerateRequestDTO();
+        byte[] zip = toolService.generate(target, request.getAnnotations(), request.getSettings());
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)

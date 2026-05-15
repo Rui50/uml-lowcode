@@ -2,21 +2,21 @@ package service;
 
 import generator.CLI_JPA.*;
 import model.ParsedModel;
+import model.ProjectSettings;
 import parser.XMIParser;
 import generator.CLI.JavaProjectGenerator;
 import generator.CLI.JavaEntityGenerator;
 import generator.plain.CodeGenerator;
 import generator.plain.ClassGenerator;
 import generator.spring.*;
-import model.ParsedModel;
 
 public class GenerationService {
-    public void generate(ParsedModel model, String target, String outputDir) throws Exception {
+    public void generate(ParsedModel model, String target, String outputDir, ProjectSettings opts) throws Exception {
         switch (target) {
             case "plain"  -> generatePlain(model, outputDir);
             case "cli"    -> generateCli(model, outputDir);
-            case "spring" -> generateSpring(model, outputDir);
-            case "cli-jpa" -> generateCliJpa(model, outputDir);
+            case "spring" -> generateSpring(model, outputDir, opts);
+            case "cli-jpa" -> generateCliJpa(model, outputDir, opts);
 
             default -> throw new IllegalArgumentException("unknown target: " + target);
         }
@@ -47,8 +47,19 @@ public class GenerationService {
                 .generateInterfaces(m.getInterfaces());
     }
 
-    private void generateCliJpa(ParsedModel m, String outputDir) throws Exception {
+    private void generateCliJpa(ParsedModel m, String outputDir, ProjectSettings opts) throws Exception {
         CLIProjectSettings settings = new CLIProjectSettings();
+        if (opts != null) {
+            if (opts.getBasePackage() != null && !opts.getBasePackage().isBlank()) {
+                settings.setBasePackage(opts.getBasePackage());
+            }
+            if (opts.getApplicationName() != null && !opts.getApplicationName().isBlank()) {
+                settings.setApplicationName(opts.getApplicationName());
+            }
+            if (opts.getDatabaseType() != null && !opts.getDatabaseType().isBlank()) {
+                settings.setDatabaseType(generator.CLI_JPA.DatabaseType.valueOf(opts.getDatabaseType()));
+            }
+        }
         CLIProjectGenerator project = new CLIProjectGenerator(settings, outputDir);
         project.generateProjectStructure();
 
@@ -64,8 +75,22 @@ public class GenerationService {
                 .generateMenus(m.getClasses(), m.getAssociations(), m.getEnumerations());
     }
 
-    private void generateSpring(ParsedModel m, String outputDir) throws Exception {
+    private void generateSpring(ParsedModel m, String outputDir, ProjectSettings opts) throws Exception {
         SpringProjectSettings settings = new SpringProjectSettings();
+        if (opts != null) {
+            if (opts.getBasePackage() != null && !opts.getBasePackage().isBlank()) {
+                settings.setBasePackage(opts.getBasePackage());
+            }
+            if (opts.getApplicationName() != null && !opts.getApplicationName().isBlank()) {
+                settings.setApplicationName(opts.getApplicationName());
+            }
+            if (opts.getDatabaseType() != null && !opts.getDatabaseType().isBlank()) {
+                settings.setDatabaseType(generator.spring.DatabaseType.valueOf(opts.getDatabaseType()));
+            }
+            if (opts.getServerPort() != null) {
+                settings.setServerPort(opts.getServerPort());
+            }
+        }
         SpringProjectGenerator project = new SpringProjectGenerator(settings, outputDir);
         project.generateProjectStructure();
 

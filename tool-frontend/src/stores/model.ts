@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { ParseResponse } from '../types'
+import type { ParseResponse, ProjectSettings } from '../types'
 import { parseModel, generateCode } from '@/api/model'
 
 export type SelectedDiagram = 
@@ -50,9 +50,9 @@ export const useModelStore = defineStore('model', () => {
     }
   }
 
-  async function generate(target: string) {
+  async function generate(target: string, settings?: ProjectSettings) {
     try {
-      const blob = await generateCode(target);
+      const blob = await generateCode(target, settings);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

@@ -11,7 +11,7 @@ public class Main {
         String target = "cli-jpa";
 
         ParsedModel model = new ParsingService().parse(xmiFilePath);
-        new GenerationService().generate(model, target, outputDir);
+        new GenerationService().generate(model, target, outputDir, null);
 
     }
 

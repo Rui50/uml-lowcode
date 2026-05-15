@@ -30,6 +30,9 @@ public class SpringProjectSettings {
     public int getServerPort() {
         return serverPort;
     }
+    public void setServerPort(int serverPort) {
+        this.serverPort = serverPort;
+    }
 
     // "com.example.app" -> "com/example/app"
     public String getPackagePath() {

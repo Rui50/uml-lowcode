@@ -1,13 +1,36 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useModelStore } from '@/stores/model'
+import { useProjectSettingsStore } from '@/stores/projectSettings'
 
 import DiagramList from '@/components/DiagramList.vue'
 import DiagramCanvas from '@/components/DiagramCanvas.vue'
 import Annotations from '@/components/Annotations.vue'
+import SettingsModal from '@/components/SettingsModal.vue'
 
 const modelStore = useModelStore()
 const target = ref('plain')
+
+const showSettings = ref(false);
+const projectSettings = useProjectSettingsStore();
+
+function startGenerate() {
+  if (target.value === 'plain' || target.value === 'cli') {
+    modelStore.generate(target.value)
+  } else {
+    showSettings.value = true
+  }
+}
+
+function onConfirm() {
+  modelStore.generate(target.value, {
+    basePackage: projectSettings.basePackage,
+    applicationName: projectSettings.applicationName,
+    databaseType: projectSettings.databaseType,
+    serverPort: projectSettings.serverPort,
+  })
+}
+
 </script>
 
 <template>
@@ -22,7 +45,8 @@ const target = ref('plain')
         <option value="cli-jpa">CLI + JPA</option>
         <option value="spring">Spring Boot</option>
       </select>
-      <button @click="modelStore.generate(target)">Generate</button>
+      <button @click="startGenerate">Generate</button>
+      <SettingsModal v-model:open="showSettings" :target="target" @confirm="onConfirm" />
 
       <button @click="modelStore.reset()">Upload another</button>
     </header>

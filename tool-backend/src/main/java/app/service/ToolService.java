@@ -2,6 +2,8 @@ package app.service;
 
 import app.dto.AnnotationsDTO;
 import app.dto.ParseResponse;
+import app.dto.ProjectSettingsDTO;
+import model.ProjectSettings;
 import app.dto.dclass.*;
 import app.dto.dsequence.*;
 import generator.GeneratorUtils;
@@ -34,15 +36,24 @@ public class ToolService {
     private final GenerationService generationService = new GenerationService();
     private final AnnotationService annotationService = new AnnotationService();
 
-    public byte[] generate(String target, AnnotationsDTO annotations) throws Exception {
+    public byte[] generate(String target, AnnotationsDTO annotations, ProjectSettingsDTO settingsDto) throws Exception {
         if (cachedModel == null) {
             throw new IllegalStateException("No model parsed yet. Upload an XMI first.");
         }
         annotationService.apply(cachedModel, annotations);
 
+        ProjectSettings opts = null;
+        if (settingsDto != null) {
+            opts = new ProjectSettings();
+            opts.setBasePackage(settingsDto.getBasePackage());
+            opts.setApplicationName(settingsDto.getApplicationName());
+            opts.setDatabaseType(settingsDto.getDatabaseType());
+            opts.setServerPort(settingsDto.getServerPort());
+        }
+
         Path tempDir = Files.createTempDirectory("uml-gen-");
         try {
-            generationService.generate(cachedModel, target, tempDir.toString());
+            generationService.generate(cachedModel, target, tempDir.toString(), opts);
             return zipDirectory(tempDir);
         } finally {
             FileSystemUtils.deleteRecursively(tempDir);
