@@ -471,6 +471,7 @@ public class CLIMenuGenerator {
         w.println("        try {");
         w.println("            " + repoVariable(ownerClass) + ".save(owner);");
         w.println("            em.getTransaction().commit();");
+        w.println("            em.refresh(other);");
         w.println("            System.out.println(\"Assigned " + otherClass + " to " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
@@ -489,11 +490,13 @@ public class CLIMenuGenerator {
         w.println("        " + ownerClass + " entity = " + repoVariable(ownerClass) + ".findById(id);");
         w.println("        if (entity == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
         w.println();
+        w.println("        " + otherClass + " previous = entity.get" + capitalized + "();");
         w.println("        entity.set" + capitalized + "(null);");
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + repoVariable(ownerClass) + ".save(entity);");
         w.println("            em.getTransaction().commit();");
+        w.println("            if (previous != null) em.refresh(previous);");
         w.println("            System.out.println(\"" + otherClass + " removed from \" + entity);");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
@@ -531,6 +534,7 @@ public class CLIMenuGenerator {
         w.println("        try {");
         w.println("            " + repoVariable(ownerClass) + ".save(owner);");
         w.println("            em.getTransaction().commit();");
+        w.println("            em.refresh(other);");
         w.println("            System.out.println(\"Added " + otherClass + " to " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
@@ -566,6 +570,7 @@ public class CLIMenuGenerator {
         w.println("        try {");
         w.println("            " + repoVariable(ownerClass) + ".save(owner);");
         w.println("            em.getTransaction().commit();");
+        w.println("            em.refresh(other);");
         w.println("            System.out.println(\"" + otherClass + " removed from \" + owner);");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
