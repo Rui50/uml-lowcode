@@ -249,8 +249,10 @@ public class SpringServiceGenerator {
             boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
             // determinar se esta classe é source ou target na associação
-            boolean isSource = cls.isOrInheritsFrom(assoc.getSourceClass());
-            boolean isTarget = cls.isOrInheritsFrom(assoc.getTargetClass());
+            // nota: matching local (não isOrInheritsFrom) — em Spring as associações herdadas
+            // são tratadas polimorficamente pelo service do pai (single-table inheritance)
+            boolean isSource = assoc.getSourceClass().equals(cls.getName());
+            boolean isTarget = assoc.getTargetClass().equals(cls.getName());
 
             if (!isSource && !isTarget) continue;
 
@@ -784,7 +786,7 @@ public class SpringServiceGenerator {
     private void generateCustomOperation(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
         String className = cls.getName();
         String operName = op.getName();
-        String returnType = op.getReturnType() != null ? op.getReturnType() : "void";
+        String returnType = op.getReturnType() != null ? GeneratorUtils.removePackageNames(op.getReturnType()) : "void";
 
         if (interaction == null) {
             writer.println();
@@ -792,7 +794,7 @@ public class SpringServiceGenerator {
             List<Parameter> params = op.getParameters();
             for (int i = 0; i < params.size(); i++) {
                 if (i > 0) writer.print(", ");
-                writer.print(params.get(i).getType() + " " + params.get(i).getName());
+                writer.print(GeneratorUtils.removePackageNames(params.get(i).getType()) + " " + params.get(i).getName());
             }
             writer.println(") {");
             writer.println("        throw new UnsupportedOperationException(");
@@ -811,7 +813,7 @@ public class SpringServiceGenerator {
             for (int i = 0; i < entryMessage.getArguments().size(); i++) {
                 if (i > 0) writer.print(", ");
                 MessageArgument arg = entryMessage.getArguments().get(i);
-                String argType = arg.getType() != null ? arg.getType() : "Long";
+                String argType = arg.getType() != null ? GeneratorUtils.removePackageNames(arg.getType()) : "Long";
                 writer.print(argType + " " + arg.getName());
             }
         }

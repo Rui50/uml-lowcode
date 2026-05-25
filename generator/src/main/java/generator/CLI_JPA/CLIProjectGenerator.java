@@ -161,8 +161,8 @@ public class CLIProjectGenerator {
                 }
                 case POSTGRESQL -> {
                     w.println("jakarta.persistence.jdbc.url=jdbc:postgresql://localhost:5432/" + dbName);
-                    w.println("jakarta.persistence.jdbc.user=postgres");
-                    w.println("jakarta.persistence.jdbc.password=");
+                    w.println("jakarta.persistence.jdbc.user=uml");
+                    w.println("jakarta.persistence.jdbc.password=uml");
                 }
                 case MYSQL -> {
                     w.println("jakarta.persistence.jdbc.url=jdbc:mysql://localhost:3306/" + dbName);

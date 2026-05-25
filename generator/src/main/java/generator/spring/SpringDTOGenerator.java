@@ -73,8 +73,10 @@ public class SpringDTOGenerator {
             w.println("@Getter");
             w.println("@Setter");
             w.println("@NoArgsConstructor");
-            w.println("@AllArgsConstructor");
-            w.println("@Builder");
+            if (!allAttrs.isEmpty()) {
+                w.println("@AllArgsConstructor");
+                w.println("@Builder");
+            }
             w.println("public class " + className + "CreateDTO {");
             w.println();
             for (Attribute attr : allAttrs) {
