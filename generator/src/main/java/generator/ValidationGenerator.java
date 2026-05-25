@@ -22,11 +22,6 @@ public class ValidationGenerator {
      * }
      */
     public void generateValidateMethod(PrintWriter writer, Class cls) {
-        System.out.println("[ValidationGen] " + cls.getName()
-                + " ownInvs=" + cls.getInvariants().size()
-                + " realizations=" + cls.getRealizations().size()
-                + " parent=" + (cls.getParentClass() != null ? cls.getParentClass().getName() : "null")
-                + " hasAny=" + cls.hasAnyInvariants());
         // gera validate se tiver invariantes proprias, herdadas de interface, ou herdadas de parent
         if (!cls.hasAnyInvariants()) return;
         boolean parentHas = cls.getParentClass() != null && cls.getParentClass().hasAnyInvariants();

@@ -107,6 +107,10 @@ public class Class {
         this.isAbstract = isAbstract;
     }
 
+    //s realizations são por classe e não são herdadas.
+    // Se uma interface for realizada por uma classe abstrata, as subclasses
+    // concretas não a herdam (getRealizations() devolve só as próprias).
+    // Para suportar, é preciso percorrer a cadeia de pais, como em isOrInheritsFrom/super.validate().
     public List<Interface> getRealizations() {
         return realizations;
     }

@@ -570,6 +570,18 @@ public class CLIEntityGenerator {
         writer.println("    // Operations");
 
         for (Operation op : cls.getOperations()) {
+            if (op.isAbstract()) {
+                String absReturn = GeneratorUtils.removePackageNames(op.getReturnType());
+                writer.print("    " + op.getVisibility() + " abstract " + absReturn + " " + op.getName() + "(");
+                List<Parameter> absParams = op.getParameters();
+                for (int i = 0; i < absParams.size(); i++) {
+                    Parameter p = absParams.get(i);
+                    if (i > 0) writer.print(", ");
+                    writer.print(GeneratorUtils.removePackageNames(p.getType()) + " " + p.getName());
+                }
+                writer.println(");");
+                continue;
+            }
             Interaction interaction = op.getSequenceDiagram();
             if (interaction != null) {
                 OperationGenerator.generateOperation(writer, cls, op, interaction, associations);

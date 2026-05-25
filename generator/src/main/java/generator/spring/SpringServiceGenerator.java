@@ -71,7 +71,15 @@ public class SpringServiceGenerator {
             writer.println("@Service");
             writer.println("@Transactional");
             writer.println("@RequiredArgsConstructor");
-            writer.println("public class " + className + "Service {");
+            writer.print("public class " + className + "Service");
+            if (!cls.getRealizations().isEmpty()) {
+                writer.print(" implements ");
+                for (int i = 0; i < cls.getRealizations().size(); i++) {
+                    if (i > 0) writer.print(", ");
+                    writer.print(cls.getRealizations().get(i).getName());
+                }
+            }
+            writer.println(" {");
             writer.println();
 
             // dependency
@@ -106,6 +114,9 @@ public class SpringServiceGenerator {
         writer.println("import " + basePackage + ".repository." + cls.getName() + "Repository;");
         writer.println("import " + basePackage + ".dto." + cls.getName() + "CreateDTO;");
         writer.println("import " + basePackage + ".dto." + cls.getName() + "ResponseDTO;");
+        for (model.Interface iface : cls.getRealizations()) {
+            writer.println("import " + basePackage + ".models." + iface.getName() + ";");
+        }
         writer.println();
         writer.println("import lombok.RequiredArgsConstructor;");
         writer.println("import org.springframework.stereotype.Service;");
@@ -777,7 +788,13 @@ public class SpringServiceGenerator {
 
         if (interaction == null) {
             writer.println();
-            writer.println("    public " + returnType + " " + operName + "() {");
+            writer.print("    public " + returnType + " " + operName + "(");
+            List<Parameter> params = op.getParameters();
+            for (int i = 0; i < params.size(); i++) {
+                if (i > 0) writer.print(", ");
+                writer.print(params.get(i).getType() + " " + params.get(i).getName());
+            }
+            writer.println(") {");
             writer.println("        throw new UnsupportedOperationException(");
             writer.println("            \"Method '" + operName + "' not yet implemented. \"");
             writer.println("        );");

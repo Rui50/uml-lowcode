@@ -225,6 +225,9 @@ public class ClassDiagramParser {
         String visibility = element.getPlainAttribute("visibility");
         operation.setVisibility(visibility != null ? visibility : "public");
 
+        String abstractAttr = element.getPlainAttribute("abstract");
+        operation.setAbstract("true".equalsIgnoreCase(abstractAttr));
+
         // tipos de return e parâmetros
         Collection<?> parameters = element.getSetAttribute("ownedparameters");
 

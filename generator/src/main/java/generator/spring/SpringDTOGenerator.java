@@ -38,7 +38,8 @@ public class SpringDTOGenerator {
         }
 
         for (Class cls : classes) {
-            generateCreateDTO(cls, associations, dtoDir);
+            // classes abstratas não podem ser instanciadas, logo não têm CreateDTO
+            if (!cls.isAbstract()) generateCreateDTO(cls, associations, dtoDir);
             generateResponseDTO(cls, associations, dtoDir);
         }
 

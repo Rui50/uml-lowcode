@@ -148,13 +148,7 @@ public class SpringEntityGenerator {
             if (cls.getParentClass() != null) {
                 writer.print(" extends " + cls.getParentClass().getName());
             }
-            if (!cls.getRealizations().isEmpty()) {
-                writer.print(" implements ");
-                for (int i = 0; i < cls.getRealizations().size(); i++) {
-                    if (i > 0) writer.print(", ");
-                    writer.print(cls.getRealizations().get(i).getName());
-                }
-            }
+            // nota: interfaces UML são realizadas pelo service (anemic entity), não pela entidade
             writer.println(" {");
             writer.println();
 

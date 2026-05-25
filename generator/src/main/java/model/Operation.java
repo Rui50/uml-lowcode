@@ -16,6 +16,7 @@ public class Operation {
     private String name;
     private String returnType;
     private String visibility;
+    private boolean isAbstract;
     private List<Parameter> parameters;
 
     private Interaction sequenceDiagram;
@@ -71,6 +72,14 @@ public class Operation {
 
     public void setVisibility(String visibility) {
         this.visibility = visibility;
+    }
+
+    public boolean isAbstract() {
+        return isAbstract;
+    }
+
+    public void setAbstract(boolean isAbstract) {
+        this.isAbstract = isAbstract;
     }
 
     public List<Parameter> getParameters() {
