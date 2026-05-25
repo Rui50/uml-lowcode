@@ -45,4 +45,11 @@ public class ModelController {
                         "attachment; filename=\"generated-" + target + ".zip\"")
                 .body(zip);
     }
+
+    // erros de cliente (OCL inválida/vazia, target desconhecido, modelo não carregado)
+    // devolvem 400 + mensagem, em vez de 500
+    @ExceptionHandler({ IllegalArgumentException.class, IllegalStateException.class })
+    public ResponseEntity<String> handleBadRequest(RuntimeException e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    }
 }

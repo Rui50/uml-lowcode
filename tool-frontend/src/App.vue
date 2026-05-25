@@ -2,9 +2,11 @@
 import { useModelStore } from '@/stores/model'
 import UploadView from '@/views/UploadView.vue'
 import WorkspaceView from '@/views/WorkspaceView.vue'
+import Toast from 'primevue/toast'
 const modelStore = useModelStore()
 </script>
 <template>
+  <Toast />
   <UploadView v-if="!modelStore.model" />
   <WorkspaceView v-else />
 </template>

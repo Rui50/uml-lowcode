@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useToast } from 'primevue/usetoast'
 import { useModelStore } from '@/stores/model'
 import { useProjectSettingsStore } from '@/stores/projectSettings'
 
@@ -13,9 +14,19 @@ const target = ref('plain')
 
 const showSettings = ref(false);
 const projectSettings = useProjectSettingsStore();
+const toast = useToast();
+
+// mostra um toast sempre que o store reporta um erro
+watch(() => modelStore.error, (msg) => {
+  if (msg) {
+    toast.add({ severity: 'error', summary: 'Erro ao gerar', detail: msg, life: 6000 });
+    modelStore.error = null;
+  }
+});
 
 function startGenerate() {
-  if (target.value === 'plain' || target.value === 'cli') {
+  // cli já usa um package fixo; plain/cli-jpa/spring passam pelo modal para definir o basePackage
+  if (target.value === 'cli') {
     modelStore.generate(target.value)
   } else {
     showSettings.value = true

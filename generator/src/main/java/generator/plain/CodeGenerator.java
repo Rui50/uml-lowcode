@@ -18,17 +18,19 @@ public class CodeGenerator {
     private List<Interaction> interactions;
 
     private String outputDirectory;
+    private String basePackage;
 
     private ClassGenerator classGenerator;
 
-    public CodeGenerator(List<Class> classes, List<Association> associations, List<Enumeration> enumerations, String outputDirectory, List<Interaction> interactions) {
+    public CodeGenerator(List<Class> classes, List<Association> associations, List<Enumeration> enumerations, String outputDirectory, String basePackage, List<Interaction> interactions) {
         this.classes = classes;
         this.associations = associations;
         this.enumerations = enumerations;
         this.outputDirectory = outputDirectory;
+        this.basePackage = basePackage;
         this.interactions = interactions;
 
-        this.classGenerator = new ClassGenerator(outputDirectory, interactions);
+        this.classGenerator = new ClassGenerator(outputDirectory, basePackage, interactions);
     }
 
     public void generate() throws IOException{

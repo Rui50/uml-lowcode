@@ -24,7 +24,7 @@ public class JavaEntityGenerator {
 
     /**
      * Para ja
-     * - todas as classes sem pai recebem um campo Long id
+     *  - todas as classes sem pai recebem um campo Long id
      *  - atributos com init OCL têm inicialização inline (= valor)
      *  - tipos enum são prefixados com o nome do enum (ATIVO -> EstadoAluno.ATIVO)
      *  - gera construtor vazio + construtor com todos os atributos, herdado via super
@@ -55,7 +55,7 @@ public class JavaEntityGenerator {
     }
 
     /**
-     * Gera um ficheiro Java por interface UML (só assinaturas).
+     * gera um ficheiro Java por interface UML (só assinaturas).
      */
     public void generateInterfaces(List<model.Interface> interfaces) throws IOException {
         if (interfaces == null || interfaces.isEmpty()) return;

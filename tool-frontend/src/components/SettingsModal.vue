@@ -21,6 +21,8 @@
 
   const showDB = computed(() => props.target === 'spring' || props.target === 'cli-jpa')
   const showPort = computed(() => props.target === 'spring')
+  // plain só gera classes; applicationName não se aplica
+  const showAppName = computed(() => props.target === 'spring' || props.target === 'cli-jpa')
 
   const dbOptions = [
     { label: 'H2 (in-memory)', value: 'H2' },
@@ -39,7 +41,7 @@
       <label>Base package</label>
       <InputText v-model="settings.basePackage" />
     </div>
-    <div class="field">
+    <div v-if="showAppName" class="field">
       <label>Application name</label>
       <InputText v-model="settings.applicationName" />
     </div>

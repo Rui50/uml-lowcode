@@ -37,7 +37,8 @@ export async function generateCode(target: string, settings?: ProjectSettings): 
   })
 
   if (!res.ok) {
-    throw new Error(`Code generation failed (${res.status}): ${res.statusText}`)
+    const msg = (await res.text()) || `Erro ao gerar código (${res.status})`
+    throw new Error(msg)
   }
 
   return res.blob()

@@ -8,6 +8,7 @@ import model.Enumeration;
 import model.*;
 import model.sequence.Interaction;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -32,12 +33,22 @@ import java.util.List;
 
 public class ClassGenerator {
     private String outputDirectory;
+    private String basePackage;
     private ValidationGenerator validationGenerator;
     private List<Interaction> interactions;
 
-    public ClassGenerator(String outputDirectory, List<Interaction> interactions) {
+    public ClassGenerator(String outputDirectory, String basePackage, List<Interaction> interactions) {
         this.outputDirectory = outputDirectory;
+        this.basePackage = basePackage;
         this.interactions = interactions;
+    }
+
+    // diretoria onde os ficheiros são escritos: <output>/<package como caminho>
+    // para que a declaração package corresponda à estrutura de pastas (necessário para serem importáveis)
+    private String packageDir() {
+        String dir = outputDirectory + "/" + basePackage.replace('.', '/');
+        new File(dir).mkdirs();
+        return dir;
     }
 
     public void generateClasses(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
@@ -58,8 +69,10 @@ public class ClassGenerator {
         if (interfaces == null || interfaces.isEmpty()) return;
 
         for (Interface iface : interfaces) {
-            String filename = outputDirectory + "/" + iface.getName() + ".java";
+            String filename = packageDir() + "/" + iface.getName() + ".java";
             try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
+                w.println("package " + basePackage + ";");
+                w.println();
                 w.println("public interface " + iface.getName() + " {");
                 w.println();
                 for (Operation op : iface.getOperations()) {
@@ -72,9 +85,11 @@ public class ClassGenerator {
     }
 
     private void generateEnum(Enumeration enumeration) throws IOException {
-        String filename = outputDirectory + "/" + enumeration.getName() + ".java";
+        String filename = packageDir() + "/" + enumeration.getName() + ".java";
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("package " + basePackage + ";");
+            writer.println();
             writer.println("public enum " + enumeration.getName() + " {");
 
             List<String> literals = enumeration.getLiterals();
@@ -90,9 +105,13 @@ public class ClassGenerator {
     }
 
     private void generateClass(Class cls, List<Association> associations) throws IOException {
-        String filename = outputDirectory + "/" + cls.getName() + ".java";
+        String filename = packageDir() + "/" + cls.getName() + ".java";
 
         try(PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            // package
+            writer.println("package " + basePackage + ";");
+            writer.println();
+
             // imports
             writer.println("import java.util.*;");
             writer.println();

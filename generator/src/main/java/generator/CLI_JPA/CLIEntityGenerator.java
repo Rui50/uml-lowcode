@@ -43,7 +43,7 @@ public class CLIEntityGenerator {
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
-        System.out.println("Generating Spring entities...");
+        System.out.println("Generating CLIJPA entities...");
 
         // criar path domain
         String domainPath = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/models";
@@ -73,7 +73,7 @@ public class CLIEntityGenerator {
     private void generateEnum(Enumeration enumeration, String modelsDir) throws IOException {
         String filename = modelsDir + "/" + enumeration.getName() + ".java";
 
-        try (PrintWriter writer = new PrintWriter(new File(filename))) {
+        try (PrintWriter writer = new PrintWriter(filename)) {
             writer.println("package " + basePackage + ".models;");
             writer.println();
             writer.println("public enum " + enumeration.getName() + " {");
@@ -96,7 +96,7 @@ public class CLIEntityGenerator {
     private void generateEntity(Class cls, List<Class> allClasses, List<Association> associations, String modelsDir) throws IOException {
         String filename = modelsDir + "/" + cls.getName() + ".java";
 
-        try (PrintWriter writer = new PrintWriter(new File(filename))) {
+        try (PrintWriter writer = new PrintWriter(filename)) {
             // package
             writer.println("package " + basePackage + ".models;");
             writer.println();
@@ -160,9 +160,13 @@ public class CLIEntityGenerator {
         if (inheritanceStrategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
             // para herança single table, só a classe pai tem @Table
             // os têm @DiscriminatorValue
+
+            // filho em SINGLE_TABLE: partilha a tabela do pai, por isso não leva @Table.
+            // só recebe @DiscriminatorValue, gerado mais abaixo.
             return;
         } else {
             // @Table , para ja normalizar so para minusculas, depois pensar melhor
+            // ter cuidado com nomes de classes que podem colidir depois de normalizar como (USER)
             writer.println("@Table(name = \"" + cls.getName().toLowerCase() + "\")");
         }
 
@@ -365,6 +369,7 @@ public class CLIEntityGenerator {
                                                      String multiplicity, Association assoc,
                                                      String side, List<Class> allClasses){
         writer.println("    // relationship: " + thisClass + " -> " + otherClass);
+
 
         String thisMultiplicity = side.equals("source")
                 ? assoc.getSourceMultiplicity()

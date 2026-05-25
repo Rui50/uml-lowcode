@@ -14,8 +14,37 @@ import org.antlr.v4.runtime.CommonTokenStream;
 public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
     public static String toJava(String oclExpression) {
+        if (oclExpression == null || oclExpression.trim().isEmpty()) {
+            throw new IllegalArgumentException("Expressão OCL vazia.");
+        }
+
         OCLLexer lexer = new OCLLexer(CharStreams.fromString(oclExpression));
         OCLParser parser = new OCLParser(new CommonTokenStream(lexer));
+
+        // por defeito, num erro de sintaxe o ANTLR apenas imprime o erro e tenta
+        // "recuperar", continua a construir uma árvore incompleta/inválida. Essa árvore
+        // depois rebenta no visitor com um NullPointerException  (HTTP 500).
+
+        //  para evitar isso, substituímos os listeners por defeito por um que lança exceção
+        // logo no primeiro erro de sintaxe, com uma mensagem clara e antes de a árvore ser visitada
+        org.antlr.v4.runtime.BaseErrorListener throwing = new org.antlr.v4.runtime.BaseErrorListener() {
+            @Override
+            public void syntaxError(org.antlr.v4.runtime.Recognizer<?, ?> r, Object sym,
+                                    int line, int pos, String msg,
+                                    org.antlr.v4.runtime.RecognitionException e) {
+                // versão com detalhe do ANTLR
+                throw new IllegalArgumentException(
+                        "Expressão OCL inválida: \"" + oclExpression + "\" (" + msg + ")");
+
+                // versão mais simples, sem detalhes técnicos
+                // throw new IllegalArgumentException("Expressão OCL inválida: \"" + oclExpression + "\"");
+            }
+        };
+        lexer.removeErrorListeners();   // remove o listener por defeito (imprime + recupera)
+        lexer.addErrorListener(throwing);
+        parser.removeErrorListeners();
+        parser.addErrorListener(throwing);
+
         return new OCLToJavaVisitor().visit(parser.standaloneExpression());
     }
 
@@ -369,6 +398,9 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         }
 
         // ->sum() -> .stream().mapToInt(Integer::intValue).sum()
+        // LIMITAÇÃO: assume coleção de inteiros. Somas de double/float não são suportadas
+        // (Integer::intValue não compila sobre Double). Suportar tipos numéricos variados
+        // exigiria informação de tipo que o visitor não tem a este nível.
         if (text.equals("->sum()")) return base + ".stream().mapToInt(Integer::intValue).sum()";
 
         // .propriedade -> .propriedade

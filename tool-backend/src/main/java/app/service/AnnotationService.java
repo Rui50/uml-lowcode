@@ -56,13 +56,18 @@ public class AnnotationService {
                     err_message = dto.getMessage();
                 }
 
-                if (c != null) {
-                    c.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message, c,
-                            associations));
-                } else {
-                    // interfaces have no attributes/associations of their own — pass empty list
-                    iface.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message,
-                            null, associations));
+                try {
+                    if (c != null) {
+                        c.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message, c,
+                                associations));
+                    } else {
+                        // interfaces have no attributes/associations of their own — pass empty list
+                        iface.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message,
+                                null, associations));
+                    }
+                } catch (IllegalArgumentException ex) {
+                    throw new IllegalArgumentException(
+                            "Invariante '" + name + "' em " + className + ": " + ex.getMessage());
                 }
             }
         });
@@ -74,21 +79,31 @@ public class AnnotationService {
 
     private void applyInits(List<Class> classes, List<Association> associations, Map<String, String> map) {
         map.forEach((key, expr) -> {
-            if (expr == null || expr.isBlank()) return;
             Attribute a = findAttribute(classes, key);
             // owner class needed by parser for map detection
             Class c = findClass(classes, key.split("\\.", 2)[0]);
-            if (a != null) AnnotationParser.applyInit(a, expr, c, associations);
+            if (a != null) {
+                try {
+                    AnnotationParser.applyInit(a, expr, c, associations);
+                } catch (IllegalArgumentException ex) {
+                    throw new IllegalArgumentException("Init em " + key + ": " + ex.getMessage());
+                }
+            }
         });
     }
 
     private void applyDerives(List<Class> classes, List<Association> associations, Map<String, String> map) {
         map.forEach((key, expr) -> {
-            if (expr == null || expr.isBlank()) return;
             Attribute a = findAttribute(classes, key);
             // owner class needed by parser for map detection
             Class c = findClass(classes, key.split("\\.", 2)[0]);
-            if (a != null) AnnotationParser.applyDerive(a, expr, c, associations);
+            if (a != null) {
+                try {
+                    AnnotationParser.applyDerive(a, expr, c, associations);
+                } catch (IllegalArgumentException ex) {
+                    throw new IllegalArgumentException("Derive em " + key + ": " + ex.getMessage());
+                }
+            }
         });
     }
 
@@ -128,7 +143,12 @@ public class AnnotationService {
                 String name = (dto.getName() == null || dto.getName().isEmpty()) ? "pre" + (i + 1) : dto.getName();
                 String errMsg = (dto.getMessage() == null || dto.getMessage().isEmpty())
                         ? "Precondition " + name + " failed" : dto.getMessage();
-                op.addPrecondition(AnnotationParser.parsePrecondition(name, dto.getExpression(), errMsg, owner, associations));
+                try {
+                    op.addPrecondition(AnnotationParser.parsePrecondition(name, dto.getExpression(), errMsg, owner, associations));
+                } catch (IllegalArgumentException ex) {
+                    String loc = (owner != null ? owner.getName() + "." : "") + op.getName();
+                    throw new IllegalArgumentException("Pré-condição '" + name + "' em " + loc + ": " + ex.getMessage());
+                }
             }
         });
     }
@@ -144,7 +164,12 @@ public class AnnotationService {
                 String name = (dto.getName() == null || dto.getName().isEmpty()) ? "post" + (i + 1) : dto.getName();
                 String errMsg = (dto.getMessage() == null || dto.getMessage().isEmpty())
                         ? "Postcondition " + name + " failed" : dto.getMessage();
-                op.addPostcondition(AnnotationParser.parsePostcondition(name, dto.getExpression(), errMsg, owner, associations));
+                try {
+                    op.addPostcondition(AnnotationParser.parsePostcondition(name, dto.getExpression(), errMsg, owner, associations));
+                } catch (IllegalArgumentException ex) {
+                    String loc = (owner != null ? owner.getName() + "." : "") + op.getName();
+                    throw new IllegalArgumentException("Pós-condição '" + name + "' em " + loc + ": " + ex.getMessage());
+                }
             }
         });
     }

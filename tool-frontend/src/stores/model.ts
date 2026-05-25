@@ -51,6 +51,7 @@ export const useModelStore = defineStore('model', () => {
   }
 
   async function generate(target: string, settings?: ProjectSettings) {
+    error.value = null
     try {
       const blob = await generateCode(target, settings);
       const url = URL.createObjectURL(blob);

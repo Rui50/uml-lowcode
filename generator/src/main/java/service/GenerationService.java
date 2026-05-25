@@ -13,7 +13,7 @@ import generator.spring.*;
 public class GenerationService {
     public void generate(ParsedModel model, String target, String outputDir, ProjectSettings opts) throws Exception {
         switch (target) {
-            case "plain"  -> generatePlain(model, outputDir);
+            case "plain"  -> generatePlain(model, outputDir, opts);
             case "cli"    -> generateCli(model, outputDir);
             case "spring" -> generateSpring(model, outputDir, opts);
             case "cli-jpa" -> generateCliJpa(model, outputDir, opts);
@@ -22,16 +22,21 @@ public class GenerationService {
         }
     }
 
-    private void generatePlain(ParsedModel m, String outputDir) throws Exception {
+    private void generatePlain(ParsedModel m, String outputDir, ProjectSettings opts) throws Exception {
+        // plain não passa pelo modal de settings; usa o basePackage se vier, senão "model"
+        String basePackage = (opts != null && opts.getBasePackage() != null && !opts.getBasePackage().isBlank())
+                ? opts.getBasePackage() : "model";
+
         new CodeGenerator(
                 m.getClasses(),
                 m.getAssociations(),
                 m.getEnumerations(),
                 outputDir,
+                basePackage,
                 //m.getPimInteractions()
                 m.getAllInteractions()
         ).generate();
-        new ClassGenerator(outputDir, m.getAllInteractions())
+        new ClassGenerator(outputDir, basePackage, m.getAllInteractions())
                 .generateInterfaces(m.getInterfaces());
     }
 
