@@ -23,6 +23,10 @@ import java.util.stream.Collectors;
  *  - CRUD
  *  - opções de associação (add/remove ou assign/remove)
  *  - opções para operações custom (ligadas a uma Interaction)
+ *
+ * depois dar fix: esta versão é em memória, sem transações. Se uma operação falhar uma
+ * pós-condição a meio, as alterações já feitas à entidade não são revertidas (a entidade
+ * fica parcialmente modificada). "ja ta fix no clijpa".
  */
 public class JavaMenuGenerator {
 
@@ -567,14 +571,20 @@ public class JavaMenuGenerator {
                 w.println();
             }
 
-            w.print("        owner." + op.getName() + "(");
+            // try/catch para que uma pré/pós-condição violada (IllegalStateException)
+            // mostra o erro e volta ao menu, em vez de rebentar a app
+            w.println("        try {");
+            w.print("            owner." + op.getName() + "(");
             for (int i = 0; i < argNames.size(); i++) {
                 if (i > 0) w.print(", ");
                 w.print(argNames.get(i));
             }
             w.println(");");
-            w.println("        " + repoVariable(cls.getName()) + ".save(owner);");
-            w.println("        System.out.println(\"" + op.getName() + " executed.\");");
+            w.println("            " + repoVariable(cls.getName()) + ".save(owner);");
+            w.println("            System.out.println(\"" + op.getName() + " executed.\");");
+            w.println("        } catch (RuntimeException ex) {");
+            w.println("            System.out.println(\"Error: \" + ex.getMessage());");
+            w.println("        }");
             w.println("    }");
             w.println();
         }

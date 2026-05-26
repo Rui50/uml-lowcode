@@ -55,6 +55,11 @@
       <InputNumber v-model="settings.serverPort" :useGrouping="false" />
     </div>
 
+    <p v-if="showDB" class="db-note">
+      Nota: os dados da base de dados têm de ser definidos no
+      ficheiro de configuração do projeto gerado antes de o executar.
+    </p>
+
     <template #footer>
       <Button label="Cancel" text @click="close" />
       <Button label="Generate" @click="confirm" />
@@ -66,8 +71,14 @@
 .field { 
   display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; 
 }
-.field label { 
-  font-size: 12px; opacity: 0.8; 
+.field label {
+  font-size: 12px; opacity: 0.8;
+}
+.db-note {
+  font-size: 11px;
+  opacity: 0.7;
+  margin: 4px 0 0;
+  line-height: 1.4;
 }
 </style>
 
