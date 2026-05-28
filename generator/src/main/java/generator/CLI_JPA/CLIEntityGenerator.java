@@ -24,13 +24,13 @@ import java.util.Set;
  * - validate() se invs
  *
  * - Herança: por agora só SINGLE_TABLE, depois podemos configurar para JOINED
+ *
+ * id: raiz com idAttributeName == null gera o id por defeito (@Id @GeneratedValue Long id);
+ * caso contrário @Id @GeneratedValue vão para o atributo escolhido. Ver model.Class.
  */
 public class CLIEntityGenerator {
     private String baseOutputPath;
     private String basePackage;
-
-    // para o tipo de herança, para já user SINGLE_TABLE, depois podemos configurar
-    private String inheritanceStrategy = "SINGLE_TABLE";
 
     private ValidationGenerator validationGenerator;
 
@@ -126,7 +126,7 @@ public class CLIEntityGenerator {
 
             // se nao tem parent gera id
             if (cls.getParentClass() == null) {
-                generateId(writer);
+                generateId(writer, cls);
             }
 
             // atributos
@@ -154,10 +154,13 @@ public class CLIEntityGenerator {
      *  anotações base
      */
     private void generateClassBaseAnnotations(PrintWriter writer, Class cls, List<Class> allClasses) {
+        // estratégia de herança
+        String strategy = cls.getRootInheritanceStrategy();
+
         // @Entity
         writer.println("@Entity");
 
-        if (inheritanceStrategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
+        if (strategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
             // para herança single table, só a classe pai tem @Table
             // os têm @DiscriminatorValue
 
@@ -173,25 +176,27 @@ public class CLIEntityGenerator {
         // caso seja parent, gerar @Inheritance
         if (cls.getParentClass() == null && isParent(cls, allClasses)) {
             // pai
-            if (inheritanceStrategy.equals("SINGLE_TABLE")) {
+            if (strategy.equals("SINGLE_TABLE")) {
                 writer.println("@Inheritance(strategy = InheritanceType.SINGLE_TABLE)");
                 writer.println("@DiscriminatorColumn(name = \"type\")");
                 writer.println("@DiscriminatorValue(\"" + cls.getName() + "\")");
-            } else if (inheritanceStrategy.equals("JOINED")) {
+            } else if (strategy.equals("JOINED")) {
                 writer.println("@Inheritance(strategy = InheritanceType.JOINED)");
             }
         } else if (cls.getParentClass() != null) {
             // filho
-            if (inheritanceStrategy.equals("SINGLE_TABLE")) {
+            if (strategy.equals("SINGLE_TABLE")) {
                 writer.println("@DiscriminatorValue(\"" + cls.getName() + "\")");
-            } else if (inheritanceStrategy.equals("JOINED")) {
+            } else if (strategy.equals("JOINED")) {
                 writer.println("@PrimaryKeyJoinColumn(name = \"" + cls.getParentClass().getName().toLowerCase() + "_id\")");
             }
         }
     }
 
-    // para ja id auto gerado como long
-    private void generateId(PrintWriter writer) {
+    // id default quando nao foi set um custom;
+    // se houver id custom, o @Id é colocado no atributo escolhido em generateAttributes
+    private void generateId(PrintWriter writer, Class cls) {
+        if (cls.getIdAttributeName() != null) return;
         writer.println("    @Id");
         writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
         writer.println("    private Long id;");
@@ -205,19 +210,24 @@ public class CLIEntityGenerator {
         writer.println();
         writer.println("    public " + className + "() {}");
 
-        // getters and setters for non-derived attributes
+        // getters and setters for non-derived attributes;
+        // se o atributo é o @Id, usar o tipo igual ao campo (que foi alterado ou nao)
+        // a wrapper (Integer), senão entity.getX() == null não compila
         for (Attribute attr : cls.getAttributes()) {
             if (attr.hasDerive()) continue;     // derived has its own getter already
-            String type = attr.getType();
             String name = attr.getName();
+            String type = name.equals(cls.getIdAttributeName())
+                    ? cls.getRoot().getIdAttributeType()
+                    : attr.getType();
             String cap  = capitalize(name);
             writer.println();
             writer.println("    public " + type + " get" + cap + "() { return " + name + "; }");
             writer.println("    public void set" + cap + "(" + type + " " + name + ") { this." + name + " = " + name + "; }");
         }
 
-        // id getter/setter only on root class
-        if (cls.getParentClass() == null) {
+        // id getter/setter só na "raiz" e só para oo id sintético (no custom id o getter
+        // do atributo escolhido já é emitido no loop dos atributos)
+        if (cls.getParentClass() == null && cls.getIdAttributeName() == null) {
             writer.println();
             writer.println("    public Long getId() { return id; }");
             writer.println("    public void setId(Long id) { this.id = id; }");
@@ -244,14 +254,22 @@ public class CLIEntityGenerator {
 
 
         // toString doesnt include relationships for now, avoids infinite cycle
+        // se há id custom, o atributo-id já vem do loop senão prefixa com "id=" + getId()
         writer.println();
         writer.println("    @Override");
         writer.println("    public String toString() {");
         StringBuilder sb = new StringBuilder();
-        sb.append("        return \"").append(className).append("{id=\" + getId()");
+        sb.append("        return \"").append(className).append("{\"");
+        boolean first = true;
+        if (cls.getRoot().getIdAttributeName() == null) {
+            sb.append(" + \"id=\" + getId()");
+            first = false;
+        }
         for (Attribute attr : cls.getAttributes()) {
             if (attr.hasDerive()) continue;
-            sb.append(" + \", ").append(attr.getName()).append("=\" + ").append(attr.getName());
+            String sep = first ? "" : ", ";
+            sb.append(" + \"").append(sep).append(attr.getName()).append("=\" + ").append(attr.getName());
+            first = false;
         }
         sb.append(" + \"}\";");
         writer.println(sb.toString());
@@ -290,15 +308,24 @@ public class CLIEntityGenerator {
             // skip derived
             if (atr.hasDerive()) continue;
 
+            // atributo escolhido como @Id idAttributeName só é definido na raiz
+            // tipo do campo é "fixed" (Integer em vez de int) — JPA não aceita primitivos no @Id
+            boolean isId = atr.getName().equals(cls.getIdAttributeName());
+            String fieldType = isId ? cls.getRoot().getIdAttributeType() : atr.getType();
+            if (isId) {
+                writer.println("    @Id");
+                writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
+            }
+
             if (enumNames.contains(atr.getType())) {
                 writer.println("    @Enumerated(EnumType.STRING)");
             }
             writer.println("    @Column(name = \"" + atr.getName() + "\")");
             if (atr.hasInit()) {
                 String javaInit = atr.getJavaInitExpression();
-                writer.println("    private " + atr.getType() + " " + atr.getName() + " = " + javaInit + ";");
+                writer.println("    private " + fieldType + " " + atr.getName() + " = " + javaInit + ";");
             } else {
-                writer.println("    private " + atr.getType() + " " + atr.getName() + ";");
+                writer.println("    private " + fieldType + " " + atr.getName() + ";");
             }
             writer.println();
         }

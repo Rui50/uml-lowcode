@@ -48,23 +48,16 @@ public class AlunoMenu {
     }
 
     private void create() {
-        System.out.print("email: ");
-        String email = scanner.nextLine();
         System.out.print("nome: ");
         String nome = scanner.nextLine();
+        System.out.print("email: ");
+        String email = scanner.nextLine();
         int numero = InputUtils.readInt(scanner, "numero: ");
-        EstadoAluno estado = null;
-        while (estado == null) {
-            System.out.print("estado " + java.util.Arrays.toString(EstadoAluno.values()) + ": ");
-            try { estado = EstadoAluno.valueOf(scanner.nextLine().trim().toUpperCase()); }
-            catch (IllegalArgumentException ex) { System.out.println("Invalid value. Try again."); }
-        }
 
         Aluno entity = new Aluno();
-        entity.setEmail(email);
         entity.setNome(nome);
+        entity.setEmail(email);
         entity.setNumero(numero);
-        entity.setEstado(estado);
 
         em.getTransaction().begin();
         try {
@@ -90,7 +83,7 @@ public class AlunoMenu {
     }
 
     private void viewById() {
-        Long id = InputUtils.readLong(scanner, "ID: ");
+        String id = InputUtils.readString(scanner, "ID: ");
         Aluno entity = alunoRepository.findById(id);
         if (entity == null) {
             System.out.println("Not found.");
@@ -101,7 +94,7 @@ public class AlunoMenu {
     }
 
     private void update() {
-        Long id = InputUtils.readLong(scanner, "ID: ");
+        String id = InputUtils.readString(scanner, "ID: ");
         Aluno entity = alunoRepository.findById(id);
         if (entity == null) {
             System.out.println("Not found.");
@@ -111,22 +104,12 @@ public class AlunoMenu {
         System.out.println("Current: " + entity);
         System.out.println("(press Enter to keep current value)");
 
-        System.out.print("email [" + entity.getEmail() +"]: ");
-        String email = scanner.nextLine();
-        if (!email.isEmpty()) entity.setEmail(email);
         System.out.print("nome [" + entity.getNome() +"]: ");
         String nome = scanner.nextLine();
         if (!nome.isEmpty()) entity.setNome(nome);
         System.out.print("numero [" + entity.getNumero() +"]: ");
         String numeroStr = scanner.nextLine();
         if (!numeroStr.isEmpty()) entity.setNumero(Integer.parseInt(numeroStr));
-        while (true) {
-            System.out.print("estado [" + entity.getEstado() + "] " + java.util.Arrays.toString(EstadoAluno.values()) + ": ");
-            String estadoStr = scanner.nextLine();
-            if (estadoStr.isEmpty()) break;
-            try { entity.setEstado(EstadoAluno.valueOf(estadoStr.trim().toUpperCase())); break; }
-            catch (IllegalArgumentException ex) { System.out.println("Invalid value. Try again."); }
-        }
 
         em.getTransaction().begin();
         try {
@@ -141,7 +124,7 @@ public class AlunoMenu {
     }
 
     private void delete() {
-        Long id = InputUtils.readLong(scanner, "ID: ");
+        String id = InputUtils.readString(scanner, "ID: ");
         Aluno entity = alunoRepository.findById(id);
         if (entity == null) {
             System.out.println("Not found.");
@@ -159,7 +142,7 @@ public class AlunoMenu {
         }
     }
     private void assignTurno() {
-        Long ownerId = InputUtils.readLong(scanner, "Aluno ID: ");
+        String ownerId = InputUtils.readString(scanner, "Aluno ID: ");
         Aluno owner = alunoRepository.findById(ownerId);
         if (owner == null) { System.out.println("Aluno not found."); return; }
 
@@ -172,6 +155,7 @@ public class AlunoMenu {
         try {
             alunoRepository.save(owner);
             em.getTransaction().commit();
+            em.refresh(other);
             System.out.println("Assigned Turno to Aluno.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
@@ -181,15 +165,17 @@ public class AlunoMenu {
     }
 
     private void removeTurno() {
-        Long id = InputUtils.readLong(scanner, "Aluno ID: ");
+        String id = InputUtils.readString(scanner, "Aluno ID: ");
         Aluno entity = alunoRepository.findById(id);
         if (entity == null) { System.out.println("Aluno not found."); return; }
 
+        Turno previous = entity.getTurno();
         entity.setTurno(null);
         em.getTransaction().begin();
         try {
             alunoRepository.save(entity);
             em.getTransaction().commit();
+            if (previous != null) em.refresh(previous);
             System.out.println("Turno removed from " + entity);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();

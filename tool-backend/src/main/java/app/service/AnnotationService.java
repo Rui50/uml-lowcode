@@ -1,6 +1,7 @@
 package app.service;
 
 import app.dto.AnnotationsDTO;
+import app.dto.CustomIdDTO;
 import app.dto.OclDTO;
 
 import model.*;
@@ -28,6 +29,28 @@ public class AnnotationService {
         applyOperationLinks(classes, model.getAllInteractions(), payload.getOperationToSeqDiagram());
         applyPreconditions(classes, associations, payload.getPreconditionsByOperation());
         applyPostconditions(classes, associations, payload.getPostconditionsByOperation());
+        applyInheritanceStrategies(classes, payload.getInheritanceStrategyByClass());
+        applyIds(classes, payload.getIdByClass());
+    }
+
+    // estratégia de herança JPA, anotada na superclasse
+    private void applyInheritanceStrategies(List<Class> classes, Map<String, String> map) {
+        if (map == null) return;
+        map.forEach((className, strategy) -> {
+            Class c = findClass(classes, className);
+            if (c != null) c.setInheritanceStrategy(strategy);
+        });
+    }
+
+    // @Id custom
+    private void applyIds(List<Class> classes, Map<String, CustomIdDTO> map) {
+        if (map == null) return;
+        map.forEach((className, cfg) -> {
+            Class c = findClass(classes, className);
+            if (c == null || cfg == null || cfg.getAttributeName() == null) return;
+            c.setIdAttributeName(cfg.getAttributeName());
+            c.setIdAttributeType(cfg.getAttributeType());
+        });
     }
 
     private void applyInvariants(List<Class> classes, List<Association> associations,

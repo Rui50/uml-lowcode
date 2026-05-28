@@ -28,13 +28,13 @@ import java.util.Set;
  * - Herança: por agora só SINGLE_TABLE, depois podemos configurar para JOINED
  *
  * Bidirecionalidade: se for bidirecional, gerar @JsonIgnoreProperties para evitar loop infinito na serialização JSON
+ *
+ * id: raiz com idAttributeName == null gera o id por defeito (@Id @GeneratedValue Long id);
+ * caso contrário @Id @GeneratedValue vão para o atributo escolhido. Ver model.Class.
  */
 public class SpringEntityGenerator {
     private String baseOutputPath;
     private String basePackage;
-
-    // para o tipo de herança, para já user SINGLE_TABLE, depois podemos configurar
-    private String inheritanceStrategy = "SINGLE_TABLE";
 
     private ValidationGenerator validationGenerator;
 
@@ -154,7 +154,7 @@ public class SpringEntityGenerator {
 
             // se nao tem parent gera id
             if (cls.getParentClass() == null) {
-                generateId(writer);
+                generateId(writer, cls);
             }
 
             // atributos
@@ -178,6 +178,9 @@ public class SpringEntityGenerator {
      *  anotações base
      */
     private void generateClassBaseAnnotations(PrintWriter writer, Class cls, List<Class> allClasses) {
+        // estratégia de herança
+        String strategy = cls.getRootInheritanceStrategy();
+
         // Lombok para nao termos que gerar construtores, getters e setters
         writer.println("@Getter");
         writer.println("@Setter");
@@ -202,7 +205,7 @@ public class SpringEntityGenerator {
         // @Entity
         writer.println("@Entity");
 
-        if (inheritanceStrategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
+        if (strategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
             // para herança single table, só a classe pai tem @Table
             // os têm @DiscriminatorValue
             return;
@@ -214,25 +217,27 @@ public class SpringEntityGenerator {
         // caso seja parent, gerar @Inheritance
         if (cls.getParentClass() == null && isParent(cls, allClasses)) {
             // pai
-            if (inheritanceStrategy.equals("SINGLE_TABLE")) {
+            if (strategy.equals("SINGLE_TABLE")) {
                 writer.println("@Inheritance(strategy = InheritanceType.SINGLE_TABLE)");
                 writer.println("@DiscriminatorColumn(name = \"type\")");
                 writer.println("@DiscriminatorValue(\"" + cls.getName() + "\")");
-            } else if (inheritanceStrategy.equals("JOINED")) {
+            } else if (strategy.equals("JOINED")) {
                 writer.println("@Inheritance(strategy = InheritanceType.JOINED)");
             }
         } else if (cls.getParentClass() != null) {
             // filho
-            if (inheritanceStrategy.equals("SINGLE_TABLE")) {
+            if (strategy.equals("SINGLE_TABLE")) {
                 writer.println("@DiscriminatorValue(\"" + cls.getName() + "\")");
-            } else if (inheritanceStrategy.equals("JOINED")) {
+            } else if (strategy.equals("JOINED")) {
                 writer.println("@PrimaryKeyJoinColumn(name = \"" + cls.getParentClass().getName().toLowerCase() + "_id\")");
             }
         }
     }
 
-    // para ja id auto gerado como long
-    private void generateId(PrintWriter writer) {
+    // id basico (Long auto-gerado) — só qnd não se define um id custom;
+    // se houver id custom, o @Id é colocado no atributo escolhido em generateAttributes
+    private void generateId(PrintWriter writer, Class cls) {
+        if (cls.getIdAttributeName() != null) return;
         writer.println("    @Id");
         writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
         writer.println("    private Long id;");
@@ -245,6 +250,15 @@ public class SpringEntityGenerator {
             // skip derived
             if (atr.hasDerive()) continue;
 
+            // atributo escolhido como @Id (sempre auto-gerado);
+            // tipo do campo é boxed (Integer em vez de int) — JPA não aceita primitivos no @Id
+            boolean isId = atr.getName().equals(cls.getIdAttributeName());
+            String fieldType = isId ? cls.getRoot().getIdAttributeType() : atr.getType();
+            if (isId) {
+                writer.println("    @Id");
+                writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
+            }
+
             if (enumNames.contains(atr.getType())) {
                 writer.println("    @Enumerated(EnumType.STRING)");
             }
@@ -252,9 +266,9 @@ public class SpringEntityGenerator {
             if (atr.hasInit()) {
                 String javaInit = atr.getJavaInitExpression();
                 writer.println("    @Builder.Default");
-                writer.println("    private " + atr.getType() + " " + atr.getName() + " = " + javaInit + ";");
+                writer.println("    private " + fieldType + " " + atr.getName() + " = " + javaInit + ";");
             } else {
-                writer.println("    private " + atr.getType() + " " + atr.getName() + ";");
+                writer.println("    private " + fieldType + " " + atr.getName() + ";");
             }
             writer.println();
         }

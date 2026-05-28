@@ -23,6 +23,8 @@ import java.util.stream.Collectors;
  *     Sao handled por ids, em bactch,
  *
  *   Invariantes OCL são validados antes de cada save
+ *
+ *   id: tipo raiz; idTypeOf(nome)/idGetterOf(nome) resolvem o id de OUTRA classe nas relações
  */
 public class SpringServiceGenerator {
     private String baseOutputPath;
@@ -30,10 +32,27 @@ public class SpringServiceGenerator {
 
     // vars ja declaradads pela preconditions, para evitar redeclaração no corpo do método
     private Set<String> preDeclaredVars = new HashSet<>();
-    
+
+    // nome -> Class, para resolver o tipo de id de outra classe nas relações
+    private final Map<String, Class> classMap = new HashMap<>();
+
     public SpringServiceGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
+    }
+
+    // tipo do id de uma classe
+    private String idTypeOf(String className) {
+        Class c = classMap.get(className);
+        return (c != null) ? c.getRoot().getIdAttributeType() : "Long";
+    }
+
+    // getter do id de outra entidade
+    private String idGetterOf(String className) {
+        Class c = classMap.get(className);
+        String field = (c != null && c.getRoot().getIdAttributeName() != null)
+                ? c.getRoot().getIdAttributeName() : "id";
+        return "get" + GeneratorUtils.capitalizeFirst(field);
     }
 
     /**
@@ -45,6 +64,9 @@ public class SpringServiceGenerator {
         // criar dir
         String serviceDir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/service";
         new java.io.File(serviceDir).mkdirs();
+
+        classMap.clear();
+        for (Class c : classes) classMap.put(c.getName(), c);
 
         for (Class cls : classes){
             if (cls.isAbstract()) continue;
@@ -205,7 +227,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param id the entity id");
         writer.println("     * @return Optional containing the entity DTO if found");
         writer.println("     */");
-        writer.println("    public Optional<" + className + "ResponseDTO> findById(Long id) {");
+        writer.println("    public Optional<" + className + "ResponseDTO> findById(" + cls.getRoot().getIdAttributeType() + " id) {");
         writer.println("        return " + repoName + ".findById(id)");
         writer.println("            .map(" + className + "ResponseDTO::fromEntity);");
         writer.println("    }");
@@ -221,7 +243,7 @@ public class SpringServiceGenerator {
         writer.println("    /**");
         writer.println("     * @param id the entity id");
         writer.println("     */");
-        writer.println("    public void deleteById(Long id) {");
+        writer.println("    public void deleteById(" + cls.getRoot().getIdAttributeType() + " id) {");
         writer.println("        " + repoName + ".deleteById(id);");
         writer.println("    }");
         writer.println();
@@ -231,7 +253,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param id the entity id");
         writer.println("     * @return true if exists");
         writer.println("     */");
-        writer.println("    public boolean existsById(Long id) {");
+        writer.println("    public boolean existsById(" + cls.getRoot().getIdAttributeType() + " id) {");
         writer.println("        return " + repoName + ".existsById(id);");
         writer.println("    }");
         writer.println();
@@ -341,7 +363,7 @@ public class SpringServiceGenerator {
         writer.println("     * @return the updated " + className);
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO assign" + GeneratorUtils.capitalizeFirst(otherClass) +
-                "(Long " + varName + "Id, Long " + otherVar + "Id) {");
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, " + idTypeOf(otherClass) + " " + otherVar + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
                 " not found: \" + " + varName + "Id));");
@@ -397,7 +419,7 @@ public class SpringServiceGenerator {
         writer.println("     * @return the updated " + className);
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO remove" + GeneratorUtils.capitalizeFirst(otherClass) +
-                "(Long " + varName + "Id) {");
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
                 " not found: \" + " + varName + "Id));");
@@ -452,7 +474,7 @@ public class SpringServiceGenerator {
         writer.println("     * @return the updated " + className);
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO add" + GeneratorUtils.capitalizeFirst(otherPlural) +
-                "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
                 " not found: \" + " + varName + "Id));");
@@ -513,7 +535,7 @@ public class SpringServiceGenerator {
         writer.println("     * @return the updated " + className);
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO remove" + GeneratorUtils.capitalizeFirst(otherPlural) +
-                "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
                 " not found: \" + " + varName + "Id));");
@@ -574,7 +596,7 @@ public class SpringServiceGenerator {
         writer.println("     * @return the updated " + className);
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO add" + GeneratorUtils.capitalizeFirst(otherPlural) +
-                "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
                 " not found: \" + " + varName + "Id));");
@@ -620,7 +642,7 @@ public class SpringServiceGenerator {
         writer.println("     * @return the updated " + className);
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO remove" + GeneratorUtils.capitalizeFirst(otherPlural) +
-                "(Long " + varName + "Id, List<Long> " + otherVar + "Ids) {");
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
                 " not found: \" + " + varName + "Id));");
@@ -635,7 +657,7 @@ public class SpringServiceGenerator {
             writer.println("        }");
         } else {
             writer.println("        " + varName + ".get" + capitalizedField + "().removeIf(" +
-                    otherVar + " -> " + otherVar + "Ids.contains(" + otherVar + ".getId()));");
+                    otherVar + " -> " + otherVar + "Ids.contains(" + otherVar + "." + idGetterOf(otherClass) + "()));");
         }
 
         writer.println();
@@ -724,14 +746,18 @@ public class SpringServiceGenerator {
         writer.println("     * @param dto the data to update");
         writer.println("     * @return the updated entity as DTO");
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO update(Long id, " + className + "CreateDTO dto) {");
+        writer.println("    public " + className + "ResponseDTO update(" + cls.getRoot().getIdAttributeType() + " id, " + className + "CreateDTO dto) {");
         writer.println("        " + className + " existing = " + repoName + ".findById(id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found: \" + id));");
         writer.println();
 
-        // update all attributes from DTO
+        // update all attributes from DTO; o atributo-id (se houver) é excluído:
+        // a PK não muda em update, e para id auto-gerado o getter nem existe no CreateDTO
+        String idAttrName = cls.getRoot().getIdAttributeName();
         List<Attribute> allAttrs = cls.getAllAttributes().stream()
-                .filter(a -> !a.hasDerive()).toList();
+                .filter(a -> !a.hasDerive())
+                .filter(a -> !a.getName().equals(idAttrName))
+                .toList();
         if (!allAttrs.isEmpty()) {
             writer.println("        // Update attributes from DTO");
             for (Attribute attr : allAttrs) {

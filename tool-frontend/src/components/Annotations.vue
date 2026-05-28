@@ -19,7 +19,7 @@ import Select from 'primevue/select';
  * 
  */
 
-type Tab = "ocl" | "spring"
+type Tab = "ocl" | "persistence" | "spring"
 
 const model = useModelStore()
 const annotations = useAnnotationsStore()
@@ -58,6 +58,54 @@ const interactionOptions = computed(() =>
   }))
   )
 
+// a estratégia de herança JPA é anotada na raiz da hierarquia
+// só mostramos o seletor se outra classe declarar esta como pai
+const isSuperclass = computed(() =>
+  !!className.value &&
+  (model.model?.classes ?? []).some(c => c.parent === className.value)
+)
+
+const inheritanceOptions = [
+  { label: 'Single table',  value: 'SINGLE_TABLE' },
+  { label: 'Joined tables', value: 'JOINED' },
+]
+
+// @Id: anotado na raiz da hierarquia (sempre auto-gerado)
+// só tipos integrais servem como @GeneratedValue; primitivos são boxed pelo gerador
+const ELIGIBLE_ID_TYPES = [
+  'Long', 'Integer', 'Short', 'Byte', 'BigInteger',
+  'long', 'int', 'short', 'byte',
+]
+
+const isIdRoot = computed(() =>
+  !isInterface.value && !!model.selectedClass && !model.selectedClass.parent
+)
+
+// config atual do id (undefined = id por defeito)
+const idConfig = computed(() =>
+  className.value ? annotations.idByClass[className.value] : undefined
+)
+
+// atributos elegíveis: integrais (wrapper) e não derivados
+const idEligibleAttributes = computed(() =>
+  (model.selectedClass?.attributes ?? []).filter(a =>
+    ELIGIBLE_ID_TYPES.includes(a.type) &&
+    !(`${className.value}.${a.name}` in annotations.deriveByAttribute)
+  )
+)
+
+function pickIdAttribute(name: string | null) {
+  if (!className.value) return
+  // sem nome (clear) -> volta ao id por defeito
+  if (!name) { annotations.setId(className.value, null); return }
+  const attr = idEligibleAttributes.value.find(a => a.name === name)
+  if (!attr) return
+  annotations.setId(className.value, {
+    attributeName: attr.name,
+    attributeType: attr.type,
+  })
+}
+
 function key(name: string) {
   return `${className.value}.${name}`
 }
@@ -76,6 +124,7 @@ function close() {
     <Tabs v-model:value="activeTab">
       <TabList>
         <Tab value="ocl">OCL</Tab>
+        <Tab value="persistence">Persistence</Tab>
         <Tab value="spring">Spring</Tab>
       </TabList>
 
@@ -239,6 +288,53 @@ function close() {
 
         </TabPanel>
 
+        <TabPanel value="persistence">
+          <!-- Identificador @Id (só na raiz da hierarquia) -->
+          <section v-if="isIdRoot" class="block">
+            <header class="block-head">
+              <h4>Identifier (@Id)</h4>
+            </header>
+            <div class="entry">
+              <Select
+                :modelValue="idConfig?.attributeName"
+                @update:modelValue="pickIdAttribute"
+                :options="idEligibleAttributes.map(a => ({ label: `${a.name}: ${a.type}`, value: a.name }))"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Default (Long, auto-generated)"
+                showClear
+              />
+              <p class="hint">
+                O valor é sempre atribuído pela base de dados.
+                Só atributos numéricos inteiros podem ser usados.
+              </p>
+            </div>
+          </section>
+
+          <!-- Estratégia de herança JPA (só na superclasse) -->
+          <section v-if="isSuperclass" class="block">
+            <header class="block-head">
+              <h4>Inheritance strategy</h4>
+            </header>
+            <div class="entry">
+              <Select
+                v-model="annotations.inheritanceStrategyByClass[className!]"
+                :options="inheritanceOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Single table"
+              />
+              <p class="hint">
+                Mapeamento JPA da hierarquia (alvos Spring e CLI-JPA).
+              </p>
+            </div>
+          </section>
+
+          <p v-if="!isIdRoot && !isSuperclass" class="empty">
+            Sem opções de persistência para esta classe.
+          </p>
+        </TabPanel>
+
         <TabPanel value="spring">
           <p class="empty">Spring annotations</p>
         </TabPanel>
@@ -333,6 +429,12 @@ function close() {
   font-style: italic;
   font-size: 12px;
   text-align: center;
+}
+.hint {
+  font-size: 11px;
+  opacity: 0.65;
+  margin: 0;
+  line-height: 1.4;
 }
 
 :deep(.p-tabs) {

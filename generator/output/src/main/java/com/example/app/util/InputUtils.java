@@ -36,4 +36,25 @@ public class InputUtils {
         scanner.nextLine();
         return value;
     }
+
+    public static Short readShort(Scanner scanner, String prompt) {
+        System.out.print(prompt);
+        while (!scanner.hasNextShort()) {
+            System.out.print("Invalid. " + prompt);
+            scanner.next();
+        }
+        Short value = scanner.nextShort();
+        scanner.nextLine();
+        return value;
+    }
+
+    public static String readString(Scanner scanner, String prompt) {
+        System.out.print(prompt);
+        String value = scanner.nextLine().trim();
+        while (value.isEmpty()) {
+            System.out.print("Invalid. " + prompt);
+            value = scanner.nextLine().trim();
+        }
+        return value;
+    }
 }

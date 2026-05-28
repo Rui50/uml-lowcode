@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
+// id: JpaRepository<Entity, T>, em que T = tipo do id (cls.getRoot().getIdAttributeType())
 public class SpringRepositoryGenerator {
     private String baseOutputPath;
     private String basePackage;
@@ -60,8 +61,9 @@ public class SpringRepositoryGenerator {
             writer.println(" * Spring Data JPA generates a base implementation automatically");
             writer.println(" */");
             writer.println("@Repository");
+            // tipo do id partir da raiz da hierarquia
             writer.println("public interface " + className + "Repository extends JpaRepository<" +
-                    className + ", Long> {");
+                    className + ", " + cls.getRoot().getIdAttributeType() + "> {");
             writer.println();
 
             // query metodos, para ja criamos alguns para atributos String

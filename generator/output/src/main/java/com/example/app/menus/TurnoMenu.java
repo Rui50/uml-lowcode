@@ -48,11 +48,9 @@ public class TurnoMenu {
     }
 
     private void create() {
-        int numero = InputUtils.readInt(scanner, "numero: ");
         int capacidade = InputUtils.readInt(scanner, "capacidade: ");
 
         Turno entity = new Turno();
-        entity.setNumero(numero);
         entity.setCapacidade(capacidade);
 
         em.getTransaction().begin();
@@ -100,9 +98,6 @@ public class TurnoMenu {
         System.out.println("Current: " + entity);
         System.out.println("(press Enter to keep current value)");
 
-        System.out.print("numero [" + entity.getNumero() +"]: ");
-        String numeroStr = scanner.nextLine();
-        if (!numeroStr.isEmpty()) entity.setNumero(Integer.parseInt(numeroStr));
         System.out.print("capacidade [" + entity.getCapacidade() +"]: ");
         String capacidadeStr = scanner.nextLine();
         if (!capacidadeStr.isEmpty()) entity.setCapacidade(Integer.parseInt(capacidadeStr));
@@ -142,7 +137,7 @@ public class TurnoMenu {
         Turno owner = turnoRepository.findById(ownerId);
         if (owner == null) { System.out.println("Turno not found."); return; }
 
-        Long otherId = InputUtils.readLong(scanner, "Aluno ID: ");
+        String otherId = InputUtils.readString(scanner, "Aluno ID: ");
         Aluno other = alunoRepository.findById(otherId);
         if (other == null) { System.out.println("Aluno not found."); return; }
 
@@ -151,6 +146,7 @@ public class TurnoMenu {
         try {
             turnoRepository.save(owner);
             em.getTransaction().commit();
+            em.refresh(other);
             System.out.println("Added Aluno to Turno.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
@@ -163,7 +159,7 @@ public class TurnoMenu {
         Turno owner = turnoRepository.findById(ownerId);
         if (owner == null) { System.out.println("Turno not found."); return; }
 
-        Long otherId = InputUtils.readLong(scanner, "Aluno ID: ");
+        String otherId = InputUtils.readString(scanner, "Aluno ID: ");
         Aluno other = alunoRepository.findById(otherId);
         if (other == null) { System.out.println("Aluno not found."); return; }
 
@@ -172,6 +168,7 @@ public class TurnoMenu {
         try {
             turnoRepository.save(owner);
             em.getTransaction().commit();
+            em.refresh(other);
             System.out.println("Aluno removed from " + owner);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();

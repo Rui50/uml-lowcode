@@ -218,6 +218,16 @@ public class CLIProjectGenerator {
             w.println("        scanner.nextLine();");
             w.println("        return value;");
             w.println("    }");
+            w.println();
+            w.println("    public static String readString(Scanner scanner, String prompt) {");
+            w.println("        System.out.print(prompt);");
+            w.println("        String value = scanner.nextLine().trim();");
+            w.println("        while (value.isEmpty()) {");
+            w.println("            System.out.print(\"Invalid. \" + prompt);");
+            w.println("            value = scanner.nextLine().trim();");
+            w.println("        }");
+            w.println("        return value;");
+            w.println("    }");
             w.println("}");
         }
         System.out.println("Generated: InputUtils.java");

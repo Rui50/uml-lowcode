@@ -56,11 +56,9 @@ public class TurmaMenu {
     private void create() {
         System.out.print("nome: ");
         String nome = scanner.nextLine();
-        int numAlunos = InputUtils.readInt(scanner, "numAlunos: ");
 
         Turma entity = new Turma();
         entity.setNome(nome);
-        entity.setNumAlunos(numAlunos);
 
         em.getTransaction().begin();
         try {
@@ -112,9 +110,6 @@ public class TurmaMenu {
         System.out.print("nome [" + entity.getNome() +"]: ");
         String nome = scanner.nextLine();
         if (!nome.isEmpty()) entity.setNome(nome);
-        System.out.print("numAlunos [" + entity.getNumAlunos() +"]: ");
-        String numAlunosStr = scanner.nextLine();
-        if (!numAlunosStr.isEmpty()) entity.setNumAlunos(Integer.parseInt(numAlunosStr));
 
         em.getTransaction().begin();
         try {
@@ -151,7 +146,7 @@ public class TurmaMenu {
         Turma owner = turmaRepository.findById(ownerId);
         if (owner == null) { System.out.println("Turma not found."); return; }
 
-        Long otherId = InputUtils.readLong(scanner, "Aluno ID: ");
+        String otherId = InputUtils.readString(scanner, "Aluno ID: ");
         Aluno other = alunoRepository.findById(otherId);
         if (other == null) { System.out.println("Aluno not found."); return; }
 
@@ -160,6 +155,7 @@ public class TurmaMenu {
         try {
             turmaRepository.save(owner);
             em.getTransaction().commit();
+            em.refresh(other);
             System.out.println("Added Aluno to Turma.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
@@ -172,7 +168,7 @@ public class TurmaMenu {
         Turma owner = turmaRepository.findById(ownerId);
         if (owner == null) { System.out.println("Turma not found."); return; }
 
-        Long otherId = InputUtils.readLong(scanner, "Aluno ID: ");
+        String otherId = InputUtils.readString(scanner, "Aluno ID: ");
         Aluno other = alunoRepository.findById(otherId);
         if (other == null) { System.out.println("Aluno not found."); return; }
 
@@ -181,6 +177,7 @@ public class TurmaMenu {
         try {
             turmaRepository.save(owner);
             em.getTransaction().commit();
+            em.refresh(other);
             System.out.println("Aluno removed from " + owner);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
@@ -202,6 +199,7 @@ public class TurmaMenu {
         try {
             turmaRepository.save(owner);
             em.getTransaction().commit();
+            em.refresh(other);
             System.out.println("Added Turno to Turma.");
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
@@ -223,6 +221,7 @@ public class TurmaMenu {
         try {
             turmaRepository.save(owner);
             em.getTransaction().commit();
+            em.refresh(other);
             System.out.println("Turno removed from " + owner);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) em.getTransaction().rollback();

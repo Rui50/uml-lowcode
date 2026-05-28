@@ -22,6 +22,9 @@ import java.util.stream.Collectors;
  *  - CRUD
  *  - opções de associação (add/remove ou assign/remove)
  *  - opções para operações custom (ligadas a uma Interaction)
+ *
+ * id: usar id da classe raiz no caso de ser herança;
+ * create e update excluem sempre o atributo-id (auto-gerado / PK).
  */
 public class CLIMenuGenerator {
 
@@ -30,10 +33,28 @@ public class CLIMenuGenerator {
     private final Set<String> enumNames = new HashSet<>();
     private final List<Interaction> interactions;
 
+    // nome -> Class, para resolver o tipo do id de outra classe nas relações
+    private final Map<String, Class> classMap = new HashMap<>();
+
     public CLIMenuGenerator(String baseOutputPath, String basePackage, List<Interaction> interactions) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
         this.interactions = interactions;
+    }
+
+    // tipo do id de uma classe (pelo nome)
+    private String idTypeOf(String className) {
+        Class c = classMap.get(className);
+        return (c != null) ? c.getRoot().getIdAttributeType() : "Long";
+    }
+
+    // metodo do InputUtils a usar
+    private String idReaderOf(String className) {
+        switch (idTypeOf(className)) {
+            case "String":  return "readString";
+            case "Integer": return "readInt";
+            default:        return "readLong";
+        }
     }
 
     /**
@@ -44,6 +65,8 @@ public class CLIMenuGenerator {
         for (Enumeration e : enumerations) {
             enumNames.add(e.getName());
         }
+        classMap.clear();
+        for (Class c : classes) classMap.put(c.getName(), c);
         System.out.println("Generating Java Menus...");
 
         String menusPath = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/menus";
@@ -218,14 +241,19 @@ public class CLIMenuGenerator {
         w.println("    private void create() {");
 
         // recolher atributos do pai + próprios (mesma ordem que o construtor)
+        // excluir o atributo-id
+        String idName = cls.getRoot().getIdAttributeName();
+
         List<Attribute> allAttrs = new ArrayList<>();
         if (cls.getParentClass() != null) {
             allAttrs.addAll(cls.getParentClass().getAttributes().stream()
                     .filter(a -> !a.hasDerive() && !a.hasInit())
+                    .filter(a -> !a.getName().equals(idName))
                     .collect(Collectors.toList()));
         }
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
+                .filter(a -> !a.getName().equals(idName))
                 .collect(Collectors.toList()));
 
         // ler cada atributo
@@ -289,7 +317,7 @@ public class CLIMenuGenerator {
      */
     private void generateViewByIdMethod(PrintWriter w, Class cls, List<Association> associations) {
         w.println("    private void viewById() {");
-        w.println("        Long id = InputUtils.readLong(scanner, \"ID: \");");
+        w.println("        " + idTypeOf(cls.getName()) + " id = InputUtils." + idReaderOf(cls.getName()) + "(scanner, \"ID: \");");
         w.println("        " + cls.getName() + " entity = " + repoVariable(cls.getName()) + ".findById(id);");
         w.println("        if (entity == null) {");
         w.println("            System.out.println(\"Not found.\");");
@@ -339,7 +367,7 @@ public class CLIMenuGenerator {
      */
     private void generateUpdateMethod(PrintWriter w, Class cls) {
         w.println("    private void update() {");
-        w.println("        Long id = InputUtils.readLong(scanner, \"ID: \");");
+        w.println("        " + idTypeOf(cls.getName()) + " id = InputUtils." + idReaderOf(cls.getName()) + "(scanner, \"ID: \");");
         w.println("        " + cls.getName() + " entity = " + repoVariable(cls.getName()) + ".findById(id);");
         w.println("        if (entity == null) {");
         w.println("            System.out.println(\"Not found.\");");
@@ -351,14 +379,19 @@ public class CLIMenuGenerator {
         w.println();
 
         // para cada atributo (pai + próprios) ler novo valor ou manter atual
+        // PK não muda em update; excluir sempre o atributo-id (se houver)
+        String idAttrName = cls.getRoot().getIdAttributeName();
+
         List<Attribute> allAttrs = new ArrayList<>();
         if (cls.getParentClass() != null) {
             allAttrs.addAll(cls.getParentClass().getAttributes().stream()
                     .filter(a -> !a.hasDerive())
+                    .filter(a -> !a.getName().equals(idAttrName))
                     .collect(Collectors.toList()));
         }
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive())
+                .filter(a -> !a.getName().equals(idAttrName))
                 .collect(Collectors.toList()));
         for (Attribute attr : allAttrs) {
             generateUpdateAttribute(w, attr);
@@ -395,7 +428,7 @@ public class CLIMenuGenerator {
      */
     private void generateDeleteMethod(PrintWriter w, Class cls) {
         w.println("    private void delete() {");
-        w.println("        Long id = InputUtils.readLong(scanner, \"ID: \");");
+        w.println("        " + idTypeOf(cls.getName()) + " id = InputUtils." + idReaderOf(cls.getName()) + "(scanner, \"ID: \");");
         w.println("        " + cls.getName() + " entity = " + repoVariable(cls.getName()) + ".findById(id);");
         w.println("        if (entity == null) {");
         w.println("            System.out.println(\"Not found.\");");
@@ -458,11 +491,11 @@ public class CLIMenuGenerator {
     private void generateAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
         String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
         w.println("    private void assign" + otherClass + "() {");
-        w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
+        w.println("        " + idTypeOf(ownerClass) + " ownerId = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
         w.println();
-        w.println("        Long otherId = InputUtils.readLong(scanner, \"" + otherClass + " ID: \");");
+        w.println("        " + idTypeOf(otherClass) + " otherId = InputUtils." + idReaderOf(otherClass) + "(scanner, \"" + otherClass + " ID: \");");
         w.println("        " + otherClass + " other = " + repoVariable(otherClass) + ".findById(otherId);");
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
@@ -486,7 +519,7 @@ public class CLIMenuGenerator {
     private void generateRemoveAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
         String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
         w.println("    private void remove" + otherClass + "() {");
-        w.println("        Long id = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
+        w.println("        " + idTypeOf(ownerClass) + " id = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " entity = " + repoVariable(ownerClass) + ".findById(id);");
         w.println("        if (entity == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
         w.println();
@@ -511,11 +544,11 @@ public class CLIMenuGenerator {
     private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc) {
         String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
         w.println("    private void add" + otherClass + "() {");
-        w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
+        w.println("        " + idTypeOf(ownerClass) + " ownerId = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
         w.println();
-        w.println("        Long otherId = InputUtils.readLong(scanner, \"" + otherClass + " ID: \");");
+        w.println("        " + idTypeOf(otherClass) + " otherId = InputUtils." + idReaderOf(otherClass) + "(scanner, \"" + otherClass + " ID: \");");
         w.println("        " + otherClass + " other = " + repoVariable(otherClass) + ".findById(otherId);");
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
@@ -548,11 +581,11 @@ public class CLIMenuGenerator {
     private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc) {
         String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
         w.println("    private void remove" + otherClass + "() {");
-        w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
+        w.println("        " + idTypeOf(ownerClass) + " ownerId = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
         w.println();
-        w.println("        Long otherId = InputUtils.readLong(scanner, \"" + otherClass + " ID: \");");
+        w.println("        " + idTypeOf(otherClass) + " otherId = InputUtils." + idReaderOf(otherClass) + "(scanner, \"" + otherClass + " ID: \");");
         w.println("        " + otherClass + " other = " + repoVariable(otherClass) + ".findById(otherId);");
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
@@ -599,7 +632,7 @@ public class CLIMenuGenerator {
             if (entry == null) continue;
 
             w.println("    private void " + op.getName() + "() {");
-            w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + cls.getName() + " ID: \");");
+            w.println("        " + idTypeOf(cls.getName()) + " ownerId = InputUtils." + idReaderOf(cls.getName()) + "(scanner, \"" + cls.getName() + " ID: \");");
             w.println("        " + cls.getName() + " owner = " + repoVariable(cls.getName()) + ".findById(ownerId);");
             w.println("        if (owner == null) { System.out.println(\"" + cls.getName() + " not found.\"); return; }");
             w.println();
@@ -612,7 +645,7 @@ public class CLIMenuGenerator {
 
                 if (classNames.contains(pType)) {
                     // entidade: pedir ID e procurar no repo
-                    w.println("        Long " + pName + "Id = InputUtils.readLong(scanner, \"" + pType + " ID (" + pName + "): \");");
+                    w.println("        " + idTypeOf(pType) + " " + pName + "Id = InputUtils." + idReaderOf(pType) + "(scanner, \"" + pType + " ID (" + pName + "): \");");
                     w.println("        " + pType + " " + pName + " = " + repoVariable(pType) + ".findById(" + pName + "Id);");
                     w.println("        if (" + pName + " == null) { System.out.println(\"" + pType + " not found.\"); return; }");
                 } else {

@@ -26,6 +26,8 @@ export async function generateCode(target: string, settings?: ProjectSettings): 
     operationToSeqDiagram: annotations.operationToSeqDiagram,
     preconditionsByOperation: annotations.preconditionsByOperation,
     postconditionsByOperation: annotations.postconditionsByOperation,
+    inheritanceStrategyByClass: annotations.inheritanceStrategyByClass,
+    idByClass: annotations.idByClass,
   }
   const body = JSON.stringify({ annotations: annotationsPayload, settings: settings ?? null })
   const res = await fetch(`/api/model/generate?target=${encodeURIComponent(target)}`, {

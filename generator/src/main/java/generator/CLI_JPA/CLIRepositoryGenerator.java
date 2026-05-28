@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
+// id: findById/deleteById e o getter usado no save() usam o tipo/nome do id resolvido pela raiz
 public class CLIRepositoryGenerator {
     private final String baseOutputPath;
     private final String basePackage;
@@ -32,7 +33,12 @@ public class CLIRepositoryGenerator {
         String name = cls.getName();
         String filename = repoDir + "/" + name + "Repository.java";
 
-        try (PrintWriter w = new PrintWriter(new File(filename))) {
+        // id
+        String idType = cls.getRoot().getIdAttributeType();
+        String idField = cls.getRoot().getIdAttributeName() == null ? "id" : cls.getRoot().getIdAttributeName();
+        String idGetter = "get" + Character.toUpperCase(idField.charAt(0)) + idField.substring(1);
+
+        try (PrintWriter w = new PrintWriter(filename)) {
             w.println("package " + basePackage + ".repository;");
             w.println();
             w.println("import " + basePackage + ".models." + name + ";");
@@ -48,14 +54,14 @@ public class CLIRepositoryGenerator {
             w.println("    }");
             w.println();
             w.println("    public " + name + " save(" + name + " entity) {");
-            w.println("        if (entity.getId() == null) {");
+            w.println("        if (entity." + idGetter + "() == null) {");
             w.println("            em.persist(entity);");
             w.println("            return entity;");
             w.println("        }");
             w.println("        return em.merge(entity);");
             w.println("    }");
             w.println();
-            w.println("    public " + name + " findById(Long id) {");
+            w.println("    public " + name + " findById(" + idType + " id) {");
             w.println("        return em.find(" + name + ".class, id);");
             w.println("    }");
             w.println();
@@ -64,7 +70,7 @@ public class CLIRepositoryGenerator {
                     ".class).getResultList();");
             w.println("    }");
             w.println();
-            w.println("    public void deleteById(Long id) {");
+            w.println("    public void deleteById(" + idType + " id) {");
             w.println("        " + name + " entity = em.find(" + name + ".class, id);");
             w.println("        if (entity != null) {");
             w.println("            em.remove(entity);");

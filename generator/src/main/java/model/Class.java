@@ -17,6 +17,12 @@ import java.util.List;
 
 /**
  * Representa uma classe UML.
+ *
+ * Identificador JPA (id) — sempre auto-gerado:
+ *  - idAttributeName == null  -> id por defeito: @Id @GeneratedValue Long id
+ *  - idAttributeName != null  -> @Id @GeneratedValue no atributo escolhido
+ *  - idAttributeType          -> tipo Java do id (default Long)
+ *  A anotação vive na RAIZ da hierarquia; uma classe filha resolve o id via getRoot().
  */
 public class Class {
     // propriedades basicas para já
@@ -31,6 +37,16 @@ public class Class {
 
     private boolean isAbstract;
     private List<Interface> realizations;
+
+    // estratégia de herança JPA, definida na superclasse
+    // "SINGLE_TABLE" (default) | "JOINED"
+    private String inheritanceStrategy = "SINGLE_TABLE";
+
+    // identificador JPA (sempre auto-gerado)
+    // idAttributeName == null -> id sintético (@Id @GeneratedValue Long id) [default]
+    // caso contrário          -> usa esse atributo como @Id @GeneratedValue
+    private String idAttributeName;          // null = id sintético
+    private String idAttributeType = "Long"; // tipo Java do id (default Long)
 
     private List<Invariant> invariants;
 
@@ -105,6 +121,60 @@ public class Class {
 
     public void setAbstract(boolean isAbstract) {
         this.isAbstract = isAbstract;
+    }
+
+    public String getInheritanceStrategy() {
+        return inheritanceStrategy;
+    }
+
+    public void setInheritanceStrategy(String inheritanceStrategy) {
+        if (inheritanceStrategy != null && !inheritanceStrategy.isBlank()) {
+            this.inheritanceStrategy = inheritanceStrategy;
+        }
+    }
+
+    // raiz da hierarquia (a própria classe se não tiver pai)
+    public Class getRoot() {
+        Class root = this;
+        while (root.getParentClass() != null) {
+            root = root.getParentClass();
+        }
+        return root;
+    }
+
+    // a anotação vive na raiz da hierarquia, por isso uma classe filha
+    // herda a estratégia do seu pai (raiz).
+    public String getRootInheritanceStrategy() {
+        return getRoot().getInheritanceStrategy();
+    }
+
+    public String getIdAttributeName() {
+        return idAttributeName;
+    }
+
+    public void setIdAttributeName(String idAttributeName) {
+        this.idAttributeName = (idAttributeName == null || idAttributeName.isBlank()) ? null : idAttributeName;
+    }
+
+    public String getIdAttributeType() {
+        return idAttributeType;
+    }
+
+    public void setIdAttributeType(String idAttributeType) {
+        if (idAttributeType == null || idAttributeType.isBlank()) return;
+        // ids têm de ser tipos de referência (generics em JpaRepository<>, List<>, etc.
+        // não aceita primitivos
+        this.idAttributeType = fixIdType(idAttributeType);
+    }
+
+    private static String fixIdType(String t) {
+        switch (t) {
+            case "int":   return "Integer";
+            case "long":  return "Long";
+            case "short": return "Short";
+            case "byte":  return "Byte";
+            default:      return t;
+        }
     }
 
     //s realizations são por classe e não são herdadas.

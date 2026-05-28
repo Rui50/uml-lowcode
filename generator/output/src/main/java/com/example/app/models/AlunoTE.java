@@ -18,10 +18,10 @@ public class AlunoTE extends Aluno {
 
     @Override
     public String toString() {
-        return "AlunoTE{id=" + getId() + ", empresa=" + empresa + "}";
+        return "AlunoTE{" + "empresa=" + empresa + "}";
     }
     // Operations
-    public Boolean comprovativo(
+    public boolean comprovativo(
     ) {
         throw new UnsupportedOperationException("Not implemented yet");
     }

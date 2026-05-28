@@ -12,11 +12,8 @@ public class Turno {
     private Long id;
 
     // attributes
-    @Column(name = "numero")
-    private int numero;
-
     @Column(name = "capacidade")
-    private Integer capacidade;
+    private int capacidade;
 
     // relationship: Turno -> Aluno
     @OneToMany(mappedBy = "turno")
@@ -25,11 +22,8 @@ public class Turno {
 
     public Turno() {}
 
-    public int getNumero() { return numero; }
-    public void setNumero(int numero) { this.numero = numero; }
-
-    public Integer getCapacidade() { return capacidade; }
-    public void setCapacidade(Integer capacidade) { this.capacidade = capacidade; }
+    public int getCapacidade() { return capacidade; }
+    public void setCapacidade(int capacidade) { this.capacidade = capacidade; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -39,10 +33,10 @@ public class Turno {
 
     @Override
     public String toString() {
-        return "Turno{id=" + getId() + ", numero=" + numero + ", capacidade=" + capacidade + "}";
+        return "Turno{" + "id=" + getId() + ", capacidade=" + capacidade + "}";
     }
     // Operations
-    public Boolean temVaga(
+    public boolean temVaga(
     ) {
         throw new UnsupportedOperationException("Not implemented yet");
     }

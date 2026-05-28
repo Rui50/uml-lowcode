@@ -15,15 +15,35 @@ import java.util.*;
  * gerar os dtos, por classe, dois:
  * - CreateDTO: para POST/PUT. apenas atributos, sem id, relações
  * - ResponseDTO: para GET. id + atributos + relacionamento IDs
+ *
+ * id: CreateDTO exclui sempre o atributo-id (a BD atribui-o);
+ * ResponseDTO expõe 'id' por defeito só quando não há id custom; relações usam o tipo/getter do id relacionado. Ver model.Class.
  */
 public class SpringDTOGenerator {
     private String baseOutputPath;
     private String basePackage;
     private Set<String> enumNames = new HashSet<>();
 
+    // nome -> Class, para resolver o tipo de id de outra classe nas relações
+    private final Map<String, Class> classMap = new HashMap<>();
+
     public SpringDTOGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
+    }
+
+    // tipo do id de uma classe (pelo nome), resolvido a partir da raiz; default Long
+    private String idTypeOf(String className) {
+        Class c = classMap.get(className);
+        return (c != null) ? c.getRoot().getIdAttributeType() : "Long";
+    }
+
+    // getter do id
+    private String idGetterOf(String className) {
+        Class c = classMap.get(className);
+        String field = (c != null && c.getRoot().getIdAttributeName() != null)
+                ? c.getRoot().getIdAttributeName() : "id";
+        return "get" + GeneratorUtils.capitalizeFirst(field);
     }
 
     public void generateDTOs(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
@@ -36,6 +56,9 @@ public class SpringDTOGenerator {
         for (Enumeration e : enumerations) {
             enumNames.add(e.getName());
         }
+
+        classMap.clear();
+        for (Class c : classes) classMap.put(c.getName(), c);
 
         for (Class cls : classes) {
             // classes abstratas não podem ser instanciadas, logo não têm CreateDTO
@@ -60,7 +83,12 @@ public class SpringDTOGenerator {
             w.println("import lombok.*;");
             w.println("import " + basePackage + ".models." + className + ";");
 
-            List<Attribute> allAttrs = cls.getAllAttributes().stream().filter(a -> !a.hasDerive()).toList();
+            // id é sempre auto-gerado pela BD -> fora do CreateDTO
+            String idName = cls.getRoot().getIdAttributeName();
+            List<Attribute> allAttrs = cls.getAllAttributes().stream()
+                    .filter(a -> !a.hasDerive())
+                    .filter(a -> !a.getName().equals(idName))
+                    .toList();
 
             // check if any attribute is an enum
             for (Attribute attr : allAttrs) {
@@ -153,9 +181,12 @@ public class SpringDTOGenerator {
             w.println("public class " + className + "ResponseDTO {");
             w.println();
 
-            // id
-            w.println("    private Long id;");
-            w.println();
+            // id normal, quando há id custom, esse atributo já aparece nos atributos abaixo
+            boolean defaultId = cls.getRoot().getIdAttributeName() == null;
+            if (defaultId) {
+                w.println("    private Long id;");
+                w.println();
+            }
 
             // attributes
             List<Attribute> allAttrs = cls.getAllAttributes();
@@ -191,7 +222,7 @@ public class SpringDTOGenerator {
             String varName = className.substring(0, 1).toLowerCase() + className.substring(1);
             w.println("    public static " + className + "ResponseDTO fromEntity(" + className + " " + varName + ") {");
             w.println("        " + className + "ResponseDTO dto = new " + className + "ResponseDTO();");
-            w.println("        dto.setId(" + varName + ".getId());");
+            if (defaultId) w.println("        dto.setId(" + varName + ".getId());");
 
             for (Attribute attr : allAttrs) {
                 String cap = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
@@ -217,11 +248,11 @@ public class SpringDTOGenerator {
         String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, multiplicity);
 
         if (GeneratorUtils.checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
-            // collection -> List<Long> of IDs
-            w.println("    private List<Long> " + fieldName + "Ids;");
+            // collection -> List of related IDs
+            w.println("    private List<" + idTypeOf(otherClass) + "> " + fieldName + "Ids;");
         } else {
-            // single reference -> Long ID
-            w.println("    private Long " + fieldName + "Id;");
+            // single reference -> related ID
+            w.println("    private " + idTypeOf(otherClass) + " " + fieldName + "Id;");
         }
     }
 
@@ -233,16 +264,16 @@ public class SpringDTOGenerator {
         if (GeneratorUtils.checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
             if (assoc.hasQualifier()) {
                 w.println("        dto.set" + capitalizedField + "Ids(" + varName + ".get" + capitalizedField + "() != null");
-                w.println("            ? " + varName + ".get" + capitalizedField + "().values().stream().map(" + otherClass + "::getId).collect(Collectors.toList())");
+                w.println("            ? " + varName + ".get" + capitalizedField + "().values().stream().map(" + otherClass + "::" + idGetterOf(otherClass) + ").collect(Collectors.toList())");
                 w.println("            : new ArrayList<>());");
             } else {
                 w.println("        dto.set" + capitalizedField + "Ids(" + varName + ".get" + capitalizedField + "() != null");
-                w.println("            ? " + varName + ".get" + capitalizedField + "().stream().map(" + otherClass + "::getId).collect(Collectors.toList())");
+                w.println("            ? " + varName + ".get" + capitalizedField + "().stream().map(" + otherClass + "::" + idGetterOf(otherClass) + ").collect(Collectors.toList())");
                 w.println("            : new ArrayList<>());");
             }
         } else {
             w.println("        dto.set" + capitalizedField + "Id(" + varName + ".get" + capitalizedField + "() != null");
-            w.println("            ? " + varName + ".get" + capitalizedField + "().getId() : null);");
+            w.println("            ? " + varName + ".get" + capitalizedField + "()." + idGetterOf(otherClass) + "() : null);");
         }
     }
 

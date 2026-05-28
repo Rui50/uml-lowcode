@@ -38,7 +38,7 @@ function attrAnnotated(attrName: string): boolean {
 
       <div class="header">
         <span v-if="classAnnotated" class="dot" />
-        <div class="class-name" :class="{ abstract: data.abstract }">{{ data.name }}</div>
+        <div class="class-name" :class="{ abstract: data.isAbstract }">{{ data.name }}</div>
         <div v-if="data.parent" class="parent">: {{ data.parent }}</div>
       </div>
 

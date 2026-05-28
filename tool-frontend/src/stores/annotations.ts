@@ -9,6 +9,11 @@ export interface OclAnnotation {
   message: string
 }
 
+export interface IdConfig {
+  attributeName: string
+  attributeType: string
+}
+
 export const useAnnotationsStore = defineStore('annotations', () => {
   // key: ClassName -> invariants
   const invariantsByClass = ref<Record<string, OclAnnotation[]>>({})
@@ -23,6 +28,12 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   const preconditionsByOperation = ref<Record<string, OclAnnotation[]>>({})
 
   const postconditionsByOperation = ref<Record<string, OclAnnotation[]>>({})
+
+  // key: ClassName (superclasse) -> "SINGLE_TABLE" | "JOINED"
+  const inheritanceStrategyByClass = ref<Record<string, 'SINGLE_TABLE' | 'JOINED'>>({})
+
+  // key: ClassName (raiz) -> config do @Id (ausente = id por defeito auto-gerado)
+  const idByClass = ref<Record<string, IdConfig>>({})
 
   function addInvariant(className: string) {
     if (!invariantsByClass.value[className]) invariantsByClass.value[className] = []
@@ -102,6 +113,11 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     }
   }
 
+  function setId(className: string, config: IdConfig | null) {
+    if (config) idByClass.value[className] = config
+    else delete idByClass.value[className]
+  }
+
 
   // Storage
   const STORAGE_KEY = 'annotations'
@@ -114,6 +130,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       operationToSeqDiagram.value = {}
       preconditionsByOperation.value = {}
       postconditionsByOperation.value = {}
+      inheritanceStrategyByClass.value = {}
+      idByClass.value = {}
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -124,6 +142,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     operationToSeqDiagram.value = data.operationToSeqDiagram || {}
     preconditionsByOperation.value = data.preconditionsByOperation || {}
     postconditionsByOperation.value = data.postconditionsByOperation || {}
+    inheritanceStrategyByClass.value = data.inheritanceStrategyByClass || {}
+    idByClass.value = data.idByClass || {}
   }
 
   function saveForModel(name: string | null) {
@@ -136,6 +156,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       operationToSeqDiagram: operationToSeqDiagram.value,
       preconditionsByOperation: preconditionsByOperation.value,
       postconditionsByOperation: postconditionsByOperation.value,
+      inheritanceStrategyByClass: inheritanceStrategyByClass.value,
+      idByClass: idByClass.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
@@ -151,7 +173,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // save current bucket on any annotation change
   watch(
-    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation],
+    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass],
     () => saveForModel(modelStore.fileName),
     { deep: true }
   )
@@ -163,6 +185,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     operationToSeqDiagram.value = {}
     preconditionsByOperation.value = {}
     postconditionsByOperation.value = {}
+    inheritanceStrategyByClass.value = {}
+    idByClass.value = {}
   }
 
   return {
@@ -173,6 +197,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     operationToSeqDiagram,
     preconditionsByOperation,
     postconditionsByOperation,
+    inheritanceStrategyByClass,
+    idByClass,
 
     // actions
     addInvariant,
@@ -187,6 +213,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     deletePrecondition,
     addPostcondition,
     deletePostcondition,
+    setId,
     reset,
   }
 })

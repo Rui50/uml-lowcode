@@ -10,23 +10,16 @@ import java.util.*;
 @DiscriminatorValue("Aluno")
 public class Aluno {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     // attributes
-    @Column(name = "email")
-    private String email;
-
     @Column(name = "nome")
     private String nome;
 
+    @Id
+    @Column(name = "email")
+    private String email;
+
     @Column(name = "numero")
     private int numero;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado")
-    private EstadoAluno estado;
 
     // relationship: Aluno -> Turno
     @ManyToOne
@@ -36,27 +29,21 @@ public class Aluno {
 
     public Aluno() {}
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
 
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
     public int getNumero() { return numero; }
     public void setNumero(int numero) { this.numero = numero; }
-
-    public EstadoAluno getEstado() { return estado; }
-    public void setEstado(EstadoAluno estado) { this.estado = estado; }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
 
     public Turno getTurno() { return turno; }
     public void setTurno(Turno turno) { this.turno = turno; }
 
     @Override
     public String toString() {
-        return "Aluno{id=" + getId() + ", email=" + email + ", nome=" + nome + ", numero=" + numero + ", estado=" + estado + "}";
+        return "Aluno{" + "nome=" + nome + ", email=" + email + ", numero=" + numero + "}";
     }
     // Operations
     public List<String> validar(

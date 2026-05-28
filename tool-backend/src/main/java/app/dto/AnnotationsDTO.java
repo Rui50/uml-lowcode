@@ -25,4 +25,10 @@ public class AnnotationsDTO {
     private Map<String, List<OclDTO>> preconditionsByOperation = new HashMap<>();
 
     private Map<String, List<OclDTO>> postconditionsByOperation = new HashMap<>();
+
+    // key className (superclasse, raiz da hierarquia) -> "SINGLE_TABLE" | "JOINED"
+    private Map<String, String> inheritanceStrategyByClass = new HashMap<>();
+
+    // key className (raiz da hierarquia) -> config do @Id
+    private Map<String, CustomIdDTO> idByClass = new HashMap<>();
 }

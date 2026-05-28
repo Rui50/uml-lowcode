@@ -9,17 +9,29 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+// id: @PathVariable/@RequestBody usam o tipo do id da própria classe e o das classes relacionadas (idTypeOf)
 public class SpringControllerGenerator {
     private String outputDirectory;
     private String basePackage;
 
+    // nome -> Class, para resolver o tipo de id de outra classe nas relações
+    private final Map<String, Class> classMap = new HashMap<>();
+
     public SpringControllerGenerator(String outputDirectory, String basePackage) {
         this.outputDirectory = outputDirectory;
         this.basePackage = basePackage;
+    }
+
+    // tipo do id de uma classe pelo nome
+    private String idTypeOf(String className) {
+        Class c = classMap.get(className);
+        return (c != null) ? c.getRoot().getIdAttributeType() : "Long";
     }
 
     // gera todos os controladores
@@ -28,6 +40,9 @@ public class SpringControllerGenerator {
 
         String controllerDir = outputDirectory + "/src/main/java/" + basePackage.replace('.', '/') + "/controllers";
         new java.io.File(controllerDir).mkdirs();
+
+        classMap.clear();
+        for (Class c : classes) classMap.put(c.getName(), c);
 
         for (Class cls : classes) {
             if (cls.isAbstract()) continue;
@@ -117,7 +132,7 @@ public class SpringControllerGenerator {
         writer.println("     * @return entity if found, 404 if not");
         writer.println("     */");
         writer.println("    @GetMapping(\"/{id}\")");
-        writer.println("    public ResponseEntity<" + className + "ResponseDTO> getById(@PathVariable Long id) {");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> getById(@PathVariable " + idTypeOf(className) + " id) {");
         writer.println("        return " + serviceName + ".findById(id)");
         writer.println("            .map(ResponseEntity::ok)");
         writer.println("            .orElse(ResponseEntity.notFound().build());");
@@ -143,7 +158,7 @@ public class SpringControllerGenerator {
         // PUT /api/entities/{id} - Update
         writer.println("    @PutMapping(\"/{id}\")");
         writer.println("    public ResponseEntity<" + className + "ResponseDTO> update(");
-        writer.println("            @PathVariable Long id,");
+        writer.println("            @PathVariable " + idTypeOf(className) + " id,");
         writer.println("            @RequestBody " + className + "CreateDTO dto) {");
         writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".update(id, dto);");
         writer.println("        return ResponseEntity.ok(updated);");
@@ -158,7 +173,7 @@ public class SpringControllerGenerator {
         writer.println("     * @return 204 No Content if deleted, 404 if not found");
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}\")");
-        writer.println("    public ResponseEntity<Void> delete(@PathVariable Long id) {");
+        writer.println("    public ResponseEntity<Void> delete(@PathVariable " + idTypeOf(className) + " id) {");
         writer.println("        if (!" + serviceName + ".existsById(id)) {");
         writer.println("            return ResponseEntity.notFound().build();");
         writer.println("        }");
@@ -239,8 +254,8 @@ public class SpringControllerGenerator {
         writer.println("     */");
         writer.println("    @PutMapping(\"/{id}/" + otherPath + "/{" + otherVar + "Id}\")");
         writer.println("    public ResponseEntity<" + className + "ResponseDTO> assign" + otherClass + "(");
-        writer.println("            @PathVariable Long id,");
-        writer.println("            @PathVariable Long " + otherVar + "Id) {");
+        writer.println("            @PathVariable " + idTypeOf(className) + " id,");
+        writer.println("            @PathVariable " + idTypeOf(otherClass) + " " + otherVar + "Id) {");
         writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".assign" + otherClass + "(id, " + otherVar + "Id);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
@@ -259,7 +274,7 @@ public class SpringControllerGenerator {
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
         writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + otherClass + "(");
-        writer.println("            @PathVariable Long id) {");
+        writer.println("            @PathVariable " + idTypeOf(className) + " id) {");
         writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + otherClass + "(id);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
@@ -281,8 +296,8 @@ public class SpringControllerGenerator {
         writer.println("     */");
         writer.println("    @PostMapping(\"/{id}/" + otherPath + "\")");
         writer.println("    public ResponseEntity<" + className + "ResponseDTO> add" + GeneratorUtils.capitalizeFirst(otherPlural) + "(");
-        writer.println("            @PathVariable Long id,");
-        writer.println("            @RequestBody List<Long> " + otherVar + "Ids) {");
+        writer.println("            @PathVariable " + idTypeOf(className) + " id,");
+        writer.println("            @RequestBody List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".add" + GeneratorUtils.capitalizeFirst(otherPlural) + "(id, " + otherVar + "Ids);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
@@ -303,8 +318,8 @@ public class SpringControllerGenerator {
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
         writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + GeneratorUtils.capitalizeFirst(otherPlural) + "(");
-        writer.println("            @PathVariable Long id,");
-        writer.println("            @RequestBody List<Long> " + otherVar + "Ids) {");
+        writer.println("            @PathVariable " + idTypeOf(className) + " id,");
+        writer.println("            @RequestBody List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + GeneratorUtils.capitalizeFirst(otherPlural) + "(id, " + otherVar + "Ids);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");

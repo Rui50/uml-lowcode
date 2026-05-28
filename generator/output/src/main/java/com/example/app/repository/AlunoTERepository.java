@@ -13,14 +13,14 @@ public class AlunoTERepository {
     }
 
     public AlunoTE save(AlunoTE entity) {
-        if (entity.getId() == null) {
+        if (entity.getEmail() == null) {
             em.persist(entity);
             return entity;
         }
         return em.merge(entity);
     }
 
-    public AlunoTE findById(Long id) {
+    public AlunoTE findById(String id) {
         return em.find(AlunoTE.class, id);
     }
 
@@ -28,7 +28,7 @@ public class AlunoTERepository {
         return em.createQuery("from AlunoTE", AlunoTE.class).getResultList();
     }
 
-    public void deleteById(Long id) {
+    public void deleteById(String id) {
         AlunoTE entity = em.find(AlunoTE.class, id);
         if (entity != null) {
             em.remove(entity);

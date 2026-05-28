@@ -15,9 +15,6 @@ public class Turma {
     @Column(name = "nome")
     private String nome;
 
-    @Column(name = "numAlunos")
-    private int numAlunos;
-
     // relationship: Turma -> Aluno
     @OneToMany
     @JoinColumn(name = "turma_id")
@@ -35,9 +32,6 @@ public class Turma {
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
 
-    public int getNumAlunos() { return numAlunos; }
-    public void setNumAlunos(int numAlunos) { this.numAlunos = numAlunos; }
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -49,30 +43,21 @@ public class Turma {
 
     @Override
     public String toString() {
-        return "Turma{id=" + getId() + ", nome=" + nome + ", numAlunos=" + numAlunos + "}";
+        return "Turma{" + "id=" + getId() + ", nome=" + nome + "}";
     }
     // Operations
-    public void inscrever(
-        Aluno a
+    public boolean transferirAluno(
+        Turma destino,
+        int numero
     ) {
         throw new UnsupportedOperationException("Not implemented yet");
     }
-    public void transferirAluno(
-        int numero,
-        Turma destino
-    ) {
-        throw new UnsupportedOperationException("Not implemented yet");
-    }
-    public void fecharTurma(
+    public int totalAlunos(
     ) {
         throw new UnsupportedOperationException("Not implemented yet");
     }
     public void inicializarAlunosParaTeste(
         List<Aluno> alunos
-    ) {
-        throw new UnsupportedOperationException("Not implemented yet");
-    }
-    public int contarAlunos(
     ) {
         throw new UnsupportedOperationException("Not implemented yet");
     }
