@@ -95,6 +95,18 @@ public class SequenceDiagramParser {
 
         // mensagens ordenadas por VP number
         List<Message> sorted = new ArrayList<>(messagesById.values());
+
+        // cada mensagem precisa de número de sequência para podermos ordenar o corpo
+        // isto nunca deve dar erro porque TEM de vir do visual paradigm, mas para ter a certeza
+        for (Message m : sorted) {
+            if (m.getVpNumber() == null || m.getVpNumber().isBlank()) {
+                throw new IllegalArgumentException(
+                        "Diagrama de sequência '" + interaction.getName() + "': a mensagem '"
+                        + (m.getRawName() != null ? m.getRawName() : m.getName())
+                        + "' não tem número de sequência — não é possível determinar a ordem.");
+            }
+        }
+
         sorted.sort((a, b) -> compareWithTheDot(a.getVpNumber(), b.getVpNumber()));
 
         for (Message msg : sorted) {
@@ -290,9 +302,22 @@ public class SequenceDiagramParser {
             parenOpen = signaturePart.indexOf('(');
         }
 
-        // sem parenteses é nome simples sem argumentos
+        // sem parenteses
         if (parenOpen == -1) {
-            message.setName(signaturePart.trim());
+            if (message.getAssignVariable() != null) {
+                // atribuição simples: "x = expr" ou "x = expr : Type" (ou seja nao seja uma chamada a um metodo)
+                String expr = signaturePart.trim();
+                int colon = findColonOutsideGenerics(expr);
+                if (colon != -1) {
+                    String type = expr.substring(colon + 1).trim();
+                    if (!type.isEmpty()) message.setReturnType(type);   // : tipo -> declarar com este tipo
+                    expr = expr.substring(0, colon).trim();
+                }
+                message.setAssignExpression(expr);
+            } else {
+                // nome simples sem argumentos
+                message.setName(signaturePart.trim());
+            }
             return;
         }
 

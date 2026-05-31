@@ -11,7 +11,8 @@ export async function parseModel(file: File): Promise<ParseResponse> {
   })
 
   if (!res.ok) {
-    throw new Error(`Parse failed (${res.status}): ${res.statusText}`)
+    const msg = (await res.text()) || `Erro ao processar o modelo (${res.status})`
+    throw new Error(msg)
   }
 
   return res.json() as Promise<ParseResponse>

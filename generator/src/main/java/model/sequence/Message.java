@@ -8,8 +8,9 @@ public class Message {
     private String name;                    // getTurma, setTurma (just the method name)
     private String rawName;                 // full original: "getTurma(a: Aluno) : Turma"
     private String messageSort;             // synchCall, asynchCall, reply
-    private String returnType;              // return type if specified (e.g., "User")
-    private String assignVariable;          // variable name for assignment (e.g., "turma" in "turma = findById(id) : Turma")
+    private String returnType;              // return type if specified ("User")
+    private String assignVariable;          // variable name for assignment ( "turma" in "turma = findById(id) : Turma")
+    private String assignExpression;        // "u" in "var = u"; null for method call messages
     private Lifeline source;
     private Lifeline target;
     private List<MessageArgument> arguments;
@@ -59,6 +60,19 @@ public class Message {
 
     public void setAssignVariable(String assignVariable) {
         this.assignVariable = assignVariable;
+    }
+
+    public String getAssignExpression() {
+        return assignExpression;
+    }
+
+    public void setAssignExpression(String assignExpression) {
+        this.assignExpression = assignExpression;
+    }
+
+    // true se a mensagem é uma atribuição simples
+    public boolean isPlainAssignment() {
+        return assignExpression != null;
     }
 
     public String getMessageSort() {

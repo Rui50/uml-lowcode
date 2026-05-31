@@ -58,15 +58,30 @@ public class OperationGenerator {
         Message entry = findEntryMessage(interaction);
         if (entry == null) return;
 
-        String returnType = operation.getReturnType() != null ? operation.getReturnType() : "void";
+        // a mensagem de entrada tem de corresponder à operação declarada (pelo nome)
+        if (entry.getName() != null && !entry.getName().equals(operation.getName())) {
+            throw new IllegalArgumentException(
+                    "Diagrama da operação '" + operation.getName() + "': a mensagem de entrada '"
+                    + entry.getName() + "' não corresponde ao nome da operação.");
+        }
 
+        // tipo de retorno da mensagem de entrada se especificado | senão da operação (diagrama de classes) | senão void
+        String returnType = (entry.getReturnType() != null && !entry.getReturnType().isBlank())
+                ? entry.getReturnType()
+                : (operation.getReturnType() != null ? operation.getReturnType() : "void");
+
+        // assinatura a partir da mensagem de entrada o tipo de cada argumento é obrigatório
         writer.println();
         writer.print("    public " + returnType + " " + entry.getName() + "(");
         for (int i = 0; i < entry.getArguments().size(); i++) {
             if (i > 0) writer.print(", ");
             MessageArgument arg = entry.getArguments().get(i);
-            String type = arg.getType() != null ? arg.getType() : "Object";
-            writer.print(type + " " + arg.getName());
+            if (arg.getType() == null || arg.getType().isBlank()) {
+                throw new IllegalArgumentException(
+                        "Diagrama da operação '" + operation.getName() + "': o argumento '"
+                        + arg.getName() + "' não tem tipo (ex: '" + arg.getName() + " : Tipo').");
+            }
+            writer.print(GeneratorUtils.removePackageNames(arg.getType()) + " " + arg.getName());
         }
         writer.println(") {");
 
@@ -100,16 +115,15 @@ public class OperationGenerator {
                 .anyMatch(p -> p.getJavaExpression() != null
                         && p.getJavaExpression().matches(".*\\bresult\\b.*"));
 
-        // TODO: estes erros deviam ser apanhados na validação do frontend
         if (!"void".equals(returnType) && returnExpr == null) {
-            throw new IllegalStateException(
-                    "Operation '" + entry.getName() + "' declares return type '" + returnType
-                            + "' but its sequence diagram has no reply message to the actor.");
+            throw new IllegalArgumentException(
+                    "Operação '" + operation.getName() + "' devolve '" + returnType
+                    + "' mas o diagrama de sequência não tem mensagem de resposta (reply) para o ator.");
         }
         if (needsResult && returnExpr == null) {
-            throw new IllegalStateException(
-                    "Operation '" + entry.getName() + "' has a postcondition referencing 'result' "
-                            + "but its sequence diagram has no reply message to the actor.");
+            throw new IllegalArgumentException(
+                    "Operação '" + operation.getName() + "': uma poscondição refere 'result' "
+                    + "mas o diagrama de sequência não tem mensagem de resposta (reply) para o ator.");
         }
 
         if (needsResult && returnExpr != null && !"void".equals(returnType)) {
@@ -156,46 +170,26 @@ public class OperationGenerator {
      */
     private static void generateMessage(PrintWriter writer, Message msg, Message entry,
                                         Class cls, List<Association> associations, String indent) {
+        // atribuição simples (quando nao tem chamadas a metodos): "x = expr" ou "x = expr : Type"
+        // se ": Type" presente -> declara (Type x = expr); ausente -> reatribui (x = expr)
+        if (msg.isPlainAssignment()) {
+            String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
+                    ? msg.getReturnType() + " " : "";
+            writer.println(indent + declType + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
+            return;
+        }
+
         String receiver;
         if (msg.getTarget().getId().equals(entry.getTarget().getId())) {
             receiver = "this";
         } else {
             receiver = msg.getTarget().getName();
             if (receiver == null || receiver.isEmpty()) {
-                throw new IllegalStateException(
-                        "Lifeline has no name (type=" + msg.getTarget().getType()
-                        + ") in interaction; lifeline name must equal the parameter/local name being called");
+                throw new IllegalArgumentException(
+                        "Diagrama de sequência: a lifeline do tipo '" + msg.getTarget().getType()
+                        + "' não tem nome — o nome tem de ser igual ao parâmetro/variável que está a ser chamado.");
             }
         }
-
-        // heurística: add(x) / remove(x) com 1 argumento -> traduzir para acesso à coleção
-        /*String name = msg.getName();
-        List<MessageArgument> args = msg.getArguments();
-        if(args != null && args.size() == 1 && (name.startsWith("add") || name.startsWith("remove"))) {
-            MessageArgument arg = args.get(0);
-            String ownerType = msg.getTarget().getType();
-            Association assoc = findAssoc(associations, ownerType, arg.getType());
-
-            if (assoc != null) {
-                String field = fieldNameFor(assoc, ownerType);
-                String base = receiver + "." + field;
-                String code;
-                if (assoc.hasQualifier()){
-                    // MAP com PUT(key, value) ou REMOVE(key) — key via getter do qualifier
-                    String q = assoc.getQualifierName();
-                    String getter = "get" + Character.toUpperCase(q.charAt(0)) + q.substring(1) + "()";
-                    code = "add".equals(name)
-                            ? base + ".put(" + arg.getName() + "." + getter + ", " + arg.getName() + ");"
-                            : base + ".remove(" + arg.getName() + "." + getter + ");";
-                } else {
-                    // coleção simples: ADD/REMOVE
-                    code = base + "." + name + "(" + arg.getName() + ");";
-                }
-                writer.println(indent + code);
-                return;
-            }
-        }*/
-
         // heurística: <xx>.add(x) / <xx>.remove(x) ou addX/removeX -> acesso à coleção
         String name = msg.getName();
         List<MessageArgument> args = msg.getArguments();
@@ -253,8 +247,10 @@ public class OperationGenerator {
         call.append(")");
 
         if (msg.getAssignVariable() != null) {
-            String type = msg.getReturnType() != null ? msg.getReturnType() : "var";
-            writer.println(indent + type + " " + msg.getAssignVariable() + " = " + call + ";");
+            // se ": Type" presente -> declara; ausente -> reatribui a variável porque já tem de ser existente
+            String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
+                    ? msg.getReturnType() + " " : "";
+            writer.println(indent + declType + msg.getAssignVariable() + " = " + call + ";");
         } else {
             writer.println(indent + call + ";");
         }
@@ -274,33 +270,29 @@ public class OperationGenerator {
 
         if ("loop".equals(op)) {
             Operand operand = frag.getOperands().get(0);
-            String guard = operand.getGuard();
+            String guard = operand.getGuard() != null ? operand.getGuard().trim() : "";
 
-            if (guard != null && guard.contains(":")){
-                String[] parts = guard.split(":", 2);
-                String left = parts[0].trim();
-                String collection = parts[1].trim().replace("self.", "this.");
-                collection = adaptCollectionAccess(collection, cls, associations);
-
-                String varType = "var";
-                String varName;
-                if (left.contains(" ")){
-                    String[] lp = left.split("\\s+");
-                    varType = lp[0];
-                    varName = lp[1];
+            // o guard escreve o loop: "for (Type var : toiter)" ou "while (cond)"
+            if (guard.startsWith("for")) {
+                String inner = extractParen(guard);                 // "Aluno a : alunos"
+                int colon = inner.indexOf(':');
+                if (colon == -1) {
+                    throw new IllegalArgumentException(
+                            "Guard de loop 'for' tem de ser 'for (Tipo var : coleção)': '" + guard + "'");
                 }
-                else {
-                    varName = left;
-                }
-
-                writer.println(indentStr + "for (" + varType + " " + varName + " : " + collection + ") {");
+                String left = inner.substring(0, colon).trim();      // "Aluno a"
+                String collection = inner.substring(colon + 1).trim().replace("self.", "this.");
+                collection = adaptCollectionAccess(collection, cls, associations);   // Map -> .values()
+                writer.println(indentStr + "for (" + left + " : " + collection + ") {");
+                generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1);
+                writer.println(indentStr + "}");
+            } else if (guard.startsWith("while")) {
+                writer.println(indentStr + "while (" + extractParen(guard) + ") {");
                 generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1);
                 writer.println(indentStr + "}");
             } else {
-                // while para ja fica aqui
-                writer.println(indentStr + "while (" + (guard != null ? guard : "true") + ") {");
-                generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1);
-                writer.println(indentStr + "}");
+                throw new IllegalArgumentException(
+                        "Guard de loop tem de ser 'for (...)' ou 'while (...)': '" + guard + "'");
             }
         } else if ("opt".equals(op)) {
             Operand operand = frag.getOperands().get(0);
@@ -314,6 +306,10 @@ public class OperationGenerator {
                 Operand operand = ops.get(i);
                 String guard = operand.getGuard();
                 if (i == 0) {
+                    if (guard == null || guard.isBlank()) {
+                        throw new IllegalArgumentException(
+                                "Operação '" + cls.getName() + "': a primeira ramificação de um 'alt' tem de ter uma condição.");
+                    }
                     writer.println(indentStr + "if (" + guard + ") {");
                 } else if (guard != null && !guard.isEmpty() && !guard.equalsIgnoreCase("else")) {
                     writer.println(indentStr + "} else if (" + guard + ") {");
@@ -326,10 +322,18 @@ public class OperationGenerator {
         }
     }
 
+    // devolve o texto entre o primeiro '(' e o último ')'
+    private static String extractParen(String s) {
+        int open = s.indexOf('(');
+        int close = s.lastIndexOf(')');
+        if (open == -1 || close == -1 || close <= open) return "";
+        return s.substring(open + 1, close).trim();
+    }
+
     // se a coleção é uma associação (Map), adiciona .values()
+    // aceita "this.alunos" ou só "alunos"
     private static String adaptCollectionAccess(String expr, Class cls, List<Association> associations) {
-        if (!expr.startsWith("this.")) return expr;
-        String fieldName = expr.substring("this.".length()).trim();
+        String fieldName = expr.startsWith("this.") ? expr.substring("this.".length()).trim() : expr.trim();
 
         for (Association assoc : associations) {
             boolean sourceSide = assoc.getSourceClass().equals(cls.getName())
