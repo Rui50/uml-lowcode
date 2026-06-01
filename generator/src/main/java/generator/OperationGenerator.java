@@ -108,7 +108,7 @@ public class OperationGenerator {
 
         // a expressão de return vem da reply-message para o actor;
         // sem reply, não é feito return
-        String returnExpr = findReplyToActor(interaction.getElements());
+        String returnExpr = GeneratorUtils.findReplyToActor(interaction.getElements());
 
         // OCL postcondition pode referir "result" — declaramos alias se algum a usar
         boolean needsResult = operation.getPostconditions().stream()
@@ -274,7 +274,7 @@ public class OperationGenerator {
 
             // o guard escreve o loop: "for (Type var : toiter)" ou "while (cond)"
             if (guard.startsWith("for")) {
-                String inner = extractParen(guard);                 // "Aluno a : alunos"
+                String inner = GeneratorUtils.extractParen(guard);                 // "Aluno a : alunos"
                 int colon = inner.indexOf(':');
                 if (colon == -1) {
                     throw new IllegalArgumentException(
@@ -287,7 +287,7 @@ public class OperationGenerator {
                 generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1);
                 writer.println(indentStr + "}");
             } else if (guard.startsWith("while")) {
-                writer.println(indentStr + "while (" + extractParen(guard) + ") {");
+                writer.println(indentStr + "while (" + GeneratorUtils.extractParen(guard) + ") {");
                 generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1);
                 writer.println(indentStr + "}");
             } else {
@@ -320,14 +320,6 @@ public class OperationGenerator {
             }
             writer.println(indentStr + "}");
         }
-    }
-
-    // devolve o texto entre o primeiro '(' e o último ')'
-    private static String extractParen(String s) {
-        int open = s.indexOf('(');
-        int close = s.lastIndexOf(')');
-        if (open == -1 || close == -1 || close <= open) return "";
-        return s.substring(open + 1, close).trim();
     }
 
     // se a coleção é uma associação (Map), adiciona .values()
@@ -388,31 +380,6 @@ public class OperationGenerator {
         return null;
     }
 
-    // procura a última reply message cujo target é o actor (lifeline sem tipo)
-    // devolve a expressão (raw name da mensagem) que vai ser usada como return.
-    //
-    // last reply ganha — se houver várias replies, a última é a usada.
-    // limitação: não suporta returns condicionais dentro de alt/opt; replies dentro
-    // de fragmentos são detectadas mas o return é sempre emitido no fim do método,
-    // não no ponto onde a reply aparece no diagrama.
-    private static String findReplyToActor(List<Object> elements) {
-        String last = null;
-        for (Object el : elements) {
-            if (el instanceof Message m
-                    && "reply".equals(m.getMessageSort())
-                    && m.getTarget() != null
-                    && m.getTarget().getType() == null) {
-                String expr = m.getRawName() != null ? m.getRawName() : m.getName();
-                if (expr != null && !expr.isBlank()) last = expr.trim();
-            } else if (el instanceof Fragment f) {
-                for (Operand op : f.getOperands()) {
-                    String inner = findReplyToActor(op.getElements());
-                    if (inner != null) last = inner;
-                }
-            }
-        }
-        return last;
-    }
 
     // procura associação cujo field name no lado do owner é attrName
     // reutiliza fieldNameFor para a derivação role-ou-default

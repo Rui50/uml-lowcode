@@ -408,13 +408,13 @@ public class SpringControllerGenerator {
             writer.println("    @ExceptionHandler(IllegalArgumentException.class)");
             writer.println("    public ResponseEntity<Map<String, String>> handleValidationError(IllegalArgumentException ex) {");
             writer.println("        return ResponseEntity.status(HttpStatus.BAD_REQUEST)");
-            writer.println("            .body(Map.of(\"error\", ex.getMessage()));");
+            writer.println("            .body(Map.of(\"error\", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));");
             writer.println("    }");
             writer.println();
             writer.println("    @ExceptionHandler(RuntimeException.class)");
             writer.println("    public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException ex) {");
             writer.println("        return ResponseEntity.status(HttpStatus.NOT_FOUND)");
-            writer.println("            .body(Map.of(\"error\", ex.getMessage()));");
+            writer.println("            .body(Map.of(\"error\", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));");
             writer.println("    }");
             writer.println("}");
         }
@@ -433,9 +433,6 @@ public class SpringControllerGenerator {
         String className = cls.getName();
         String serviceName = GeneratorUtils.lowercaseFirst(className) + "Service";
 
-        Set<String> classNames = new HashSet<>();
-        for (Class c : allClasses) classNames.add(c.getName());
-
         writer.println();
         writer.println("    // Custom Operation Endpoints dos diagramas sequencia");
 
@@ -446,43 +443,24 @@ public class SpringControllerGenerator {
             Message entryMessage = SpringUtils.findEntryMessage(interaction, cls, op);
             List<MessageArgument> entryArgs = (entryMessage != null) ? entryMessage.getArguments() : new ArrayList<>();
 
+            // endpoint parâmetros = mensagem de entrada; chama o service tal e qual
+            // (a forma do request/response por DTO é uma anotação PSM futura — por agora @RequestParam)
             writer.println();
-            writer.println("    @PostMapping(\"/{id}/" + op.getName() + "\")");
-            writer.print("    public ResponseEntity<?> " + op.getName() + "(\n");
-            writer.print("            @PathVariable Long id");
-
-            for (MessageArgument arg : entryArgs) {
-                String argName = arg.getName();
-                if ("id".equals(argName)) continue;
-                String argType = arg.getType() != null ? arg.getType() : "Long";
-                if (classNames.contains(argType)) {
-                    writer.print(",\n            @RequestParam Long " + argName + "Id");
-                } else {
-                    writer.print(",\n            @RequestParam " + argType + " " + argName);
-                }
+            writer.println("    @PostMapping(\"/" + op.getName() + "\")");
+            writer.print("    public ResponseEntity<?> " + op.getName() + "(");
+            for (int i = 0; i < entryArgs.size(); i++) {
+                if (i > 0) writer.print(",");
+                MessageArgument arg = entryArgs.get(i);
+                String argType = arg.getType() != null ? GeneratorUtils.removePackageNames(arg.getType()) : "Object";
+                writer.print("\n            @RequestParam " + argType + " " + arg.getName());
             }
             writer.println(") {");
 
-            for (MessageArgument arg : entryArgs) {
-                String argName = arg.getName();
-                if ("id".equals(argName)) continue;
-                String argType = arg.getType() != null ? arg.getType() : "Long";
-                if (classNames.contains(argType)) {
-                    String paramServiceName = GeneratorUtils.lowercaseFirst(argType) + "Service";
-                    writer.println("        " + argType + " " + argName + " = " + paramServiceName
-                            + ".findById(" + argName + "Id)");
-                    writer.println("            .orElseThrow(() -> new RuntimeException(\"" + argType
-                            + " not found: \" + " + argName + "Id));");
-                }
+            StringBuilder args = new StringBuilder();
+            for (int i = 0; i < entryArgs.size(); i++) {
+                if (i > 0) args.append(", ");
+                args.append(entryArgs.get(i).getName());
             }
-
-            writer.println();
-            StringBuilder args = new StringBuilder("id");
-            for (MessageArgument arg : entryArgs) {
-                if ("id".equals(arg.getName())) continue;
-                args.append(", ").append(arg.getName());
-            }
-
             writer.println("        " + serviceName + "." + op.getName() + "(" + args + ");");
             writer.println("        return ResponseEntity.ok().build();");
             writer.println("    }");

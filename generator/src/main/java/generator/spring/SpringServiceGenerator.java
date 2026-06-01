@@ -36,6 +36,9 @@ public class SpringServiceGenerator {
     // nome -> Class, para resolver o tipo de id de outra classe nas relações
     private final Map<String, Class> classMap = new HashMap<>();
 
+    // associações do modelo, para traduzir add/remove em coleções nas operações
+    private List<Association> associations = new ArrayList<>();
+
     public SpringServiceGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
@@ -67,6 +70,7 @@ public class SpringServiceGenerator {
 
         classMap.clear();
         for (Class c : classes) classMap.put(c.getName(), c);
+        this.associations = associations;
 
         for (Class cls : classes){
             if (cls.isAbstract()) continue;
@@ -812,9 +816,9 @@ public class SpringServiceGenerator {
     private void generateCustomOperation(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
         String className = cls.getName();
         String operName = op.getName();
-        String returnType = op.getReturnType() != null ? GeneratorUtils.removePackageNames(op.getReturnType()) : "void";
 
         if (interaction == null) {
+            String returnType = op.getReturnType() != null ? GeneratorUtils.removePackageNames(op.getReturnType()) : "void";
             writer.println();
             writer.print("    public " + returnType + " " + operName + "(");
             List<Parameter> params = op.getParameters();
@@ -832,15 +836,39 @@ public class SpringServiceGenerator {
 
         Message entryMessage = SpringUtils.findEntryMessage(interaction, cls, op);
 
-        // assinatura — parâmetros vêm da mensagem de entrada do diagrama de sequência
+        // TODO: pré/poscondições OCL em operações Spring ainda não ta feoito
+        // por agora falha de forma clara em vez de gerar código que não compila.
+        if (!op.getPreconditions().isEmpty() || !op.getPostconditions().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Operação '" + operName + "': condições pré/pós (OCL) em operações Spring ainda não são suportadas.");
+        }
+
+        // a mensagem de entrada tem de corresponder à operação declarada (pelo nome)
+        if (entryMessage != null && entryMessage.getName() != null
+                && !entryMessage.getName().equals(operName)) {
+            throw new IllegalArgumentException(
+                    "Diagrama da operação '" + operName + "': a mensagem de entrada '"
+                    + entryMessage.getName() + "' não corresponde ao nome da operação.");
+        }
+
+        // tipo de retorno: da mensagem de entrada se especificado | senão da operação | senão void
+        String returnType = (entryMessage != null && entryMessage.getReturnType() != null && !entryMessage.getReturnType().isBlank())
+                ? GeneratorUtils.removePackageNames(entryMessage.getReturnType())
+                : (op.getReturnType() != null ? GeneratorUtils.removePackageNames(op.getReturnType()) : "void");
+
+        // assinatura a partir da mensagem de entrada; o tipo de cada argumento é obrigatório
         writer.println();
         writer.print("    public " + returnType + " " + operName + "(");
         if (entryMessage != null && !entryMessage.getArguments().isEmpty()) {
             for (int i = 0; i < entryMessage.getArguments().size(); i++) {
                 if (i > 0) writer.print(", ");
                 MessageArgument arg = entryMessage.getArguments().get(i);
-                String argType = arg.getType() != null ? GeneratorUtils.removePackageNames(arg.getType()) : "Long";
-                writer.print(argType + " " + arg.getName());
+                if (arg.getType() == null || arg.getType().isBlank()) {
+                    throw new IllegalArgumentException(
+                            "Diagrama da operação '" + operName + "': o argumento '"
+                            + arg.getName() + "' não tem tipo (ex: '" + arg.getName() + " : Tipo').");
+                }
+                writer.print(GeneratorUtils.removePackageNames(arg.getType()) + " " + arg.getName());
             }
         }
         writer.println(") {");
@@ -878,8 +906,8 @@ public class SpringServiceGenerator {
 
         generateMethodBodyFromInteraction(writer, cls, op, interaction);
 
-        // a expressão de return vem da reply-message para o actor; sem reply, não é feito return
-        String returnExpr = findReplyToActor(interaction.getElements());
+        // a expressão de return vem da reply-message para o actor  sem reply não é feito return
+        String returnExpr = GeneratorUtils.findReplyToActor(interaction.getElements());
         // OCL postcondition pode referir "result"
         // se for o caso, declarar variável "result" para o valor de return
         boolean needsResult = op.getPostconditions().stream()
@@ -903,25 +931,6 @@ public class SpringServiceGenerator {
         }
 
         writer.println("    }");
-    }
-
-    private static String findReplyToActor(List<Object> elements) {
-        String last = null;
-        for (Object el : elements) {
-            if (el instanceof Message m
-                    && "reply".equals(m.getMessageSort())
-                    && m.getTarget() != null
-                    && m.getTarget().getType() == null) {
-                String expr = m.getRawName() != null ? m.getRawName() : m.getName();
-                if (expr != null && !expr.isBlank()) last = expr.trim();
-            } else if (el instanceof Fragment f) {
-                for (Operand op : f.getOperands()) {
-                    String inner = findReplyToActor(op.getElements());
-                    if (inner != null) last = inner;
-                }
-            }
-        }
-        return last;
     }
 
     private void generateMethodBodyFromInteraction(PrintWriter writer, Class cls, Operation op, Interaction
@@ -980,10 +989,24 @@ public class SpringServiceGenerator {
         // só processar mensagens enviadas pelo service
         if (serviceLifeline == null || !msg.getSource().getId().equals(serviceLifeline.getId())) return;
 
-        String targetVar = lifelineVarMap.getOrDefault(
-                msg.getTarget().getId(),
-                GeneratorUtils.lowercaseFirst(msg.getTarget().getType())
-        );
+        // atribuição simples (sem chamada): "x = expr" ou "x = expr : Type"
+        // ": Type" presente -> declara; ausente -> reatribui
+        if (msg.isPlainAssignment()) {
+            String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
+                    ? msg.getReturnType() + " " : "";
+            writer.println(indent + declType + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
+            return;
+        }
+
+        // var da lifeline alvo: repos/service vêm do map; entidades carregadas usam o nome
+        // (represents) para distinguir duas da mesma classe (turma vs destino), senão o tipo
+        String targetVar = lifelineVarMap.get(msg.getTarget().getId());
+        if (targetVar == null) {
+            String represents = msg.getTarget().getRepresents();
+            targetVar = (represents != null && !represents.isBlank())
+                    ? represents
+                    : GeneratorUtils.lowercaseFirst(msg.getTarget().getType());
+        }
 
         // construir lista dos argumentos
         StringBuilder args = new StringBuilder();
@@ -994,6 +1017,43 @@ public class SpringServiceGenerator {
 
         String methodName = msg.getName();
         boolean isSelfMessage = msg.getSource().getId().equals(msg.getTarget().getId());
+
+        // heurística para as coleções: <campo>.add/remove/get numa entidade carregada faz acesso com getter
+        if (methodName != null && msg.getArguments().size() == 1) {
+            int sep = methodName.indexOf('.');
+            if (sep > 0) {
+                String attrName = methodName.substring(0, sep);
+                String op = methodName.substring(sep + 1);
+                Association assoc = findAssocByField(msg.getTarget().getType(), attrName);
+                if (assoc != null) {
+                    String argName = msg.getArguments().get(0).getName();
+                    String base = targetVar + ".get" + GeneratorUtils.capitalizeFirst(attrName) + "()";
+
+                    // get(chave)  leitura, é uma atribuição (Tipo var = ...)
+                    if ("get".equals(op) && msg.getAssignVariable() != null) {
+                        String type = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
+                                ? msg.getReturnType() + " " : "";
+                        writer.println(indent + type + msg.getAssignVariable() + " = " + base + ".get(" + argName + ");");
+                        return;
+                    }
+
+                    // add/remove(x) ->  (List add/remove ou Map put/remove com a chave)
+                    if ("add".equals(op) || "remove".equals(op)) {
+                        String code;
+                        if (assoc.hasQualifier()) {
+                            String keyGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName()) + "()";
+                            code = "add".equals(op)
+                                    ? base + ".put(" + argName + "." + keyGetter + ", " + argName + ");"
+                                    : base + ".remove(" + argName + "." + keyGetter + ");";
+                        } else {
+                            code = base + "." + op + "(" + argName + ");";
+                        }
+                        writer.println(indent + code);
+                        return;
+                    }
+                }
+            }
+        }
 
         if (isSelfMessage) {
             // self-message: turma.removeAluno(aluno) -> código direto
@@ -1032,15 +1092,15 @@ public class SpringServiceGenerator {
 
         if ("loop".equals(operator)){
             Operand operand = frag.getOperands().get(0);
-            String guard = operand.getGuard();
+            String guard = operand.getGuard() != null ? operand.getGuard().trim() : "";
 
-            // guard no formato "var : collection" -> "for (var x : collection)"
-            String[] parts = guard.split("\\s*:\\s*", 2);
-            if (parts.length == 2) {
-                writer.println(indentStr + "for (var " + parts[0].trim() + " : " + parts[1].trim() + ") {");
+            // o guard escreve o cabeçalho do loop: "for (...)" ou "while (...)" — transcrito tal e qual
+            if (guard.startsWith("for") || guard.startsWith("while")) {
+                writer.println(indentStr + guard.substring(0, guard.indexOf('(')).trim()
+                        + " (" + GeneratorUtils.extractParen(guard) + ") {");
             } else {
-                //fallback: guard é condição booleana
-                writer.println(indentStr + "while (" + guard + ") {");
+                throw new IllegalArgumentException(
+                        "Guard de loop tem de ser 'for (...)' ou 'while (...)': '" + guard + "'");
             }
             generateElements(writer, operand.getElements(), serviceLifeline, lifelineVarMap, indent + 1);
             writer.println(indentStr + "}");
@@ -1058,6 +1118,10 @@ public class SpringServiceGenerator {
                 Operand operand = frag.getOperands().get(i);
                 String guard = operand.getGuard();
                 if (i == 0) {
+                    if (guard == null || guard.isBlank()) {
+                        throw new IllegalArgumentException(
+                                "A primeira ramificação de um 'alt' tem de ter uma condição.");
+                    }
                     writer.println(indentStr + "if (" + guard + ") {");
                 } else if (guard != null && !guard.isEmpty() && !guard.equalsIgnoreCase("else")) {
                     writer.println(indentStr + "} else if (" + guard + ") {");
@@ -1068,5 +1132,22 @@ public class SpringServiceGenerator {
             }
             writer.println(indentStr + "}");
         }
+    }
+
+    // procura a associação cujo campo (no lado do ownerType) se chama attrName
+    private Association findAssocByField(String ownerType, String attrName) {
+        for (Association a : associations) {
+            if (!ownerType.equals(a.getSourceClass()) && !ownerType.equals(a.getTargetClass())) continue;
+            if (attrName.equals(fieldNameFor(a, ownerType))) return a;
+        }
+        return null;
+    }
+
+    // nome do campo, no lado do owner, que refere o outro lado da associação
+    private String fieldNameFor(Association a, String ownerType) {
+        if (a.getSourceClass().equals(ownerType)) {
+            return GeneratorUtils.makeAttributeName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
+        }
+        return GeneratorUtils.makeAttributeName(a.getSourceClass(), a.getSourceRole(), a.getSourceMultiplicity());
     }
 }

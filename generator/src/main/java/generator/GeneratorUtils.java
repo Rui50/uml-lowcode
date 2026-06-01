@@ -4,6 +4,9 @@ import model.Association;
 import model.Class;
 import model.Operation;
 import model.Parameter;
+import model.sequence.Fragment;
+import model.sequence.Message;
+import model.sequence.Operand;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -26,6 +29,35 @@ public class GeneratorUtils {
     public static String removePackageNames(String type) {
         if (type == null) return null;
         return type.replaceAll("\\b([A-Za-z_$][\\w$]*\\.)+([A-Za-z_$][\\w$]*)\\b", "$2");
+    }
+
+    // expressão de return é última reply-message para o ator (lifeline sem tipo)
+    public static String findReplyToActor(List<Object> elements) {
+        String last = null;
+        for (Object el : elements) {
+            if (el instanceof Message m
+                    && "reply".equals(m.getMessageSort())
+                    && m.getTarget() != null
+                    && m.getTarget().getType() == null) {
+                String expr = m.getRawName() != null ? m.getRawName() : m.getName();
+                if (expr != null && !expr.isBlank()) last = expr.trim();
+            } else if (el instanceof Fragment f) {
+                for (Operand op : f.getOperands()) {
+                    String inner = findReplyToActor(op.getElements());
+                    if (inner != null) last = inner;
+                }
+            }
+        }
+        return last;
+    }
+
+    // texto entre o primeiro '(' e o último ')'
+    public static String extractParen(String s) {
+        if (s == null) return "";
+        int open = s.indexOf('(');
+        int close = s.lastIndexOf(')');
+        if (open == -1 || close == -1 || close <= open) return "";
+        return s.substring(open + 1, close).trim();
     }
 
     public static boolean checkMultiplicity(String multiplicity) {
