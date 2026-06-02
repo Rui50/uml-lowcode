@@ -1,38 +1,28 @@
 package com.example.app.repository;
 
 import com.example.app.models.Turma;
-import jakarta.persistence.EntityManager;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import java.util.List;
 
-public class TurmaRepository {
+/**
+ * Repository for Turma entity
+ * Spring Data JPA generates a base implementation automatically
+ */
+@Repository
+public interface TurmaRepository extends JpaRepository<Turma, Long> {
 
-    private final EntityManager em;
+    // Automatic CRUD methods provided by JpaRepository:
+    // - save(entity)
+    // - findById(id)
+    // - findAll()
+    // - deleteById(id)
+    // - count()
+    // - existsById(id)
 
-    public TurmaRepository(EntityManager em) {
-        this.em = em;
-    }
-
-    public Turma save(Turma entity) {
-        if (entity.getId() == null) {
-            em.persist(entity);
-            return entity;
-        }
-        return em.merge(entity);
-    }
-
-    public Turma findById(Long id) {
-        return em.find(Turma.class, id);
-    }
-
-    public List<Turma> findAll() {
-        return em.createQuery("from Turma", Turma.class).getResultList();
-    }
-
-    public void deleteById(Long id) {
-        Turma entity = em.find(Turma.class, id);
-        if (entity != null) {
-            em.remove(entity);
-        }
-    }
+    // Query methods (Spring generates implementation):
+    List<Turma> findByNome(String nome);
+    List<Turma> findByNomeContaining(String nome);
+    boolean existsByNome(String nome);
 
 }

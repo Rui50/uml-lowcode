@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useModelStore } from '@/stores/model'
 import { useAnnotationsStore } from '@/stores/annotations';
 
@@ -12,6 +12,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select';
+import Checkbox from 'primevue/checkbox'
 
 /**
  * POSSIVEIS MUDANÇAS:
@@ -39,6 +40,16 @@ const attributes = computed(() => isInterface.value ? [] : model.selectedClass?.
 
 const operations = computed(() => isInterface.value ? [] : model.selectedClass?.operations ?? [])
 const interactions = computed(() => model.model?.interactions ?? [])
+
+const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+// garante uma config de endpoint para cada operação da classe selecionada
+watch(operations, (ops) => {
+  for (const op of ops) {
+    if (!annotations.endpointByOperation[op.id]) {
+      annotations.endpointByOperation[op.id] = { job: false, endpointName: '', httpMethod: 'POST', cron: '' }
+    }
+  }
+}, { immediate: true })
 
 const enumsText = computed<Record<string, string[]>>(() => {
   const enums = model.model?.enumerations ?? []
@@ -336,7 +347,29 @@ function close() {
         </TabPanel>
 
         <TabPanel value="spring">
-          <p class="empty">Spring annotations</p>
+          <!-- Endpoint / Job por operação (mapeamento PSM) -->
+          <section v-if="!isInterface" class="block">
+            <header class="block-head">
+              <h4>Endpoints</h4>
+            </header>
+            <p v-if="operations.length === 0" class="empty">No operations</p>
+            <div v-for="op in operations" :key="op.id" class="entry">
+              <div class="attr-label">
+                {{ op.name }}
+              </div>
+              <div class="endpoint-cfg">
+                <div class="job-toggle">
+                  <Checkbox v-model="annotations.endpointByOperation[op.id]!.job" :binary="true" :inputId="`job-${op.id}`" />
+                  <label :for="`job-${op.id}`">Job (@Scheduled)</label>
+                </div>
+                <div v-if="!annotations.endpointByOperation[op.id]!.job" class="endpoint-row">
+                  <Select v-model="annotations.endpointByOperation[op.id]!.httpMethod" :options="httpMethods" placeholder="POST" />
+                  <InputText v-model="annotations.endpointByOperation[op.id]!.endpointName" :placeholder="op.name" />
+                </div>
+                <InputText v-else v-model="annotations.endpointByOperation[op.id]!.cron" placeholder="cron — ex: 0 0 * * * *" />
+              </div>
+            </div>
+          </section>
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -421,6 +454,33 @@ function close() {
 .sub-entry :deep(.p-inputtext),
 .sub-entry :deep(.p-textarea) {
   flex: 1;
+}
+
+.endpoint-cfg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.endpoint-row {
+  display: flex;
+  gap: 4px;
+}
+
+.endpoint-row :deep(.p-select),
+.endpoint-row :deep(.p-inputtext) {
+  flex: 1;
+  min-width: 0;
+}
+
+.endpoint-cfg > :deep(.p-inputtext) {
+  width: 100%;
+}
+
+.job-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .empty {

@@ -437,6 +437,8 @@ public class SpringControllerGenerator {
         writer.println("    // Custom Operation Endpoints dos diagramas sequencia");
 
         for (Operation op : cls.getOperations()) {
+            if (op.isJob()) continue;   // jobs são @Scheduled, não têm endpoint REST
+
             Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
 
@@ -446,7 +448,9 @@ public class SpringControllerGenerator {
             // endpoint parâmetros = mensagem de entrada; chama o service tal e qual
             // (a forma do request/response por DTO é uma anotação PSM futura — por agora @RequestParam)
             writer.println();
-            writer.println("    @PostMapping(\"/" + op.getName() + "\")");
+            String path = (op.getEndpointName() != null && !op.getEndpointName().isBlank())
+                    ? op.getEndpointName() : op.getName();
+            writer.println("    " + mappingAnnotation(op.getHttpMethod()) + "(\"/" + path + "\")");
             writer.print("    public ResponseEntity<?> " + op.getName() + "(");
             for (int i = 0; i < entryArgs.size(); i++) {
                 if (i > 0) writer.print(",");
@@ -465,5 +469,17 @@ public class SpringControllerGenerator {
             writer.println("        return ResponseEntity.ok().build();");
             writer.println("    }");
         }
+    }
+
+    //  HTTP -> anotação de mapping do Spring, o post fica como default
+    private String mappingAnnotation(String httpMethod) {
+        String method = (httpMethod == null || httpMethod.isBlank()) ? "POST" : httpMethod.trim().toUpperCase();
+        return switch (method) {
+            case "GET"    -> "@GetMapping";
+            case "PUT"    -> "@PutMapping";
+            case "DELETE" -> "@DeleteMapping";
+            case "PATCH"  -> "@PatchMapping";
+            default       -> "@PostMapping";
+        };
     }
 }

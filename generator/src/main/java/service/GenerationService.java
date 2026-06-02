@@ -113,6 +113,8 @@ public class GenerationService {
                 .generateServices(m.getClasses(), m.getAssociations(), /*m.getPsmInteractions()*/m.getAllInteractions(), m.getEnumerations());
         new SpringControllerGenerator(outputDir, basePackage)
                 .generateControllers(m.getClasses(), m.getAssociations(), m.getAllInteractions());//m.getPsmInteractions());
+        new SpringJobGenerator(outputDir, basePackage)
+                .generateJobs(m.getClasses(), m.getAssociations(), m.getEnumerations());
 
     }
 }

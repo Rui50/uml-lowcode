@@ -14,6 +14,13 @@ export interface IdConfig {
   attributeType: string
 }
 
+export interface EndpointConfig {
+  job: boolean
+  endpointName: string
+  httpMethod: string
+  cron: string
+}
+
 export const useAnnotationsStore = defineStore('annotations', () => {
   // key: ClassName -> invariants
   const invariantsByClass = ref<Record<string, OclAnnotation[]>>({})
@@ -34,6 +41,9 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // key: ClassName (raiz) -> config do @Id (ausente = id por defeito auto-gerado)
   const idByClass = ref<Record<string, IdConfig>>({})
+
+  // key: operationId -> config do endpoint REST / job (ausente = POST /<opName>, não-job)
+  const endpointByOperation = ref<Record<string, EndpointConfig>>({})
 
   function addInvariant(className: string) {
     if (!invariantsByClass.value[className]) invariantsByClass.value[className] = []
@@ -132,6 +142,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       postconditionsByOperation.value = {}
       inheritanceStrategyByClass.value = {}
       idByClass.value = {}
+      endpointByOperation.value = {}
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -144,6 +155,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     postconditionsByOperation.value = data.postconditionsByOperation || {}
     inheritanceStrategyByClass.value = data.inheritanceStrategyByClass || {}
     idByClass.value = data.idByClass || {}
+    endpointByOperation.value = data.endpointByOperation || {}
   }
 
   function saveForModel(name: string | null) {
@@ -158,6 +170,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       postconditionsByOperation: postconditionsByOperation.value,
       inheritanceStrategyByClass: inheritanceStrategyByClass.value,
       idByClass: idByClass.value,
+      endpointByOperation: endpointByOperation.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
@@ -173,7 +186,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // save current bucket on any annotation change
   watch(
-    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass],
+    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation],
     () => saveForModel(modelStore.fileName),
     { deep: true }
   )
@@ -187,6 +200,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     postconditionsByOperation.value = {}
     inheritanceStrategyByClass.value = {}
     idByClass.value = {}
+    endpointByOperation.value = {}
   }
 
   return {
@@ -199,6 +213,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     postconditionsByOperation,
     inheritanceStrategyByClass,
     idByClass,
+    endpointByOperation,
 
     // actions
     addInvariant,

@@ -31,4 +31,7 @@ public class AnnotationsDTO {
 
     // key className (raiz da hierarquia) -> config do @Id
     private Map<String, CustomIdDTO> idByClass = new HashMap<>();
+
+    // key operationId -> config do endpoint REST / job
+    private Map<String, EndpointConfigDTO> endpointByOperation = new HashMap<>();
 }

@@ -25,6 +25,14 @@ public class Operation {
 
     private List<Postcondition> postconditions = new ArrayList<>();
 
+    // operação é um job @Scheduled (Spring) sem endpoint REST, sem parâmetros/caller
+    private boolean isJob = false;
+    private String cron;                    // expressão cron do job (só usado quando isJob)
+
+    // endpoint REST custom (operações que nao sao job)
+    private String endpointName;            // path; null/vazio = usa o nome da operação
+    private String httpMethod = "POST";     // HTTP: GET | POST | PUT | DELETE | PATCH
+
 
     public Operation() {
         this.id = "";
@@ -112,6 +120,38 @@ public class Operation {
 
     public void addPostcondition(Postcondition postcondition) {
         this.postconditions.add(postcondition);
+    }
+
+    public boolean isJob() {
+        return isJob;
+    }
+
+    public void setJob(boolean isJob) {
+        this.isJob = isJob;
+    }
+
+    public String getCron() {
+        return cron;
+    }
+
+    public void setCron(String cron) {
+        this.cron = cron;
+    }
+
+    public String getEndpointName() {
+        return endpointName;
+    }
+
+    public void setEndpointName(String endpointName) {
+        this.endpointName = endpointName;
+    }
+
+    public String getHttpMethod() {
+        return httpMethod;
+    }
+
+    public void setHttpMethod(String httpMethod) {
+        this.httpMethod = httpMethod;
     }
 
     @Override

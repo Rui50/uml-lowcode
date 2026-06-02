@@ -1,8 +1,16 @@
 package com.example.app.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import lombok.*;
 import java.util.*;
+import lombok.experimental.SuperBuilder;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@SuperBuilder
 @Entity
 public class AlunoTE extends Aluno {
 
@@ -10,19 +18,4 @@ public class AlunoTE extends Aluno {
     @Column(name = "empresa")
     private String empresa;
 
-
-    public AlunoTE() {}
-
-    public String getEmpresa() { return empresa; }
-    public void setEmpresa(String empresa) { this.empresa = empresa; }
-
-    @Override
-    public String toString() {
-        return "AlunoTE{" + "empresa=" + empresa + "}";
-    }
-    // Operations
-    public boolean comprovativo(
-    ) {
-        throw new UnsupportedOperationException("Not implemented yet");
-    }
 }

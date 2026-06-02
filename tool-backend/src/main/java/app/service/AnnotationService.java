@@ -2,6 +2,7 @@ package app.service;
 
 import app.dto.AnnotationsDTO;
 import app.dto.CustomIdDTO;
+import app.dto.EndpointConfigDTO;
 import app.dto.OclDTO;
 
 import model.*;
@@ -31,6 +32,21 @@ public class AnnotationService {
         applyPostconditions(classes, associations, payload.getPostconditionsByOperation());
         applyInheritanceStrategies(classes, payload.getInheritanceStrategyByClass());
         applyIds(classes, payload.getIdByClass());
+        applyEndpointConfig(classes, payload.getEndpointByOperation());
+    }
+
+    // config do endpoint REST / job, por operação
+    private void applyEndpointConfig(List<Class> classes, Map<String, EndpointConfigDTO> map) {
+        if (map == null) return;
+        map.forEach((operationId, cfg) -> {
+            Operation op = findOperation(classes, operationId);
+            if (op == null || cfg == null) return;
+            op.setJob(cfg.isJob());
+            op.setEndpointName(cfg.getEndpointName());
+            op.setHttpMethod(cfg.getHttpMethod() != null && !cfg.getHttpMethod().isBlank()
+                    ? cfg.getHttpMethod() : "POST");
+            op.setCron(cfg.getCron());
+        });
     }
 
     // estratégia de herança JPA, anotada na superclasse
@@ -221,6 +237,10 @@ public class AnnotationService {
             for (Operation op : c.getOperations()) {
                 op.getPreconditions().clear();
                 op.getPostconditions().clear();
+                op.setJob(false);
+                op.setEndpointName(null);
+                op.setHttpMethod("POST");
+                op.setCron(null);
             }
             for (Attribute a : c.getAttributes()) {
                 a.setInitExpression(null);

@@ -1,8 +1,15 @@
 package com.example.app.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import lombok.*;
 import java.util.*;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 @Entity
 @Table(name = "turno")
 public class Turno {
@@ -13,31 +20,15 @@ public class Turno {
 
     // attributes
     @Column(name = "capacidade")
-    private int capacidade;
+    private Integer capacidade;
+
+    @Column(name = "numero")
+    private int numero;
 
     // relationship: Turno -> Aluno
+    @JsonIgnoreProperties("turno")
     @OneToMany(mappedBy = "turno")
+    @Builder.Default
     private List<Aluno> alunos = new ArrayList<>();
 
-
-    public Turno() {}
-
-    public int getCapacidade() { return capacidade; }
-    public void setCapacidade(int capacidade) { this.capacidade = capacidade; }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public List<Aluno> getAlunos() { return alunos; }
-    public void setAlunos(List<Aluno> alunos) { this.alunos = alunos; }
-
-    @Override
-    public String toString() {
-        return "Turno{" + "id=" + getId() + ", capacidade=" + capacidade + "}";
-    }
-    // Operations
-    public boolean temVaga(
-    ) {
-        throw new UnsupportedOperationException("Not implemented yet");
-    }
 }
