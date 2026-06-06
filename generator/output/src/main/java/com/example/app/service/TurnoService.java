@@ -66,8 +66,8 @@ public class TurnoService {
             .orElseThrow(() -> new RuntimeException("Turno not found: " + id));
 
         // Update attributes from DTO
-        existing.setCapacidade(dto.getCapacidade());
         existing.setNumero(dto.getNumero());
+        existing.setCapacidade(dto.getCapacidade());
 
         Turno saved = turnoRepository.save(existing);
         return TurnoResponseDTO.fromEntity(saved);

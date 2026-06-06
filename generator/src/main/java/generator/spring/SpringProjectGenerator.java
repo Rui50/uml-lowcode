@@ -141,6 +141,14 @@ public class SpringProjectGenerator {
             w.println("            <groupId>org.springframework.boot</groupId>");
             w.println("            <artifactId>spring-boot-starter-webmvc</artifactId>");
             w.println("        </dependency>");
+            // OpenAPI / Swagger UI em /swagger-ui.html (springdoc 3.x p/ Spring Boot 4) — opcional
+            if (settings.isOpenApi()) {
+                w.println("        <dependency>");
+                w.println("            <groupId>org.springdoc</groupId>");
+                w.println("            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>");
+                w.println("            <version>3.0.0</version>");
+                w.println("        </dependency>");
+            }
             // Lombok
             w.println("        <dependency>");
             w.println("            <groupId>org.projectlombok</groupId>");

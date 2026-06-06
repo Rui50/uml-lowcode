@@ -81,6 +81,8 @@ public class AnnotationService {
                 OclDTO dto = list.get(i);
                 String name;
 
+                // aplicar defaults se nao vierem da frontend
+
                 if (dto.getName() == null || dto.getName().isEmpty()) {
                     name = "inv" + (i + 1);
                 } else {

@@ -813,11 +813,21 @@ public class SpringServiceGenerator {
         }
     }
 
+    // uma expressão Java traduzida de OCL refere self quando contém "this." (self -> this na tradução)
+    private boolean refsSelf(String javaExpr) {
+        return javaExpr != null && javaExpr.contains("this.");
+    }
+
     private void generateCustomOperation(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
         String className = cls.getName();
         String operName = op.getName();
 
         if (interaction == null) {
+            // pré/pós-condições precisam de um corpo (self carregado) — sem diagrama não há onde as aplicar
+            if (!op.getPreconditions().isEmpty() || !op.getPostconditions().isEmpty()) {
+                throw new IllegalArgumentException("Operação '" + operName
+                        + "' tem pré/pós-condições mas não tem diagrama de sequência associado.");
+            }
             String returnType = op.getReturnType() != null ? GeneratorUtils.removePackageNames(op.getReturnType()) : "void";
             writer.println();
             writer.print("    public " + returnType + " " + operName + "(");
@@ -835,12 +845,10 @@ public class SpringServiceGenerator {
         }
 
         Message entryMessage = SpringUtils.findEntryMessage(interaction, cls, op);
-
-        // TODO: pré/poscondições OCL em operações Spring ainda não ta feoito
-        // por agora falha de forma clara em vez de gerar código que não compila.
-        if (!op.getPreconditions().isEmpty() || !op.getPostconditions().isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Operação '" + operName + "': condições pré/pós (OCL) em operações Spring ainda não são suportadas.");
+        // operação normal (não-job) tem de ter mensagem de entrada (actor -> service) — define a assinatura
+        if (entryMessage == null) {
+            throw new IllegalArgumentException("Operação '" + operName
+                    + "': o diagrama não tem mensagem de entrada (actor -> " + className + "Service) com o nome da operação.");
         }
 
         // a mensagem de entrada tem de corresponder à operação declarada (pelo nome)
@@ -875,16 +883,33 @@ public class SpringServiceGenerator {
 
         SequenceBodyGenerator bodyGen = new SequenceBodyGenerator(associations);
 
-        // preload entity if pre/postcond reference
         String selfVar = GeneratorUtils.lowercaseFirst(className);
-        boolean needsSelf = !op.getPreconditions().isEmpty() || !op.getPostconditions().isEmpty();
+        boolean hasConditions = !op.getPreconditions().isEmpty() || !op.getPostconditions().isEmpty();
+        // só carregamos self se alguma condição o referir (this.) ou houver snapshot @pre;
+        // uma condição só sobre parâmetros (ex: pre: d > 0) não precisa de self nem do <entityVar>Id
+        boolean needsSelf =
+                op.getPreconditions().stream().anyMatch(p -> refsSelf(p.getJavaExpression()))
+                || op.getPostconditions().stream().anyMatch(p -> refsSelf(p.getJavaExpression())
+                        || !p.getPreSnapshots().isEmpty());
 
         if (needsSelf) {
+            // self é carregado a partir de um parâmetro com o nome convencional <entityVar>Id (ex: turmaId)
+            String idParam = selfVar + "Id";
+            boolean hasIdParam = entryMessage != null && entryMessage.getArguments().stream()
+                    .anyMatch(a -> idParam.equals(a.getName()));
+            if (!hasIdParam) {
+                throw new IllegalArgumentException("Operação '" + operName + "': condições que referem 'self' "
+                        + "precisam de um parâmetro '" + idParam + "' para o carregar.");
+            }
             String repoName = selfVar + "Repository";
-            writer.println("        " + className + " " + selfVar + " = " + repoName + ".findById(id)");
+            writer.println("        " + className + " " + selfVar + " = " + repoName + ".findById(" + idParam + ")");
             writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found\"));");
+            // pré-declara o self (carregado acima) para o SequenceBodyGenerator saltar o
+            // "turma = findById(...)" do diagrama e não o declarar duas vezes;
             bodyGen.addPreDeclaredVar(selfVar);
+        }
 
+        if (hasConditions) {
             for (Precondition pre : op.getPreconditions()) {
                 String javaExpr = pre.getJavaExpression(selfVar);
                 writer.println("        if (!(" + javaExpr + ")) {");
@@ -915,6 +940,15 @@ public class SpringServiceGenerator {
                     String je = p.getJavaExpression(selfVar);
                     return je != null && je.matches(".*\\bresult\\b.*");
                 });
+        // operação não-void precisa de reply; uma pós-condição que refere 'result' também
+        if (!"void".equals(returnType) && returnExpr == null) {
+            throw new IllegalArgumentException("Operação '" + operName + "': devolve '" + returnType
+                    + "' mas o diagrama não tem mensagem de resposta (reply) para o ator.");
+        }
+        if (needsResult && returnExpr == null) {
+            throw new IllegalArgumentException("Operação '" + operName
+                    + "': uma pós-condição refere 'result' mas o diagrama não tem mensagem de resposta (reply).");
+        }
         if (needsResult && returnExpr != null && !"void".equals(returnType)) {
             writer.println("        " + returnType + " result = " + returnExpr + ";");
         }

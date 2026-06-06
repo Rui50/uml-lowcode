@@ -4,6 +4,7 @@
   import InputText from 'primevue/inputtext'
   import InputNumber from 'primevue/inputnumber'
   import Select from 'primevue/select'
+  import Checkbox from 'primevue/checkbox'
   import Button from 'primevue/button'
   import { useProjectSettingsStore } from '@/stores/projectSettings';
 
@@ -54,6 +55,10 @@
       <label>Server port</label>
       <InputNumber v-model="settings.serverPort" :useGrouping="false" />
     </div>
+    <div v-if="showPort" class="field-check">
+      <Checkbox v-model="settings.openApi" :binary="true" inputId="openApi" />
+      <label for="openApi">Include OpenAPI / Swagger docs</label>
+    </div>
 
     <p v-if="showDB" class="db-note">
       Nota: os dados da base de dados têm de ser definidos no
@@ -72,6 +77,12 @@
   display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; 
 }
 .field label {
+  font-size: 12px; opacity: 0.8;
+}
+.field-check {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.field-check label {
   font-size: 12px; opacity: 0.8;
 }
 .db-note {

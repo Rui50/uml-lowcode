@@ -95,6 +95,9 @@ public class GenerationService {
             if (opts.getServerPort() != null) {
                 settings.setServerPort(opts.getServerPort());
             }
+            if (opts.getOpenApi() != null) {
+                settings.setOpenApi(opts.getOpenApi());
+            }
         }
         SpringProjectGenerator project = new SpringProjectGenerator(settings, outputDir);
         project.generateProjectStructure();

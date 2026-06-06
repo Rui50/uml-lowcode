@@ -358,6 +358,27 @@ public class SpringControllerGenerator {
             writer.println("import " + basePackage + ".service." + extra + "Service;");
         }
 
+        // ResponseDTOs (de outras entidades) + Collectors para endpoints custom que devolvem entidades
+        Set<String> responseDtoImports = new HashSet<>();
+        boolean needsCollectors = false;
+        for (Operation op : cls.getOperations()) {
+            if (op.isJob() || op.getSequenceDiagram() == null) continue;
+            Message entry = SpringUtils.findEntryMessage(op.getSequenceDiagram(), cls, op);
+            String rt = customOpReturnType(cls, op, entry);
+            if ("void".equals(rt)) continue;
+            String base = GeneratorUtils.extractBaseType(rt);
+            if (classMap.containsKey(base)) {
+                if (!base.equals(className)) responseDtoImports.add(base);
+                if (rt.startsWith("List<")) needsCollectors = true;
+            }
+        }
+        for (String e : responseDtoImports) {
+            writer.println("import " + basePackage + ".dto." + e + "ResponseDTO;");
+        }
+        if (needsCollectors) {
+            writer.println("import java.util.stream.Collectors;");
+        }
+
         writer.println();
     }
 
@@ -465,10 +486,38 @@ public class SpringControllerGenerator {
                 if (i > 0) args.append(", ");
                 args.append(entryArgs.get(i).getName());
             }
-            writer.println("        " + serviceName + "." + op.getName() + "(" + args + ");");
-            writer.println("        return ResponseEntity.ok().build();");
+
+            // tipo de retorno do service: mensagem de entrada ":Type" | senão operação | senão void
+            String returnType = customOpReturnType(cls, op, entryMessage);
+            String call = serviceName + "." + op.getName() + "(" + args + ")";
+            if ("void".equals(returnType)) {
+                writer.println("        " + call + ";");
+                writer.println("        return ResponseEntity.ok().build();");
+            } else {
+                String base = GeneratorUtils.extractBaseType(returnType);
+                writer.println("        " + returnType + " result = " + call + ";");
+                if (classMap.containsKey(base) && returnType.startsWith("List<")) {
+                    // List<Entidade> -> mapeia cada um para o seu ResponseDTO
+                    writer.println("        return ResponseEntity.ok(result.stream().map("
+                            + base + "ResponseDTO::fromEntity).collect(Collectors.toList()));");
+                } else if (classMap.containsKey(base)) {
+                    // Entidade -> ResponseDTO
+                    writer.println("        return ResponseEntity.ok(" + base + "ResponseDTO.fromEntity(result));");
+                } else {
+                    // primitivo / String / outro -> devolve diretamente
+                    writer.println("        return ResponseEntity.ok(result);");
+                }
+            }
             writer.println("    }");
         }
+    }
+
+    // tipo de retorno do endpoint custom: mensagem de entrada ":Type" | senão operação | senão void
+    private String customOpReturnType(Class cls, Operation op, Message entryMessage) {
+        if (entryMessage != null && entryMessage.getReturnType() != null && !entryMessage.getReturnType().isBlank()) {
+            return GeneratorUtils.removePackageNames(entryMessage.getReturnType());
+        }
+        return op.getReturnType() != null ? GeneratorUtils.removePackageNames(op.getReturnType()) : "void";
     }
 
     //  HTTP -> anotação de mapping do Spring, o post fica como default

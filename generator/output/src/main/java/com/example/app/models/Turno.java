@@ -19,11 +19,11 @@ public class Turno {
     private Long id;
 
     // attributes
-    @Column(name = "capacidade")
-    private Integer capacidade;
-
     @Column(name = "numero")
     private int numero;
+
+    @Column(name = "capacidade")
+    private Integer capacidade;
 
     // relationship: Turno -> Aluno
     @JsonIgnoreProperties("turno")

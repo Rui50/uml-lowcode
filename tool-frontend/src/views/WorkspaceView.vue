@@ -39,6 +39,7 @@ function onConfirm() {
     applicationName: projectSettings.applicationName,
     databaseType: projectSettings.databaseType,
     serverPort: projectSettings.serverPort,
+    openApi: projectSettings.openApi,
   })
 }
 

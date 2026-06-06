@@ -16,8 +16,8 @@ public class TurmaResponseDTO {
 
     private Long id;
 
-    private String nome;
     private int numAlunos;
+    private String nome;
 
     private List<Long> alunosIds;
     private List<Long> turnosIds;
@@ -25,8 +25,8 @@ public class TurmaResponseDTO {
     public static TurmaResponseDTO fromEntity(Turma turma) {
         TurmaResponseDTO dto = new TurmaResponseDTO();
         dto.setId(turma.getId());
-        dto.setNome(turma.getNome());
         dto.setNumAlunos(turma.getNumAlunos());
+        dto.setNome(turma.getNome());
         dto.setAlunosIds(turma.getAlunos() != null
             ? turma.getAlunos().values().stream().map(Aluno::getId).collect(Collectors.toList())
             : new ArrayList<>());

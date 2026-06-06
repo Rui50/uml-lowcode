@@ -137,4 +137,13 @@ public class TurmaController {
 
 
     // Custom Operation Endpoints dos diagramas sequencia
+
+    @PostMapping("/transferirAluno")
+    public ResponseEntity<?> transferirAluno(
+            @RequestParam Long turmaId,
+            @RequestParam int numero,
+            @RequestParam Long destinoId) {
+        boolean result = turmaService.transferirAluno(turmaId, numero, destinoId);
+        return ResponseEntity.ok(result);
+    }
 }

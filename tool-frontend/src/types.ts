@@ -129,6 +129,7 @@ export interface ProjectSettings {
   applicationName?: string
   databaseType?: 'H2' | 'POSTGRESQL' | 'MYSQL'
   serverPort?: number
+  openApi?: boolean
 }
 
 ///////////

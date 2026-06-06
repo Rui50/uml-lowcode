@@ -69,8 +69,8 @@ public class TurmaService {
             .orElseThrow(() -> new RuntimeException("Turma not found: " + id));
 
         // Update attributes from DTO
-        existing.setNome(dto.getNome());
         existing.setNumAlunos(dto.getNumAlunos());
+        existing.setNome(dto.getNome());
 
         Turma saved = turmaRepository.save(existing);
         return TurmaResponseDTO.fromEntity(saved);
@@ -167,9 +167,9 @@ public class TurmaService {
 
     // operations (TODO: implement)
 
-    public void fecharTurma() {
+    public int contarAlunos() {
         throw new UnsupportedOperationException(
-            "Method 'fecharTurma' not yet implemented. "
+            "Method 'contarAlunos' not yet implemented. "
         );
     }
 
@@ -185,9 +185,31 @@ public class TurmaService {
         );
     }
 
-    public int contarAlunos() {
+    public boolean transferirAluno(Long turmaId, int numero, Long destinoId) {
+        Turma turma = turmaRepository.findById(turmaId)
+            .orElseThrow(() -> new RuntimeException("Turma not found"));
+        if (!(turma.getAlunos().size() > 0)) {
+            throw new IllegalStateException("a turma tem de ter alunos");
+        }
+        Map<Integer, Aluno> alunos_pre = new HashMap<>(turma.getAlunos());
+        Turma destino = turmaRepository.findById(destinoId)
+            .orElseThrow(() -> new RuntimeException("Turma not found"));
+        boolean sucesso = false;
+        Aluno a = turma.getAlunos().get(numero);
+        if (a != null) {
+            turma.getAlunos().remove(a.getNumero());
+            destino.getAlunos().put(a.getNumero(), a);
+            sucesso = true;
+        }
+        if (!(java.util.Objects.equals(turma.getAlunos().size(), alunos_pre.size() - 1))) {
+            throw new IllegalStateException("tem de diminuir 1");
+        }
+        return sucesso;
+    }
+
+    public void fecharTurma() {
         throw new UnsupportedOperationException(
-            "Method 'contarAlunos' not yet implemented. "
+            "Method 'fecharTurma' not yet implemented. "
         );
     }
 }

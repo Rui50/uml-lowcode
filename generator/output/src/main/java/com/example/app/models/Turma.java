@@ -19,11 +19,11 @@ public class Turma {
     private Long id;
 
     // attributes
-    @Column(name = "nome")
-    private String nome;
-
     @Column(name = "numAlunos")
     private int numAlunos;
+
+    @Column(name = "nome")
+    private String nome;
 
     // relationship: Turma -> Aluno
     @OneToMany
