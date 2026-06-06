@@ -5,27 +5,12 @@ import service.ParsingService;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        String xmiFilePath = "test-models/seqtest.uml";
+        //String xmiFilePath = "test-models/aluno_turma_class_seq_full_test.uml";
+        String xmiFilePath = "test-models/interface.uml";
         String outputDir = "output";
-        String target = "spring";
+        String target = "cli-jpa";
 
         ParsedModel model = new ParsingService().parse(xmiFilePath);
-
-        // TEMP: precondição SÓ sobre parâmetro (numero > 0) — não deve carregar self nem exigir turmaId
-        model.Class turma = null;
-        for (model.Class c : model.getClasses()) if (c.getName().equals("Turma")) turma = c;
-        for (model.Class c : model.getClasses()) {
-            for (Operation op : c.getOperations()) {
-                if (op.getName().equals("transferirAluno")) {
-                    for (model.sequence.Interaction it : model.getAllInteractions())
-                        if ("TransAlunoSPRING".equals(it.getName())) op.setSequenceDiagram(it);
-                    op.addPrecondition(parser.AnnotationParser.parsePrecondition(
-                            "numeroValido", "numero > 0", "numero tem de ser positivo",
-                            turma, model.getAssociations()));
-                }
-            }
-        }
-
         new GenerationService().generate(model, target, outputDir, null);
 
     }
