@@ -1,5 +1,7 @@
 package generator.CLI;
 
+import generator.GeneratorUtils;
+
 import model.Association;
 import model.Class;
 import model.Enumeration;
@@ -34,7 +36,7 @@ public class JavaProjectGenerator {
         // limpar output anterior
         File output = new File(outputDirectory);
         if (output.exists()) {
-            deleteDirectory(output);
+            GeneratorUtils.deleteDirectory(output);
         }
 
         // criar estrutura base
@@ -131,19 +133,5 @@ public class JavaProjectGenerator {
         System.out.println("Generated: InputUtils.java");
     }
 
-    // apaga recursivamente
-    private void deleteDirectory(File directory) {
-        File[] files = directory.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    deleteDirectory(file);
-                } else {
-                    file.delete();
-                }
-            }
-        }
-        directory.delete();
-    }
 
 }

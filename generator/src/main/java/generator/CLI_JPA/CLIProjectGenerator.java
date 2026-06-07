@@ -1,5 +1,7 @@
 package generator.CLI_JPA;
 
+import generator.GeneratorUtils;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -26,7 +28,7 @@ public class CLIProjectGenerator {
         //  wipe
         File output = new File(outputDirectory);
         if (output.exists()) {
-            deleteDirectory(output);
+            GeneratorUtils.deleteDirectory(output);
         }
 
         //  layout
@@ -280,18 +282,4 @@ public class CLIProjectGenerator {
     }
 
 
-    // apaga recursivamente
-    private void deleteDirectory(File directory) {
-        File[] files = directory.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    deleteDirectory(file);
-                } else {
-                    file.delete();
-                }
-            }
-        }
-        directory.delete();
-    }
 }

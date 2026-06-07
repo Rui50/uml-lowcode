@@ -73,7 +73,7 @@ public class JavaMenuGenerator {
 
         // verificar que repos este menu precisa
 
-        Set<String> neededRepos = getNeededRepositories(cls, associations, allClasses);
+        Set<String> neededRepos = GeneratorUtils.getNeededRepositories(cls, associations, allClasses);
 
         try (PrintWriter w = new PrintWriter(filename)) {
             w.println("package menus;");
@@ -88,9 +88,9 @@ public class JavaMenuGenerator {
 
             // fields
             w.println("    private Scanner scanner;");
-            w.println("    private " + cls.getName() + "Repository " + repoVariable(cls.getName()) + ";");
+            w.println("    private " + cls.getName() + "Repository " + GeneratorUtils.repoVariable(cls.getName()) + ";");
             for (String related : neededRepos) {
-                w.println("    private " + related + "Repository " + repoVariable(related) + ";");
+                w.println("    private " + related + "Repository " + GeneratorUtils.repoVariable(related) + ";");
             }
             w.println();
 
@@ -123,16 +123,16 @@ public class JavaMenuGenerator {
      */
     private void generateMenuConstructor(PrintWriter w, Class cls, Set<String> neededRepos) {
         w.print("    public " + cls.getName() + "Menu(Scanner scanner, ");
-        w.print(cls.getName() + "Repository " + repoVariable(cls.getName()));
+        w.print(cls.getName() + "Repository " + GeneratorUtils.repoVariable(cls.getName()));
 
         for (String related : neededRepos) {
-            w.print(", " + related + "Repository " + repoVariable(related));
+            w.print(", " + related + "Repository " + GeneratorUtils.repoVariable(related));
         }
         w.println(") {");
         w.println("        this.scanner = scanner;");
-        w.println("        this." + repoVariable(cls.getName()) + " = " + repoVariable(cls.getName()) + ";");
+        w.println("        this." + GeneratorUtils.repoVariable(cls.getName()) + " = " + GeneratorUtils.repoVariable(cls.getName()) + ";");
         for (String related : neededRepos) {
-            w.println("        this." + repoVariable(related) + " = " + repoVariable(related) + ";");
+            w.println("        this." + GeneratorUtils.repoVariable(related) + " = " + GeneratorUtils.repoVariable(related) + ";");
         }
         w.println("    }");
         w.println();
@@ -260,7 +260,7 @@ public class JavaMenuGenerator {
         }
 
         w.println();
-        w.println("        " + repoVariable(cls.getName()) + ".save(entity);");
+        w.println("        " + GeneratorUtils.repoVariable(cls.getName()) + ".save(entity);");
         w.println("        System.out.println(\"Created: \" + entity);");
         w.println("    }");
         w.println();
@@ -271,7 +271,7 @@ public class JavaMenuGenerator {
      */
     private void generateViewAllMethod(PrintWriter w, Class cls, List<Association> associations) {
         w.println("    private void viewAll() {");
-        w.println("        List<" + cls.getName() + "> all = " + repoVariable(cls.getName()) + ".findAll();");
+        w.println("        List<" + cls.getName() + "> all = " + GeneratorUtils.repoVariable(cls.getName()) + ".findAll();");
         w.println("        if (all.isEmpty()) {");
         w.println("            System.out.println(\"No records found.\");");
         w.println("            return;");
@@ -290,7 +290,7 @@ public class JavaMenuGenerator {
     private void generateViewByIdMethod(PrintWriter w, Class cls, List<Association> associations) {
         w.println("    private void viewById() {");
         w.println("        Long id = InputUtils.readLong(scanner, \"ID: \");");
-        w.println("        " + cls.getName() + " entity = " + repoVariable(cls.getName()) + ".findById(id);");
+        w.println("        " + cls.getName() + " entity = " + GeneratorUtils.repoVariable(cls.getName()) + ".findById(id);");
         w.println("        if (entity == null) {");
         w.println("            System.out.println(\"Not found.\");");
         w.println("            return;");
@@ -340,7 +340,7 @@ public class JavaMenuGenerator {
     private void generateUpdateMethod(PrintWriter w, Class cls) {
         w.println("    private void update() {");
         w.println("        Long id = InputUtils.readLong(scanner, \"ID: \");");
-        w.println("        " + cls.getName() + " entity = " + repoVariable(cls.getName()) + ".findById(id);");
+        w.println("        " + cls.getName() + " entity = " + GeneratorUtils.repoVariable(cls.getName()) + ".findById(id);");
         w.println("        if (entity == null) {");
         w.println("            System.out.println(\"Not found.\");");
         w.println("            return;");
@@ -376,7 +376,7 @@ public class JavaMenuGenerator {
         }
 
         w.println();
-        w.println("        " + repoVariable(cls.getName()) + ".save(entity);");
+        w.println("        " + GeneratorUtils.repoVariable(cls.getName()) + ".save(entity);");
         w.println("        System.out.println(\"Updated: \" + entity);");
         w.println("    }");
         w.println();
@@ -388,7 +388,7 @@ public class JavaMenuGenerator {
     private void generateDeleteMethod(PrintWriter w, Class cls) {
         w.println("    private void delete() {");
         w.println("        Long id = InputUtils.readLong(scanner, \"ID: \");");
-        w.println("        if (" + repoVariable(cls.getName()) + ".deleteById(id)) {");
+        w.println("        if (" + GeneratorUtils.repoVariable(cls.getName()) + ".deleteById(id)) {");
         w.println("            System.out.println(\"Deleted.\");");
         w.println("        } else {");
         w.println("            System.out.println(\"Not found.\");");
@@ -442,15 +442,15 @@ public class JavaMenuGenerator {
         String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
         w.println("    private void assign" + otherClass + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
-        w.println("        " + ownerClass + " owner = " + repoVariable(ownerClass) + ".findById(ownerId);");
+        w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
         w.println();
         w.println("        Long otherId = InputUtils.readLong(scanner, \"" + otherClass + " ID: \");");
-        w.println("        " + otherClass + " other = " + repoVariable(otherClass) + ".findById(otherId);");
+        w.println("        " + otherClass + " other = " + GeneratorUtils.repoVariable(otherClass) + ".findById(otherId);");
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
         w.println("        owner.set" + capitalized + "(other);");
-        w.println("        " + repoVariable(ownerClass) + ".save(owner);");
+        w.println("        " + GeneratorUtils.repoVariable(ownerClass) + ".save(owner);");
         w.println("        System.out.println(\"Assigned " + otherClass + " to " + ownerClass + ".\");");
         w.println("    }");
         w.println();
@@ -461,7 +461,7 @@ public class JavaMenuGenerator {
         String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
         w.println("    private void remove" + otherClass + "() {");
         w.println("        Long id = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
-        w.println("        " + ownerClass + " entity = " + repoVariable(ownerClass) + ".findById(id);");
+        w.println("        " + ownerClass + " entity = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(id);");
         w.println("        if (entity == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
         w.println();
         w.println("        entity.set" + capitalized + "(null);");
@@ -475,11 +475,11 @@ public class JavaMenuGenerator {
         String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
         w.println("    private void add" + otherClass + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
-        w.println("        " + ownerClass + " owner = " + repoVariable(ownerClass) + ".findById(ownerId);");
+        w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
         w.println();
         w.println("        Long otherId = InputUtils.readLong(scanner, \"" + otherClass + " ID: \");");
-        w.println("        " + otherClass + " other = " + repoVariable(otherClass) + ".findById(otherId);");
+        w.println("        " + otherClass + " other = " + GeneratorUtils.repoVariable(otherClass) + ".findById(otherId);");
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
@@ -493,7 +493,7 @@ public class JavaMenuGenerator {
             w.println("        owner.get" + capitalized + "().add(other);");
         }
 
-        w.println("        " + repoVariable(ownerClass) + ".save(owner);");
+        w.println("        " + GeneratorUtils.repoVariable(ownerClass) + ".save(owner);");
         w.println("        System.out.println(\"Added " + otherClass + " to " + ownerClass + ".\");");
         w.println("    }");
         w.println();
@@ -504,11 +504,11 @@ public class JavaMenuGenerator {
         String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
         w.println("    private void remove" + otherClass + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
-        w.println("        " + ownerClass + " owner = " + repoVariable(ownerClass) + ".findById(ownerId);");
+        w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
         w.println();
         w.println("        Long otherId = InputUtils.readLong(scanner, \"" + otherClass + " ID: \");");
-        w.println("        " + otherClass + " other = " + repoVariable(otherClass) + ".findById(otherId);");
+        w.println("        " + otherClass + " other = " + GeneratorUtils.repoVariable(otherClass) + ".findById(otherId);");
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
@@ -546,7 +546,7 @@ public class JavaMenuGenerator {
 
             w.println("    private void " + op.getName() + "() {");
             w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + cls.getName() + " ID: \");");
-            w.println("        " + cls.getName() + " owner = " + repoVariable(cls.getName()) + ".findById(ownerId);");
+            w.println("        " + cls.getName() + " owner = " + GeneratorUtils.repoVariable(cls.getName()) + ".findById(ownerId);");
             w.println("        if (owner == null) { System.out.println(\"" + cls.getName() + " not found.\"); return; }");
             w.println();
 
@@ -559,7 +559,7 @@ public class JavaMenuGenerator {
                 if (classNames.contains(pType)) {
                     // entidade: pedir ID e procurar no repo
                     w.println("        Long " + pName + "Id = InputUtils.readLong(scanner, \"" + pType + " ID (" + pName + "): \");");
-                    w.println("        " + pType + " " + pName + " = " + repoVariable(pType) + ".findById(" + pName + "Id);");
+                    w.println("        " + pType + " " + pName + " = " + GeneratorUtils.repoVariable(pType) + ".findById(" + pName + "Id);");
                     w.println("        if (" + pName + " == null) { System.out.println(\"" + pType + " not found.\"); return; }");
                 } else {
                     // primitivo: input direto
@@ -580,7 +580,7 @@ public class JavaMenuGenerator {
                 w.print(argNames.get(i));
             }
             w.println(");");
-            w.println("            " + repoVariable(cls.getName()) + ".save(owner);");
+            w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".save(owner);");
             w.println("            System.out.println(\"" + op.getName() + " executed.\");");
             w.println("        } catch (RuntimeException ex) {");
             w.println("            System.out.println(\"Error: \" + ex.getMessage());");
@@ -611,7 +611,7 @@ public class JavaMenuGenerator {
 
             // all repositories
             for (Class cls : classes) {
-                w.println("    private " + cls.getName() + "Repository " + repoVariable(cls.getName()) + " = " +
+                w.println("    private " + cls.getName() + "Repository " + GeneratorUtils.repoVariable(cls.getName()) + " = " +
                         "new " + cls.getName() + "Repository();");
             }
             w.println();
@@ -629,12 +629,12 @@ public class JavaMenuGenerator {
             w.println("            switch (option) {");
             for (int i = 0; i < classes.size(); i++) {
                 Class cls = classes.get(i);
-                Set<String> neededRepos = getNeededRepositories(cls, associations, classes);
+                Set<String> neededRepos = GeneratorUtils.getNeededRepositories(cls, associations, classes);
 
                 w.print("                case " + (i + 1) + ": new " + cls.getName() + "Menu(scanner, " +
-                        repoVariable(cls.getName()));
+                        GeneratorUtils.repoVariable(cls.getName()));
                 for (String related : neededRepos) {
-                    w.print(", " + repoVariable(related));
+                    w.print(", " + GeneratorUtils.repoVariable(related));
                 }
                 w.println(").run(); break;");
             }
@@ -753,39 +753,6 @@ public class JavaMenuGenerator {
         }
     }
 
-    /**
-     * pega no conjunto de outras classes cujos repositórios este menu precisa
-     * as associadas (navegáveis) + as usadas como parâmetro de operações custom.
-     */
-    private Set<String> getNeededRepositories(Class cls, List<Association> associations, List<Class> allClasses) {
-        Set<String> related = new LinkedHashSet<>();
-        for (Association assoc : associations) {
-            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
-                related.add(assoc.getTargetClass());
-            }
-            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
-                related.add(assoc.getSourceClass());
-            }
-        }
-        for (Operation op : cls.getOperations()) {
-            Interaction interaction = op.getSequenceDiagram();
-            if (interaction == null) continue;
-            for (Parameter param : op.getParameters()) {
-                String type = param.getType();
-                // only include if it's a domain class (matches one of the known classes)
-                for (Class other : allClasses) {
-                    if (other.getName().equals(type) && !type.equals(cls.getName())) {
-                        related.add(type);
-                    }
-                }
-            }
-        }
-        return related;
-    }
 
-    // nome da variável do repositório: classe com letra minúscula + "Repository"
-    private String repoVariable(String className) {
-        return className.substring(0, 1).toLowerCase() + className.substring(1) + "Repository";
-    }
 
 }

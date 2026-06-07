@@ -174,7 +174,7 @@ public class CLIEntityGenerator {
         }
 
         // caso seja parent, gerar @Inheritance
-        if (cls.getParentClass() == null && isParent(cls, allClasses)) {
+        if (cls.getParentClass() == null && GeneratorUtils.isParent(cls, allClasses)) {
             // pai
             if (strategy.equals("SINGLE_TABLE")) {
                 writer.println("@Inheritance(strategy = InheritanceType.SINGLE_TABLE)");
@@ -377,15 +377,6 @@ public class CLIEntityGenerator {
         }
     }
 
-    // para saber se a classe é pai de outra, para gerar @Inheritance
-    private boolean isParent(Class cls, List<Class> allClasses) {
-        for (Class c : allClasses) {
-            if (c.getParentClass() != null && c.getParentClass().getName().equals(cls.getName())) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     /**
      * Gerar as anotações de relacionamento (@OneToMany, @ManyToOne, @ManyToMany)
@@ -455,7 +446,7 @@ public class CLIEntityGenerator {
                 writer.println("    )");
             } else {
                 writer.println("    @ManyToMany(mappedBy = \"" +
-                        getOtherSideAttributeName(assoc, side) + "\")");
+                        GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
             }
         } else {
             writer.println("    @ManyToMany");
@@ -495,7 +486,7 @@ public class CLIEntityGenerator {
 
         if (isBidirectional) {
             writer.println("    @OneToMany(mappedBy = \"" +
-                    getOtherSideAttributeName(assoc, side) + "\"" + cascade + ")");
+                    GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\"" + cascade + ")");
         } else {
             if (isComposite) {
                 writer.println("    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)");
@@ -555,7 +546,7 @@ public class CLIEntityGenerator {
         if (assoc.hasQualifier()) {
             if (isBidirectional) {
                 writer.println("    @OneToMany(mappedBy = \"" +
-                        getOtherSideAttributeName(assoc, side) + "\")");
+                        GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
             } else {
                 writer.println("    @OneToMany");
                 writer.println("    @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\")");
@@ -575,7 +566,7 @@ public class CLIEntityGenerator {
                     writer.println("    @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
                 } else {
                     writer.println("    @OneToOne(mappedBy = \"" +
-                            getOtherSideAttributeName(assoc, side) + "\")");
+                            GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
                 }
             } else {
                 writer.println("    @OneToOne");
@@ -658,23 +649,6 @@ public class CLIEntityGenerator {
         }
     }
 
-
-    // nome do campo do outro lado da associação, para usarmos em mappedBy e @JsonIgnorePropertie
-    private String getOtherSideAttributeName(Association assoc, String side) {
-        if (side.equals("source")) {
-            return GeneratorUtils.makeAttributeName(
-                    assoc.getTargetClass(),
-                    assoc.getTargetRole(),
-                    assoc.getTargetMultiplicity()
-            );
-        } else {
-            return GeneratorUtils.makeAttributeName(
-                    assoc.getSourceClass(),
-                    assoc.getSourceRole(),
-                    assoc.getSourceMultiplicity()
-            );
-        }
-    }
 
     private static String capitalize(String s) {
         return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);

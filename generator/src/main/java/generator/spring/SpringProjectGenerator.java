@@ -1,5 +1,7 @@
 package generator.spring;
 
+import generator.GeneratorUtils;
+
 
 import java.io.File;
 import java.io.FileWriter;
@@ -38,7 +40,7 @@ public class SpringProjectGenerator {
 
         File output = new File(outputDirectory);
         if (output.exists()) {
-            deleteDirectory(output);
+            GeneratorUtils.deleteDirectory(output);
         }
 
         createDirectoryStructure();
@@ -312,20 +314,4 @@ public class SpringProjectGenerator {
         }
     }
 
-    /**
-     * Deleta dir recursivamente, para ja apaga para ser mais facil seguir mudanças
-     * */
-    private void deleteDirectory(File directory) {
-        File[] files = directory.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    deleteDirectory(file);
-                } else {
-                    file.delete();
-                }
-            }
-        }
-        directory.delete();
-    }
 }

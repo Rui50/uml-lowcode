@@ -5,11 +5,14 @@ import model.Class;
 import model.Operation;
 import model.Parameter;
 import model.sequence.Fragment;
+import model.sequence.Interaction;
 import model.sequence.Message;
 import model.sequence.Operand;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -192,5 +195,87 @@ public class GeneratorUtils {
         }
         sb.append(")");
         return sb.toString();
+    }
+
+    /**
+     * Repositórios que um menu/serviço de uma classe precisa: os das classes
+     * relacionadas navegáveis + os tipos-domínio usados como parâmetros das
+     * operações com diagrama de sequência.
+     */
+    public static Set<String> getNeededRepositories(Class cls, List<Association> associations, List<Class> allClasses) {
+        Set<String> related = new LinkedHashSet<>();
+        for (Association assoc : associations) {
+            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
+                related.add(assoc.getTargetClass());
+            }
+            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
+                related.add(assoc.getSourceClass());
+            }
+        }
+        for (Operation op : cls.getOperations()) {
+            Interaction interaction = op.getSequenceDiagram();
+            if (interaction == null) continue;
+            for (Parameter param : op.getParameters()) {
+                String type = param.getType();
+                // só incluir se for uma classe-domínio (corresponde a uma das classes conhecidas)
+                for (Class other : allClasses) {
+                    if (other.getName().equals(type) && !type.equals(cls.getName())) {
+                        related.add(type);
+                    }
+                }
+            }
+        }
+        return related;
+    }
+
+    // apaga recursivamente um diretório e o seu conteúdo (usado para limpar o output antes de gerar)
+    public static void deleteDirectory(File directory) {
+        File[] files = directory.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    deleteDirectory(file);
+                } else {
+                    file.delete();
+                }
+            }
+        }
+        directory.delete();
+    }
+
+    // nome da variável de repositório de uma classe (ex: Aluno -> alunoRepository)
+    public static String repoVariable(String className) {
+        return className.substring(0, 1).toLowerCase() + className.substring(1) + "Repository";
+    }
+
+    // saber se a classe é pai de outra (tem subclasses), para gerar @Inheritance / SuperBuilder
+    public static boolean isParent(Class cls, List<Class> allClasses) {
+        for (Class c : allClasses) {
+            if (c.getParentClass() != null && c.getParentClass().getName().equals(cls.getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Devolve o nome do atributo do OUTRO lado de uma associação bidirecional
+     * (usado em @JsonIgnoreProperties e no mappedBy). side = "source"/"target"
+     * indica de que lado estamos a olhar.
+     */
+    public static String getOtherSideAttributeName(Association assoc, String side) {
+        if (side.equals("source")) {
+            return makeAttributeName(
+                    assoc.getTargetClass(),
+                    assoc.getTargetRole(),
+                    assoc.getTargetMultiplicity()
+            );
+        } else {
+            return makeAttributeName(
+                    assoc.getSourceClass(),
+                    assoc.getSourceRole(),
+                    assoc.getSourceMultiplicity()
+            );
+        }
     }
 }

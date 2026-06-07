@@ -135,7 +135,7 @@ public class SpringEntityGenerator {
             writer.println("import jakarta.persistence.*;");
             writer.println("import lombok.*;");
             writer.println("import java.util.*;");
-            if (cls.getParentClass() != null || isParent(cls, allClasses)) {
+            if (cls.getParentClass() != null || GeneratorUtils.isParent(cls, allClasses)) {
                 writer.println("import lombok.experimental.SuperBuilder;");
             }
             writer.println();
@@ -187,7 +187,7 @@ public class SpringEntityGenerator {
         writer.println("@NoArgsConstructor");
         writer.println("@AllArgsConstructor(access = AccessLevel.PRIVATE)");
         // need superbuilder se for de herança
-        if (cls.getParentClass() != null || isParent(cls, allClasses)) {
+        if (cls.getParentClass() != null || GeneratorUtils.isParent(cls, allClasses)) {
             writer.println("@SuperBuilder");
         } else {
             /***
@@ -215,7 +215,7 @@ public class SpringEntityGenerator {
         }
 
         // caso seja parent, gerar @Inheritance
-        if (cls.getParentClass() == null && isParent(cls, allClasses)) {
+        if (cls.getParentClass() == null && GeneratorUtils.isParent(cls, allClasses)) {
             // pai
             if (strategy.equals("SINGLE_TABLE")) {
                 writer.println("@Inheritance(strategy = InheritanceType.SINGLE_TABLE)");
@@ -320,16 +320,6 @@ public class SpringEntityGenerator {
         }
     }
 
-    // para saber se a classe é pai de outra, para gerar @Inheritance
-    private boolean isParent(Class cls, List<Class> allClasses) {
-        for (Class c : allClasses) {
-            if (c.getParentClass() != null && c.getParentClass().getName().equals(cls.getName())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     /**
      * Gerar as anotações de relacionamento (@OneToMany, @ManyToOne, @ManyToMany)
      * com base na multiplicidade e navegabilidade da associação.
@@ -354,7 +344,7 @@ public class SpringEntityGenerator {
 
         // is bidirectional, gerar @JsonIgnoreProperties para evitar loop infinito na serialização JSON
         if (isBidirectional) {
-            writer.println("    @JsonIgnoreProperties(\"" + getOtherSideAttributeName(assoc, side) + "\")");
+            writer.println("    @JsonIgnoreProperties(\"" + GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
         }
 
         // Many to Many
@@ -402,7 +392,7 @@ public class SpringEntityGenerator {
                 writer.println("    )");
             } else {
                 writer.println("    @ManyToMany(mappedBy = \"" +
-                        getOtherSideAttributeName(assoc, side) + "\")");
+                        GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
             }
         } else {
             writer.println("    @ManyToMany");
@@ -444,7 +434,7 @@ public class SpringEntityGenerator {
 
         if (isBidirectional) {
             writer.println("    @OneToMany(mappedBy = \"" +
-                    getOtherSideAttributeName(assoc, side) + "\"" + cascade + ")");
+                    GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\"" + cascade + ")");
         } else {
             if (isComposite) {
                 writer.println("    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)");
@@ -506,7 +496,7 @@ public class SpringEntityGenerator {
         if (assoc.hasQualifier()) {
             if (isBidirectional) {
                 writer.println("    @OneToMany(mappedBy = \"" +
-                        getOtherSideAttributeName(assoc, side) + "\")");
+                        GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
             } else {
                 writer.println("    @OneToMany");
                 writer.println("    @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\")");
@@ -527,7 +517,7 @@ public class SpringEntityGenerator {
                     writer.println("    @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
                 } else {
                     writer.println("    @OneToOne(mappedBy = \"" +
-                            getOtherSideAttributeName(assoc, side) + "\")");
+                            GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
                 }
             } else {
                 writer.println("    @OneToOne");
@@ -539,22 +529,5 @@ public class SpringEntityGenerator {
     }
 
 
-
-    // nome do campo do outro lado da associação, para usarmos em mappedBy e @JsonIgnorePropertie
-    private String getOtherSideAttributeName(Association assoc, String side) {
-        if (side.equals("source")) {
-            return GeneratorUtils.makeAttributeName(
-                    assoc.getTargetClass(),
-                    assoc.getTargetRole(),
-                    assoc.getTargetMultiplicity()
-            );
-        } else {
-            return GeneratorUtils.makeAttributeName(
-                    assoc.getSourceClass(),
-                    assoc.getSourceRole(),
-                    assoc.getSourceMultiplicity()
-            );
-        }
-    }
 
 }
