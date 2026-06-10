@@ -49,8 +49,85 @@ public class SpringProjectGenerator {
         generateApplicationProperties();
         generateMainClass();
         generateTestClass();
+        if (settings.isDockerfile()) {
+            generateDockerfile();
+            // H2 é embebido mas Postgres/MySQL precisam de um container de BD -> docker-compose
+            if (settings.getDatabaseType() != DatabaseType.H2) {
+                generateDockerCompose();
+            }
+        }
 
         System.out.println("Project structure generated in: " + outputDirectory);
+    }
+
+    // Dockerfile, build com Maven, run com JRE (jar executável do spring-boot-maven-plugin)
+    private void generateDockerfile() throws IOException {
+        try (PrintWriter w = new PrintWriter(new FileWriter(outputDirectory + "/Dockerfile"))) {
+            w.println("# build stage");
+            w.println("FROM maven:3.9-eclipse-temurin-17 AS build");
+            w.println("WORKDIR /app");
+            w.println("COPY pom.xml .");
+            w.println("COPY src ./src");
+            w.println("RUN mvn -q clean package -DskipTests");
+            w.println();
+            w.println("# run stage");
+            w.println("FROM eclipse-temurin:17-jre");
+            w.println("WORKDIR /app");
+            w.println("COPY --from=build /app/target/*.jar app.jar");
+            w.println("EXPOSE " + settings.getServerPort());
+            w.println("ENTRYPOINT [\"java\",\"-jar\",\"app.jar\"]");
+        }
+        System.out.println("Generated: Dockerfile");
+    }
+
+    // docker-compose: app + container de BD (Postgres/MySQL). credenciais por
+    // env (SPRING_DATASOURCE_*), que o Spring Boot usa por cima do application.properties.
+    private void generateDockerCompose() throws IOException {
+        String dbName = settings.getApplicationName();
+        boolean postgres = settings.getDatabaseType() == DatabaseType.POSTGRESQL;
+        int port = settings.getServerPort();
+        try (PrintWriter w = new PrintWriter(new FileWriter(outputDirectory + "/docker-compose.yml"))) {
+            w.println("services:");
+            w.println("  db:");
+            if (postgres) {
+                w.println("    image: postgres:16");
+                w.println("    environment:");
+                w.println("      POSTGRES_DB: " + dbName);
+                w.println("      POSTGRES_USER: uml");
+                w.println("      POSTGRES_PASSWORD: uml");
+                w.println("    healthcheck:");
+                w.println("      test: [\"CMD-SHELL\", \"pg_isready -U uml -d " + dbName + "\"]");
+                w.println("      interval: 5s");
+                w.println("      retries: 10");
+            } else {
+                w.println("    image: mysql:8");
+                w.println("    environment:");
+                w.println("      MYSQL_DATABASE: " + dbName);
+                w.println("      MYSQL_USER: uml");
+                w.println("      MYSQL_PASSWORD: uml");
+                w.println("      MYSQL_ROOT_PASSWORD: uml");
+                w.println("    healthcheck:");
+                w.println("      test: [\"CMD\", \"mysqladmin\", \"ping\", \"-h\", \"localhost\"]");
+                w.println("      interval: 5s");
+                w.println("      retries: 10");
+            }
+            w.println();
+            w.println("  app:");
+            w.println("    build: .");
+            w.println("    depends_on:");
+            w.println("      db:");
+            w.println("        condition: service_healthy");
+            w.println("    ports:");
+            w.println("      - \"" + port + ":" + port + "\"");
+            w.println("    environment:");
+            String url = postgres
+                    ? "jdbc:postgresql://db:5432/" + dbName
+                    : "jdbc:mysql://db:3306/" + dbName;
+            w.println("      SPRING_DATASOURCE_URL: " + url);
+            w.println("      SPRING_DATASOURCE_USERNAME: uml");
+            w.println("      SPRING_DATASOURCE_PASSWORD: uml");
+        }
+        System.out.println("Generated: docker-compose.yml");
     }
 
     private void createDirectoryStructure() throws IOException {

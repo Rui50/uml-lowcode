@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 
 public class VpParser {
 
+    // Qualifiers são MAPs basicamente
     public static class Qualifier {
         String name;
         String type;
@@ -33,6 +34,7 @@ public class VpParser {
     /**
      * Para Extrair os qualifiers, SD metrics nao consegue direito porque está muito nested e nao possui ids
      * <ownedEnd> -> <qualifier> -> <modelRef value="id"/> -> <packagedElement xmi:id="id">
+     * Entao faz se "manual" a leitura
      */
 
     public static Map<String, Qualifier> parseQualifiers(String filePath) throws Exception {

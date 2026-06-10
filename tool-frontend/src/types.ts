@@ -130,6 +130,7 @@ export interface ProjectSettings {
   databaseType?: 'H2' | 'POSTGRESQL' | 'MYSQL'
   serverPort?: number
   openApi?: boolean
+  dockerfile?: boolean
 }
 
 ///////////

@@ -20,27 +20,26 @@ import java.util.Map;
  * processo:
  *   1. generateOperation — cria metodo, emite preconditions, @pre snapshots,
  *      corpo (via generateElements), result alias, postconditions, return
- *   2. generateElements — itera mensagens e fragmentos; só processa
+ *   2. generateElements — itera mensagens e fragmentos, só processa
  *      mensagens enviadas pelo dono da operação
  *   3. generateMessage — gera código para uma mensagem (heurística + fallback)
  *   4. generateFragment — gera código para loop / alt / opt (recursivo)
  *
  * Heurísticas:
- *   - target == entry.target -> "this"; senão usa o nome da lifeline
+ *   - target == entry.target -> "this", senão usa o nome da lifeline
  *   - <attr>.add(x) ou <attr>.remove(x) -> put/remove para Map (com qualifier),
  *     senão add/remove para coleção simples
- *   - addX(x) / removeX(x) (legacy) -> mesma tradução, lookup por par de tipos
  *   - loops sobre Map -> adaptados para iterar .values()
- *   - reply para o actor -> return statement; sem reply -> sem return (void)
+ *   - reply para o actor -> return statement, sem reply -> sem return (void)
  *
  * OCL:
  *   - preconditions e postconditions são emitidas como if (!(...)) throw IllegalStateException
  *   - @pre nas postconditions -> snapshot do estado declarado antes do corpo
  *   - "result" nas postconditions -> alias declarado depois do corpo, antes das checks
  *
- * Convenções (UML que o utilizador desenha):
+ * Convenções ao utilizador fazer o diagrama:
  *   - Tipos explícitos em todos os argumentos e returns (a: Aluno, não apenas a)
- *   - Actor (lifeline sem tipo) chama a operação
+ *   - Actor (lifeline sem tipo) chama a operação ( a nao ser que seja job )
  *   - Nome da mensagem do actor === nome da operação
  *   - Nome da lifeline === nome do parâmetro (para cross-lifeline calls)
  *   - Lifelines do owner devem ser tipadas (turma:Turma)
@@ -190,7 +189,7 @@ public class OperationGenerator {
                         + "' não tem nome — o nome tem de ser igual ao parâmetro/variável que está a ser chamado.");
             }
         }
-        // heurística: <xx>.add(x) / <xx>.remove(x) ou addX/removeX -> acesso à coleção
+        // heurística: <xx>.add(x) / <xx>.remove(x) ou addX/removeX -> acesso a coleção
         String name = msg.getName();
         List<MessageArgument> args = msg.getArguments();
 

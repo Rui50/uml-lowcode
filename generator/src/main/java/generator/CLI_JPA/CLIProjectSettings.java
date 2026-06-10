@@ -4,8 +4,17 @@ public class CLIProjectSettings {
     private String basePackage = "com.example.app";
     private String applicationName = "cli-jpa-template-app";
     private DatabaseType databaseType = DatabaseType.POSTGRESQL;
+    private boolean dockerfile = false;   // gerar Dockerfile
 
     // getters and setters
+    public boolean isDockerfile() {
+        return dockerfile;
+    }
+
+    public void setDockerfile(boolean dockerfile) {
+        this.dockerfile = dockerfile;
+    }
+
     public String getPackagePath() {
         return basePackage.replace('.', '/');
     }

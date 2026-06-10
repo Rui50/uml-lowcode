@@ -24,6 +24,8 @@
   const showPort = computed(() => props.target === 'spring')
   // plain só gera classes; applicationName não se aplica
   const showAppName = computed(() => props.target === 'spring' || props.target === 'cli-jpa')
+  // Dockerfile só faz sentido nos targets com pom (spring e cli-jpa)
+  const showDocker = computed(() => props.target === 'spring' || props.target === 'cli-jpa')
 
   const dbOptions = [
     { label: 'H2 (in-memory)', value: 'H2' },
@@ -58,6 +60,10 @@
     <div v-if="showPort" class="field-check">
       <Checkbox v-model="settings.openApi" :binary="true" inputId="openApi" />
       <label for="openApi">Include OpenAPI / Swagger docs</label>
+    </div>
+    <div v-if="showDocker" class="field-check">
+      <Checkbox v-model="settings.dockerfile" :binary="true" inputId="dockerfile" />
+      <label for="dockerfile">Generate Dockerfile</label>
     </div>
 
     <p v-if="showDB" class="db-note">

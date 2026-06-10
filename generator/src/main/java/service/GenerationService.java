@@ -3,7 +3,6 @@ package service;
 import generator.CLI_JPA.*;
 import model.ParsedModel;
 import model.ProjectSettings;
-import parser.XMIParser;
 import generator.CLI.JavaProjectGenerator;
 import generator.CLI.JavaEntityGenerator;
 import generator.plain.CodeGenerator;
@@ -64,6 +63,9 @@ public class GenerationService {
             if (opts.getDatabaseType() != null && !opts.getDatabaseType().isBlank()) {
                 settings.setDatabaseType(generator.CLI_JPA.DatabaseType.valueOf(opts.getDatabaseType()));
             }
+            if (opts.getDockerfile() != null) {
+                settings.setDockerfile(opts.getDockerfile());
+            }
         }
         CLIProjectGenerator project = new CLIProjectGenerator(settings, outputDir);
         project.generateProjectStructure();
@@ -97,6 +99,9 @@ public class GenerationService {
             }
             if (opts.getOpenApi() != null) {
                 settings.setOpenApi(opts.getOpenApi());
+            }
+            if (opts.getDockerfile() != null) {
+                settings.setDockerfile(opts.getDockerfile());
             }
         }
         SpringProjectGenerator project = new SpringProjectGenerator(settings, outputDir);

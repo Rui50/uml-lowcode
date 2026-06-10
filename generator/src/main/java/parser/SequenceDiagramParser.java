@@ -6,6 +6,12 @@ import com.sdmetrics.model.*;
 
 import model.sequence.*;
 
+/**
+ * coisas principais
+ * interaction = diagrama de sequência
+ * message = signature é a mensagem em si, sort é o tipo (sync etc) e send/receive events para associar às lifelines
+ * sendEvent / receiveEvent = mensagem aponta para estes dois, de onde sai, onde chega
+ */
 public class SequenceDiagramParser {
     private Model model;
     private MetaModel metaModel;
@@ -15,6 +21,7 @@ public class SequenceDiagramParser {
         this.model = model;
         this.metaModel = metaModel;
         // extrai os numeros das mensagens do VP (extension "vpnumber" do Message)
+        // é a unica maneira de obter ordem correta
         this.messageNumbers = VpParser.extractMessageNumbers(xmiFile);
     }
 
@@ -38,7 +45,7 @@ public class SequenceDiagramParser {
 
     /**
      * Constroi um objeto Interaction.
-     * O processo é:
+     * Faz:
      * 1 - parse das lifelines (para depois associar às mensagens)
      * 2 - parse das mensagens (criamos os objetos Message e criamos 2 maps,
      *   um de messageId -> Message e outro de messageId -> sendEvent, para depois construir a hierarquia dos fragments
@@ -81,10 +88,10 @@ public class SequenceDiagramParser {
      * - operandId -> Operand (para obter o Operand a partir do id do fragmento combinado)
      * - fragmentId -> Fragment (para obter o Fragment a partir do id do fragmento
      *
-     * Para cada mensagem ele pega no sendEvent e ve quem é  owner, isso indica o "container" da mensagem
+     * Para cada mensagem ele pega no sendEvent e ve quem é owner, isso indica o "container" da mensagem
      * esse container pode ser a propria interação (root) ou um operand, (mensagem dentro de um loop etc)
      *
-     * Com o container da mensagem, ele chama attachAndGetElements que é recursiva e sobe a arvore de fragments até chegar à raiz (interação)
+     * Com o container da mensagem, ele chama getOrCreateContainerElements que é recursiva e sobe a arvore de fragments até chegar à raiz (interação)
      */
     private void buildFromMessages(ModelElement interactionElement, Interaction interaction,
                                    Map<String, Message> messagesById,
@@ -99,16 +106,26 @@ public class SequenceDiagramParser {
         // cada mensagem precisa de número de sequência para podermos ordenar o corpo
         // isto nunca deve dar erro porque TEM de vir do visual paradigm, mas para ter a certeza
         for (Message m : sorted) {
-            if (m.getVpNumber() == null || m.getVpNumber().isBlank()) {
+            String vp = m.getVpNumber();
+            if (vp == null || vp.isBlank()) {
                 throw new IllegalArgumentException(
                         "Diagrama de sequência '" + interaction.getName() + "': a mensagem '"
                         + (m.getRawName() != null ? m.getRawName() : m.getName())
                         + "' não tem número de sequência — não é possível determinar a ordem.");
             }
+            // o número tem de ser do tipo "1" ou "1.2.3"
+            if (!vp.matches("\\d+(\\.\\d+)*")) {
+                throw new IllegalArgumentException(
+                        "Diagrama de sequência '" + interaction.getName() + "': a mensagem '"
+                        + (m.getRawName() != null ? m.getRawName() : m.getName())
+                        + "' tem um número de sequência inválido ('" + vp + "') — esperado algo como 1 ou 1.2.");
+            }
         }
 
+        // ordenar por VP number para garantir que a ordem visual é a correta
         sorted.sort((a, b) -> compareWithTheDot(a.getVpNumber(), b.getVpNumber()));
 
+        // percorre as mensagems por ordem e coloca cada uma no seu "container"
         for (Message msg : sorted) {
             // entry message (actor -> lifeline): anexar direto à raiz
             if (msg.getSource() == null || msg.getSource().getType() == null) {
@@ -121,7 +138,9 @@ public class SequenceDiagramParser {
 
             // o "container" da mensagem é o owner do seu sendEvent
             ModelElement container = sendEvent.getOwner();
-            List<Object> containerList = attachAndGetElements(container, interaction, rootId, operands, fragments);
+
+            // obtem a lista de elementos do container da mensagem, e adiciona
+            List<Object> containerList = getOrCreateContainerElements(container, interaction, rootId, operands, fragments);
             containerList.add(msg);
         }
     }
@@ -140,10 +159,11 @@ public class SequenceDiagramParser {
      *     cria entao o operand, e regista-o no mapa respetivo
      *     Depois trata do seu CombinedFragment pai:
      *      - se ja existir em fragments, apenas adiciona o novo operand a lista desse fragment
-     *      - se nao existir cria do 0 e chama recursivamente sobro o dono do fragment
-     *      para obter a lista onde esse fragment deve ser inserido
+     *      - não existe -> cria-o e chama-se recursivamente sobre o owner do fragment
+     *        para descobrir ONDE inseri-lo. A recursão sobe o nesting, criando os pais
+     *        que faltam, até à raiz (ou a um nó já criado).
      */
-    private List<Object> attachAndGetElements(ModelElement container, Interaction interaction, String rootId,
+    private List<Object> getOrCreateContainerElements(ModelElement container, Interaction interaction, String rootId,
                                               Map<String, Operand> operands, Map<String, Fragment> fragments) {
         String id = container.getXMIID();
         if (id.equals(rootId)) return interaction.getElements();
@@ -166,7 +186,7 @@ public class SequenceDiagramParser {
             frag.setId(combFragelem.getXMIID());
             frag.setOperator(combFragelem.getPlainAttribute("operator"));
             fragments.put(combFragelem.getXMIID(), frag);
-            List<Object> parentList = attachAndGetElements(combFragelem.getOwner(), interaction, rootId, operands, fragments);
+            List<Object> parentList = getOrCreateContainerElements(combFragelem.getOwner(), interaction, rootId, operands, fragments);
             parentList.add(frag);
         }
         frag.getOperands().add(op);

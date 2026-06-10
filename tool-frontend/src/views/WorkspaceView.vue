@@ -40,6 +40,7 @@ function onConfirm() {
     databaseType: projectSettings.databaseType,
     serverPort: projectSettings.serverPort,
     openApi: projectSettings.openApi,
+    dockerfile: projectSettings.dockerfile,
   })
 }
 

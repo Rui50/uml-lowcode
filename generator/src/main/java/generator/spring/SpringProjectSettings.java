@@ -6,6 +6,7 @@ public class SpringProjectSettings {
     private DatabaseType databaseType = DatabaseType.H2;
     private int serverPort = 8080;
     private boolean openApi = true;   // incluir OpenAPI/Swagger UI (springdoc)
+    private boolean dockerfile = false;   // gerar Dockerfile
 
     // getters and setters
     public boolean isOpenApi() {
@@ -13,6 +14,13 @@ public class SpringProjectSettings {
     }
     public void setOpenApi(boolean openApi) {
         this.openApi = openApi;
+    }
+
+    public boolean isDockerfile() {
+        return dockerfile;
+    }
+    public void setDockerfile(boolean dockerfile) {
+        this.dockerfile = dockerfile;
     }
 
     public String getBasePackage() {

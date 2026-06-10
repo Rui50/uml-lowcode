@@ -7,5 +7,6 @@ export const useProjectSettingsStore = defineStore('projectSettings', () => {
   const databaseType = ref<'H2' | 'POSTGRESQL' | 'MYSQL'>('H2')
   const serverPort = ref<number>(8080)
   const openApi = ref<boolean>(true)
-  return { basePackage, applicationName, databaseType, serverPort, openApi }
+  const dockerfile = ref<boolean>(false)
+  return { basePackage, applicationName, databaseType, serverPort, openApi, dockerfile }
 })

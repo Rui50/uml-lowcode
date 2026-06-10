@@ -47,9 +47,72 @@ public class CLIProjectGenerator {
         generateConfigProperties();
         generateMainClass();
         generateInputUtils();
+        if (settings.isDockerfile()) {
+            generateDockerfile();
+            // H2 é nao previsa mas Postgres/MySQL precisam de um container de BD -> docker-compose
+            if (settings.getDatabaseType() != DatabaseType.H2) {
+                generateDockerCompose();
+            }
+        }
 
 
         System.out.println("CLI-JPA project structure created in: " + outputDirectory);
+    }
+
+    // app CLI interativa, sem jar executável (exec-maven-plugin) -> corre via 'mvn exec:java'.
+    // correr com: docker run -it <image>
+    private void generateDockerfile() throws IOException {
+        try (PrintWriter w = new PrintWriter(new FileWriter(outputDirectory + "/Dockerfile"))) {
+            w.println("# App CLI interativa — correr com:  docker run -it <image>");
+            w.println("FROM maven:3.9-eclipse-temurin-17");
+            w.println("WORKDIR /app");
+            w.println("COPY pom.xml .");
+            w.println("COPY src ./src");
+            w.println("RUN mvn -q clean compile");
+            w.println("CMD [\"mvn\",\"-q\",\"exec:java\"]");
+        }
+        System.out.println("Generated: Dockerfile");
+    }
+
+    // docker-compose: app + container de BD (Postgres/MySQL). O 'db' bate certo com o host
+    // em config.properties e com as credenciais. App interativa -> docker compose run --rm app
+    private void generateDockerCompose() throws IOException {
+        String dbName = settings.getApplicationName();
+        boolean postgres = settings.getDatabaseType() == DatabaseType.POSTGRESQL;
+        try (PrintWriter w = new PrintWriter(new FileWriter(outputDirectory + "/docker-compose.yml"))) {
+            w.println("# App CLI interativa — correr com:  docker compose run --rm app");
+            w.println("services:");
+            w.println("  db:");
+            if (postgres) {
+                w.println("    image: postgres:16");
+                w.println("    environment:");
+                w.println("      POSTGRES_DB: " + dbName);
+                w.println("      POSTGRES_USER: uml");
+                w.println("      POSTGRES_PASSWORD: uml");
+                w.println("    healthcheck:");
+                w.println("      test: [\"CMD-SHELL\", \"pg_isready -U uml -d " + dbName + "\"]");
+                w.println("      interval: 5s");
+                w.println("      retries: 10");
+            } else {
+                w.println("    image: mysql:8");
+                w.println("    environment:");
+                w.println("      MYSQL_DATABASE: " + dbName);
+                w.println("      MYSQL_ALLOW_EMPTY_PASSWORD: \"yes\"");
+                w.println("    healthcheck:");
+                w.println("      test: [\"CMD\", \"mysqladmin\", \"ping\", \"-h\", \"localhost\"]");
+                w.println("      interval: 5s");
+                w.println("      retries: 10");
+            }
+            w.println();
+            w.println("  app:");
+            w.println("    build: .");
+            w.println("    depends_on:");
+            w.println("      db:");
+            w.println("        condition: service_healthy");
+            w.println("    stdin_open: true");
+            w.println("    tty: true");
+        }
+        System.out.println("Generated: docker-compose.yml");
     }
 
     private void generatePomXml() throws IOException {
@@ -155,6 +218,9 @@ public class CLIProjectGenerator {
         String filename = outputDirectory + "/src/main/resources/config.properties";
         try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
             String dbName = settings.getApplicationName();
+            // com Docker, a BD corre noutro container -> host = nome do serviço "db" (docker-compose),
+            // não "localhost" (que apontaria para o próprio container da app)
+            String dbHost = settings.isDockerfile() ? "db" : "localhost";
             switch (settings.getDatabaseType()) {
                 case H2 -> {
                     w.println("jakarta.persistence.jdbc.url=jdbc:h2:./data/" + dbName);
@@ -162,12 +228,12 @@ public class CLIProjectGenerator {
                     w.println("jakarta.persistence.jdbc.password=");
                 }
                 case POSTGRESQL -> {
-                    w.println("jakarta.persistence.jdbc.url=jdbc:postgresql://localhost:5432/" + dbName);
+                    w.println("jakarta.persistence.jdbc.url=jdbc:postgresql://" + dbHost + ":5432/" + dbName);
                     w.println("jakarta.persistence.jdbc.user=uml");
                     w.println("jakarta.persistence.jdbc.password=uml");
                 }
                 case MYSQL -> {
-                    w.println("jakarta.persistence.jdbc.url=jdbc:mysql://localhost:3306/" + dbName);
+                    w.println("jakarta.persistence.jdbc.url=jdbc:mysql://" + dbHost + ":3306/" + dbName);
                     w.println("jakarta.persistence.jdbc.user=root");
                     w.println("jakarta.persistence.jdbc.password=");
                 }

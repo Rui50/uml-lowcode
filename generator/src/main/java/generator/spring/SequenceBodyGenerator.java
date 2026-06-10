@@ -14,14 +14,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Motor partilhado que transcreve um diagrama de sequência (estilo service, com lifelines
- * de repositórios) para o corpo de um método Java. Usado pelos services (operações custom)
- * e pelos jobs (@Scheduled). Não depende de nenhum gerador concreto — só das associações.
+ * diagrama de sequência (com service, com lifelines
+ * de repositórios) para o corpo de um metodo Java. Usado pelos services (operações custom)
+ * e pelos jobs (@Scheduled).
  */
 public class SequenceBodyGenerator {
 
     private final List<Association> associations;
-    // variáveis já declaradas fora do corpo ( elo carregamento da entidade self) — não redeclarar
+    // variáveis já declaradas fora do corpo ( pelo carregamento da entidade self) — não redeclarar
     private final Set<String> preDeclaredVars = new HashSet<>();
 
     public SequenceBodyGenerator(List<Association> associations) {
@@ -46,6 +46,14 @@ public class SequenceBodyGenerator {
                 serviceLifeline = ll;
                 break;
             }
+        }
+
+        // todos os diagramas precisam de service,
+        // Os jobs tecnicamente nao mas falta ver isso
+        if (serviceLifeline == null) {
+            throw new IllegalArgumentException(
+                    "Operação '" + op.getName() + "': o diagrama de sequência não tem uma lifeline do tipo '"
+                    + serviceName + "' (o owner do método). Sem ela não é possível gerar o corpo.");
         }
 
         // mapear lifeline ID -> nome da variável java para os repositories

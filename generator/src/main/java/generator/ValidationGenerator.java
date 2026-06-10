@@ -29,7 +29,7 @@ public class ValidationGenerator {
         writer.println("    // Validation (para ja so invariantes OCL simples");
         writer.println();
 
-        // Javadoc
+        // javadoc
         writer.println("    /**");
         writer.println("     * Validate entity with OCL");
         writer.println("     * ");
@@ -46,7 +46,7 @@ public class ValidationGenerator {
         writer.println("     * @return list of validation errors (empty if valid)");
         writer.println("     */");
 
-        // Method signature
+        // assign metodo
         writer.println("    public List<String> validate() {");
         writer.println("       List<String> errors = new ArrayList<>();");
         if (parentHas) {
@@ -54,13 +54,13 @@ public class ValidationGenerator {
         }
         writer.println();
 
-        // Generate validation for each invariant (ANTLR4 OCL -> Java)
+        // validation para cada invariant (ANTLR4 OCL -> Java)
         for (Invariant inv : cls.getInvariants()) {
-            invariantCheck(writer, inv, null);
+            generateInvariantCheck(writer, inv, null);
         }
         for (Interface iface : cls.getRealizations()) {
             for (Invariant inv : iface.getInvariants()) {
-                invariantCheck(writer, inv, iface.getName());
+                generateInvariantCheck(writer, inv, iface.getName());
             }
         }
 
@@ -69,7 +69,10 @@ public class ValidationGenerator {
         writer.println();
     }
 
-    private void invariantCheck(PrintWriter writer, Invariant inv, String fromInterface) {
+    /**
+     *
+     */
+    private void generateInvariantCheck(PrintWriter writer, Invariant inv, String fromInterface) {
         String javaExpression = inv.getJavaExpression();
         String prefix = (fromInterface != null) ? "[" + fromInterface + "] " : "";
         String errorMessage = (inv.getMessage() != null && !inv.getMessage().isEmpty())

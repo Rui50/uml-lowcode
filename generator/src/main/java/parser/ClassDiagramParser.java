@@ -19,6 +19,7 @@ public class ClassDiagramParser {
     private MetaModel metaModel;
 
     // estes sao temps porque depois passa a ser na "app" e nao no xmi parsing
+    // deixa-se para testar depois sem frontend
     private Map<String, Qualifier> qualifiers;
     private Map<String, List<Invariant>> invariantsCache;
     private Map<String, List<String[]>> initsCache;
@@ -68,6 +69,7 @@ public class ClassDiagramParser {
                 visibility
         );
 
+        // determinar se é uma classe abstrata
         String abstractAttr = element.getPlainAttribute("abstract");
         cl.setAbstract("true".equalsIgnoreCase(abstractAttr));
 
@@ -78,7 +80,7 @@ public class ClassDiagramParser {
                 ModelElement attributeElement = (ModelElement) attributeObj;
 
                 // as associações também aparecem como atributos
-                // tirar porque são tratados depois
+                // tirar porque são tratados depois independentemente
                 ModelElement associationRef = (ModelElement) attributeElement.getRefAttribute("association");
                 if (associationRef != null) {
                     continue;
@@ -179,7 +181,7 @@ public class ClassDiagramParser {
             String name = element.getName();
             Interface iface = new Interface(name, "public");
 
-            // operations
+            // operations dessa interface
             Collection<?> operations = element.getSetAttribute("ownedoperations");
             if (operations != null) {
                 for (Object operationObj : operations) {
@@ -222,9 +224,11 @@ public class ClassDiagramParser {
         operation.setId(element.getXMIID());
         operation.setName(element.getName());
 
+        // visibilidade da operação
         String visibility = element.getPlainAttribute("visibility");
         operation.setVisibility(visibility != null ? visibility : "public");
 
+        // se é op abstrata
         String abstractAttr = element.getPlainAttribute("abstract");
         operation.setAbstract("true".equalsIgnoreCase(abstractAttr));
 
@@ -238,14 +242,16 @@ public class ClassDiagramParser {
                 // direction do parâmetro (in, out, return)
                 String direction = paramElement.getPlainAttribute("kind");
 
-                if (direction.equals("return")){
+                if ("return".equals(direction)){
                     // é um tipo de return
 
                     // genericType é como o VP da handle a Lists etc
                     String genericType = paramElement.getPlainAttribute("generictype");
                     if (genericType != null && !genericType.trim().isEmpty()) {
                         operation.setReturnType(genericType);
-                    } else {
+                    }
+                    // se não tiver genericType, tenta o tipo normal
+                    else {
                         ModelElement type = (ModelElement) paramElement.getRefAttribute("parametertype");
                         if (type != null) {
                             operation.setReturnType(type.getName());
@@ -278,12 +284,13 @@ public class ClassDiagramParser {
         // direction
         parameter.setDirection(direction != null ? direction : "in");
 
+        // genericType = lists etc
         String genericType = element.getPlainAttribute("generictype");
 
         if (genericType != null && !genericType.trim().isEmpty()) {
             parameter.setType(genericType);
         } else {
-            // fallback
+            // tipos "normais"
             ModelElement type = (ModelElement) element.getRefAttribute("parametertype");
             if (type != null) {
                 parameter.setType(type.getName());
@@ -295,9 +302,15 @@ public class ClassDiagramParser {
         return parameter;
     }
 
+    /**
+     * extrai as associações do modelo, incluindo multiplicidade, roles, navegabilidade e agregação.
+     * assume sempre que tem exatamente 2 "ends"
+     * assume tambem que ends.get(0) é source e ends.get(1) é target
+     */
     public List<Association> parseAssociations() {
         List<Association> associations =  new ArrayList<>();
 
+        // todos os elementos de associação
         List<ModelElement> associationElements = model.getAcceptedElements(metaModel.getType("association"));
 
         for (ModelElement associationElement: associationElements){
@@ -311,7 +324,7 @@ public class ClassDiagramParser {
                     ends.add((ModelElement) endObj);
                 }
 
-                // origem
+                // origem - assume sempre como sendo o get(0) da assoc
                 ModelElement sourceEnd = ends.get(0);
                 ModelElement sourceType = (ModelElement) sourceEnd.getRefAttribute("propertytype");
 
@@ -347,21 +360,24 @@ public class ClassDiagramParser {
 
                     String sourceLowerValue = sourceLower != null ? sourceLower.getPlainAttribute("value") : null;
                     String sourceUpperValue = sourceUpper != null ? sourceUpper.getPlainAttribute("value") : null;
+
                     association.setSourceMultiplicity(buildMultiplicity(sourceLowerValue, sourceUpperValue));
 
                     // Multiplicidade target
                     ModelElement targetLower = (ModelElement) targetEnd.getRefAttribute("lowervalue");
                     ModelElement targetUpper = (ModelElement) targetEnd.getRefAttribute("uppervalue");
+
                     String targetLowerValue = targetLower != null ? targetLower.getPlainAttribute("value") : null;
                     String targetUpperValue = targetUpper != null ? targetUpper.getPlainAttribute("value") : null;
+
                     association.setTargetMultiplicity(buildMultiplicity(targetLowerValue, targetUpperValue));
 
                     // navegability
                     String sourceNavigable = sourceEnd.getPlainAttribute("isnavigable");
                     String targetNavigable = targetEnd.getPlainAttribute("isnavigable");
+
                     association.setSourceNavigable(sourceNavigable == null || Boolean.parseBoolean(sourceNavigable));
                     association.setTargetNavigable(targetNavigable == null || Boolean.parseBoolean(targetNavigable));
-                    
 
                     if(sourceQualifier != null) {
                         association.setQualifierName(sourceQualifier.name);
@@ -410,6 +426,7 @@ public class ClassDiagramParser {
     public List<Generalization> parseGeneralizations() {
         List<Generalization> generalizations = new ArrayList<>();
 
+        // obtem as associações de herança do modelo
         List<ModelElement> generalizationElements = model.getAcceptedElements(metaModel.getType("generalization"));
 
 

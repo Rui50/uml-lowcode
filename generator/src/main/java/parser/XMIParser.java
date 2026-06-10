@@ -17,8 +17,6 @@ import model.Class;
 import model.Enumeration;
 import model.annotations.Invariant;
 import model.sequence.Interaction;
-import ocl.OCLToJavaVisitor;
-import parser.VpParser;
 import parser.VpParser.Qualifier;
 import parser.VpAnnotationsParser;
 

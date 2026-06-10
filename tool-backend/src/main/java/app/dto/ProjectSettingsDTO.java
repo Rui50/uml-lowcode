@@ -12,6 +12,8 @@ public class ProjectSettingsDTO {
     private String applicationName;   // optional, "my-app"
     private String databaseType;      // "H2" | "POSTGRESQL" | "MYSQL"
     private Integer serverPort;       // Spring only
+    private Boolean openApi;          // Spring only — incluir OpenAPI/Swagger
+    private Boolean dockerfile;       // Spring / CLI-JPA — gerar Dockerfile (+ compose se Postgres/MySQL)
 }
 
 
