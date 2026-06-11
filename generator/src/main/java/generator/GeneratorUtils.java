@@ -1,6 +1,7 @@
 package generator;
 
 import model.Association;
+import model.Attribute;
 import model.Class;
 import model.Operation;
 import model.Parameter;
@@ -13,14 +14,70 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class GeneratorUtils {
 
     public static String capitalizeFirst(String s) {
         if (s == null || s.isEmpty()) return s;
         return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /**
+     * operações "efetivas" de uma classe: próprias + herdadas, com o override a
+     * "ganhar". getAllOperations devolve as próprias primeiro, por isso a primeira
+     * ocorrência de cada nome é a mais derivada (o override).
+     */
+    public static List<Operation> effectiveOperations(Class cls) {
+        Map<String, Operation> byName = new LinkedHashMap<>();
+        for (Operation op : cls.getAllOperations()) {
+            byName.putIfAbsent(op.getName(), op);
+        }
+        return new ArrayList<>(byName.values());
+    }
+
+    /**
+     * Classe que realmente declara a operação (sobe na hierarquia até a encontrar);
+     * para uma op herdada por StudentMember, devolve Member.
+     *
+     * Necessário porque uma operação de uma superclasse abstrata  (Member.redeemPoints Staffmember.redeempoints)
+     * é gerada nos serviços/controllers das subclasses concretas (StudentMember, StaffMember),
+     * mas o seu diagrama de sequência foi desenhado em termos da classe que a declara —
+     * MemberService, memberId, lifeline ': Member'. Devolver este "owner" deixa a geração
+     * ler o diagrama nesses termos enquanto emite para a classe concreta. Sem isto, procurava
+     * StudentMemberService / studentMemberId e não encontrava a mensagem de entrada, o
+     * parâmetro de self, nem a lifeline do service — e rebentava.
+     */
+    public static Class declaringClassOf(Class cls, Operation op) {
+        for (Class c = cls; c != null; c = c.getParentClass()) {
+            if (c.getOperations().contains(op)) return c;
+        }
+        return cls;
+    }
+
+    /**
+     * devolve o tipo de referência (wrapper) de um primitivo; necessário quando
+     * o campo tem de poder ser null (ex.: campo de CreateDTO com valor por defeito).
+     * tipos que já são de referência ficam inalterados.
+     */
+    public static String fixType(String type) {
+        if (type == null) return null;
+        switch (type) {
+            case "int":     return "Integer";
+            case "long":    return "Long";
+            case "short":   return "Short";
+            case "byte":    return "Byte";
+            case "boolean": return "Boolean";
+            case "char":    return "Character";
+            case "double":  return "Double";
+            case "float":   return "Float";
+            default:        return type;   // já é tipo de referência
+        }
     }
 
     public static String lowercaseFirst(String s) {
@@ -100,7 +157,13 @@ public class GeneratorUtils {
         for (Class c : classes) entityNames.add(c.getName());
 
         Set<String> entitiesToImport = new HashSet<>();
-        for (Operation op : cls.getOperations()) {
+        for (Operation op : effectiveOperations(cls)) {   // inclui herdadas: os seus tipos também são usados nos métodos/stubs gerados
+            // a classe que declara a op (owner) é o tipo do 'self' carregado no service
+            // de uma op herdada (ex: Member member = ...), logo tem de ser importada
+            Class owner = declaringClassOf(cls, op);
+            if (!owner.getName().equals(cls.getName())) {
+                entitiesToImport.add(owner.getName());
+            }
             for (Parameter param : op.getParameters()) {
                 String baseType = extractBaseType(param.getType());
                 if (baseType != null && entityNames.contains(baseType) && !baseType.equals(cls.getName())) {
@@ -147,6 +210,26 @@ public class GeneratorUtils {
         List<String> mapFields = getMapFieldNames(cls, associations);
         for (String field : mapFields) {
             java = java.replace("this." + field + ".stream()", "this." + field + ".values().stream()");
+        }
+        return java;
+    }
+
+    /**
+     * os atributos derivados não têm campo, apenas getter. O visitor traduz
+     * self.<attr> como acesso direto a campo (this.<attr>), o que não compila
+     * para um derivado. Reescrevemos esses acessos para a chamada do getter
+     * (this.get<Attr>()). Inclui derivados herdados, porque getAllAttributes
+     * percorre a cadeia de pais.
+     */
+    public static String fixDerivedAccess(String java, Class cls) {
+        if (java == null || cls == null) return java;
+        for (Attribute a : cls.getAllAttributes()) {
+            if (!a.hasDerive()) continue;
+            String name = a.getName();
+            String replacement = Matcher.quoteReplacement(
+                    "this.get" + capitalizeFirst(name) + "()");
+            // \b para não apanhar prefixos (this.activeLoansX)
+            java = java.replaceAll("\\bthis\\." + Pattern.quote(name) + "\\b", replacement);
         }
         return java;
     }

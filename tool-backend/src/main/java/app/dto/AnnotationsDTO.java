@@ -34,4 +34,7 @@ public class AnnotationsDTO {
 
     // key operationId -> config do endpoint REST / job
     private Map<String, EndpointConfigDTO> endpointByOperation = new HashMap<>();
+
+    // key className -> gerar controller REST? (Spring; default true)
+    private Map<String, Boolean> generateControllerByClass = new HashMap<>();
 }

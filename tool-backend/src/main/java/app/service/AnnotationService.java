@@ -33,6 +33,16 @@ public class AnnotationService {
         applyInheritanceStrategies(classes, payload.getInheritanceStrategyByClass());
         applyIds(classes, payload.getIdByClass());
         applyEndpointConfig(classes, payload.getEndpointByOperation());
+        applyControllerConfig(classes, payload.getGenerateControllerByClass());
+    }
+
+    // gerar (ou não) o controller REST, por classe
+    private void applyControllerConfig(List<Class> classes, Map<String, Boolean> map) {
+        if (map == null) return;
+        map.forEach((className, generate) -> {
+            Class c = findClass(classes, className);
+            if (c != null && generate != null) c.setGenerateController(generate);
+        });
     }
 
     // config do endpoint REST / job, por operação

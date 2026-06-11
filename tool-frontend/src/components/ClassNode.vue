@@ -38,7 +38,10 @@ function attrAnnotated(attrName: string): boolean {
 
       <div class="header">
         <span v-if="classAnnotated" class="dot" />
-        <div class="class-name" :class="{ abstract: data.isAbstract }">{{ data.name }}</div>
+        <div class="title">
+          <div v-if="data.isAbstract" class="stereotype">«abstract»</div>
+          <div class="class-name" :class="{ abstract: data.isAbstract }">{{ data.name }}</div>
+        </div>
         <div v-if="data.parent" class="parent">: {{ data.parent }}</div>
       </div>
 
@@ -125,8 +128,19 @@ function attrAnnotated(attrName: string): boolean {
     vertical-align: middle;
   }
 
-  .class-name.abstract { 
-    font-style: italic; 
-    color: yellow;
+  .title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.1;
+  }
+  .stereotype {
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    font-style: italic;
+    color: var(--p-text-muted-color, #6b7787);
+  }
+  .class-name.abstract {
+    font-style: italic;
   }
 </style>

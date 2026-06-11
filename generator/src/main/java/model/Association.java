@@ -111,7 +111,26 @@ public class Association extends Relationship {
     }
 
     public void setQualifierType(String qualifierType) {
-        this.qualifierType = qualifierType;
+        this.qualifierType = toJavaKeyType(qualifierType);
+    }
+
+    // as chaves de um Map têm de ser tipos de referência; o VP exporta os
+    // primitivos em minúsculas ( "string", "int"), por isso normalizamos
+    // para o tipo Java correspondente
+    private static String toJavaKeyType(String t) {
+        if (t == null) return null;
+        switch (t.trim().toLowerCase()) {
+            case "string":                 return "String";
+            case "int": case "integer":    return "Integer";
+            case "long":                   return "Long";
+            case "short":                  return "Short";
+            case "byte":                   return "Byte";
+            case "boolean":                return "Boolean";
+            case "char": case "character": return "Character";
+            case "double":                 return "Double";
+            case "float":                  return "Float";
+            default:                       return t;   // tipo de referência definido pelo utilizador (classe/enum)
+        }
     }
 
     public boolean hasQualifier() {

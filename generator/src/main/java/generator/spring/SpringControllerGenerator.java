@@ -46,6 +46,7 @@ public class SpringControllerGenerator {
 
         for (Class cls : classes) {
             if (cls.isAbstract()) continue;
+            if (!cls.isGenerateController()) continue;   // controller suprimido para esta classe
             generateController(cls, classes, associations, controllerDir, interactions);
         }
 
@@ -361,9 +362,10 @@ public class SpringControllerGenerator {
         // ResponseDTOs (de outras entidades) + Collectors para endpoints custom que devolvem entidades
         Set<String> responseDtoImports = new HashSet<>();
         boolean needsCollectors = false;
-        for (Operation op : cls.getOperations()) {
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             if (op.isJob() || op.getSequenceDiagram() == null) continue;
-            Message entry = SpringUtils.findEntryMessage(op.getSequenceDiagram(), cls, op);
+            Class owner = GeneratorUtils.declaringClassOf(cls, op);
+            Message entry = SpringUtils.findEntryMessage(op.getSequenceDiagram(), owner, op);
             String rt = customOpReturnType(cls, op, entry);
             if ("void".equals(rt)) continue;
             String base = GeneratorUtils.extractBaseType(rt);
@@ -385,7 +387,7 @@ public class SpringControllerGenerator {
     // entidades referenciadas em parametros de operações (excluindo a propria classe)
     private Set<String> getExtraServices(Class cls, List<Class> allClasses) {
         Set<String> extraServices = new HashSet<>();
-        for (Operation op : cls.getOperations()) {
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             for (Parameter param : op.getParameters()) {
                 for (Class c : allClasses) {
                     if (c.getName().equals(param.getType()) && !c.getName().equals(cls.getName())) {
@@ -432,6 +434,13 @@ public class SpringControllerGenerator {
             writer.println("            .body(Map.of(\"error\", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));");
             writer.println("    }");
             writer.println();
+            writer.println("    // violações de pré/pós-condição (OCL) são erros do cliente -> 400, não 404");
+            writer.println("    @ExceptionHandler(IllegalStateException.class)");
+            writer.println("    public ResponseEntity<Map<String, String>> handleContractError(IllegalStateException ex) {");
+            writer.println("        return ResponseEntity.status(HttpStatus.BAD_REQUEST)");
+            writer.println("            .body(Map.of(\"error\", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));");
+            writer.println("    }");
+            writer.println();
             writer.println("    @ExceptionHandler(RuntimeException.class)");
             writer.println("    public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException ex) {");
             writer.println("        return ResponseEntity.status(HttpStatus.NOT_FOUND)");
@@ -449,7 +458,7 @@ public class SpringControllerGenerator {
 
     private void generateCustomOperationEndpoints(PrintWriter writer, Class cls, List<Interaction>
             interactions, List<Class> allClasses) {
-        if (cls.getOperations().isEmpty()) return;
+        if (GeneratorUtils.effectiveOperations(cls).isEmpty()) return;
 
         String className = cls.getName();
         String serviceName = GeneratorUtils.lowercaseFirst(className) + "Service";
@@ -457,13 +466,15 @@ public class SpringControllerGenerator {
         writer.println();
         writer.println("    // Custom Operation Endpoints dos diagramas sequencia");
 
-        for (Operation op : cls.getOperations()) {
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             if (op.isJob()) continue;   // jobs são @Scheduled, não têm endpoint REST
 
             Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
 
-            Message entryMessage = SpringUtils.findEntryMessage(interaction, cls, op);
+            // diagrama foi desenhado na classe que declara a op; a chamada vai à do service concreto
+            Class owner = GeneratorUtils.declaringClassOf(cls, op);
+            Message entryMessage = SpringUtils.findEntryMessage(interaction, owner, op);
             List<MessageArgument> entryArgs = (entryMessage != null) ? entryMessage.getArguments() : new ArrayList<>();
 
             // endpoint parâmetros = mensagem de entrada; chama o service tal e qual

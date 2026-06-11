@@ -70,11 +70,28 @@ public class SequenceDiagramParser {
 
         buildFromMessages(element, interaction, messagesById, sendEventsByMessageId);
 
-        // context class
-        if (!interaction.getLifelines().isEmpty()) {
-            interaction.setContextClass(interaction.getLifelines().get(0).getType());
-        }
+        // context = "dono" do diagrama: o tipo do alvo da mensagem de entrada (actor -> lifeline).
+        // distingue diagramas com o mesmo nome (ex: versão entity vs service)
+        interaction.setContextClass(resolveContextClass(interaction));
         return interaction;
+    }
+
+    /**
+     * O "dono" do diagrama ou seja o tipo do alvo da mensagem de entrada (actor -> lifeline),
+     * ou seja a lifeline que o actor chama. como "fallback" a primeira lifeline com tipo.
+     */
+    private String resolveContextClass(Interaction interaction) {
+        for (Object el : interaction.getElements()) {
+            if (el instanceof Message m
+                    && (m.getSource() == null || m.getSource().getType() == null)
+                    && m.getTarget() != null && m.getTarget().getType() != null) {
+                return m.getTarget().getType();
+            }
+        }
+        for (Lifeline ll : interaction.getLifelines()) {
+            if (ll.getType() != null) return ll.getType();
+        }
+        return null;
     }
 
 

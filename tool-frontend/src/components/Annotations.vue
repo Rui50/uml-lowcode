@@ -117,6 +117,18 @@ function pickIdAttribute(name: string | null) {
   })
 }
 
+// controller REST por classe (Spring); abstratas/interfaces não têm controller
+const controllerEligible = computed(() =>
+  !isInterface.value && !!model.selectedClass && !model.selectedClass.isAbstract
+)
+
+// garante a entrada do controller (default true) para a classe selecionada
+watch(className, (name) => {
+  if (name && controllerEligible.value && annotations.generateControllerByClass[name] === undefined) {
+    annotations.generateControllerByClass[name] = true
+  }
+}, { immediate: true })
+
 function key(name: string) {
   return `${className.value}.${name}`
 }
@@ -300,6 +312,9 @@ function close() {
         </TabPanel>
 
         <TabPanel value="persistence">
+          <p class="tab-note">
+            Applies only to the <strong>CLI + JPA</strong> and <strong>Spring</strong> targets.
+          </p>
           <!-- Identificador @Id (só na raiz da hierarquia) -->
           <section v-if="isIdRoot" class="block">
             <header class="block-head">
@@ -347,6 +362,23 @@ function close() {
         </TabPanel>
 
         <TabPanel value="spring">
+          <!-- Geração do controller REST por classe -->
+          <section v-if="controllerEligible" class="block">
+            <header class="block-head">
+              <h4>REST controller</h4>
+            </header>
+            <div class="entry">
+              <div class="job-toggle">
+                <Checkbox v-model="annotations.generateControllerByClass[className!]" :binary="true" inputId="gen-controller" />
+                <label for="gen-controller">Generate REST controller</label>
+              </div>
+              <p class="hint">
+                Se desativado, esta classe não expõe endpoints REST.
+                A entidade, repositório e serviço continuam a ser gerados.
+              </p>
+            </div>
+          </section>
+
           <!-- Endpoint / Job por operação (mapeamento PSM) -->
           <section v-if="!isInterface" class="block">
             <header class="block-head">
@@ -456,6 +488,16 @@ function close() {
   flex: 1;
 }
 
+.sub-entry :deep(.p-select) {
+  flex: 1;
+  min-width: 0;
+}
+.sub-entry :deep(.p-select-label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .endpoint-cfg {
   display: flex;
   flex-direction: column;
@@ -495,6 +537,19 @@ function close() {
   opacity: 0.65;
   margin: 0;
   line-height: 1.4;
+}
+
+.tab-note {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+.tab-note strong {
+  font-weight: 600;
 }
 
 :deep(.p-tabs) {

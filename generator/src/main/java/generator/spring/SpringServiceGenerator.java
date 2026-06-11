@@ -765,8 +765,7 @@ public class SpringServiceGenerator {
             writer.println("        // Update attributes from DTO");
             for (Attribute attr : allAttrs) {
                 String attrName = attr.getName();
-                String prefix = "boolean".equals(attr.getType()) ? "is" : "get";
-                String getter = prefix + GeneratorUtils.capitalizeFirst(attrName);
+                String getter = "get" + GeneratorUtils.capitalizeFirst(attrName);
                 String setter = "set" + GeneratorUtils.capitalizeFirst(attrName);
 
                 writer.println("        existing." + setter + "(dto." + getter + "());");
@@ -800,16 +799,17 @@ public class SpringServiceGenerator {
      * */
 
     private void generateCustomOperations(PrintWriter writer, Class cls) {
-        if (cls.getOperations().isEmpty()) {
+        if (GeneratorUtils.effectiveOperations(cls).isEmpty()) {
             return;
         }
 
         writer.println("    // operations (TODO: implement)");
 
-        for (Operation op : cls.getOperations()) {
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             if (op.isJob()) continue;   // jobs são gerados como classes próprias em jobs/<Op>Job
+            Class owner = GeneratorUtils.declaringClassOf(cls, op);   // classe onde a op (e o diagrama) foi declarada
             Interaction interaction = op.getSequenceDiagram();
-            generateCustomOperation(writer, cls, op, interaction);
+            generateCustomOperation(writer, cls, owner, op, interaction);
         }
     }
 
@@ -818,8 +818,9 @@ public class SpringServiceGenerator {
         return javaExpr != null && javaExpr.contains("this.");
     }
 
-    private void generateCustomOperation(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
-        String className = cls.getName();
+    private void generateCustomOperation(PrintWriter writer, Class cls, Class owner, Operation op, Interaction interaction) {
+        String className = cls.getName();       // classe concreta onde o método é emitido (ex: StudentMember)
+        String ownerName = owner.getName();     // classe que declara a op / dona do diagrama (ex: Member)
         String operName = op.getName();
 
         if (interaction == null) {
@@ -844,11 +845,11 @@ public class SpringServiceGenerator {
             return;
         }
 
-        Message entryMessage = SpringUtils.findEntryMessage(interaction, cls, op);
+        Message entryMessage = SpringUtils.findEntryMessage(interaction, owner, op);
         // operação normal (não-job) tem de ter mensagem de entrada (actor -> service) — define a assinatura
         if (entryMessage == null) {
             throw new IllegalArgumentException("Operação '" + operName
-                    + "': o diagrama não tem mensagem de entrada (actor -> " + className + "Service) com o nome da operação.");
+                    + "': o diagrama não tem mensagem de entrada (actor -> " + ownerName + "Service) com o nome da operação.");
         }
 
         // a mensagem de entrada tem de corresponder à operação declarada (pelo nome)
@@ -883,7 +884,7 @@ public class SpringServiceGenerator {
 
         SequenceBodyGenerator bodyGen = new SequenceBodyGenerator(associations);
 
-        String selfVar = GeneratorUtils.lowercaseFirst(className);
+        String selfVar = GeneratorUtils.lowercaseFirst(ownerName);   // var/id seguem a classe do diagrama (ex: member, memberId)
         boolean hasConditions = !op.getPreconditions().isEmpty() || !op.getPostconditions().isEmpty();
         // só carregamos self se alguma condição o referir (this.) ou houver snapshot @pre;
         // uma condição só sobre parâmetros (ex: pre: d > 0) não precisa de self nem do <entityVar>Id
@@ -901,8 +902,10 @@ public class SpringServiceGenerator {
                 throw new IllegalArgumentException("Operação '" + operName + "': condições que referem 'self' "
                         + "precisam de um parâmetro '" + idParam + "' para o carregar.");
             }
-            String repoName = selfVar + "Repository";
-            writer.println("        " + className + " " + selfVar + " = " + repoName + ".findById(" + idParam + ")");
+            // self é carregado pelo repositório da classe CONCRETA (a abstrata não tem repo),
+            // mas tipado como a classe dona do diagrama (ex: Member member = studentMemberRepository...)
+            String repoName = GeneratorUtils.lowercaseFirst(className) + "Repository";
+            writer.println("        " + ownerName + " " + selfVar + " = " + repoName + ".findById(" + idParam + ")");
             writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found\"));");
             // pré-declara o self (carregado acima) para o SequenceBodyGenerator saltar o
             // "turma = findById(...)" do diagrama e não o declarar duas vezes;
@@ -929,7 +932,7 @@ public class SpringServiceGenerator {
             }
         }
 
-        bodyGen.generateMethodBodyFromInteraction(writer, cls, op, interaction);
+        bodyGen.generateMethodBodyFromInteraction(writer, owner, op, interaction);   // lifeline do service = a do diagrama (owner)
 
         // a expressão de return vem da reply-message para o actor  sem reply não é feito return
         String returnExpr = GeneratorUtils.findReplyToActor(interaction.getElements());

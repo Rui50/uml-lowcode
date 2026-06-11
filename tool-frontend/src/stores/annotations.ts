@@ -45,6 +45,9 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   // key: operationId -> config do endpoint REST / job (ausente = POST /<opName>, não-job)
   const endpointByOperation = ref<Record<string, EndpointConfig>>({})
 
+  // key: ClassName -> gerar controller REST? (ausente = true)
+  const generateControllerByClass = ref<Record<string, boolean>>({})
+
   function addInvariant(className: string) {
     if (!invariantsByClass.value[className]) invariantsByClass.value[className] = []
     invariantsByClass.value[className].push({
@@ -143,6 +146,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       inheritanceStrategyByClass.value = {}
       idByClass.value = {}
       endpointByOperation.value = {}
+      generateControllerByClass.value = {}
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -156,6 +160,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     inheritanceStrategyByClass.value = data.inheritanceStrategyByClass || {}
     idByClass.value = data.idByClass || {}
     endpointByOperation.value = data.endpointByOperation || {}
+    generateControllerByClass.value = data.generateControllerByClass || {}
   }
 
   function saveForModel(name: string | null) {
@@ -171,6 +176,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       inheritanceStrategyByClass: inheritanceStrategyByClass.value,
       idByClass: idByClass.value,
       endpointByOperation: endpointByOperation.value,
+      generateControllerByClass: generateControllerByClass.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
@@ -186,7 +192,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // save current bucket on any annotation change
   watch(
-    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation],
+    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass],
     () => saveForModel(modelStore.fileName),
     { deep: true }
   )
@@ -201,6 +207,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     inheritanceStrategyByClass.value = {}
     idByClass.value = {}
     endpointByOperation.value = {}
+    generateControllerByClass.value = {}
   }
 
   return {
@@ -214,6 +221,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     inheritanceStrategyByClass,
     idByClass,
     endpointByOperation,
+    generateControllerByClass,
 
     // actions
     addInvariant,

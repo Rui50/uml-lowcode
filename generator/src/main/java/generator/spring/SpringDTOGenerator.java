@@ -108,7 +108,11 @@ public class SpringDTOGenerator {
             w.println("public class " + className + "CreateDTO {");
             w.println();
             for (Attribute attr : allAttrs) {
-                w.println("    private " + attr.getType() + " " + attr.getName() + ";");
+                // campos com valor por defeito são "boxed" (int -> Integer) para
+                // poderem ser null, e assim preservar o default quando não enviados
+                String type = attr.getInitExpression() != null
+                        ? GeneratorUtils.fixType(attr.getType()) : attr.getType();
+                w.println("    private " + type + " " + attr.getName() + ";");
             }
 
             // toEntity() method
@@ -118,12 +122,11 @@ public class SpringDTOGenerator {
             w.println("        " + className + " " + varName + " = new " + className + "();");
             for (Attribute attr : allAttrs) {
                 String cap = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
-                String prefix = "boolean".equals(attr.getType()) ? "is" : "get";
                 if (attr.getInitExpression() != null) {
                     // preserve entity's init default when client didn't send a value
-                    w.println("        if (this." + prefix + cap + "() != null) " + varName + ".set" + cap + "(this." + prefix + cap + "());");
+                    w.println("        if (this.get" + cap + "() != null) " + varName + ".set" + cap + "(this.get" + cap + "());");
                 } else {
-                    w.println("        " + varName + ".set" + cap + "(this." + prefix + cap + "());");
+                    w.println("        " + varName + ".set" + cap + "(this.get" + cap + "());");
                 }
             }
             w.println("        return " + varName + ";");
@@ -226,8 +229,7 @@ public class SpringDTOGenerator {
 
             for (Attribute attr : allAttrs) {
                 String cap = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
-                String prefix = "boolean".equals(attr.getType()) ? "is" : "get";
-                w.println("        dto.set" + cap + "(" + varName + "." + prefix + cap + "());");
+                w.println("        dto.set" + cap + "(" + varName + ".get" + cap + "());");
             }
 
             for (RelationshipInfo rel : relationships) {

@@ -1,5 +1,6 @@
 package app.dto.dclass;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import java.util.List;
@@ -11,6 +12,9 @@ public class ClassDTO {
     private String parent;
     private List<AttributeDTO> attributes;
     private List<OperationDTO> operations;
+    // Jackson tira o "is" de getters boolean (isAbstract -> "abstract"); forçamos
+    // a chave "isAbstract" para coincidir com o que o frontend lê
+    @JsonProperty("isAbstract")
     private boolean isAbstract;
     private List<String> realizations;
 }

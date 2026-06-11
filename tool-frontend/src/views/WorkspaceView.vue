@@ -4,6 +4,7 @@ import { useToast } from 'primevue/usetoast'
 import { useModelStore } from '@/stores/model'
 import { useProjectSettingsStore } from '@/stores/projectSettings'
 
+import Select from 'primevue/select'
 import DiagramList from '@/components/DiagramList.vue'
 import DiagramCanvas from '@/components/DiagramCanvas.vue'
 import Annotations from '@/components/Annotations.vue'
@@ -11,6 +12,12 @@ import SettingsModal from '@/components/SettingsModal.vue'
 
 const modelStore = useModelStore()
 const target = ref('plain')
+const targetOptions = [
+  { label: 'Plain Java', value: 'plain' },
+  { label: 'CLI', value: 'cli' },
+  { label: 'CLI + JPA', value: 'cli-jpa' },
+  { label: 'Spring Boot', value: 'spring' },
+]
 
 const showSettings = ref(false);
 const projectSettings = useProjectSettingsStore();
@@ -49,19 +56,26 @@ function onConfirm() {
 <template>
   <div class="workspace">
     <header class="topbar">
-      <h1>UML-LowCode</h1>
-      <span class="filename">{{ modelStore.fileName }}</span>
+      <div class="brand">
+        <span class="brand__name">UML-LowCode</span>
+        <span v-if="modelStore.fileName" class="brand__sep" aria-hidden="true"></span>
+        <code v-if="modelStore.fileName" class="brand__file">{{ modelStore.fileName }}</code>
+      </div>
 
-      <select v-model="target">
-        <option value="plain">Plain Java</option>
-        <option value="cli">CLI</option>
-        <option value="cli-jpa">CLI + JPA</option>
-        <option value="spring">Spring Boot</option>
-      </select>
-      <button @click="startGenerate">Generate</button>
-      <SettingsModal v-model:open="showSettings" :target="target" @confirm="onConfirm" />
-
-      <button @click="modelStore.reset()">Upload another</button>
+      <div class="actions">
+        <span class="target-label">Generation target</span>
+        <Select
+          v-model="target"
+          :options="targetOptions"
+          optionLabel="label"
+          optionValue="value"
+          size="small"
+          aria-label="Generation target"
+        />
+        <button class="btn" @click="startGenerate">Generate</button>
+        <button class="btn" @click="modelStore.reset()">Upload another</button>
+        <SettingsModal v-model:open="showSettings" :target="target" @confirm="onConfirm" />
+      </div>
     </header>
     <div class="layout">
       <DiagramList />
@@ -77,38 +91,81 @@ function onConfirm() {
   flex-direction: column;
   height: 100vh;
 }
+
 .topbar {
+  --accent: var(--p-primary-color, #2f6f87);
+  --contrast: var(--p-primary-contrast-color, #ffffff);
+  --line: var(--p-content-border-color, var(--color-border, #e4e8ee));
+  --ink: var(--p-text-color, var(--color-text, #1f2933));
+  --muted: var(--p-text-muted-color, #6b7787);
+  --surface: var(--p-content-background, var(--color-secondary, #ffffff));
+  --mono: ui-monospace, "JetBrains Mono", "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-secondary);
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
 }
-.topbar h1 {
-  font-size: 1.1rem;
-  margin: 0;
-  color: var(--color-text);
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
 }
-.filename {
-  color: var(--color-text);
-  opacity: 0.7;
-  font-size: 0.9rem;
-  flex: 1;
+.brand__name {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
-.topbar button {
-  background: var(--color-secondary-hover);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: 0.4rem 0.8rem;
+.brand__sep {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  background: var(--line);
+}
+.brand__file {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  max-width: 26ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.target-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.btn {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 5px;
   cursor: pointer;
+  padding: 0.38rem 0.8rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.topbar button:hover {
-  background: var(--color-primary);
-  color: #000;
-  border-color: var(--color-primary);
+.btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--contrast);
 }
+
 .layout {
   display: flex;
   flex: 1;

@@ -42,6 +42,9 @@ public class Class {
     // "SINGLE_TABLE" (default) | "JOINED"
     private String inheritanceStrategy = "SINGLE_TABLE";
 
+    // gerar o controller REST para esta classe? (Spring) — default true
+    private boolean generateController = true;
+
     // identificador JPA (sempre auto-gerado)
     // idAttributeName == null -> id sintético (@Id @GeneratedValue Long id) [default]
     // caso contrário          -> usa esse atributo como @Id @GeneratedValue
@@ -131,6 +134,14 @@ public class Class {
         if (inheritanceStrategy != null && !inheritanceStrategy.isBlank()) {
             this.inheritanceStrategy = inheritanceStrategy;
         }
+    }
+
+    public boolean isGenerateController() {
+        return generateController;
+    }
+
+    public void setGenerateController(boolean generateController) {
+        this.generateController = generateController;
     }
 
     // raiz da hierarquia (a própria classe se não tiver pai)

@@ -7,24 +7,24 @@
     <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIProjectGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIProjectGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIProjectSettings.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIProjectSettings.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/OperationGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/OperationGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/ValidationGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/ValidationGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SequenceBodyGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SequenceBodyGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectSettings.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectSettings.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/ProjectSettings.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/ProjectSettings.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/parser/ClassDiagramParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/ClassDiagramParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIMenuGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIMenuGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/Association.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Association.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/Class.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Class.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/parser/SequenceDiagramParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/SequenceDiagramParser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/parser/VpParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/VpParser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/parser/XMIParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/XMIParser.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/service/GenerationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/service/GenerationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/ProjectSettingsDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/ProjectSettingsDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/ToolService.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/ToolService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/SettingsModal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/SettingsModal.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/stores/projectSettings.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/stores/projectSettings.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AnnotationsDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AnnotationsDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dclass/ClassDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dclass/ClassDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/AnnotationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/AnnotationService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/api/model.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/api/model.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/Annotations.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/Annotations.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/ClassNode.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/ClassNode.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/FileUploader.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/FileUploader.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/views/UploadView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/views/UploadView.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tool-frontend/src/views/WorkspaceView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/views/WorkspaceView.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

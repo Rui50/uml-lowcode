@@ -1,8 +1,15 @@
 package service;
 
 import generator.CLI_JPA.*;
+import generator.GeneratorUtils;
 import model.ParsedModel;
 import model.ProjectSettings;
+import model.Class;
+import model.Attribute;
+import model.Operation;
+import model.annotations.Invariant;
+import model.annotations.Precondition;
+import model.annotations.Postcondition;
 import generator.CLI.JavaProjectGenerator;
 import generator.CLI.JavaEntityGenerator;
 import generator.plain.CodeGenerator;
@@ -11,6 +18,7 @@ import generator.spring.*;
 
 public class GenerationService {
     public void generate(ParsedModel model, String target, String outputDir, ProjectSettings opts) throws Exception {
+        normalizeDerivedAccess(model);
         switch (target) {
             case "plain"  -> generatePlain(model, outputDir, opts);
             case "cli"    -> generateCli(model, outputDir);
@@ -18,6 +26,32 @@ public class GenerationService {
             case "cli-jpa" -> generateCliJpa(model, outputDir, opts);
 
             default -> throw new IllegalArgumentException("unknown target: " + target);
+        }
+    }
+
+    /**
+     * reescreve os acessos a atributos derivados (this.x -> this.getX()) em todas
+     * as expressões OCL já traduzidas. Corre aqui, com o modelo completo, porque
+     * no parser a ordem de aplicação das anotações não garante que o derivado já
+     * é conhecido — sobretudo quando é herdado da superclasse.
+     */
+    private void normalizeDerivedAccess(ParsedModel model) {
+        for (Class cls : model.getClasses()) {
+            for (Invariant inv : cls.getInvariants()) {
+                inv.setJavaExpression(GeneratorUtils.fixDerivedAccess(inv.getJavaExpression(), cls));
+            }
+            for (Operation op : cls.getOperations()) {
+                for (Precondition pre : op.getPreconditions()) {
+                    pre.setJavaExpression(GeneratorUtils.fixDerivedAccess(pre.getJavaExpression(), cls));
+                }
+                for (Postcondition post : op.getPostconditions()) {
+                    post.setJavaExpression(GeneratorUtils.fixDerivedAccess(post.getJavaExpression(), cls));
+                }
+            }
+            for (Attribute a : cls.getAttributes()) {
+                a.setJavaInitExpression(GeneratorUtils.fixDerivedAccess(a.getJavaInitExpression(), cls));
+                a.setJavaDeriveExpression(GeneratorUtils.fixDerivedAccess(a.getJavaDeriveExpression(), cls));
+            }
         }
     }
 

@@ -202,7 +202,7 @@ public class CLIMenuGenerator {
             }
         }
 
-        for (Operation op : cls.getOperations()) {
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction != null) {
                 String label = op.getName().substring(0, 1).toUpperCase() + op.getName().substring(1);
@@ -622,7 +622,7 @@ public class CLIMenuGenerator {
         Set<String> classNames = new HashSet<>();
         for (Class c : allClasses) classNames.add(c.getName());
 
-        for (Operation op : cls.getOperations()) {
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
 
