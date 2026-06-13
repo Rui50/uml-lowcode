@@ -68,14 +68,14 @@ public class AnnotationService {
         });
     }
 
-    // @Id custom
+    // @Id custom: atributo escolhido (int/String) ou id default (Long por defeito ou UUID)
     private void applyIds(List<Class> classes, Map<String, CustomIdDTO> map) {
         if (map == null) return;
         map.forEach((className, cfg) -> {
             Class c = findClass(classes, className);
-            if (c == null || cfg == null || cfg.getAttributeName() == null) return;
-            c.setIdAttributeName(cfg.getAttributeName());
-            c.setIdAttributeType(cfg.getAttributeType());
+            if (c == null || cfg == null) return;
+            c.setIdAttributeName(cfg.getAttributeName());   // null/vazio = id sintético
+            c.setIdAttributeType(cfg.getAttributeType());   // setter ignora null/vazio
         });
     }
 

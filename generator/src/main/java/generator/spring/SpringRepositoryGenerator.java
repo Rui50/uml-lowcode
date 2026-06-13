@@ -53,6 +53,7 @@ public class SpringRepositoryGenerator {
             writer.println("import org.springframework.data.jpa.repository.JpaRepository;");
             writer.println("import org.springframework.stereotype.Repository;");
             writer.println("import java.util.List;");
+            writer.println("import java.util.UUID;");
             writer.println();
 
             // Interface

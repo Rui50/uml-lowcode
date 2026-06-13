@@ -81,12 +81,9 @@ const inheritanceOptions = [
   { label: 'Joined tables', value: 'JOINED' },
 ]
 
-// @Id: anotado na raiz da hierarquia (sempre auto-gerado)
-// só tipos integrais servem como @GeneratedValue; primitivos são boxed pelo gerador
-const ELIGIBLE_ID_TYPES = [
-  'Long', 'Integer', 'Short', 'Byte', 'BigInteger',
-  'long', 'int', 'short', 'byte',
-]
+// @Id: anotado na raiz da hierarquia.
+// integrais -> auto-gerados (@GeneratedValue); String -> chave natural atribuída pelo cliente
+const ELIGIBLE_ID_TYPES = ['Long', 'Integer', 'long', 'int', 'String']
 
 const isIdRoot = computed(() =>
   !isInterface.value && !!model.selectedClass && !model.selectedClass.parent
@@ -105,16 +102,33 @@ const idEligibleAttributes = computed(() =>
   )
 )
 
-function pickIdAttribute(name: string | null) {
+const UUID_OPTION = '__uuid__'
+
+// opções: UUID (sintético) + atributos elegíveis. Clear/placeholder = Long default.
+const idOptions = computed(() => [
+  { label: 'UUID (auto-generated)', value: UUID_OPTION },
+  ...idEligibleAttributes.value.map(a => ({ label: `${a.name}: ${a.type}`, value: a.name })),
+])
+
+// valor no dropdown: null (Long) | UUID_OPTION | nome do atributo.
+// UUID é a única config sem attributeName, daí o fallback.
+const idSelection = computed(() =>
+  idConfig.value ? (idConfig.value.attributeName || UUID_OPTION) : null
+)
+
+// chave natural String -> atribuída pelo cliente (mostra aviso)
+const idIsAssigned = computed(() => idConfig.value?.attributeType === 'String')
+
+function pickId(value: string | null) {
   if (!className.value) return
-  // sem nome (clear) -> volta ao id por defeito
-  if (!name) { annotations.setId(className.value, null); return }
-  const attr = idEligibleAttributes.value.find(a => a.name === name)
+  if (!value) { annotations.setId(className.value, null); return }              // Long default
+  if (value === UUID_OPTION) {
+    annotations.setId(className.value, { attributeName: '', attributeType: 'UUID' })
+    return
+  }
+  const attr = idEligibleAttributes.value.find(a => a.name === value)
   if (!attr) return
-  annotations.setId(className.value, {
-    attributeName: attr.name,
-    attributeType: attr.type,
-  })
+  annotations.setId(className.value, { attributeName: attr.name, attributeType: attr.type })
 }
 
 // controller REST por classe (Spring); abstratas/interfaces não têm controller
@@ -322,17 +336,19 @@ function close() {
             </header>
             <div class="entry">
               <Select
-                :modelValue="idConfig?.attributeName"
-                @update:modelValue="pickIdAttribute"
-                :options="idEligibleAttributes.map(a => ({ label: `${a.name}: ${a.type}`, value: a.name }))"
+                :modelValue="idSelection"
+                @update:modelValue="pickId"
+                :options="idOptions"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Default (Long, auto-generated)"
                 showClear
               />
-              <p class="hint">
-                O valor é sempre atribuído pela base de dados.
-                Só atributos numéricos inteiros podem ser usados.
+              <p v-if="idIsAssigned" class="hint warn">
+                Chave natural — tem de ser fornecida pelo cliente (não é auto-gerada).
+              </p>
+              <p v-else class="hint">
+                O id é gerado automaticamente pelo servidor.
               </p>
             </div>
           </section>
@@ -537,6 +553,10 @@ function close() {
   opacity: 0.65;
   margin: 0;
   line-height: 1.4;
+}
+.hint.warn {
+  opacity: 1;
+  color: var(--p-orange-600, #c2410c);
 }
 
 .tab-note {

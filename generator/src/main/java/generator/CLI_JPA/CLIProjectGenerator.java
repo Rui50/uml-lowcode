@@ -296,6 +296,14 @@ public class CLIProjectGenerator {
             w.println("        }");
             w.println("        return value;");
             w.println("    }");
+            w.println();
+            w.println("    public static java.util.UUID readUuid(Scanner scanner, String prompt) {");
+            w.println("        while (true) {");
+            w.println("            System.out.print(prompt);");
+            w.println("            try { return java.util.UUID.fromString(scanner.nextLine().trim()); }");
+            w.println("            catch (IllegalArgumentException e) { System.out.println(\"Invalid UUID.\"); }");
+            w.println("        }");
+            w.println("    }");
             w.println("}");
         }
         System.out.println("Generated: InputUtils.java");

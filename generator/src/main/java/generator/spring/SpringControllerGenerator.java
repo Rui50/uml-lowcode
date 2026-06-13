@@ -340,6 +340,7 @@ public class SpringControllerGenerator {
         writer.println("import org.springframework.web.bind.annotation.*;");
         writer.println();
         writer.println("import java.util.List;");
+        writer.println("import java.util.UUID;");
 
         // Imports de entidades usadas nas Operations
         List<String> modelsToImport = GeneratorUtils.getModelsToImportFromOperations(cls, allClasses);

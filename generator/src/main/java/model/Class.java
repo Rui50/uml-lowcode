@@ -188,6 +188,12 @@ public class Class {
         }
     }
 
+    // id "atribuído" pelo cliente (chave natural String): sem @GeneratedValue e
+    // incluído no CreateDTO. Os restantes (Long/Integer/UUID) são gerados pelo servidor.
+    public boolean isIdAssigned() {
+        return "String".equals(getRoot().getIdAttributeType());
+    }
+
     //s realizations são por classe e não são herdadas.
     // Se uma interface for realizada por uma classe abstrata, as subclasses
     // concretas não a herdam (getRealizations() devolve só as próprias).

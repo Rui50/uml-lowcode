@@ -238,9 +238,16 @@ public class SpringEntityGenerator {
     // se houver id custom, o @Id é colocado no atributo escolhido em generateAttributes
     private void generateId(PrintWriter writer, Class cls) {
         if (cls.getIdAttributeName() != null) return;
+        // id sintético: Long (default) ou UUID gerado
+        String idType = cls.getRoot().getIdAttributeType();
         writer.println("    @Id");
-        writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
-        writer.println("    private Long id;");
+        if ("UUID".equals(idType)) {
+            writer.println("    @GeneratedValue(strategy = GenerationType.UUID)");
+            writer.println("    private UUID id;");
+        } else {
+            writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
+            writer.println("    private Long id;");
+        }
         writer.println();
     }
 
@@ -256,7 +263,11 @@ public class SpringEntityGenerator {
             String fieldType = isId ? cls.getRoot().getIdAttributeType() : atr.getType();
             if (isId) {
                 writer.println("    @Id");
-                writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
+                // chave natural (String) é atribuída pelo cliente -> sem @GeneratedValue;
+                // tipos gerados (integrais) mantêm o auto-incremento
+                if (!cls.isIdAssigned()) {
+                    writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
+                }
             }
 
             if (enumNames.contains(atr.getType())) {

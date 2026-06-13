@@ -44,6 +44,7 @@ public class CLIRepositoryGenerator {
             w.println("import " + basePackage + ".models." + name + ";");
             w.println("import jakarta.persistence.EntityManager;");
             w.println("import java.util.List;");
+            w.println("import java.util.UUID;");
             w.println();
             w.println("public class " + name + "Repository {");
             w.println();

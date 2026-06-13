@@ -197,9 +197,16 @@ public class CLIEntityGenerator {
     // se houver id custom, o @Id é colocado no atributo escolhido em generateAttributes
     private void generateId(PrintWriter writer, Class cls) {
         if (cls.getIdAttributeName() != null) return;
+        // id sintético: Long (default) ou UUID gerado
+        String idType = cls.getRoot().getIdAttributeType();
         writer.println("    @Id");
-        writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
-        writer.println("    private Long id;");
+        if ("UUID".equals(idType)) {
+            writer.println("    @GeneratedValue(strategy = GenerationType.UUID)");
+            writer.println("    private UUID id;");
+        } else {
+            writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
+            writer.println("    private Long id;");
+        }
         writer.println();
     }
 
@@ -228,9 +235,10 @@ public class CLIEntityGenerator {
         // id getter/setter só na "raiz" e só para oo id sintético (no custom id o getter
         // do atributo escolhido já é emitido no loop dos atributos)
         if (cls.getParentClass() == null && cls.getIdAttributeName() == null) {
+            String idType = cls.getRoot().getIdAttributeType();   // Long (default) ou UUID
             writer.println();
-            writer.println("    public Long getId() { return id; }");
-            writer.println("    public void setId(Long id) { this.id = id; }");
+            writer.println("    public " + idType + " getId() { return id; }");
+            writer.println("    public void setId(" + idType + " id) { this.id = id; }");
         }
 
         // getters and setters for relationship fields
@@ -314,7 +322,10 @@ public class CLIEntityGenerator {
             String fieldType = isId ? cls.getRoot().getIdAttributeType() : atr.getType();
             if (isId) {
                 writer.println("    @Id");
-                writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
+                // chave natural (String) é atribuída pelo cliente -> sem @GeneratedValue
+                if (!cls.isIdAssigned()) {
+                    writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
+                }
             }
 
             if (enumNames.contains(atr.getType())) {

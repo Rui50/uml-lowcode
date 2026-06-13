@@ -52,6 +52,7 @@ public class CLIMenuGenerator {
     private String idReaderOf(String className) {
         switch (idTypeOf(className)) {
             case "String":  return "readString";
+            case "UUID":    return "readUuid";
             case "Integer": return "readInt";
             default:        return "readLong";
         }
@@ -248,7 +249,7 @@ public class CLIMenuGenerator {
         if (cls.getParentClass() != null) {
             allAttrs.addAll(cls.getParentClass().getAttributes().stream()
                     .filter(a -> !a.hasDerive() && !a.hasInit())
-                    .filter(a -> !a.getName().equals(idName))
+                    .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                     .collect(Collectors.toList()));
         }
         allAttrs.addAll(cls.getAttributes().stream()

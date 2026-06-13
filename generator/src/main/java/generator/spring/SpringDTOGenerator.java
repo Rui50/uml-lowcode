@@ -83,11 +83,13 @@ public class SpringDTOGenerator {
             w.println("import lombok.*;");
             w.println("import " + basePackage + ".models." + className + ";");
 
-            // id é sempre auto-gerado pela BD -> fora do CreateDTO
+            // id gerado pela BD -> fora do CreateDTO
+            // chave natural (String) é
+            // atribuída pelo cliente -> mantém-se no CreateDTO
             String idName = cls.getRoot().getIdAttributeName();
             List<Attribute> allAttrs = cls.getAllAttributes().stream()
                     .filter(a -> !a.hasDerive())
-                    .filter(a -> !a.getName().equals(idName))
+                    .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                     .toList();
 
             // check if any attribute is an enum
@@ -187,7 +189,7 @@ public class SpringDTOGenerator {
             // id normal, quando há id custom, esse atributo já aparece nos atributos abaixo
             boolean defaultId = cls.getRoot().getIdAttributeName() == null;
             if (defaultId) {
-                w.println("    private Long id;");
+                w.println("    private " + cls.getRoot().getIdAttributeType() + " id;");
                 w.println();
             }
 
