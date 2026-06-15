@@ -2,6 +2,7 @@ package generator.spring;
 
 import generator.GeneratorUtils;
 import generator.ValidationGenerator;
+import ocl.OCLtoSpringAnnot;
 import model.Association;
 import model.Attribute;
 import model.Class;
@@ -15,6 +16,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -133,6 +135,7 @@ public class SpringEntityGenerator {
             // imports
             writer.println("import com.fasterxml.jackson.annotation.JsonIgnoreProperties;");
             writer.println("import jakarta.persistence.*;");
+            writer.println("import jakarta.validation.constraints.*;");   // anotações Validation (OCL)
             writer.println("import lombok.*;");
             writer.println("import java.util.*;");
             if (cls.getParentClass() != null || GeneratorUtils.isParent(cls, allClasses)) {
@@ -157,8 +160,14 @@ public class SpringEntityGenerator {
                 generateId(writer, cls);
             }
 
+            // invariantes OCL simples -> anotações  Validation. as mapeadas saem do validate().
+            // se desativado para a classe, fica tudo no validate() (Result vazio)
+            OCLtoSpringAnnot.Result constraints = cls.isBeanValidation()
+                    ? OCLtoSpringAnnot.map(cls)
+                    : new OCLtoSpringAnnot.Result();
+
             // atributos
-            generateAttributes(writer, cls);
+            generateAttributes(writer, cls, constraints.annotationsByField);
 
             // getters derivados
             generateDerivedGetters(writer, cls);
@@ -166,7 +175,7 @@ public class SpringEntityGenerator {
             // relações
             generateRelationships(writer, cls, associations, allClasses);
 
-            validationGenerator.generateValidateMethod(writer, cls);
+            validationGenerator.generateValidateMethod(writer, cls, constraints.consumed);
 
             writer.println("}");
 
@@ -251,7 +260,7 @@ public class SpringEntityGenerator {
         writer.println();
     }
 
-    private void generateAttributes(PrintWriter writer, Class cls) {
+    private void generateAttributes(PrintWriter writer, Class cls, Map<String, List<String>> annsByField) {
         writer.println("    // attributes");
         for (Attribute atr : cls.getAttributes()){
             // skip derived
@@ -274,6 +283,10 @@ public class SpringEntityGenerator {
                 writer.println("    @Enumerated(EnumType.STRING)");
             }
             writer.println("    @Column(name = \"" + atr.getName() + "\")");
+            // anotações Bean Validation vindas das invariantes OCL
+            for (String ann : annsByField.getOrDefault(atr.getName(), List.of())) {
+                writer.println("    " + ann);
+            }
             if (atr.hasInit()) {
                 String javaInit = atr.getJavaInitExpression();
                 writer.println("    @Builder.Default");

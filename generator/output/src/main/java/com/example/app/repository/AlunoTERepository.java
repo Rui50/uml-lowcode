@@ -4,6 +4,7 @@ import com.example.app.models.AlunoTE;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Repository for AlunoTE entity
@@ -25,12 +26,12 @@ public interface AlunoTERepository extends JpaRepository<AlunoTE, Long> {
     List<AlunoTE> findByEmpresaContaining(String empresa);
     boolean existsByEmpresa(String empresa);
 
-    List<AlunoTE> findByEmail(String email);
-    List<AlunoTE> findByEmailContaining(String email);
-    boolean existsByEmail(String email);
-
     List<AlunoTE> findByNome(String nome);
     List<AlunoTE> findByNomeContaining(String nome);
     boolean existsByNome(String nome);
+
+    List<AlunoTE> findByEmail(String email);
+    List<AlunoTE> findByEmailContaining(String email);
+    boolean existsByEmail(String email);
 
 }

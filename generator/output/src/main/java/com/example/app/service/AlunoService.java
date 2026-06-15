@@ -15,8 +15,6 @@ import java.util.stream.Collectors;
 
 import com.example.app.models.Turno;
 import com.example.app.repository.TurnoRepository;
-
-import com.example.app.models.EstadoAluno;
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -66,10 +64,9 @@ public class AlunoService {
             .orElseThrow(() -> new RuntimeException("Aluno not found: " + id));
 
         // Update attributes from DTO
-        existing.setEmail(dto.getEmail());
-        existing.setEstado(dto.getEstado());
-        existing.setNumero(dto.getNumero());
         existing.setNome(dto.getNome());
+        existing.setEmail(dto.getEmail());
+        existing.setNumero(dto.getNumero());
 
         Aluno saved = alunoRepository.save(existing);
         return AlunoResponseDTO.fromEntity(saved);

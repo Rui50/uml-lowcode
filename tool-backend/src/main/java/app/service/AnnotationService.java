@@ -34,6 +34,7 @@ public class AnnotationService {
         applyIds(classes, payload.getIdByClass());
         applyEndpointConfig(classes, payload.getEndpointByOperation());
         applyControllerConfig(classes, payload.getGenerateControllerByClass());
+        applyBeanValidationConfig(classes, payload.getBeanValidationByClass());
     }
 
     // gerar (ou não) o controller REST, por classe
@@ -42,6 +43,15 @@ public class AnnotationService {
         map.forEach((className, generate) -> {
             Class c = findClass(classes, className);
             if (c != null && generate != null) c.setGenerateController(generate);
+        });
+    }
+
+    // anotações spring Validation (a partir das invariantes OCL), por classe
+    private void applyBeanValidationConfig(List<Class> classes, Map<String, Boolean> map) {
+        if (map == null) return;
+        map.forEach((className, on) -> {
+            Class c = findClass(classes, className);
+            if (c != null && on != null) c.setBeanValidation(on);
         });
     }
 

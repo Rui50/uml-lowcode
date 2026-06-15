@@ -2,6 +2,7 @@ package com.example.app.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 import java.util.*;
 import lombok.experimental.SuperBuilder;

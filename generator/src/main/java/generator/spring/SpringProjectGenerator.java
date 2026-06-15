@@ -220,6 +220,11 @@ public class SpringProjectGenerator {
             w.println("            <groupId>org.springframework.boot</groupId>");
             w.println("            <artifactId>spring-boot-starter-webmvc</artifactId>");
             w.println("        </dependency>");
+            // Bean Validation (Hibernate Validator) — anotações OCL nas entidades
+            w.println("        <dependency>");
+            w.println("            <groupId>org.springframework.boot</groupId>");
+            w.println("            <artifactId>spring-boot-starter-validation</artifactId>");
+            w.println("        </dependency>");
             // OpenAPI / Swagger UI em /swagger-ui.html (springdoc 3.x p/ Spring Boot 4) — opcional
             if (settings.isOpenApi()) {
                 w.println("        <dependency>");

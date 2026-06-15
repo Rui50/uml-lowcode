@@ -10,12 +10,10 @@ import com.example.app.models.Turma;
 @Builder
 public class TurmaCreateDTO {
 
-    private int numAlunos;
     private String nome;
 
     public Turma toEntity() {
         Turma turma = new Turma();
-        turma.setNumAlunos(this.getNumAlunos());
         turma.setNome(this.getNome());
         return turma;
     }

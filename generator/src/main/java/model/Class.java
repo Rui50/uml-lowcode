@@ -45,6 +45,9 @@ public class Class {
     // gerar o controller REST para esta classe? (Spring) — default true
     private boolean generateController = true;
 
+    // transformar invariantes OCL simples em anotações de Validation em spring — default true
+    private boolean beanValidation = true;
+
     // identificador JPA (sempre auto-gerado)
     // idAttributeName == null -> id sintético (@Id @GeneratedValue Long id) [default]
     // caso contrário          -> usa esse atributo como @Id @GeneratedValue
@@ -142,6 +145,14 @@ public class Class {
 
     public void setGenerateController(boolean generateController) {
         this.generateController = generateController;
+    }
+
+    public boolean isBeanValidation() {
+        return beanValidation;
+    }
+
+    public void setBeanValidation(boolean beanValidation) {
+        this.beanValidation = beanValidation;
     }
 
     // raiz da hierarquia (a própria classe se não tiver pai)

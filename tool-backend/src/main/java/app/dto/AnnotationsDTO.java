@@ -37,4 +37,7 @@ public class AnnotationsDTO {
 
     // key className -> gerar controller REST? (Spring; default true)
     private Map<String, Boolean> generateControllerByClass = new HashMap<>();
+
+    // key className -> invariantes OCL viram anotações Bean Validation? (Spring; default true)
+    private Map<String, Boolean> beanValidationByClass = new HashMap<>();
 }

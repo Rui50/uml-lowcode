@@ -2,6 +2,7 @@ package com.example.app.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 import java.util.*;
 
@@ -19,11 +20,8 @@ public class Turno {
     private Long id;
 
     // attributes
-    @Column(name = "numero")
-    private int numero;
-
     @Column(name = "capacidade")
-    private Integer capacidade;
+    private int capacidade;
 
     // relationship: Turno -> Aluno
     @JsonIgnoreProperties("turno")

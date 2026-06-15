@@ -4,7 +4,6 @@ import lombok.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import com.example.app.models.AlunoTE;
-import com.example.app.models.EstadoAluno;
 
 @Getter
 @Setter
@@ -16,19 +15,17 @@ public class AlunoTEResponseDTO {
     private Long id;
 
     private String empresa;
-    private String email;
-    private EstadoAluno estado;
-    private int numero;
     private String nome;
+    private String email;
+    private int numero;
 
     public static AlunoTEResponseDTO fromEntity(AlunoTE alunoTE) {
         AlunoTEResponseDTO dto = new AlunoTEResponseDTO();
         dto.setId(alunoTE.getId());
         dto.setEmpresa(alunoTE.getEmpresa());
-        dto.setEmail(alunoTE.getEmail());
-        dto.setEstado(alunoTE.getEstado());
-        dto.setNumero(alunoTE.getNumero());
         dto.setNome(alunoTE.getNome());
+        dto.setEmail(alunoTE.getEmail());
+        dto.setNumero(alunoTE.getNumero());
         return dto;
     }
 }

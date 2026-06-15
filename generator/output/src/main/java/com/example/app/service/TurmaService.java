@@ -17,8 +17,6 @@ import com.example.app.models.Turno;
 import com.example.app.repository.TurnoRepository;
 import com.example.app.models.Aluno;
 import com.example.app.repository.AlunoRepository;
-
-import com.example.app.models.EstadoAluno;
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -69,7 +67,6 @@ public class TurmaService {
             .orElseThrow(() -> new RuntimeException("Turma not found: " + id));
 
         // Update attributes from DTO
-        existing.setNumAlunos(dto.getNumAlunos());
         existing.setNome(dto.getNome());
 
         Turma saved = turmaRepository.save(existing);
@@ -167,49 +164,21 @@ public class TurmaService {
 
     // operations (TODO: implement)
 
-    public int contarAlunos() {
-        throw new UnsupportedOperationException(
-            "Method 'contarAlunos' not yet implemented. "
-        );
-    }
-
     public void inicializarAlunosParaTeste(List<Aluno> alunos) {
         throw new UnsupportedOperationException(
             "Method 'inicializarAlunosParaTeste' not yet implemented. "
         );
     }
 
-    public void inscrever(Aluno a) {
+    public boolean transferirAluno(Turma destino, int numero) {
         throw new UnsupportedOperationException(
-            "Method 'inscrever' not yet implemented. "
+            "Method 'transferirAluno' not yet implemented. "
         );
     }
 
-    public boolean transferirAluno(Long turmaId, int numero, Long destinoId) {
-        Turma turma = turmaRepository.findById(turmaId)
-            .orElseThrow(() -> new RuntimeException("Turma not found"));
-        if (!(turma.getAlunos().size() > 0)) {
-            throw new IllegalStateException("a turma tem de ter alunos");
-        }
-        Map<Integer, Aluno> alunos_pre = new HashMap<>(turma.getAlunos());
-        Turma destino = turmaRepository.findById(destinoId)
-            .orElseThrow(() -> new RuntimeException("Turma not found"));
-        boolean sucesso = false;
-        Aluno a = turma.getAlunos().get(numero);
-        if (a != null) {
-            turma.getAlunos().remove(a.getNumero());
-            destino.getAlunos().put(a.getNumero(), a);
-            sucesso = true;
-        }
-        if (!(java.util.Objects.equals(turma.getAlunos().size(), alunos_pre.size() - 1))) {
-            throw new IllegalStateException("tem de diminuir 1");
-        }
-        return sucesso;
-    }
-
-    public void fecharTurma() {
+    public int totalAlunos() {
         throw new UnsupportedOperationException(
-            "Method 'fecharTurma' not yet implemented. "
+            "Method 'totalAlunos' not yet implemented. "
         );
     }
 }

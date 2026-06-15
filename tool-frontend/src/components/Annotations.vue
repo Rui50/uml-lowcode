@@ -143,6 +143,16 @@ watch(className, (name) => {
   }
 }, { immediate: true })
 
+// Bean Validation por classe (Spring); aplica-se a qualquer classe (inclui abstratas)
+const beanValidationEligible = computed(() => !isInterface.value && !!model.selectedClass)
+
+// garante a entrada do bean validation (default true) para a classe selecionada
+watch(className, (name) => {
+  if (name && beanValidationEligible.value && annotations.beanValidationByClass[name] === undefined) {
+    annotations.beanValidationByClass[name] = true
+  }
+}, { immediate: true })
+
 function key(name: string) {
   return `${className.value}.${name}`
 }
@@ -391,6 +401,23 @@ function close() {
               <p class="hint">
                 Se desativado, esta classe não expõe endpoints REST.
                 A entidade, repositório e serviço continuam a ser gerados.
+              </p>
+            </div>
+          </section>
+
+          <!-- Invariantes OCL como anotações Bean Validation por classe -->
+          <section v-if="beanValidationEligible" class="block">
+            <header class="block-head">
+              <h4>Bean Validation</h4>
+            </header>
+            <div class="entry">
+              <div class="job-toggle">
+                <Checkbox v-model="annotations.beanValidationByClass[className!]" :binary="true" inputId="bean-validation" />
+                <label for="bean-validation">Invariantes OCL como anotações</label>
+              </div>
+              <p class="hint">
+                Invariantes simples (ex: points &gt;= 0) viram anotações Bean Validation no campo;
+                as restantes continuam no método validate().
               </p>
             </div>
           </section>

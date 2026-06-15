@@ -10,12 +10,10 @@ import com.example.app.models.Turno;
 @Builder
 public class TurnoCreateDTO {
 
-    private int numero;
-    private Integer capacidade;
+    private int capacidade;
 
     public Turno toEntity() {
         Turno turno = new Turno();
-        turno.setNumero(this.getNumero());
         turno.setCapacidade(this.getCapacidade());
         return turno;
     }

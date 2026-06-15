@@ -51,6 +51,7 @@ export async function generateCode(target: string, settings?: ProjectSettings): 
     idByClass: annotations.idByClass,
     endpointByOperation: annotations.endpointByOperation,
     generateControllerByClass: annotations.generateControllerByClass,
+    beanValidationByClass: annotations.beanValidationByClass,
   }
   const body = JSON.stringify({ annotations: annotationsPayload, settings: settings ?? null })
   const res = await fetch(`/api/model/generate?target=${encodeURIComponent(target)}`, {

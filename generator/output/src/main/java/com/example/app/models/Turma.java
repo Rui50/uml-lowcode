@@ -2,6 +2,7 @@ package com.example.app.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 import java.util.*;
 
@@ -19,9 +20,6 @@ public class Turma {
     private Long id;
 
     // attributes
-    @Column(name = "numAlunos")
-    private int numAlunos;
-
     @Column(name = "nome")
     private String nome;
 

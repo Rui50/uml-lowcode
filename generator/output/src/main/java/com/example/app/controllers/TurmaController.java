@@ -10,10 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 import com.example.app.models.Turno;
 import com.example.app.models.Aluno;
-import com.example.app.service.AlunoService;
 
 /**
  * REST Controller for Turma
@@ -24,7 +24,6 @@ import com.example.app.service.AlunoService;
 public class TurmaController {
 
     private final TurmaService turmaService;
-    private final AlunoService alunoService;
 
     // CRUD Endpoints
 
@@ -137,13 +136,4 @@ public class TurmaController {
 
 
     // Custom Operation Endpoints dos diagramas sequencia
-
-    @PostMapping("/transferirAluno")
-    public ResponseEntity<?> transferirAluno(
-            @RequestParam Long turmaId,
-            @RequestParam int numero,
-            @RequestParam Long destinoId) {
-        boolean result = turmaService.transferirAluno(turmaId, numero, destinoId);
-        return ResponseEntity.ok(result);
-    }
 }

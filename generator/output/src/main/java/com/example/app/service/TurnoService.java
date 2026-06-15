@@ -15,8 +15,6 @@ import java.util.stream.Collectors;
 
 import com.example.app.models.Aluno;
 import com.example.app.repository.AlunoRepository;
-
-import com.example.app.models.EstadoAluno;
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -66,7 +64,6 @@ public class TurnoService {
             .orElseThrow(() -> new RuntimeException("Turno not found: " + id));
 
         // Update attributes from DTO
-        existing.setNumero(dto.getNumero());
         existing.setCapacidade(dto.getCapacidade());
 
         Turno saved = turnoRepository.save(existing);
@@ -90,7 +87,7 @@ public class TurnoService {
 
     // operations (TODO: implement)
 
-    public Boolean temVaga() {
+    public boolean temVaga() {
         throw new UnsupportedOperationException(
             "Method 'temVaga' not yet implemented. "
         );

@@ -5,6 +5,8 @@ import model.Interface;
 import model.annotations.Invariant;
 
 import java.io.PrintWriter;
+import java.util.Collections;
+import java.util.Set;
 
 public class ValidationGenerator {
 
@@ -22,6 +24,12 @@ public class ValidationGenerator {
      * }
      */
     public void generateValidateMethod(PrintWriter writer, Class cls) {
+        generateValidateMethod(writer, cls, Collections.emptySet());
+    }
+
+    // 'skip' = invariantes já transformadas em anotações de Validation (Spring), que por
+    // isso saem do validate(),vazio nos restantes alvos
+    public void generateValidateMethod(PrintWriter writer, Class cls, Set<Invariant> skip) {
         // gera validate se tiver invariantes proprias, herdadas de interface, ou herdadas de parent
         if (!cls.hasAnyInvariants()) return;
         boolean parentHas = cls.getParentClass() != null && cls.getParentClass().hasAnyInvariants();
@@ -34,6 +42,7 @@ public class ValidationGenerator {
         writer.println("     * Validate entity with OCL");
         writer.println("     * ");
         for (Invariant inv : cls.getInvariants()) {
+            if (skip.contains(inv)) continue;
             writer.println("     * - " + inv.getName() + ": " + inv.getOclExpression());
         }
         for (Interface iface : cls.getRealizations()) {
@@ -56,6 +65,7 @@ public class ValidationGenerator {
 
         // validation para cada invariant (ANTLR4 OCL -> Java)
         for (Invariant inv : cls.getInvariants()) {
+            if (skip.contains(inv)) continue;   // já é anotação spring
             generateInvariantCheck(writer, inv, null);
         }
         for (Interface iface : cls.getRealizations()) {

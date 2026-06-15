@@ -13,7 +13,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 
-import com.example.app.models.EstadoAluno;
+import com.example.app.models.Aluno;
+import com.example.app.repository.AlunoRepository;
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -63,10 +64,9 @@ public class AlunoTEService {
 
         // Update attributes from DTO
         existing.setEmpresa(dto.getEmpresa());
-        existing.setEmail(dto.getEmail());
-        existing.setEstado(dto.getEstado());
-        existing.setNumero(dto.getNumero());
         existing.setNome(dto.getNome());
+        existing.setEmail(dto.getEmail());
+        existing.setNumero(dto.getNumero());
 
         AlunoTE saved = alunoTERepository.save(existing);
         return AlunoTEResponseDTO.fromEntity(saved);
@@ -89,9 +89,15 @@ public class AlunoTEService {
 
     // operations (TODO: implement)
 
-    public Boolean comprovativo() {
+    public boolean comprovativo() {
         throw new UnsupportedOperationException(
             "Method 'comprovativo' not yet implemented. "
+        );
+    }
+
+    public List<String> validar() {
+        throw new UnsupportedOperationException(
+            "Method 'validar' not yet implemented. "
         );
     }
 }

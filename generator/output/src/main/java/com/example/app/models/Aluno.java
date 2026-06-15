@@ -2,6 +2,7 @@ package com.example.app.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 import java.util.*;
 import lombok.experimental.SuperBuilder;
@@ -23,18 +24,14 @@ public class Aluno {
     private Long id;
 
     // attributes
+    @Column(name = "nome")
+    private String nome;
+
     @Column(name = "email")
     private String email;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado")
-    private EstadoAluno estado;
-
     @Column(name = "numero")
     private int numero;
-
-    @Column(name = "nome")
-    private String nome;
 
     // relationship: Aluno -> Turno
     @JsonIgnoreProperties("alunos")
