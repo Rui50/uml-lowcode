@@ -8,5 +8,6 @@ export const useProjectSettingsStore = defineStore('projectSettings', () => {
   const serverPort = ref<number>(8080)
   const openApi = ref<boolean>(true)
   const dockerfile = ref<boolean>(false)
-  return { basePackage, applicationName, databaseType, serverPort, openApi, dockerfile }
+  const timestamps = ref<boolean>(false)
+  return { basePackage, applicationName, databaseType, serverPort, openApi, dockerfile, timestamps }
 })

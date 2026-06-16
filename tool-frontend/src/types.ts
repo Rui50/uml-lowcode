@@ -131,6 +131,7 @@ export interface ProjectSettings {
   serverPort?: number
   openApi?: boolean
   dockerfile?: boolean
+  timestamps?: boolean
 }
 
 ///////////

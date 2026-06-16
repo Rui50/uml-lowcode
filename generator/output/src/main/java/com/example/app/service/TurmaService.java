@@ -54,6 +54,18 @@ public class TurmaService {
         Turma turma = dto.toEntity();
 
         Turma saved = turmaRepository.save(turma);
+
+        if (dto.getAlunosIds() != null) {
+            for (Aluno aluno : alunoRepository.findAllById(dto.getAlunosIds())) {
+                saved.getAlunos().put(aluno.getNumero(), aluno);
+            }
+        }
+        if (dto.getTurnosIds() != null) {
+            for (Turno turno : turnoRepository.findAllById(dto.getTurnosIds())) {
+                saved.getTurnos().add(turno);
+            }
+        }
+        saved = turmaRepository.save(saved);
         return TurmaResponseDTO.fromEntity(saved);
     }
 
@@ -69,7 +81,7 @@ public class TurmaService {
         // Update attributes from DTO
         existing.setNome(dto.getNome());
 
-        Turma saved = turmaRepository.save(existing);
+        Turma saved = turmaRepository.saveAndFlush(existing);
         return TurmaResponseDTO.fromEntity(saved);
     }
 
@@ -164,21 +176,21 @@ public class TurmaService {
 
     // operations (TODO: implement)
 
+    public int totalAlunos() {
+        throw new UnsupportedOperationException(
+            "Method 'totalAlunos' not yet implemented. "
+        );
+    }
+
     public void inicializarAlunosParaTeste(List<Aluno> alunos) {
         throw new UnsupportedOperationException(
             "Method 'inicializarAlunosParaTeste' not yet implemented. "
         );
     }
 
-    public boolean transferirAluno(Turma destino, int numero) {
+    public boolean transferirAluno(int numero, Turma destino) {
         throw new UnsupportedOperationException(
             "Method 'transferirAluno' not yet implemented. "
-        );
-    }
-
-    public int totalAlunos() {
-        throw new UnsupportedOperationException(
-            "Method 'totalAlunos' not yet implemented. "
         );
     }
 }

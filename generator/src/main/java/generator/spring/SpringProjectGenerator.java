@@ -49,6 +49,9 @@ public class SpringProjectGenerator {
         generateApplicationProperties();
         generateMainClass();
         generateTestClass();
+        if (settings.isTimestamps()) {
+            generateAuditableClass();
+        }
         if (settings.isDockerfile()) {
             generateDockerfile();
             // H2 é embebido mas Postgres/MySQL precisam de um container de BD -> docker-compose
@@ -364,8 +367,14 @@ public class SpringProjectGenerator {
             w.println();
             w.println("import org.springframework.boot.SpringApplication;");
             w.println("import org.springframework.boot.autoconfigure.SpringBootApplication;");
+            if (settings.isTimestamps()) {
+                w.println("import org.springframework.data.jpa.repository.config.EnableJpaAuditing;");
+            }
             w.println();
             w.println("@SpringBootApplication");
+            if (settings.isTimestamps()) {
+                w.println("@EnableJpaAuditing");
+            }
             w.println("public class " + className + " {");
             w.println();
             w.println("    public static void main(String[] args) {");
@@ -373,6 +382,61 @@ public class SpringProjectGenerator {
             w.println("    }");
             w.println("}");
         }
+    }
+
+    /**
+     * Gera o {@code @MappedSuperclass Auditable} com createdAt/updatedAt
+     * extebds pelas entidades raiz
+     *
+     * Usa o auditing do Spring Data JPA (@CreatedDate / @LastModifiedDate AuditingEntityListener) em vez das anotações específicas do Hibernate
+     * (@CreationTimestamp / @UpdateTimestamp). Assim as classes de domínio geradas
+     * não importam org.hibernate.*: o modelo fica em JPA + Spring Data puros e
+     * mantém-se independente do provedor JPA ao nível do código-fonte.
+     *
+     * createdAt é imutável (updatable = false); updatedAt é atualizado em cada flush
+     * de uma entidade gerida. Ambos são preenchidos automaticamente — não vêm no
+     * CreateDTO, aparecem no ResponseDTO.
+     */
+    private void generateAuditableClass() throws IOException {
+        String packagePath = settings.getPackagePath();
+        String modelsDir = outputDirectory + "/src/main/java/" + packagePath + "/models";
+        new File(modelsDir).mkdirs();   // o gerador de entidades só cria esta pasta mais tarde
+        String filename = modelsDir + "/Auditable.java";
+
+        try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
+            w.println("package " + settings.getBasePackage() + ".models;");
+            w.println();
+            w.println("import jakarta.persistence.Column;");
+            w.println("import jakarta.persistence.EntityListeners;");
+            w.println("import jakarta.persistence.MappedSuperclass;");
+            w.println("import lombok.Getter;");
+            w.println("import lombok.Setter;");
+            w.println("import lombok.NoArgsConstructor;");
+            w.println("import lombok.experimental.SuperBuilder;");
+            w.println("import org.springframework.data.annotation.CreatedDate;");
+            w.println("import org.springframework.data.annotation.LastModifiedDate;");
+            w.println("import org.springframework.data.jpa.domain.support.AuditingEntityListener;");
+            w.println();
+            w.println("import java.time.Instant;");
+            w.println();
+            w.println("@Getter");
+            w.println("@Setter");
+            w.println("@NoArgsConstructor");
+            w.println("@SuperBuilder");
+            w.println("@MappedSuperclass");
+            w.println("@EntityListeners(AuditingEntityListener.class)");
+            w.println("public abstract class Auditable {");
+            w.println();
+            w.println("    @CreatedDate");
+            w.println("    @Column(name = \"created_at\", updatable = false)");
+            w.println("    private Instant createdAt;");
+            w.println();
+            w.println("    @LastModifiedDate");
+            w.println("    @Column(name = \"updated_at\")");
+            w.println("    private Instant updatedAt;");
+            w.println("}");
+        }
+        System.out.println("Generated: Auditable.java");
     }
 
     private void generateTestClass() throws IOException {

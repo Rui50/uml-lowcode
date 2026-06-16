@@ -7,12 +7,16 @@ public class ProjectSettings {
     private Integer serverPort;
     private Boolean openApi;        // incluir OpenAPI/Swagger (null = default = true)
     private Boolean dockerfile;     // gerar Dockerfile (null = default = false)
+    private Boolean timestamps;     // adicionar createdAt/updatedAt nas entidades (Spring; null = default = false)
 
     public Boolean getOpenApi() { return openApi; }
     public void setOpenApi(Boolean openApi) { this.openApi = openApi; }
 
     public Boolean getDockerfile() { return dockerfile; }
     public void setDockerfile(Boolean dockerfile) { this.dockerfile = dockerfile; }
+
+    public Boolean getTimestamps() { return timestamps; }
+    public void setTimestamps(Boolean timestamps) { this.timestamps = timestamps; }
 
     public String getBasePackage() { return basePackage; }
     public void setBasePackage(String basePackage) { this.basePackage = basePackage; }

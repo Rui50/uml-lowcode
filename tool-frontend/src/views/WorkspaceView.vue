@@ -48,6 +48,7 @@ function onConfirm() {
     serverPort: projectSettings.serverPort,
     openApi: projectSettings.openApi,
     dockerfile: projectSettings.dockerfile,
+    timestamps: projectSettings.timestamps,
   })
 }
 

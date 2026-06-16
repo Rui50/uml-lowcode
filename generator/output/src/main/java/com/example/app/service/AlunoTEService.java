@@ -50,6 +50,7 @@ public class AlunoTEService {
         AlunoTE alunoTE = dto.toEntity();
 
         AlunoTE saved = alunoTERepository.save(alunoTE);
+
         return AlunoTEResponseDTO.fromEntity(saved);
     }
 
@@ -65,10 +66,10 @@ public class AlunoTEService {
         // Update attributes from DTO
         existing.setEmpresa(dto.getEmpresa());
         existing.setNome(dto.getNome());
-        existing.setEmail(dto.getEmail());
         existing.setNumero(dto.getNumero());
+        existing.setEmail(dto.getEmail());
 
-        AlunoTE saved = alunoTERepository.save(existing);
+        AlunoTE saved = alunoTERepository.saveAndFlush(existing);
         return AlunoTEResponseDTO.fromEntity(saved);
     }
 

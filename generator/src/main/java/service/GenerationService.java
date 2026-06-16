@@ -137,17 +137,21 @@ public class GenerationService {
             if (opts.getDockerfile() != null) {
                 settings.setDockerfile(opts.getDockerfile());
             }
+            if (opts.getTimestamps() != null) {
+                settings.setTimestamps(opts.getTimestamps());
+            }
         }
         SpringProjectGenerator project = new SpringProjectGenerator(settings, outputDir);
         project.generateProjectStructure();
 
         String basePackage = settings.getBasePackage();
+        boolean timestamps = settings.isTimestamps();
 
-        new SpringEntityGenerator(outputDir, basePackage)
+        new SpringEntityGenerator(outputDir, basePackage, timestamps)
                 .generateEntities(m.getClasses(), m.getAssociations(), m.getEnumerations());
-        new SpringEntityGenerator(outputDir, basePackage)
+        new SpringEntityGenerator(outputDir, basePackage, false)   // interfaces não estendem Auditable
                 .generateInterfaces(m.getInterfaces());
-        new SpringDTOGenerator(outputDir, basePackage)
+        new SpringDTOGenerator(outputDir, basePackage, timestamps)
                 .generateDTOs(m.getClasses(), m.getAssociations(), m.getEnumerations());
         new SpringRepositoryGenerator(outputDir, basePackage)
                 .generateRepositories(m.getClasses());

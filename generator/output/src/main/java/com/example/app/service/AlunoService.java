@@ -51,6 +51,13 @@ public class AlunoService {
         Aluno aluno = dto.toEntity();
 
         Aluno saved = alunoRepository.save(aluno);
+
+        if (dto.getTurnoId() != null) {
+            Turno turno = turnoRepository.findById(dto.getTurnoId())
+                .orElseThrow(() -> new RuntimeException("Turno not found: " + dto.getTurnoId()));
+            saved.setTurno(turno);
+        }
+        saved = alunoRepository.save(saved);
         return AlunoResponseDTO.fromEntity(saved);
     }
 
@@ -65,10 +72,10 @@ public class AlunoService {
 
         // Update attributes from DTO
         existing.setNome(dto.getNome());
-        existing.setEmail(dto.getEmail());
         existing.setNumero(dto.getNumero());
+        existing.setEmail(dto.getEmail());
 
-        Aluno saved = alunoRepository.save(existing);
+        Aluno saved = alunoRepository.saveAndFlush(existing);
         return AlunoResponseDTO.fromEntity(saved);
     }
 

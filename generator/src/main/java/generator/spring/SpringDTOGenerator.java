@@ -24,12 +24,16 @@ public class SpringDTOGenerator {
     private String basePackage;
     private Set<String> enumNames = new HashSet<>();
 
+    // createdAt/updatedAt expostos no ResponseDTO
+    private final boolean timestamps;
+
     // nome -> Class, para resolver o tipo de id de outra classe nas relações
     private final Map<String, Class> classMap = new HashMap<>();
 
-    public SpringDTOGenerator(String baseOutputPath, String basePackage) {
+    public SpringDTOGenerator(String baseOutputPath, String basePackage, boolean timestamps) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
+        this.timestamps = timestamps;
     }
 
     // tipo do id de uma classe (pelo nome), resolvido a partir da raiz; default Long
@@ -78,9 +82,17 @@ public class SpringDTOGenerator {
         String filename = dtoDir + "/" + className + "CreateDTO.java";
 
         try (PrintWriter w = new PrintWriter(new File(filename))) {
+            // relações navegáveis (mesmos campos de id que o ResponseDTO)
+            List<RelationshipInfo> relationships = collectRelationships(className, associations);
+            boolean hasCollectionRel = relationships.stream()
+                    .anyMatch(r -> GeneratorUtils.checkMultiplicity(r.multiplicity) || r.assoc.hasQualifier());
+
             w.println("package " + basePackage + ".dto;");
             w.println();
             w.println("import lombok.*;");
+            if (hasCollectionRel) {
+                w.println("import java.util.*;");   // List<...> dos ids de coleção
+            }
             w.println("import " + basePackage + ".models." + className + ";");
 
             // id gerado pela BD -> fora do CreateDTO
@@ -103,7 +115,7 @@ public class SpringDTOGenerator {
             w.println("@Getter");
             w.println("@Setter");
             w.println("@NoArgsConstructor");
-            if (!allAttrs.isEmpty()) {
+            if (!allAttrs.isEmpty() || !relationships.isEmpty()) {
                 w.println("@AllArgsConstructor");
                 w.println("@Builder");
             }
@@ -115,6 +127,11 @@ public class SpringDTOGenerator {
                 String type = attr.getInitExpression() != null
                         ? GeneratorUtils.fixType(attr.getType()) : attr.getType();
                 w.println("    private " + type + " " + attr.getName() + ";");
+            }
+
+            // ids de relação (ligados no service, não no toEntity) — mesmo "emit" do ResponseDTO
+            for (RelationshipInfo rel : relationships) {
+                generateRelationshipIdField(w, rel.otherClass, rel.role, rel.multiplicity, rel.assoc);
             }
 
             // toEntity() method
@@ -140,6 +157,24 @@ public class SpringDTOGenerator {
         System.out.println("Generated: " + className + "CreateDTO.java");
     }
 
+    // relações navs desta classe (ambos os lados) — partilhado por Response e Create DTO
+    private List<RelationshipInfo> collectRelationships(String className, List<Association> associations) {
+        List<RelationshipInfo> relationships = new ArrayList<>();
+        for (Association assoc : associations) {
+            if (assoc.getSourceClass().equals(className) && assoc.isTargetNavigable()) {
+                relationships.add(new RelationshipInfo(
+                        assoc.getTargetClass(), assoc.getTargetRole(),
+                        assoc.getTargetMultiplicity(), assoc));
+            }
+            if (assoc.getTargetClass().equals(className) && assoc.isSourceNavigable()) {
+                relationships.add(new RelationshipInfo(
+                        assoc.getSourceClass(), assoc.getSourceRole(),
+                        assoc.getSourceMultiplicity(), assoc));
+            }
+        }
+        return relationships;
+    }
+
     /**
      * ResponseDTO: id + attributes + relationship IDs
      * Used for GET responses and return values
@@ -154,6 +189,9 @@ public class SpringDTOGenerator {
             w.println("import lombok.*;");
             w.println("import java.util.*;");
             w.println("import java.util.stream.Collectors;");
+            if (timestamps) {
+                w.println("import java.time.Instant;");
+            }
             w.println("import " + basePackage + ".models." + className + ";");
 
             // import enums and related entity classes for fromEntity
@@ -193,27 +231,21 @@ public class SpringDTOGenerator {
                 w.println();
             }
 
+            // timestamps (geridos pelo servidor, só de leitura)
+            if (timestamps) {
+                w.println("    private Instant createdAt;");
+                w.println("    private Instant updatedAt;");
+                w.println();
+            }
+
             // attributes
             List<Attribute> allAttrs = cls.getAllAttributes();
             for (Attribute attr : allAttrs) {
                 w.println("    private " + attr.getType() + " " + attr.getName() + ";");
             }
 
-            // relationship ID fields
-            // collect relationship info for both fields and fromEntity mapping
-            List<RelationshipInfo> relationships = new ArrayList<>();
-            for (Association assoc : associations) {
-                if (assoc.getSourceClass().equals(className) && assoc.isTargetNavigable()) {
-                    relationships.add(new RelationshipInfo(
-                            assoc.getTargetClass(), assoc.getTargetRole(),
-                            assoc.getTargetMultiplicity(), assoc));
-                }
-                if (assoc.getTargetClass().equals(className) && assoc.isSourceNavigable()) {
-                    relationships.add(new RelationshipInfo(
-                            assoc.getSourceClass(), assoc.getSourceRole(),
-                            assoc.getSourceMultiplicity(), assoc));
-                }
-            }
+            // relationship ID fields (mesma lista usada nos campos e no fromEntity)
+            List<RelationshipInfo> relationships = collectRelationships(className, associations);
 
             if (!relationships.isEmpty()) {
                 w.println();
@@ -228,6 +260,10 @@ public class SpringDTOGenerator {
             w.println("    public static " + className + "ResponseDTO fromEntity(" + className + " " + varName + ") {");
             w.println("        " + className + "ResponseDTO dto = new " + className + "ResponseDTO();");
             if (defaultId) w.println("        dto.setId(" + varName + ".getId());");
+            if (timestamps) {
+                w.println("        dto.setCreatedAt(" + varName + ".getCreatedAt());");
+                w.println("        dto.setUpdatedAt(" + varName + ".getUpdatedAt());");
+            }
 
             for (Attribute attr : allAttrs) {
                 String cap = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);

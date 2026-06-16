@@ -1,6 +1,7 @@
 package com.example.app.dto;
 
 import lombok.*;
+import java.util.*;
 import com.example.app.models.Turma;
 
 @Getter
@@ -11,6 +12,8 @@ import com.example.app.models.Turma;
 public class TurmaCreateDTO {
 
     private String nome;
+    private List<Long> alunosIds;
+    private List<Long> turnosIds;
 
     public Turma toEntity() {
         Turma turma = new Turma();

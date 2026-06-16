@@ -16,8 +16,8 @@ public class AlunoResponseDTO {
     private Long id;
 
     private String nome;
-    private String email;
     private int numero;
+    private String email;
 
     private Long turnoId;
 
@@ -25,8 +25,8 @@ public class AlunoResponseDTO {
         AlunoResponseDTO dto = new AlunoResponseDTO();
         dto.setId(aluno.getId());
         dto.setNome(aluno.getNome());
-        dto.setEmail(aluno.getEmail());
         dto.setNumero(aluno.getNumero());
+        dto.setEmail(aluno.getEmail());
         dto.setTurnoId(aluno.getTurno() != null
             ? aluno.getTurno().getId() : null);
         return dto;

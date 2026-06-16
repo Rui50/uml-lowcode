@@ -1,6 +1,7 @@
 package com.example.app.dto;
 
 import lombok.*;
+import java.util.*;
 import com.example.app.models.Turno;
 
 @Getter
@@ -11,6 +12,7 @@ import com.example.app.models.Turno;
 public class TurnoCreateDTO {
 
     private int capacidade;
+    private List<Long> alunosIds;
 
     public Turno toEntity() {
         Turno turno = new Turno();

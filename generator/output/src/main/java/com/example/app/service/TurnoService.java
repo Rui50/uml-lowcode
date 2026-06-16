@@ -51,6 +51,14 @@ public class TurnoService {
         Turno turno = dto.toEntity();
 
         Turno saved = turnoRepository.save(turno);
+
+        if (dto.getAlunosIds() != null) {
+            for (Aluno aluno : alunoRepository.findAllById(dto.getAlunosIds())) {
+                saved.getAlunos().add(aluno);
+                aluno.setTurno(saved);
+                alunoRepository.save(aluno);
+            }
+        }
         return TurnoResponseDTO.fromEntity(saved);
     }
 
@@ -66,7 +74,7 @@ public class TurnoService {
         // Update attributes from DTO
         existing.setCapacidade(dto.getCapacidade());
 
-        Turno saved = turnoRepository.save(existing);
+        Turno saved = turnoRepository.saveAndFlush(existing);
         return TurnoResponseDTO.fromEntity(saved);
     }
 

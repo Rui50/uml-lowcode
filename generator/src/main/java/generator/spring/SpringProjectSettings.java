@@ -7,6 +7,7 @@ public class SpringProjectSettings {
     private int serverPort = 8080;
     private boolean openApi = true;   // incluir OpenAPI/Swagger UI (springdoc)
     private boolean dockerfile = false;   // gerar Dockerfile
+    private boolean timestamps = false;   // adicionar createdAt/updatedAt às entidades (Auditable)
 
     // getters and setters
     public boolean isOpenApi() {
@@ -14,6 +15,13 @@ public class SpringProjectSettings {
     }
     public void setOpenApi(boolean openApi) {
         this.openApi = openApi;
+    }
+
+    public boolean isTimestamps() {
+        return timestamps;
+    }
+    public void setTimestamps(boolean timestamps) {
+        this.timestamps = timestamps;
     }
 
     public boolean isDockerfile() {

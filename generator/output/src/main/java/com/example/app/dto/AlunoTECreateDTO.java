@@ -12,15 +12,15 @@ public class AlunoTECreateDTO {
 
     private String empresa;
     private String nome;
-    private String email;
     private int numero;
+    private String email;
 
     public AlunoTE toEntity() {
         AlunoTE alunoTE = new AlunoTE();
         alunoTE.setEmpresa(this.getEmpresa());
         alunoTE.setNome(this.getNome());
-        alunoTE.setEmail(this.getEmail());
         alunoTE.setNumero(this.getNumero());
+        alunoTE.setEmail(this.getEmail());
         return alunoTE;
     }
 }

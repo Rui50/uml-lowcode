@@ -38,14 +38,18 @@ public class SpringEntityGenerator {
     private String baseOutputPath;
     private String basePackage;
 
+    // adicionar createdAt/updatedAt, classes raiz estendem Auditable
+    private final boolean timestamps;
+
     private ValidationGenerator validationGenerator;
 
     // nomes das enumerações para saber quando um atributo é enum
     private Set<String> enumNames = new HashSet<>();
 
-    public SpringEntityGenerator(String baseOutputPath, String basePackage) {
+    public SpringEntityGenerator(String baseOutputPath, String basePackage, boolean timestamps) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
+        this.timestamps = timestamps;
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
@@ -138,7 +142,11 @@ public class SpringEntityGenerator {
             writer.println("import jakarta.validation.constraints.*;");   // anotações Validation (OCL)
             writer.println("import lombok.*;");
             writer.println("import java.util.*;");
-            if (cls.getParentClass() != null || GeneratorUtils.isParent(cls, allClasses)) {
+            // com timestamps a raiz extends Auditable (@SuperBuilder), logo todas usam SuperBuilder
+            boolean useSuperBuilder = cls.getParentClass() != null
+                    || GeneratorUtils.isParent(cls, allClasses)
+                    || timestamps;
+            if (useSuperBuilder) {
                 writer.println("import lombok.experimental.SuperBuilder;");
             }
             writer.println();
@@ -150,6 +158,9 @@ public class SpringEntityGenerator {
             writer.print("public " + (cls.isAbstract() ? "abstract " : "") + "class " + cls.getName());
             if (cls.getParentClass() != null) {
                 writer.print(" extends " + cls.getParentClass().getName());
+            } else if (timestamps) {
+                // a classe raiz carrega os timestamps filhas herdam por transitividade
+                writer.print(" extends Auditable");
             }
             // nota: interfaces UML são realizadas pelo service (anemic entity), não pela entidade
             writer.println(" {");
@@ -195,8 +206,8 @@ public class SpringEntityGenerator {
         writer.println("@Setter");
         writer.println("@NoArgsConstructor");
         writer.println("@AllArgsConstructor(access = AccessLevel.PRIVATE)");
-        // need superbuilder se for de herança
-        if (cls.getParentClass() != null || GeneratorUtils.isParent(cls, allClasses)) {
+        // need superbuilder se for de herança (ou se extendem Auditable por causa dos timestamps)
+        if (cls.getParentClass() != null || GeneratorUtils.isParent(cls, allClasses) || timestamps) {
             writer.println("@SuperBuilder");
         } else {
             /***

@@ -65,6 +65,10 @@
       <Checkbox v-model="settings.dockerfile" :binary="true" inputId="dockerfile" />
       <label for="dockerfile">Generate Dockerfile</label>
     </div>
+    <div v-if="showPort" class="field-check">
+      <Checkbox v-model="settings.timestamps" :binary="true" inputId="timestamps" />
+      <label for="timestamps">Add createdAt / updatedAt to entities</label>
+    </div>
 
     <p v-if="showDB" class="db-note">
       Nota: os dados da base de dados têm de ser definidos no
