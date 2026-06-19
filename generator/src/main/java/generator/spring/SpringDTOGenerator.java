@@ -140,7 +140,7 @@ public class SpringDTOGenerator {
             w.println("    public " + className + " toEntity() {");
             w.println("        " + className + " " + varName + " = new " + className + "();");
             for (Attribute attr : allAttrs) {
-                String cap = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
+                String cap = GeneratorUtils.capitalizeFirst(attr.getName());
                 if (attr.getInitExpression() != null) {
                     // preserve entity's init default when client didn't send a value
                     w.println("        if (this.get" + cap + "() != null) " + varName + ".set" + cap + "(this.get" + cap + "());");
@@ -266,7 +266,7 @@ public class SpringDTOGenerator {
             }
 
             for (Attribute attr : allAttrs) {
-                String cap = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
+                String cap = GeneratorUtils.capitalizeFirst(attr.getName());
                 w.println("        dto.set" + cap + "(" + varName + ".get" + cap + "());");
             }
 
@@ -299,7 +299,7 @@ public class SpringDTOGenerator {
     private void generateRelationshipIdMapping(PrintWriter w, String varName, String otherClass,
                                                 String role, String multiplicity, Association assoc) {
         String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, multiplicity);
-        String capitalizedField = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
 
         if (GeneratorUtils.checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
             if (assoc.hasQualifier()) {

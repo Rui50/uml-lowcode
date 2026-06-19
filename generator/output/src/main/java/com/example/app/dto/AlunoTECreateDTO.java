@@ -11,16 +11,16 @@ import com.example.app.models.AlunoTE;
 public class AlunoTECreateDTO {
 
     private String empresa;
-    private String nome;
     private int numero;
     private String email;
+    private String nome;
 
     public AlunoTE toEntity() {
         AlunoTE alunoTE = new AlunoTE();
         alunoTE.setEmpresa(this.getEmpresa());
-        alunoTE.setNome(this.getNome());
         alunoTE.setNumero(this.getNumero());
         alunoTE.setEmail(this.getEmail());
+        alunoTE.setNome(this.getNome());
         return alunoTE;
     }
 }

@@ -132,6 +132,59 @@ public class GeneratorUtils {
         return checkMultiplicity(multiplicity) ? base + "s" : base;
     }
 
+    /**
+     * A entidade de 'className' é o DONO desta relação (tem @JoinTable/@JoinColumn, não mappedBy)?
+     * Fonte única de verdade da posse — usada pela entidade, services, controllers e CLI, para que
+     * não possam discordar. Quem decide é a NAVEGABILIDADE, não o source/target da associação.
+     *
+     * Regra: unidirecional -> o lado navegável é sempre dono; bidirecional depende da forma:
+     *   M:N e O:O -> o target é dono;  O:M (coleção) -> inverso (mappedBy);  M:O (singular) -> dono da FK.
+     */
+    public static boolean isOwningSide(String className, Association assoc) {
+        boolean isSource = assoc.getSourceClass().equals(className);
+        boolean navigableFromHere = isSource ? assoc.isTargetNavigable() : assoc.isSourceNavigable();
+        if (!navigableFromHere) return false;   // nem sequer tem campo
+
+        boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
+        if (!isBidirectional) return true;      // unidirecional: o lado navegável é o dono
+
+        // bidirecional: forma do campo no sentido do EntityGenerator (far = para onde o campo aponta)
+        String farMul  = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
+        String nearMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+        boolean fieldIsCollection = checkMultiplicity(farMul);
+        boolean nearMultiple      = checkMultiplicity(nearMul);
+
+        if (fieldIsCollection && nearMultiple)  return !isSource;  // M:N -> target é dono
+        if (fieldIsCollection && !nearMultiple) return false;      // O:M -> mappedBy (inverso)
+        if (!fieldIsCollection && nearMultiple) return true;       // M:O -> dono da FK
+        return !isSource;                                          // O:O -> target é dono
+    }
+
+    // Decidem o lado por igualdade de nome (não cobrem associações herdadas — ver menus).
+    // esta classe consegue navegar para o outro lado nesta associação?
+    public static boolean isNavigableTo(String className, Association a) {
+        return a.getSourceClass().equals(className) ? a.isTargetNavigable() : a.isSourceNavigable();
+    }
+
+    // a classe do outro lado
+    public static String otherClassOf(String className, Association a) {
+        return a.getSourceClass().equals(className) ? a.getTargetClass() : a.getSourceClass();
+    }
+
+    // o campo desta classe para esta associação (combina o outro lado + makeAttributeName)
+    public static String fieldNameOf(String className, Association a) {
+        boolean s = a.getSourceClass().equals(className);
+        return makeAttributeName(s ? a.getTargetClass() : a.getSourceClass(),
+                                 s ? a.getTargetRole()  : a.getSourceRole(),
+                                 s ? a.getTargetMultiplicity() : a.getSourceMultiplicity());
+    }
+
+    // o campo desta classe é coleção? (outro lado "muitos" ou associação de map (qualifier))
+    public static boolean isCollectionOf(String className, Association a) {
+        boolean s = a.getSourceClass().equals(className);
+        return checkMultiplicity(s ? a.getTargetMultiplicity() : a.getSourceMultiplicity()) || a.hasQualifier();
+    }
+
     // extrair o tipo "base" de retorno e parametros: List<Aluno> -> Aluno, Map<Integer, Turma> -> Turma
     public static String extractBaseType(String type) {
         if (type == null) return null;

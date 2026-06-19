@@ -288,10 +288,9 @@ public class SpringServiceGenerator {
             boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);
 
             // navegabilidade: esta classe precisa de ter navegabilidade para o outro lado
-            boolean navigableToOther = isSource ? assoc.isTargetNavigable() : assoc.isSourceNavigable();
-            if (!navigableToOther) continue;
+            if (!GeneratorUtils.isNavigableTo(cls.getName(), assoc)) continue;
 
-            String otherClass = isSource ? assoc.getTargetClass() : assoc.getSourceClass();
+            String otherClass = GeneratorUtils.otherClassOf(cls.getName(), assoc);
 
             // ManyToOne: esta classe tem o FK (lado owner)
             // thisMultiple = muitos de "mim" -> o outro tem coleção desta classe
@@ -310,15 +309,15 @@ public class SpringServiceGenerator {
                 generateRemoveAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource);
             }
 
-            // ManyToMany: gerar addX e removeX no lado owner (@JoinTable)
-            // No entity generator, o source é o owner
-            if (thisMultiple && otherMultiple && isSource) {
+            // ManyToMany: gerar addX e removeX no lado DONO (@JoinTable), decidido por isOwningSide
+            if (thisMultiple && otherMultiple && GeneratorUtils.isOwningSide(cls.getName(), assoc)) {
                 if (!hasRelationships) {
                     writer.println("    // Relationship stuff");
                     hasRelationships = true;
                 }
 
-                String fieldName = GeneratorUtils.makeAttributeName(otherClass, assoc.getTargetRole(), otherMul);
+                String fieldName = GeneratorUtils.makeAttributeName(otherClass,
+                        isSource ? assoc.getTargetRole() : assoc.getSourceRole(), otherMul);
 
                 generateManyToManyAddMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional);
                 generateManyToManyRemoveMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional);
@@ -365,7 +364,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Id the " + otherClass + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO assign" + GeneratorUtils.capitalizeFirst(otherClass) +
+        writer.println("    public " + className + "ResponseDTO assign" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, " + idTypeOf(otherClass) + " " + otherVar + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -421,7 +420,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO remove" + GeneratorUtils.capitalizeFirst(otherClass) +
+        writer.println("    public " + className + "ResponseDTO remove" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -476,7 +475,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO add" + GeneratorUtils.capitalizeFirst(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO add" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -490,8 +489,12 @@ public class SpringServiceGenerator {
             writer.println("            " + varName + ".get" + capitalizedField + "().put(" +
                     otherVar + "." + qualifierGetter + "(), " + otherVar + ");");
             if (isBidirectional) {
-                String inverseMul = assoc.getSourceMultiplicity();
-                String inverseField = GeneratorUtils.makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                // campo inverso (no outro lado, a apontar para esta classe) = role do MEU lado,
+                // independentemente de eu ser source ou target da associação
+                boolean inverseIsSource = assoc.getSourceClass().equals(className);
+                String inverseMul = inverseIsSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+                String inverseField = GeneratorUtils.makeAttributeName(className,
+                        inverseIsSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
                 writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().put(" +
                         varName + "." + qualifierGetter + "(), " + varName + ");");
             }
@@ -500,8 +503,12 @@ public class SpringServiceGenerator {
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedField + "().add(" + otherVar + ");");
             if (isBidirectional) {
-                String inverseMul = assoc.getSourceMultiplicity();
-                String inverseField = GeneratorUtils.makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                // campo inverso (no outro lado, a apontar para esta classe) = role do MEU lado,
+                // independentemente de eu ser source ou target da associação
+                boolean inverseIsSource = assoc.getSourceClass().equals(className);
+                String inverseMul = inverseIsSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+                String inverseField = GeneratorUtils.makeAttributeName(className,
+                        inverseIsSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
                 writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().add(" + varName + ");");
             }
             writer.println("        }");
@@ -537,7 +544,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO remove" + GeneratorUtils.capitalizeFirst(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO remove" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -551,8 +558,12 @@ public class SpringServiceGenerator {
             writer.println("            " + varName + ".get" + capitalizedField + "().remove(" +
                     otherVar + "." + qualifierGetter + "());");
             if (isBidirectional) {
-                String inverseMul = assoc.getSourceMultiplicity();
-                String inverseField = GeneratorUtils.makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                // campo inverso (no outro lado, a apontar para esta classe) = role do MEU lado,
+                // independentemente de eu ser source ou target da associação
+                boolean inverseIsSource = assoc.getSourceClass().equals(className);
+                String inverseMul = inverseIsSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+                String inverseField = GeneratorUtils.makeAttributeName(className,
+                        inverseIsSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
                 writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().remove(" +
                         varName + "." + qualifierGetter + "());");
             }
@@ -561,8 +572,12 @@ public class SpringServiceGenerator {
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedField + "().remove(" + otherVar + ");");
             if (isBidirectional) {
-                String inverseMul = assoc.getSourceMultiplicity();
-                String inverseField = GeneratorUtils.makeAttributeName(className, assoc.getSourceRole(), inverseMul);
+                // campo inverso (no outro lado, a apontar para esta classe) = role do MEU lado,
+                // independentemente de eu ser source ou target da associação
+                boolean inverseIsSource = assoc.getSourceClass().equals(className);
+                String inverseMul = inverseIsSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+                String inverseField = GeneratorUtils.makeAttributeName(className,
+                        inverseIsSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
                 writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().remove(" + varName + ");");
             }
             writer.println("        }");
@@ -598,7 +613,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO add" + GeneratorUtils.capitalizeFirst(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO add" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -644,7 +659,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO remove" + GeneratorUtils.capitalizeFirst(otherPlural) +
+        writer.println("    public " + className + "ResponseDTO remove" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
@@ -686,7 +701,7 @@ public class SpringServiceGenerator {
 
         for (Attribute attr : stringAttributes){
             String attrName = attr.getName();
-            String capitalizedAttr = attrName.substring(0, 1).toUpperCase() + attrName.substring(1);
+            String capitalizedAttr = GeneratorUtils.capitalizeFirst(attrName);
 
             // findByAttribute()
             writer.println("    /**");
@@ -767,29 +782,18 @@ public class SpringServiceGenerator {
             boolean isTarget = assoc.getTargetClass().equals(className);
             if (!isSource && !isTarget) continue;
 
-            // só interessa se conseguimos navegar para o outro lado (senão não há campo no DTO)
-            boolean navigableToOther = isSource ? assoc.isTargetNavigable() : assoc.isSourceNavigable();
-            if (!navigableToOther) continue;
+            // sem navegação para o outro lado não há campo no DTO
+            if (!GeneratorUtils.isNavigableTo(className, assoc)) continue;
 
-            // bidirecional = os dois lados se veem (relevante para distinguir O:M uni de O:M inverso)
-            boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
+            String otherClass  = GeneratorUtils.otherClassOf(className, assoc);
+            // nome do campo = o mesmo que o CreateDTO/entidade usam, por isso get<Field>Id()/Ids() existem
+            String capField    = GeneratorUtils.capitalizeFirst(GeneratorUtils.fieldNameOf(className, assoc));
+            boolean collection = GeneratorUtils.isCollectionOf(className, assoc);
 
-            // dados do OUTRO lado (a entidade relacionada) e do MEU lado, do ponto de vista desta classe
-            String otherClass = isSource ? assoc.getTargetClass()        : assoc.getSourceClass();
-            String otherRole  = isSource ? assoc.getTargetRole()         : assoc.getSourceRole();
-            String otherMul   = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
-            String thisRole   = isSource ? assoc.getSourceRole()         : assoc.getTargetRole();
-            String thisMul    = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-            boolean thisMultiple  = GeneratorUtils.checkMultiplicity(thisMul);    // "muitos DESTE" por cada outro
-            boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);   // "muitos do OUTRO" por cada este
-
-            // nome do campo = exatamente o mesmo que o CreateDTO/entidade usam (via makeAttributeName),
-            // por isso get<Field>Id()/get<Field>Ids() e saved.get<Field>() existem com este nome
-            String fieldName  = GeneratorUtils.makeAttributeName(otherClass, otherRole, otherMul);
-            String capField   = GeneratorUtils.capitalizeFirst(fieldName);
-
-            // é coleção se o outro lado é "muitos", ou se a associação é qualificada (Map)
-            boolean collection = otherMultiple || assoc.hasQualifier();
+            // dados do MEU lado — preciso para o campo inverso (caso 3)
+            String thisRole = isSource ? assoc.getSourceRole() : assoc.getTargetRole();
+            String thisMul  = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+            boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
 
             String otherVar  = GeneratorUtils.lowercaseFirst(otherClass);
             String otherRepo = otherVar + "Repository";   // repo já injetado (entidade associada)
@@ -808,11 +812,9 @@ public class SpringServiceGenerator {
             }
             // casos2/3 é quando é coleção
             else {
-                // dono da coleção = M:N source, ou O:M/qualificada unidirecional (a coleção é só nossa);
-                // caso contrário é o lado INVERSO (a FK está no outro)
-                boolean ownerSide = (thisMultiple && otherMultiple && isSource)
-                        || ((!thisMultiple || assoc.hasQualifier())
-                            && (otherMultiple || assoc.hasQualifier()) && !isBidirectional);
+                // dono da coleção segundo a NAVEGABILIDADE (mesma decisão da entidade);
+                // se não somos donos, a FK está no outro -> lado inverso
+                boolean ownerSide = GeneratorUtils.isOwningSide(className, assoc);
 
                 // como adicionar 'other' à coleção deste lado: put se for Map qualificado, senão add
                 String addToSaved;

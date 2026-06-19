@@ -182,15 +182,15 @@ public class TurmaService {
         );
     }
 
-    public void inicializarAlunosParaTeste(List<Aluno> alunos) {
-        throw new UnsupportedOperationException(
-            "Method 'inicializarAlunosParaTeste' not yet implemented. "
-        );
-    }
-
     public boolean transferirAluno(int numero, Turma destino) {
         throw new UnsupportedOperationException(
             "Method 'transferirAluno' not yet implemented. "
+        );
+    }
+
+    public void inicializarAlunosParaTeste(List<Aluno> alunos) {
+        throw new UnsupportedOperationException(
+            "Method 'inicializarAlunosParaTeste' not yet implemented. "
         );
     }
 }

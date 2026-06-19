@@ -272,7 +272,7 @@ public class JavaEntityGenerator {
 
 
     private void generateGetterSetter(PrintWriter writer, String type, String name) {
-        String capitalized = name.substring(0, 1).toUpperCase() + name.substring(1);
+        String capitalized = GeneratorUtils.capitalizeFirst(name);
 
         // getter
         writer.println("    public " + type + " get" + capitalized + "() {");
@@ -289,7 +289,7 @@ public class JavaEntityGenerator {
 
     private void generateDerivedGetter(PrintWriter writer, Attribute attr) {
         String name = attr.getName();
-        String capitalized = name.substring(0, 1).toUpperCase() + name.substring(1);
+        String capitalized = GeneratorUtils.capitalizeFirst(name);
         writer.println("    public " + attr.getType() + " get" + capitalized + "() {");
         writer.println("        return " + attr.getJavaDeriveExpression() + ";");
         writer.println("    }");
@@ -374,7 +374,7 @@ public class JavaEntityGenerator {
 
         for (Attribute attr : cls.getAttributes()) {
             writer.println(" +");
-            String capitalized = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
+            String capitalized = GeneratorUtils.capitalizeFirst(attr.getName());
             String expr;
             if (attr.hasDerive()) {
                 expr = "get" + capitalized + "()";

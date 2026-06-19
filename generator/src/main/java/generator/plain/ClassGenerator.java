@@ -298,7 +298,7 @@ public class ClassGenerator {
         for (Attribute attribute : cls.getAttributes()) {
             String name = attribute.getName();
             String type = attribute.getType();
-            String capitalizedName = name.substring(0, 1).toUpperCase() + name.substring(1);
+            String capitalizedName = GeneratorUtils.capitalizeFirst(name);
 
             if (attribute.hasDerive()){
                 writer.println();
@@ -374,27 +374,29 @@ public class ClassGenerator {
     * put / get / remove / getAll
      */
     private void generateMapAssociationMethods(PrintWriter writer, String targetClass, String attributeName, String keyType){
+        // nome dos métodos baseado no role (attributeName), desambigua quando tem mais do que uma  assoc para a mesma classe
+        String cap = GeneratorUtils.capitalizeFirst(attributeName);
         // put method
         writer.println();
-        writer.println("    public void put" + targetClass + "(" + keyType + " key, " + targetClass + " value) {");
+        writer.println("    public void put" + cap + "(" + keyType + " key, " + targetClass + " value) {");
         writer.println("        this." + attributeName + ".put(key, value);");
         writer.println("    }");
 
         // get method
         writer.println();
-        writer.println("    public " + targetClass + " get" + targetClass + "(" + keyType + " key) {");
+        writer.println("    public " + targetClass + " get" + cap + "(" + keyType + " key) {");
         writer.println("        return this." + attributeName + ".get(key);");
         writer.println("    }");
 
         // remove method
         writer.println();
-        writer.println("    public void remove" + targetClass + "(" + keyType + " key) {");
+        writer.println("    public void remove" + cap + "(" + keyType + " key) {");
         writer.println("        this." + attributeName + ".remove(key);");
         writer.println("    }");
 
         // get all method
         writer.println();
-        writer.println("    public Map<" + keyType + ", " + targetClass + "> getAll" + targetClass + "s() {");
+        writer.println("    public Map<" + keyType + ", " + targetClass + "> getAll" + cap + "() {");
         writer.println("        return this." + attributeName + ";");
         writer.println("    }");
     }
@@ -404,21 +406,22 @@ public class ClassGenerator {
     *  add / remove / getXs
      */
     private void generateListAssociationMethods(PrintWriter wrriter, String className, String attributeName){
+        String cap = GeneratorUtils.capitalizeFirst(attributeName);   // nome dos metodos baseado na role
         // add method
         wrriter.println();
-        wrriter.println("    public void add" + className + "(" + className + " " + attributeName + ") {");
+        wrriter.println("    public void add" + cap + "(" + className + " " + attributeName + ") {");
         wrriter.println("        this." + attributeName + ".add(" + attributeName + ");");
         wrriter.println("    }");
 
         // remove method
         wrriter.println();
-        wrriter.println("    public void remove" + className + "(" + className + " " + attributeName + ") {");
+        wrriter.println("    public void remove" + cap + "(" + className + " " + attributeName + ") {");
         wrriter.println("        this." + attributeName + ".remove(" + attributeName + ");");
         wrriter.println("    }");
 
         // get method
         wrriter.println();
-        wrriter.println("    public List<" + className + "> get" + className + "s() {");
+        wrriter.println("    public List<" + className + "> get" + cap + "() {");
         wrriter.println("        return this." + attributeName + ";");
         wrriter.println("    }");
     }
@@ -428,15 +431,16 @@ public class ClassGenerator {
     * get / set
      */
     private void generateSingleAssociationMethods(PrintWriter wrriter, String className, String attributeName){
+        String cap = GeneratorUtils.capitalizeFirst(attributeName);   // nome dos metodos baseado na role
         // get method
         wrriter.println();
-        wrriter.println("    public " + className + " get" + className + "() {");
+        wrriter.println("    public " + className + " get" + cap + "() {");
         wrriter.println("        return this." + attributeName + ";");
         wrriter.println("    }");
 
         // set method
         wrriter.println();
-        wrriter.println("    public void set" + className + "(" + className + " " + attributeName + ") {");
+        wrriter.println("    public void set" + cap + "(" + className + " " + attributeName + ") {");
         wrriter.println("        this." + attributeName + " = " + attributeName + ";");
         wrriter.println("    }");
     }

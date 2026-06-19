@@ -71,9 +71,9 @@ public class AlunoService {
             .orElseThrow(() -> new RuntimeException("Aluno not found: " + id));
 
         // Update attributes from DTO
-        existing.setNome(dto.getNome());
         existing.setNumero(dto.getNumero());
         existing.setEmail(dto.getEmail());
+        existing.setNome(dto.getNome());
 
         Aluno saved = alunoRepository.saveAndFlush(existing);
         return AlunoResponseDTO.fromEntity(saved);

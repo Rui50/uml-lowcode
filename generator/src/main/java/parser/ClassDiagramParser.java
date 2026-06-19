@@ -44,6 +44,16 @@ public class ClassDiagramParser {
         this.derivesCache = derivesCache;
     }
 
+    // getSetAttribute(...) devolve um Set nao deterministico e gera coisas diferentes de cada vez
+    // para resolver ordenar pelo comparador do SDMetrics (runningID = ordem do documento XMI)
+    // torna a geração determinística e mantém a ordem com que as coisas foram desenhadas.
+    private static List<ModelElement> ordered(Collection<?> set) {
+        List<ModelElement> list = new ArrayList<>();
+        if (set != null) for (Object o : set) list.add((ModelElement) o);
+        list.sort(ModelElement.getComparator());
+        return list;
+    }
+
     // extrair todos as classes do modelo
     public List<Class> parseClasses() {
         List<Class> classes = new ArrayList<>();
@@ -74,32 +84,23 @@ public class ClassDiagramParser {
         cl.setAbstract("true".equalsIgnoreCase(abstractAttr));
 
         // attr da classe
-        Collection<?> attributes = element.getSetAttribute("ownedattributes");
-        if (attributes != null) {
-            for (Object attributeObj : attributes){
-                ModelElement attributeElement = (ModelElement) attributeObj;
-
-                // as associações também aparecem como atributos
-                // tirar porque são tratados depois independentemente
-                ModelElement associationRef = (ModelElement) attributeElement.getRefAttribute("association");
-                if (associationRef != null) {
-                    continue;
-                }
-
-                // parsing dos atributos "normais"
-                Attribute attribute = parseAttribute(attributeElement);
-                cl.addAttribute(attribute);
+        for (ModelElement attributeElement : ordered(element.getSetAttribute("ownedattributes"))) {
+            // as associações também aparecem como atributos
+            // tirar porque são tratados depois independentemente
+            ModelElement associationRef = (ModelElement) attributeElement.getRefAttribute("association");
+            if (associationRef != null) {
+                continue;
             }
+
+            // parsing dos atributos "normais"
+            Attribute attribute = parseAttribute(attributeElement);
+            cl.addAttribute(attribute);
         }
 
         // operações da classe
-        Collection<?> operations = element.getSetAttribute("ownedoperations");
-        if (operations != null) {
-            for (Object operationObj : operations){
-                ModelElement operationElement = (ModelElement) operationObj;
-                Operation operation = parseOperation(operationElement);
-                cl.addOperation(operation);
-            }
+        for (ModelElement operationElement : ordered(element.getSetAttribute("ownedoperations"))) {
+            Operation operation = parseOperation(operationElement);
+            cl.addOperation(operation);
         }
 
         String classId = element.getXMIID();
@@ -182,13 +183,9 @@ public class ClassDiagramParser {
             Interface iface = new Interface(name, "public");
 
             // operations dessa interface
-            Collection<?> operations = element.getSetAttribute("ownedoperations");
-            if (operations != null) {
-                for (Object operationObj : operations) {
-                    ModelElement operationElement = (ModelElement) operationObj;
-                    Operation operation = parseOperation(operationElement);
-                    iface.addOperation(operation);
-                }
+            for (ModelElement operationElement : ordered(element.getSetAttribute("ownedoperations"))) {
+                Operation operation = parseOperation(operationElement);
+                iface.addOperation(operation);
             }
             interfaces.add(iface);
         }
@@ -232,36 +229,30 @@ public class ClassDiagramParser {
         String abstractAttr = element.getPlainAttribute("abstract");
         operation.setAbstract("true".equalsIgnoreCase(abstractAttr));
 
-        // tipos de return e parâmetros
-        Collection<?> parameters = element.getSetAttribute("ownedparameters");
+        // tipos de return e parâmetros (ordem do documento)
+        for (ModelElement paramElement : ordered(element.getSetAttribute("ownedparameters"))) {
+            // direction do parâmetro (in, out, return)
+            String direction = paramElement.getPlainAttribute("kind");
 
-        if (parameters != null) {
-            for(Object paramObj : parameters) {
+            if ("return".equals(direction)){
+                // é um tipo de return
 
-                ModelElement paramElement = (ModelElement) paramObj;
-                // direction do parâmetro (in, out, return)
-                String direction = paramElement.getPlainAttribute("kind");
-
-                if ("return".equals(direction)){
-                    // é um tipo de return
-
-                    // genericType é como o VP da handle a Lists etc
-                    String genericType = paramElement.getPlainAttribute("generictype");
-                    if (genericType != null && !genericType.trim().isEmpty()) {
-                        operation.setReturnType(genericType);
-                    }
-                    // se não tiver genericType, tenta o tipo normal
-                    else {
-                        ModelElement type = (ModelElement) paramElement.getRefAttribute("parametertype");
-                        if (type != null) {
-                            operation.setReturnType(type.getName());
-                        }
-                    }
-                } else {
-                    // Parâmetro normal
-                    Parameter parameter = parseParameter(paramElement, direction);
-                    operation.addParameter(parameter);
+                // genericType é como o VP da handle a Lists etc
+                String genericType = paramElement.getPlainAttribute("generictype");
+                if (genericType != null && !genericType.trim().isEmpty()) {
+                    operation.setReturnType(genericType);
                 }
+                // se não tiver genericType, tenta o tipo normal
+                else {
+                    ModelElement type = (ModelElement) paramElement.getRefAttribute("parametertype");
+                    if (type != null) {
+                        operation.setReturnType(type.getName());
+                    }
+                }
+            } else {
+                // Parâmetro normal
+                Parameter parameter = parseParameter(paramElement, direction);
+                operation.addParameter(parameter);
             }
         }
 
@@ -319,10 +310,7 @@ public class ClassDiagramParser {
 
             if (memberEnds != null && memberEnds.size() == 2) {
                 // meter os dois lados numa lista, considerar a origim como o primeiro e o destino como o segundo se for necessário
-                List<ModelElement> ends = new ArrayList<>();
-                for (Object endObj : memberEnds) {
-                    ends.add((ModelElement) endObj);
-                }
+                List<ModelElement> ends = ordered(memberEnds);
 
                 // origem - assume sempre como sendo o get(0) da assoc
                 ModelElement sourceEnd = ends.get(0);
@@ -406,12 +394,8 @@ public class ClassDiagramParser {
         for (ModelElement enumElement : enumElements) {
             Enumeration enumeration = new Enumeration(enumElement.getName());
 
-            Collection<?> literals = enumElement.getSetAttribute("ownedliterals");
-            if (literals != null) {
-                for (Object literalObj : literals) {
-                    ModelElement literalElement = (ModelElement) literalObj;
-                    enumeration.addLiteral(literalElement.getName());
-                }
+            for (ModelElement literalElement : ordered(enumElement.getSetAttribute("ownedliterals"))) {
+                enumeration.addLiteral(literalElement.getName());
             }
 
             enumerations.add(enumeration);

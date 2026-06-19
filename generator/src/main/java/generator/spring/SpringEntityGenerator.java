@@ -312,7 +312,7 @@ public class SpringEntityGenerator {
     private void generateDerivedGetters(PrintWriter writer, Class cls) {
         for (Attribute atr : cls.getAttributes()) {
             if (!atr.hasDerive()) continue;
-            String cap = atr.getName().substring(0,1).toUpperCase() + atr.getName().substring(1);
+            String cap = GeneratorUtils.capitalizeFirst(atr.getName());
             writer.println("    public " + atr.getType() + " get" + cap + "() {");
             writer.println("        return " + atr.getJavaDeriveExpression() + ";");
             writer.println("    }");
@@ -416,12 +416,12 @@ public class SpringEntityGenerator {
                                     boolean isBidirectional) {
 
         if (isBidirectional) {
-            boolean isOwner = side.equals("source");
+            boolean isOwner = GeneratorUtils.isOwningSide(thisClass, assoc);
 
             if (isOwner) {
                 writer.println("    @ManyToMany");
                 writer.println("    @JoinTable(");
-                writer.println("        name = \"" + thisClass.toLowerCase() + "_" + otherClass.toLowerCase() + "\",");
+                writer.println("        name = \"" + thisClass.toLowerCase() + "_" + fieldName.toLowerCase() + "\",");
                 writer.println("        joinColumns = @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\"),");
                 writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
                 writer.println("    )");
@@ -432,7 +432,7 @@ public class SpringEntityGenerator {
         } else {
             writer.println("    @ManyToMany");
             writer.println("    @JoinTable(");
-            writer.println("        name = \"" + thisClass.toLowerCase() + "_" + otherClass.toLowerCase() + "\",");
+            writer.println("        name = \"" + thisClass.toLowerCase() + "_" + fieldName.toLowerCase() + "\",");
             writer.println("        joinColumns = @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\"),");
             writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
             writer.println("    )");
@@ -545,7 +545,7 @@ public class SpringEntityGenerator {
         } else {
             // Sem qualifier: OneToOne normal
             if (isBidirectional) {
-                boolean isOwner = side.equals("source");
+                boolean isOwner = GeneratorUtils.isOwningSide(thisClass, assoc);
 
                 if (isOwner) {
                     writer.println("    @OneToOne");

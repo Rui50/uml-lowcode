@@ -204,10 +204,13 @@ public class SpringControllerGenerator {
             boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
             boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);
 
-            boolean navigableToOther = isSource ? assoc.isTargetNavigable() : assoc.isSourceNavigable();
-            if (!navigableToOther) continue;
+            if (!GeneratorUtils.isNavigableTo(className, assoc)) continue;
 
-            String otherClass = isSource ? assoc.getTargetClass() : assoc.getSourceClass();
+            String otherClass = GeneratorUtils.otherClassOf(className, assoc);
+
+            // nome do campo baseado no role (igual ao service/entidade)
+            // sem role, makeAttributeName usa o nome da classe
+            String role = isSource ? assoc.getTargetRole() : assoc.getSourceRole();
 
             // ManyToOne: PUT /{id}/{other}/{otherId} e DELETE /{id}/{other}
             if (thisMultiple && !otherMultiple) {
@@ -215,18 +218,20 @@ public class SpringControllerGenerator {
                     writer.println("    // Relationship Endpoints");
                     hasRelationships = true;
                 }
-                generateAssignEndpoint(writer, className, otherClass, serviceName);
-                generateRemoveAssignEndpoint(writer, className, otherClass, serviceName);
+                String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, "0..1");
+                generateAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
+                generateRemoveAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
             }
 
-            // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others}
-            if (thisMultiple && otherMultiple && isSource) {
+            // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others} — no lado DONO (isOwningSide)
+            if (thisMultiple && otherMultiple && GeneratorUtils.isOwningSide(className, assoc)) {
                 if (!hasRelationships) {
                     writer.println("    // Relationship Endpoints");
                     hasRelationships = true;
                 }
-                generateCollectionAddEndpoint(writer, className, otherClass, serviceName);
-                generateCollectionRemoveEndpoint(writer, className, otherClass, serviceName);
+                String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, otherMul);
+                generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
+                generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);
             }
 
             // OneToMany unidirectional (or qualifier/Map): POST /{id}/{others} e DELETE /{id}/{others}
@@ -235,8 +240,9 @@ public class SpringControllerGenerator {
                     writer.println("    // Relationship Endpoints");
                     hasRelationships = true;
                 }
-                generateCollectionAddEndpoint(writer, className, otherClass, serviceName);
-                generateCollectionRemoveEndpoint(writer, className, otherClass, serviceName);
+                String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, otherMul);
+                generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
+                generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);
             }
         }
     }
@@ -245,19 +251,20 @@ public class SpringControllerGenerator {
      * ManyToOne: PUT /{id}/{otherClass}/{otherId}
      * Ex: PUT /api/alunos/1/turno/3
      */
-    private void generateAssignEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
+    private void generateAssignEndpoint(PrintWriter writer, String className, String otherClass, String fieldName, String serviceName) {
         String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
-        String otherPath = otherVar.toLowerCase();
+        String cap = GeneratorUtils.capitalizeFirst(fieldName);   // nome do método/handler (baseado no role)
+        String otherPath = fieldName.toLowerCase();                // path baseado no role
 
         writer.println();
         writer.println("    /**");
         writer.println("     * ManyToOne: Assign a " + otherClass + " to " + className);
         writer.println("     */");
         writer.println("    @PutMapping(\"/{id}/" + otherPath + "/{" + otherVar + "Id}\")");
-        writer.println("    public ResponseEntity<" + className + "ResponseDTO> assign" + otherClass + "(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> assign" + cap + "(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
         writer.println("            @PathVariable " + idTypeOf(otherClass) + " " + otherVar + "Id) {");
-        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".assign" + otherClass + "(id, " + otherVar + "Id);");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".assign" + cap + "(id, " + otherVar + "Id);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -267,16 +274,17 @@ public class SpringControllerGenerator {
      * ManyToOne: DELETE /{id}/{otherClass}
      * Ex: DELETE /api/alunos/1/turno
      */
-    private void generateRemoveAssignEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
-        String otherPath = otherClass.toLowerCase();
+    private void generateRemoveAssignEndpoint(PrintWriter writer, String className, String otherClass, String fieldName, String serviceName) {
+        String cap = GeneratorUtils.capitalizeFirst(fieldName);
+        String otherPath = fieldName.toLowerCase();
 
         writer.println("    /**");
         writer.println("     * ManyToOne: Remove the " + otherClass + " from " + className);
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
-        writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + otherClass + "(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + cap + "(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id) {");
-        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + otherClass + "(id);");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + cap + "(id);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -286,20 +294,20 @@ public class SpringControllerGenerator {
      * Collection (ManyToMany / OneToMany unidirectional): POST /{id}/{others}
      * Ex: POST /api/turmas/1/alunos  body: [1, 2, 3]
      */
-    private void generateCollectionAddEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
+    private void generateCollectionAddEndpoint(PrintWriter writer, String className, String otherClass, String fieldName, String serviceName) {
         String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
-        String otherPlural = otherVar + "s";
-        String otherPath = otherPlural.toLowerCase();
+        String cap = GeneratorUtils.capitalizeFirst(fieldName);   // nome do método/handler (baseado no role)
+        String otherPath = fieldName.toLowerCase();                // path baseado no role
 
         writer.println();
         writer.println("    /**");
         writer.println("     * Add " + otherClass + " entities to " + className + " by IDs");
         writer.println("     */");
         writer.println("    @PostMapping(\"/{id}/" + otherPath + "\")");
-        writer.println("    public ResponseEntity<" + className + "ResponseDTO> add" + GeneratorUtils.capitalizeFirst(otherPlural) + "(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> add" + cap + "(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
         writer.println("            @RequestBody List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
-        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".add" + GeneratorUtils.capitalizeFirst(otherPlural) + "(id, " + otherVar + "Ids);");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".add" + cap + "(id, " + otherVar + "Ids);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -309,19 +317,19 @@ public class SpringControllerGenerator {
      * Collection (ManyToMany / OneToMany uni): DELETE /{id}/{others}
      * Ex: DELETE /api/turmas/1/alunos  body: [1, 2, 3]
      */
-    private void generateCollectionRemoveEndpoint(PrintWriter writer, String className, String otherClass, String serviceName) {
+    private void generateCollectionRemoveEndpoint(PrintWriter writer, String className, String otherClass, String fieldName, String serviceName) {
         String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
-        String otherPlural = otherVar + "s";
-        String otherPath = otherPlural.toLowerCase();
+        String cap = GeneratorUtils.capitalizeFirst(fieldName);
+        String otherPath = fieldName.toLowerCase();
 
         writer.println("    /**");
         writer.println("     * Remove " + otherClass + " entities from " + className + " by IDs");
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
-        writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + GeneratorUtils.capitalizeFirst(otherPlural) + "(");
+        writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + cap + "(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
         writer.println("            @RequestBody List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
-        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + GeneratorUtils.capitalizeFirst(otherPlural) + "(id, " + otherVar + "Ids);");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + cap + "(id, " + otherVar + "Ids);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();

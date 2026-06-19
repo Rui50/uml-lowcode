@@ -15,17 +15,17 @@ public class AlunoTEResponseDTO {
     private Long id;
 
     private String empresa;
-    private String nome;
     private int numero;
     private String email;
+    private String nome;
 
     public static AlunoTEResponseDTO fromEntity(AlunoTE alunoTE) {
         AlunoTEResponseDTO dto = new AlunoTEResponseDTO();
         dto.setId(alunoTE.getId());
         dto.setEmpresa(alunoTE.getEmpresa());
-        dto.setNome(alunoTE.getNome());
         dto.setNumero(alunoTE.getNumero());
         dto.setEmail(alunoTE.getEmail());
+        dto.setNome(alunoTE.getNome());
         return dto;
     }
 }

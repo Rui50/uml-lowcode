@@ -65,9 +65,9 @@ public class AlunoTEService {
 
         // Update attributes from DTO
         existing.setEmpresa(dto.getEmpresa());
-        existing.setNome(dto.getNome());
         existing.setNumero(dto.getNumero());
         existing.setEmail(dto.getEmail());
+        existing.setNome(dto.getNome());
 
         AlunoTE saved = alunoTERepository.saveAndFlush(existing);
         return AlunoTEResponseDTO.fromEntity(saved);

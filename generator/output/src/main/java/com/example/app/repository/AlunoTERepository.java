@@ -26,12 +26,12 @@ public interface AlunoTERepository extends JpaRepository<AlunoTE, Long> {
     List<AlunoTE> findByEmpresaContaining(String empresa);
     boolean existsByEmpresa(String empresa);
 
-    List<AlunoTE> findByNome(String nome);
-    List<AlunoTE> findByNomeContaining(String nome);
-    boolean existsByNome(String nome);
-
     List<AlunoTE> findByEmail(String email);
     List<AlunoTE> findByEmailContaining(String email);
     boolean existsByEmail(String email);
+
+    List<AlunoTE> findByNome(String nome);
+    List<AlunoTE> findByNomeContaining(String nome);
+    boolean existsByNome(String nome);
 
 }

@@ -177,28 +177,35 @@ public class CLIMenuGenerator {
         for (Association assoc : associations) {
             if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
                 String other = assoc.getTargetClass();
+                // nome do campo com base nas roles, evita problemas de 2 ou mais assoc entr
+                // associações para a mesma classe, a ke  da opção tem de bater certo com o metodo
+                // evitar problemas   case 6: addAuthors(); mas o metodo é addAuthor
+                String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
+                String cap = GeneratorUtils.capitalizeFirst(fieldName);
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
                     // OneToMany, ManyToMany ou Map: Add e Remove
-                    options.add(new String[]{"Add " + other, "add" + other});
-                    options.add(new String[]{"Remove " + other, "remove" + other});
+                    options.add(new String[]{"Add " + fieldName, "add" + cap});
+                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
                 else {
                     // ManyToOne: Assign e Remove
-                    options.add(new String[]{"Assign " + other, "assign" + other});
-                    options.add(new String[]{"Remove " + other, "remove" + other});
+                    options.add(new String[]{"Assign " + fieldName, "assign" + cap});
+                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
             }
             if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
                 String other = assoc.getSourceClass();
+                String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
+                String cap = GeneratorUtils.capitalizeFirst(fieldName);
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
-                    options.add(new String[]{"Add " + other, "add" + other});
-                    options.add(new String[]{"Remove " + other, "remove" + other});
+                    options.add(new String[]{"Add " + fieldName, "add" + cap});
+                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
                 else {
-                    options.add(new String[]{"Assign " + other, "assign" + other});
-                    options.add(new String[]{"Remove " + other, "remove" + other});
+                    options.add(new String[]{"Assign " + fieldName, "assign" + cap});
+                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
             }
         }
@@ -206,7 +213,7 @@ public class CLIMenuGenerator {
         for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction != null) {
-                String label = op.getName().substring(0, 1).toUpperCase() + op.getName().substring(1);
+                String label = GeneratorUtils.capitalizeFirst(op.getName());
                 options.add(new String[]{label, op.getName()});
             }
         }
@@ -266,7 +273,7 @@ public class CLIMenuGenerator {
         // criar entidade no-arg + setters
         w.println("        " + cls.getName() + " entity = new " + cls.getName() + "();");
         for (Attribute attr : allAttrs) {
-            String cap = attr.getName().substring(0, 1).toUpperCase() + attr.getName().substring(1);
+            String cap = GeneratorUtils.capitalizeFirst(attr.getName());
             w.println("        entity.set" + cap + "(" + attr.getName() + ");");
         }
 
@@ -350,7 +357,7 @@ public class CLIMenuGenerator {
             if (other == null) continue;
 
             String fieldName = GeneratorUtils.makeAttributeName(other, role, mult);
-            String cap = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+            String cap = GeneratorUtils.capitalizeFirst(fieldName);
             String getter = "entity.get" + cap + "()";
 
             if (assoc.hasQualifier()) {
@@ -490,8 +497,8 @@ public class CLIMenuGenerator {
 
     // Assign method (ManyToOne): entity.setOther(other)
     private void generateAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
-        String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-        w.println("    private void assign" + otherClass + "() {");
+        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+        w.println("    private void assign" + capitalized + "() {");
         w.println("        " + idTypeOf(ownerClass) + " ownerId = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
@@ -518,8 +525,8 @@ public class CLIMenuGenerator {
 
     // remove assign
     private void generateRemoveAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
-        String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-        w.println("    private void remove" + otherClass + "() {");
+        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+        w.println("    private void remove" + capitalized + "() {");
         w.println("        " + idTypeOf(ownerClass) + " id = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " entity = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(id);");
         w.println("        if (entity == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
@@ -543,8 +550,8 @@ public class CLIMenuGenerator {
 
     // add (OneToMany/ManyToMany/Map): list.add(other) ou map.put(key, other)
     private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc) {
-        String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-        w.println("    private void add" + otherClass + "() {");
+        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+        w.println("    private void add" + capitalized + "() {");
         w.println("        " + idTypeOf(ownerClass) + " ownerId = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
@@ -558,7 +565,7 @@ public class CLIMenuGenerator {
             // Map fazemos put com a chave sendo o qualifier do outro objeto
             // owner.getAlunos().put(other.getNumero(), other)
             String qualifierName = assoc.getQualifierName();
-            String qualCap = qualifierName.substring(0, 1).toUpperCase() + qualifierName.substring(1);
+            String qualCap = GeneratorUtils.capitalizeFirst(qualifierName);
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
         } else {
             w.println("        owner.get" + capitalized + "().add(other);");
@@ -580,8 +587,8 @@ public class CLIMenuGenerator {
 
     // remove da lista/map
     private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc) {
-        String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-        w.println("    private void remove" + otherClass + "() {");
+        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+        w.println("    private void remove" + capitalized + "() {");
         w.println("        " + idTypeOf(ownerClass) + " ownerId = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
@@ -594,7 +601,7 @@ public class CLIMenuGenerator {
         if (assoc.hasQualifier()) {
             // map remove pela chave
             String qualifierName = assoc.getQualifierName();
-            String qualCap = qualifierName.substring(0, 1).toUpperCase() + qualifierName.substring(1);
+            String qualCap = GeneratorUtils.capitalizeFirst(qualifierName);
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
         } else {
             w.println("        owner.get" + capitalized + "().remove(other);");
@@ -775,7 +782,7 @@ public class CLIMenuGenerator {
      */
     private void generateUpdateAttribute(PrintWriter w, Attribute attr) {
         String name = attr.getName();
-        String capitalized = name.substring(0, 1).toUpperCase() + name.substring(1);
+        String capitalized = GeneratorUtils.capitalizeFirst(name);
 
         switch (attr.getType()) {
             case "String":

@@ -10,16 +10,16 @@ import com.example.app.models.Aluno;
 @Builder
 public class AlunoCreateDTO {
 
-    private String nome;
     private int numero;
     private String email;
+    private String nome;
     private Long turnoId;
 
     public Aluno toEntity() {
         Aluno aluno = new Aluno();
-        aluno.setNome(this.getNome());
         aluno.setNumero(this.getNumero());
         aluno.setEmail(this.getEmail());
+        aluno.setNome(this.getNome());
         return aluno;
     }
 }

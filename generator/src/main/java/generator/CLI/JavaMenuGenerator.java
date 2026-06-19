@@ -60,7 +60,9 @@ public class JavaMenuGenerator {
             generateEntityMenu(cls, classes, associations, menusPath);
         }
 
-        generateMainMenu(classesToBuild, associations, menusPath);
+        // passa a lista completa, os repositórios (campos) incluem abstratas, porque outros
+        // menus dependem delas (tipo o memberRepository)
+        generateMainMenu(classes, associations, menusPath);
         System.out.println("Java menu generation completed.");
     }
 
@@ -159,28 +161,33 @@ public class JavaMenuGenerator {
         for (Association assoc : associations) {
             if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
                 String other = assoc.getTargetClass();
+                // nome do campo baseado no role
+                String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
+                String cap = GeneratorUtils.capitalizeFirst(fieldName);
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
                     // OneToMany, ManyToMany ou Map: Add e Remove
-                    options.add(new String[]{"Add " + other, "add" + other});
-                    options.add(new String[]{"Remove " + other, "remove" + other});
+                    options.add(new String[]{"Add " + fieldName, "add" + cap});
+                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
                 else {
                     // ManyToOne: Assign e Remove
-                    options.add(new String[]{"Assign " + other, "assign" + other});
-                    options.add(new String[]{"Remove " + other, "remove" + other});
+                    options.add(new String[]{"Assign " + fieldName, "assign" + cap});
+                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
             }
             if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
                 String other = assoc.getSourceClass();
+                String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
+                String cap = GeneratorUtils.capitalizeFirst(fieldName);
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
-                    options.add(new String[]{"Add " + other, "add" + other});
-                    options.add(new String[]{"Remove " + other, "remove" + other});
+                    options.add(new String[]{"Add " + fieldName, "add" + cap});
+                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
                 else {
-                    options.add(new String[]{"Assign " + other, "assign" + other});
-                    options.add(new String[]{"Remove " + other, "remove" + other});
+                    options.add(new String[]{"Assign " + fieldName, "assign" + cap});
+                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
             }
         }
@@ -188,7 +195,7 @@ public class JavaMenuGenerator {
         for (Operation op : cls.getOperations()) {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction != null) {
-                String label = op.getName().substring(0, 1).toUpperCase() + op.getName().substring(1);
+                String label = GeneratorUtils.capitalizeFirst(op.getName());
                 options.add(new String[]{label, op.getName()});
             }
         }
@@ -321,7 +328,7 @@ public class JavaMenuGenerator {
             if (other == null) continue;
 
             String fieldName = GeneratorUtils.makeAttributeName(other, role, mult);
-            String cap = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+            String cap = GeneratorUtils.capitalizeFirst(fieldName);
             String getter = "entity.get" + cap + "()";
 
             if (assoc.hasQualifier()) {
@@ -439,8 +446,8 @@ public class JavaMenuGenerator {
 
     // Assign method (ManyToOne): entity.setOther(other)
     private void generateAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
-        String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-        w.println("    private void assign" + otherClass + "() {");
+        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+        w.println("    private void assign" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
@@ -458,8 +465,8 @@ public class JavaMenuGenerator {
 
     // remove assign
     private void generateRemoveAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
-        String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-        w.println("    private void remove" + otherClass + "() {");
+        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+        w.println("    private void remove" + capitalized + "() {");
         w.println("        Long id = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " entity = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(id);");
         w.println("        if (entity == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
@@ -472,8 +479,8 @@ public class JavaMenuGenerator {
 
     // add (OneToMany/ManyToMany/Map): list.add(other) ou map.put(key, other)
     private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc) {
-        String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-        w.println("    private void add" + otherClass + "() {");
+        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+        w.println("    private void add" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
@@ -487,7 +494,7 @@ public class JavaMenuGenerator {
             // Map fazemos put com a chave sendo o qualifier do outro objeto
             // owner.getAlunos().put(other.getNumero(), other)
             String qualifierName = assoc.getQualifierName();
-            String qualCap = qualifierName.substring(0, 1).toUpperCase() + qualifierName.substring(1);
+            String qualCap = GeneratorUtils.capitalizeFirst(qualifierName);
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
         } else {
             w.println("        owner.get" + capitalized + "().add(other);");
@@ -501,8 +508,8 @@ public class JavaMenuGenerator {
 
     // remove da lista/map
     private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc) {
-        String capitalized = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-        w.println("    private void remove" + otherClass + "() {");
+        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+        w.println("    private void remove" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
         w.println("        if (owner == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
@@ -515,7 +522,7 @@ public class JavaMenuGenerator {
         if (assoc.hasQualifier()) {
             // map remove pela chave
             String qualifierName = assoc.getQualifierName();
-            String qualCap = qualifierName.substring(0, 1).toUpperCase() + qualifierName.substring(1);
+            String qualCap = GeneratorUtils.capitalizeFirst(qualifierName);
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
         } else {
             w.println("        owner.get" + capitalized + "().remove(other);");
@@ -609,26 +616,29 @@ public class JavaMenuGenerator {
             w.println();
             w.println("    private Scanner scanner = new Scanner(System.in);");
 
-            // all repositories
+            // all repositories (inclui abstratas — menus relacionados dependem delas)
             for (Class cls : classes) {
                 w.println("    private " + cls.getName() + "Repository " + GeneratorUtils.repoVariable(cls.getName()) + " = " +
                         "new " + cls.getName() + "Repository();");
             }
             w.println();
 
+            // só classes concretas têm menu próprio (abstratas não)
+            List<Class> concrete = classes.stream().filter(c -> !c.isAbstract()).collect(Collectors.toList());
+
             // run
             w.println("    public void run() {");
             w.println("        while (true) {");
             w.println("            System.out.println(\"\\n=== Main Menu ===\");");
-            for (int i = 0; i < classes.size(); i++) {
-                w.println("            System.out.println(\"" + (i + 1) + ". " + classes.get(i).getName() + " Menu\");");
+            for (int i = 0; i < concrete.size(); i++) {
+                w.println("            System.out.println(\"" + (i + 1) + ". " + concrete.get(i).getName() + " Menu\");");
             }
             w.println("            System.out.println(\"0. Exit\");");
             w.println();
             w.println("            int option = InputUtils.readInt(scanner, \"Option: \");");
             w.println("            switch (option) {");
-            for (int i = 0; i < classes.size(); i++) {
-                Class cls = classes.get(i);
+            for (int i = 0; i < concrete.size(); i++) {
+                Class cls = concrete.get(i);
                 Set<String> neededRepos = GeneratorUtils.getNeededRepositories(cls, associations, classes);
 
                 w.print("                case " + (i + 1) + ": new " + cls.getName() + "Menu(scanner, " +
@@ -699,7 +709,7 @@ public class JavaMenuGenerator {
      */
     private void generateUpdateAttribute(PrintWriter w, Attribute attr) {
         String name = attr.getName();
-        String capitalized = name.substring(0, 1).toUpperCase() + name.substring(1);
+        String capitalized = GeneratorUtils.capitalizeFirst(name);
 
         switch (attr.getType()) {
             case "String":

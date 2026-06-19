@@ -1,5 +1,6 @@
 package generator.spring;
 
+import generator.GeneratorUtils;
 import model.Class;
 import model.Attribute;
 
@@ -97,7 +98,7 @@ public class SpringRepositoryGenerator {
                 }
 
                 String attrName = attr.getName();
-                String capitalizedAttr = attrName.substring(0, 1).toUpperCase() + attrName.substring(1);
+                String capitalizedAttr = GeneratorUtils.capitalizeFirst(attrName);
 
                 writer.println("    List<" + cls.getName() + "> findBy" + capitalizedAttr +
                         "(String " + attrName + ");");
