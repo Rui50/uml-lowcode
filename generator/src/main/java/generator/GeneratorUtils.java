@@ -185,6 +185,37 @@ public class GeneratorUtils {
         return checkMultiplicity(s ? a.getTargetMultiplicity() : a.getSourceMultiplicity()) || a.hasQualifier();
     }
 
+    /**
+     * Nome da classe que DECLARA esta associação (a que a "possui" na hierarquia)
+     *   - o próprio nome da class se participa diretamente
+     *   - o nome do pai ABSTRATO se herda a associação dele;
+     *   - null se não participa OU só a herda de um pai normal.
+     *
+     * Versão "com nome" do isOrInheritsFrom (diz se classe participa e sob que nome).
+     * Só é preciso em Spring por duas razões
+     * - o sync do lado inverso é POR NOME
+     * do campo, derivado do declarante ("Member"), não da subclasse;
+     * - o "gate" do abstrato — um pai normal já tem service próprio (polimórfico), logo null.
+     */
+    public static String assocDeclaringClass(Class cls, Association a) {
+        if (cls.isOrInheritsFrom(a.getSourceClass()) && a.isTargetNavigable())
+            return ownOrAbstract(cls, a.getSourceClass());
+        if (cls.isOrInheritsFrom(a.getTargetClass()) && a.isSourceNavigable())
+            return ownOrAbstract(cls, a.getTargetClass());
+        return null;
+    }
+
+    // Sobe a cadeia de pais a partir da classe até encontrar a classe "endName"
+    // (o lado da associação em que a classe "participa") e devolve o seu nome se for o
+    // próprio cls ou uma classe abstrata, caso contrário (pai normal) null.
+    private static String ownOrAbstract(Class cls, String endName) {
+        for (Class c = cls; c != null; c = c.getParentClass()) {
+            if (c.getName().equals(endName))
+                return (c == cls || c.isAbstract()) ? endName : null;
+        }
+        return null;
+    }
+
     // extrair o tipo "base" de retorno e parametros: List<Aluno> -> Aluno, Map<Integer, Turma> -> Turma
     public static String extractBaseType(String type) {
         if (type == null) return null;
@@ -235,14 +266,12 @@ public class GeneratorUtils {
     public static List<String> getModelsToImportFromAssociations(Class cls, List<Association> associations) {
         Set<String> entitiesToImport = new HashSet<>();
         for (Association assoc : associations) {
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
-                String relatedClass = assoc.getTargetClass();
-                if (!relatedClass.equals(cls.getName())) entitiesToImport.add(relatedClass);
-            }
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String relatedClass = assoc.getSourceClass();
-                if (!relatedClass.equals(cls.getName())) entitiesToImport.add(relatedClass);
-            }
+            // inclui associações herdadas de pai abstrato (assocDeclaringClass): em
+            // Spring materializam-se na subclasse, que precisa de importar o outro lado
+            String declarer = assocDeclaringClass(cls, assoc);
+            if (declarer == null) continue;
+            String relatedClass = otherClassOf(declarer, assoc);
+            if (!relatedClass.equals(cls.getName())) entitiesToImport.add(relatedClass);
         }
         return new ArrayList<>(entitiesToImport);
     }

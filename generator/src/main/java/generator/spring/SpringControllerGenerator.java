@@ -194,19 +194,21 @@ public class SpringControllerGenerator {
         for (Association assoc : associations) {
             boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
-            // matching local — associações herdadas tratadas pelo controller do pai (polimórfico)
-            boolean isSource = assoc.getSourceClass().equals(className);
-            boolean isTarget = assoc.getTargetClass().equals(className);
-            if (!isSource && !isTarget) continue;
+            // classe que DECLARA a associação (a própria ou um pai abstrato); null =>
+            // não participa, ou só a herda de pai concreto (que já gera os seus
+            // endpoints). Já garante navegabilidade. Os endpoints ficam no controller
+            // de cls (delega no service de cls), por isso só precisamos de declarer
+            // para a derivação dos nomes/lados — não há campo inverso aqui.
+            String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
+            if (declarer == null) continue;
+            boolean isSource = assoc.getSourceClass().equals(declarer);
 
             String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
             String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
             boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
             boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);
 
-            if (!GeneratorUtils.isNavigableTo(className, assoc)) continue;
-
-            String otherClass = GeneratorUtils.otherClassOf(className, assoc);
+            String otherClass = GeneratorUtils.otherClassOf(declarer, assoc);
 
             // nome do campo baseado no role (igual ao service/entidade)
             // sem role, makeAttributeName usa o nome da classe
@@ -224,7 +226,7 @@ public class SpringControllerGenerator {
             }
 
             // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others} — no lado DONO (isOwningSide)
-            if (thisMultiple && otherMultiple && GeneratorUtils.isOwningSide(className, assoc)) {
+            if (thisMultiple && otherMultiple && GeneratorUtils.isOwningSide(declarer, assoc)) {
                 if (!hasRelationships) {
                     writer.println("    // Relationship Endpoints");
                     hasRelationships = true;

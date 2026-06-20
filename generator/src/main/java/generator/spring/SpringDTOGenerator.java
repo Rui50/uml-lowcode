@@ -83,7 +83,7 @@ public class SpringDTOGenerator {
 
         try (PrintWriter w = new PrintWriter(new File(filename))) {
             // relações navegáveis (mesmos campos de id que o ResponseDTO)
-            List<RelationshipInfo> relationships = collectRelationships(className, associations);
+            List<RelationshipInfo> relationships = collectRelationships(cls, associations);
             boolean hasCollectionRel = relationships.stream()
                     .anyMatch(r -> GeneratorUtils.checkMultiplicity(r.multiplicity) || r.assoc.hasQualifier());
 
@@ -157,20 +157,20 @@ public class SpringDTOGenerator {
         System.out.println("Generated: " + className + "CreateDTO.java");
     }
 
-    // relações navs desta classe (ambos os lados) — partilhado por Response e Create DTO
-    private List<RelationshipInfo> collectRelationships(String className, List<Association> associations) {
+    // relações navs desta classe (ambos os lados) — partilhado por Response e Create DTO.
+    // Inclui associações herdadas de um pai ABSTRATO (assocDeclaringClass): a subclasse
+    // concreta precisa dos campos de id no seu DTO. Pai concreto já tem o seu próprio DTO.
+    private List<RelationshipInfo> collectRelationships(Class cls, List<Association> associations) {
         List<RelationshipInfo> relationships = new ArrayList<>();
         for (Association assoc : associations) {
-            if (assoc.getSourceClass().equals(className) && assoc.isTargetNavigable()) {
-                relationships.add(new RelationshipInfo(
-                        assoc.getTargetClass(), assoc.getTargetRole(),
-                        assoc.getTargetMultiplicity(), assoc));
-            }
-            if (assoc.getTargetClass().equals(className) && assoc.isSourceNavigable()) {
-                relationships.add(new RelationshipInfo(
-                        assoc.getSourceClass(), assoc.getSourceRole(),
-                        assoc.getSourceMultiplicity(), assoc));
-            }
+            String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
+            if (declarer == null) continue;
+            boolean isSource = assoc.getSourceClass().equals(declarer);
+            relationships.add(new RelationshipInfo(
+                    isSource ? assoc.getTargetClass() : assoc.getSourceClass(),
+                    isSource ? assoc.getTargetRole()  : assoc.getSourceRole(),
+                    isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity(),
+                    assoc));
         }
         return relationships;
     }
@@ -201,13 +201,12 @@ public class SpringDTOGenerator {
                     extraImports.add(attr.getType());
                 }
             }
+            // entidades relacionadas para o fromEntity (.map(Other::getId)) — inclui
+            // associações herdadas de pai abstrato, materializadas nesta subclasse
             for (Association assoc : associations) {
-                if (assoc.getSourceClass().equals(className) && assoc.isTargetNavigable()) {
-                    extraImports.add(assoc.getTargetClass());
-                }
-                if (assoc.getTargetClass().equals(className) && assoc.isSourceNavigable()) {
-                    extraImports.add(assoc.getSourceClass());
-                }
+                String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
+                if (declarer == null) continue;
+                extraImports.add(GeneratorUtils.otherClassOf(declarer, assoc));
             }
             for (String imp : extraImports) {
                 if (!imp.equals(className)) {
@@ -245,7 +244,7 @@ public class SpringDTOGenerator {
             }
 
             // relationship ID fields (mesma lista usada nos campos e no fromEntity)
-            List<RelationshipInfo> relationships = collectRelationships(className, associations);
+            List<RelationshipInfo> relationships = collectRelationships(cls, associations);
 
             if (!relationships.isEmpty()) {
                 w.println();
