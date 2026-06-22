@@ -471,8 +471,8 @@ public class CLIMenuGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
-                    generateAddMethod(w, cls.getName(), other, fieldName, assoc);
-                    generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc);
+                    generateAddMethod(w, cls.getName(), other, fieldName, assoc, true);
+                    generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, true);
                 }
                 else {
                     generateAssignMethod(w, cls.getName(), other, fieldName);
@@ -484,8 +484,8 @@ public class CLIMenuGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
-                    generateAddMethod(w, cls.getName(), other, fieldName, assoc);
-                    generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc);
+                    generateAddMethod(w, cls.getName(), other, fieldName, assoc, false);
+                    generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, false);
                 }
                 else {
                     generateAssignMethod(w, cls.getName(), other, fieldName);
@@ -549,7 +549,7 @@ public class CLIMenuGenerator {
     }
 
     // add (OneToMany/ManyToMany/Map): list.add(other) ou map.put(key, other)
-    private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc) {
+    private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc, boolean isSource) {
         String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
         w.println("    private void add" + capitalized + "() {");
         w.println("        " + idTypeOf(ownerClass) + " ownerId = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
@@ -561,21 +561,37 @@ public class CLIMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
+        // uma relação só é persistida se for escrita pelo lado DONO.
+        // Se o campo é o lado inverso (que tem mappedBy), gravar owner.getCampo().add(other) não escreve nada
+        // temos de escrever o campo dono em 'other' e gravaresse  'other'.
+        // (qualifier/Map sempre owner.)
+        boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
+        String saveVar, saveRepo, refreshVar;
+
         if (assoc.hasQualifier()) {
-            // Map fazemos put com a chave sendo o qualifier do outro objeto
-            // owner.getAlunos().put(other.getNumero(), other)
-            String qualifierName = assoc.getQualifierName();
-            String qualCap = GeneratorUtils.capitalizeFirst(qualifierName);
+            String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
-        } else {
+            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other";
+        } else if (isOwner) {
             w.println("        owner.get" + capitalized + "().add(other);");
+            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other";
+        } else {
+            // lado inverso escrevemos pelo lado DONO na var other
+            String ownerCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+            boolean ownerIsCollection = GeneratorUtils.checkMultiplicity(
+                    isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
+            // escrever só o lado DONO; o em.refresh(owner) no fim recarrega o lado inverso da BD
+            w.println(ownerIsCollection
+                    ? "        other.get" + ownerCap + "().add(owner);   // lado DONO: é o que persiste"
+                    : "        other.set" + ownerCap + "(owner);   // lado DONO: é o que persiste");
+            saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner";
         }
 
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
-        w.println("            " + GeneratorUtils.repoVariable(ownerClass) + ".save(owner);");
+        w.println("            " + saveRepo + ".save(" + saveVar + ");");
         w.println("            em.getTransaction().commit();");
-        w.println("            em.refresh(other);");
+        w.println("            em.refresh(" + refreshVar + ");");
         w.println("            System.out.println(\"Added " + otherClass + " to " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
@@ -586,7 +602,7 @@ public class CLIMenuGenerator {
     }
 
     // remove da lista/map
-    private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc) {
+    private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc, boolean isSource) {
         String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
         w.println("    private void remove" + capitalized + "() {");
         w.println("        " + idTypeOf(ownerClass) + " ownerId = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
@@ -598,21 +614,36 @@ public class CLIMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
+        // mesmo coisa do add a remoção só persiste pelo lado DONO
+        boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
+        String saveVar, saveRepo, refreshVar;
+
         if (assoc.hasQualifier()) {
-            // map remove pela chave
-            String qualifierName = assoc.getQualifierName();
-            String qualCap = GeneratorUtils.capitalizeFirst(qualifierName);
+            String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
-        } else {
+            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other";
+        } else if (isOwner) {
             w.println("        owner.get" + capitalized + "().remove(other);");
+            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other";
+        } else {
+            // lado inverso ent remover pelo lado DONO (em "other")
+            String ownerCap = GeneratorUtils.capitalizeFirst(
+                    GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+            boolean ownerIsCollection = GeneratorUtils.checkMultiplicity(
+                    isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
+            // escrever só o lado DONO, o em.refresh(owner) no fim recarrega o lado inverso da BD
+            w.println(ownerIsCollection
+                    ? "        other.get" + ownerCap + "().remove(owner);   // lado DONO: é o que persiste"
+                    : "        other.set" + ownerCap + "(null);   // lado DONO: é o que persiste");
+            saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner";
         }
 
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
-        w.println("            " + GeneratorUtils.repoVariable(ownerClass) + ".save(owner);");
+        w.println("            " + saveRepo + ".save(" + saveVar + ");");
         w.println("            em.getTransaction().commit();");
-        w.println("            em.refresh(other);");
-        w.println("            System.out.println(\"" + otherClass + " removed from \" + owner);");
+        w.println("            em.refresh(" + refreshVar + ");");
+        w.println("            System.out.println(\"" + otherClass + " removed from " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
         w.println("            em.clear();");

@@ -269,71 +269,62 @@ public class SpringServiceGenerator {
         for (Association assoc : associations) {
             boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
-            // classe da hierarquia de cls que DECLARA esta associação (ela ou pai abs)
-            // null => cls não participa, ou só a herda de um pai
-            // (nao abs) (que já gera o seu próprio service)
-            // Os métodos são emitidos no service de cls (subclasse concreta), mas o campo inverso no outro lado
-            // aponta para `declarer` (ex: Book.members, não Book.studentMembers).
+            // classe da hierarquia de cls que DECLARA esta associação (ela ou pai abstrato);
+            // null => cls não participa, ou só a herda de um pai concreto (que já gera o seu service).
             String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
             if (declarer == null) continue;
 
-            boolean isSource = assoc.getSourceClass().equals(declarer);
-
-            // multiplicidades do ponto de vista desta classe
-            String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-            String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
-            boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
-            boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);
-
-            String otherClass = GeneratorUtils.otherClassOf(declarer, assoc);
-
-            // ManyToOne: esta classe tem o FK (lado owner)
-            // thisMultiple = muitos de "mim" -> o outro tem coleção desta classe
-            // !otherMultiple = eu tenho uma referência singular ao outro
-            // Gerar assignX e removeX nesta classe
-            if (thisMultiple && !otherMultiple) {
-                if (!hasRelationships) {
-                    writer.println("    // Relationship stuff");
-                    hasRelationships = true;
-                }
-
-                String fieldName = GeneratorUtils.makeAttributeName(otherClass,
-                        isSource ? assoc.getTargetRole() : assoc.getSourceRole(), "0..1");
-
-                generateAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
-                generateRemoveAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
-            }
-
-            // ManyToMany: gerar addX e removeX no lado DONO (@JoinTable), decidido por isOwningSide
-            if (thisMultiple && otherMultiple && GeneratorUtils.isOwningSide(declarer, assoc)) {
-                if (!hasRelationships) {
-                    writer.println("    // Relationship stuff");
-                    hasRelationships = true;
-                }
-
-                String fieldName = GeneratorUtils.makeAttributeName(otherClass,
-                        isSource ? assoc.getTargetRole() : assoc.getSourceRole(), otherMul);
-
-                generateManyToManyAddMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, declarer);
-                generateManyToManyRemoveMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, declarer);
-            }
-
-            // OneToMany unidirectional: esta classe tem a coleção
-            // sem back-reference no outro lado
-            // Gerar addX e removeX nesta classe
-            if ((!thisMultiple || assoc.hasQualifier()) && (otherMultiple || assoc.hasQualifier()) && !isBidirectional) {
-                if (!hasRelationships) {
-                    writer.println("    // Relationship stuff");
-                    hasRelationships = true;
-                }
-
-                String fieldName = GeneratorUtils.makeAttributeName(otherClass,
-                        isSource ? assoc.getTargetRole() : assoc.getSourceRole(), otherMul);
-
-                generateOneToManyUniAddMethod(writer, cls, otherClass, fieldName, assoc);
-                generateOneToManyUniRemoveMethod(writer, cls, otherClass, fieldName, assoc);
+            // normalmente processa-se UMA perspetiva. mas numa auto-associação bidirecional a classe
+            // é os DOIS lados, por isso processam-se ambos (source e target) — senão o lado DONO de
+            // um M:N self (onde isOwningSide só é true de um lado) nunca seria gerado.
+            boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass()) && isBidirectional;
+            if (selfBidirectional) {
+                hasRelationships = generateRelationMethodsForSide(writer, cls, assoc, isBidirectional, true, declarer, hasRelationships);
+                hasRelationships = generateRelationMethodsForSide(writer, cls, assoc, isBidirectional, false, declarer, hasRelationships);
+            } else {
+                boolean isSource = assoc.getSourceClass().equals(declarer);
+                hasRelationships = generateRelationMethodsForSide(writer, cls, assoc, isBidirectional, isSource, declarer, hasRelationships);
             }
         }
+    }
+
+    // Gera os métodos de relação para UMA perspetiva (lado) da associação.
+    private boolean generateRelationMethodsForSide(PrintWriter writer, Class cls, Association assoc,
+                                                   boolean isBidirectional, boolean isSource, String declarer,
+                                                   boolean hasRelationships) {
+        // multiplicidades do ponto de vista desta classe
+        String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+        String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
+        boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
+        boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);
+
+        String otherClass = GeneratorUtils.otherClassOf(declarer, assoc);
+        String role = isSource ? assoc.getTargetRole() : assoc.getSourceRole();
+
+        // ManyToOne: esta classe tem o FK (lado owner) -> assignX / removeX
+        if (thisMultiple && !otherMultiple) {
+            if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
+            String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, "0..1");
+            generateAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
+            generateRemoveAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
+        }
+
+        // ManyToMany: addX / removeX no lado DONO (@JoinTable), decidido por isOwningSide
+        if (thisMultiple && otherMultiple && GeneratorUtils.isOwningSide(assoc, isSource)) {
+            if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
+            String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, otherMul);
+            generateManyToManyAddMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
+            generateManyToManyRemoveMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
+        }
+
+        // OneToMany unidirectional: esta classe tem a coleção, sem back-reference -> addX / removeX
+        if ((!thisMultiple || assoc.hasQualifier()) && (otherMultiple || assoc.hasQualifier()) && !isBidirectional) {
+            if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
+            String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, otherMul);
+            generateOneToManyUniAddMethod(writer, cls, otherClass, fieldName, assoc);
+            generateOneToManyUniRemoveMethod(writer, cls, otherClass, fieldName, assoc);
+        }
+        return hasRelationships;
     }
 
     /**
@@ -350,8 +341,11 @@ public class SpringServiceGenerator {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
-        String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
-        String otherRepoName = otherVar + "Repository";
+        // numa auto-associação o owner e o outro lado são a mesma classe ("employee"), logo as
+        // duas variáveis colidiam. Por isso a var/param do outro lado vem do nome do campo
+        // ("manager"), não da classe. O repositório continua a vir da classe (employeeRepository).
+        String otherVar = GeneratorUtils.lowercaseFirst(fieldName);
+        String otherRepoName = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
         String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
 
         writer.println();
@@ -456,7 +450,7 @@ public class SpringServiceGenerator {
      */
     private void generateManyToManyAddMethod(PrintWriter writer, Class cls, String otherClass,
                                               String fieldName, Association assoc,
-                                              boolean isBidirectional, String declarer) {
+                                              boolean isBidirectional, boolean isSource, String declarer) {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
@@ -464,6 +458,16 @@ public class SpringServiceGenerator {
         String otherRepoName = otherVar + "Repository";
         String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
         String otherPlural = otherVar + "s";
+        // Numa AUTO-associação otherClass == className, por isso a var do loop seria "employee",
+        // igual à do owner, por isso usa-se "other" só nesse caso, nas
+        // associações normais mantém-se o nome baseado na classe.
+        String elementVar = className.equals(otherClass) ? "other" : otherVar;
+        // nome do campo do OUTRO lado que aponta de volta para esta classe (sincroniza os dois
+        // lados em memória). Usa o MEU role, o isSource diz qual é o meu lado.
+        String inverseMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+        String inverseField = GeneratorUtils.makeAttributeName(declarer,
+                isSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
+        String inverseCap = GeneratorUtils.capitalizeFirst(inverseField);
 
         writer.println();
         writer.println("    /**");
@@ -482,31 +486,19 @@ public class SpringServiceGenerator {
 
         if (assoc.hasQualifier()) {
             String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
-            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
+            writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedField + "().put(" +
-                    otherVar + "." + qualifierGetter + "(), " + otherVar + ");");
+                    elementVar + "." + qualifierGetter + "(), " + elementVar + ");");
             if (isBidirectional) {
-                // campo inverso (no outro lado, a apontar para esta classe) = role do MEU lado,
-                // independentemente de eu ser source ou target da associação
-                boolean inverseIsSource = assoc.getSourceClass().equals(declarer);
-                String inverseMul = inverseIsSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-                String inverseField = GeneratorUtils.makeAttributeName(declarer,
-                        inverseIsSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
-                writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().put(" +
+                writer.println("            " + elementVar + ".get" + inverseCap + "().put(" +
                         varName + "." + qualifierGetter + "(), " + varName + ");");
             }
             writer.println("        }");
         } else {
-            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
-            writer.println("            " + varName + ".get" + capitalizedField + "().add(" + otherVar + ");");
+            writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
+            writer.println("            " + varName + ".get" + capitalizedField + "().add(" + elementVar + ");");
             if (isBidirectional) {
-                // campo inverso (no outro lado, a apontar para esta classe) = role do MEU lado,
-                // independentemente de eu ser source ou target da associação
-                boolean inverseIsSource = assoc.getSourceClass().equals(declarer);
-                String inverseMul = inverseIsSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-                String inverseField = GeneratorUtils.makeAttributeName(declarer,
-                        inverseIsSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
-                writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().add(" + varName + ");");
+                writer.println("            " + elementVar + ".get" + inverseCap + "().add(" + varName + ");");
             }
             writer.println("        }");
         }
@@ -526,7 +518,7 @@ public class SpringServiceGenerator {
      */
     private void generateManyToManyRemoveMethod(PrintWriter writer, Class cls, String otherClass,
                                                  String fieldName, Association assoc,
-                                                 boolean isBidirectional, String declarer) {
+                                                 boolean isBidirectional, boolean isSource, String declarer) {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
@@ -534,6 +526,15 @@ public class SpringServiceGenerator {
         String otherRepoName = otherVar + "Repository";
         String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
         String otherPlural = otherVar + "s";
+        // auto-associação: "other" p/ a var do loop não colidir com a do owner (mesma classe);
+        // associações normais ficam inalteradas. Ver generateManyToManyAddMethod para o porquê.
+        String elementVar = className.equals(otherClass) ? "other" : otherVar;
+        // nome do campo do OUTRO lado que aponta de volta para esta classe (sincroniza os dois
+        // lados em memória). Usa o MEU role, o isSource diz qual é o meu lado.
+        String inverseMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+        String inverseField = GeneratorUtils.makeAttributeName(declarer,
+                isSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
+        String inverseCap = GeneratorUtils.capitalizeFirst(inverseField);
 
         writer.println("    /**");
         writer.println("     * ManyToMany: Remove " + otherClass + " entities from " + className);
@@ -551,31 +552,19 @@ public class SpringServiceGenerator {
 
         if (assoc.hasQualifier()) {
             String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
-            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
+            writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedField + "().remove(" +
-                    otherVar + "." + qualifierGetter + "());");
+                    elementVar + "." + qualifierGetter + "());");
             if (isBidirectional) {
-                // campo inverso (no outro lado, a apontar para esta classe) = role do MEU lado,
-                // independentemente de eu ser source ou target da associação
-                boolean inverseIsSource = assoc.getSourceClass().equals(declarer);
-                String inverseMul = inverseIsSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-                String inverseField = GeneratorUtils.makeAttributeName(declarer,
-                        inverseIsSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
-                writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().remove(" +
+                writer.println("            " + elementVar + ".get" + inverseCap + "().remove(" +
                         varName + "." + qualifierGetter + "());");
             }
             writer.println("        }");
         } else {
-            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
-            writer.println("            " + varName + ".get" + capitalizedField + "().remove(" + otherVar + ");");
+            writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
+            writer.println("            " + varName + ".get" + capitalizedField + "().remove(" + elementVar + ");");
             if (isBidirectional) {
-                // campo inverso (no outro lado, a apontar para esta classe) = role do MEU lado,
-                // independentemente de eu ser source ou target da associação
-                boolean inverseIsSource = assoc.getSourceClass().equals(declarer);
-                String inverseMul = inverseIsSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-                String inverseField = GeneratorUtils.makeAttributeName(declarer,
-                        inverseIsSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
-                writer.println("            " + otherVar + ".get" + GeneratorUtils.capitalizeFirst(inverseField) + "().remove(" + varName + ");");
+                writer.println("            " + elementVar + ".get" + inverseCap + "().remove(" + varName + ");");
             }
             writer.println("        }");
         }
@@ -789,8 +778,10 @@ public class SpringServiceGenerator {
             String thisMul  = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
             boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
 
-            String otherVar  = GeneratorUtils.lowercaseFirst(otherClass);
-            String otherRepo = otherVar + "Repository";   // repo já injetado (entidade associada)
+            // mesma razão do assign: numa auto-associação a var do outro lado seria igual à do
+            // owner ('saved'/'employee'), por isso vem do nome do campo ("manager"). Repo da classe.
+            String otherVar  = GeneratorUtils.lowercaseFirst(capField);
+            String otherRepo = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";   // repo já injetado (entidade associada)
             anyLinked = true;
 
             // caso 1 referência singular (ESTE lado tem a FK como Aluno.turno)
@@ -808,7 +799,7 @@ public class SpringServiceGenerator {
             else {
                 // dono da coleção segundo a NAVEGABILIDADE (mesma decisão da entidade);
                 // se não somos donos, a FK está no outro -> lado inverso
-                boolean ownerSide = GeneratorUtils.isOwningSide(declarer, assoc);
+                boolean ownerSide = GeneratorUtils.isOwningSide(assoc, isSource);
 
                 // como adicionar 'other' à coleção deste lado: put se for Map qualificado, senão add
                 String addToSaved;

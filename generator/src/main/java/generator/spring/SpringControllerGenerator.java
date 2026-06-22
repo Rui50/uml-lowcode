@@ -194,59 +194,64 @@ public class SpringControllerGenerator {
         for (Association assoc : associations) {
             boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
-            // classe que DECLARA a associação (a própria ou um pai abstrato); null =>
-            // não participa, ou só a herda de pai concreto (que já gera os seus
-            // endpoints). Já garante navegabilidade. Os endpoints ficam no controller
-            // de cls (delega no service de cls), por isso só precisamos de declarer
-            // para a derivação dos nomes/lados — não há campo inverso aqui.
+            // classe que DECLARA a associação (a própria ou um pai abstrato); null => não
+            // participa, ou só a herda de pai concreto (que já gera os seus endpoints).
             String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
             if (declarer == null) continue;
-            boolean isSource = assoc.getSourceClass().equals(declarer);
 
-            String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-            String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
-            boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
-            boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);
-
-            String otherClass = GeneratorUtils.otherClassOf(declarer, assoc);
-
-            // nome do campo baseado no role (igual ao service/entidade)
-            // sem role, makeAttributeName usa o nome da classe
-            String role = isSource ? assoc.getTargetRole() : assoc.getSourceRole();
-
-            // ManyToOne: PUT /{id}/{other}/{otherId} e DELETE /{id}/{other}
-            if (thisMultiple && !otherMultiple) {
-                if (!hasRelationships) {
-                    writer.println("    // Relationship Endpoints");
-                    hasRelationships = true;
-                }
-                String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, "0..1");
-                generateAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
-                generateRemoveAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
-            }
-
-            // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others} — no lado DONO (isOwningSide)
-            if (thisMultiple && otherMultiple && GeneratorUtils.isOwningSide(declarer, assoc)) {
-                if (!hasRelationships) {
-                    writer.println("    // Relationship Endpoints");
-                    hasRelationships = true;
-                }
-                String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, otherMul);
-                generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
-                generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);
-            }
-
-            // OneToMany unidirectional (or qualifier/Map): POST /{id}/{others} e DELETE /{id}/{others}
-            if ((!thisMultiple || assoc.hasQualifier()) && (otherMultiple || assoc.hasQualifier()) && !isBidirectional) {
-                if (!hasRelationships) {
-                    writer.println("    // Relationship Endpoints");
-                    hasRelationships = true;
-                }
-                String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, otherMul);
-                generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
-                generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);
+            // igual ao service numa auto associação bidirecional a classe é os dois lados, por
+            // isso processam-se ambos — senão o lado DONO de um M:N self (onde isOwningSide só é
+            // true de um lado) nunca geraria endpoint. Os endpoints só delegam no service, não há
+            // campo inverso nem colisão de variáveis aqui.
+            boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass()) && isBidirectional;
+            if (selfBidirectional) {
+                hasRelationships = generateRelationEndpointsForSide(writer, className, serviceName, assoc, isBidirectional, true, declarer, hasRelationships);
+                hasRelationships = generateRelationEndpointsForSide(writer, className, serviceName, assoc, isBidirectional, false, declarer, hasRelationships);
+            } else {
+                boolean isSource = assoc.getSourceClass().equals(declarer);
+                hasRelationships = generateRelationEndpointsForSide(writer, className, serviceName, assoc, isBidirectional, isSource, declarer, hasRelationships);
             }
         }
+    }
+
+    // Gera os endpoints de relação para UMA perspetiva (lado) da associação.
+    // Devolve o estado atualizado de hasRelationships
+    private boolean generateRelationEndpointsForSide(PrintWriter writer, String className, String serviceName,
+                                                     Association assoc, boolean isBidirectional, boolean isSource,
+                                                     String declarer, boolean hasRelationships) {
+        String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+        String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
+        boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
+        boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);
+
+        String otherClass = GeneratorUtils.otherClassOf(declarer, assoc);
+        // nome do campo baseado no role (igual ao service/entidade); sem role usa o nome da classe
+        String role = isSource ? assoc.getTargetRole() : assoc.getSourceRole();
+
+        // ManyToOne: PUT /{id}/{other}/{otherId} e DELETE /{id}/{other}
+        if (thisMultiple && !otherMultiple) {
+            if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
+            String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, "0..1");
+            generateAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
+            generateRemoveAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
+        }
+
+        // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others} — no lado DONO (isOwningSide)
+        if (thisMultiple && otherMultiple && GeneratorUtils.isOwningSide(assoc, isSource)) {
+            if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
+            String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, otherMul);
+            generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
+            generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);
+        }
+
+        // OneToMany unidirectional (or qualifier/Map): POST /{id}/{others} e DELETE /{id}/{others}
+        if ((!thisMultiple || assoc.hasQualifier()) && (otherMultiple || assoc.hasQualifier()) && !isBidirectional) {
+            if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
+            String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, otherMul);
+            generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
+            generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);
+        }
+        return hasRelationships;
     }
 
     /**

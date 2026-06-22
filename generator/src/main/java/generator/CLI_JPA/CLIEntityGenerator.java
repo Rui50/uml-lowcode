@@ -445,15 +445,20 @@ public class CLIEntityGenerator {
                                     String side,
                                     boolean isBidirectional) {
 
+        // no caso de auto associação as duas colunas seriam iguais ("employee_id")
+        // entao nesse caso usa-se o campo inverso
+        String invJoinCol = (thisClass.equals(otherClass) ? fieldName.toLowerCase() : otherClass.toLowerCase()) + "_id";
+
         if (isBidirectional) {
-            boolean isOwner = GeneratorUtils.isOwningSide(thisClass, assoc);
+            // decide se o campo gerado é @JoinTable (dono) ou mappedBy (inverso)
+            boolean isOwner = GeneratorUtils.isOwningSide(assoc, side.equals("target"));
 
             if (isOwner) {
                 writer.println("    @ManyToMany");
                 writer.println("    @JoinTable(");
                 writer.println("        name = \"" + thisClass.toLowerCase() + "_" + fieldName.toLowerCase() + "\",");
                 writer.println("        joinColumns = @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\"),");
-                writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
+                writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + invJoinCol + "\")");
                 writer.println("    )");
             } else {
                 writer.println("    @ManyToMany(mappedBy = \"" +
@@ -570,7 +575,8 @@ public class CLIEntityGenerator {
         } else {
             // Sem qualifier: OneToOne normal
             if (isBidirectional) {
-                boolean isOwner = GeneratorUtils.isOwningSide(thisClass, assoc);
+                // decide se o campo gerado é @OneToOne (dono) ou mappedBy (inverso)
+                boolean isOwner = GeneratorUtils.isOwningSide(assoc, side.equals("target"));
 
                 if (isOwner) {
                     writer.println("    @OneToOne");

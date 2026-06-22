@@ -23,6 +23,9 @@ public class SequenceBodyGenerator {
     private final List<Association> associations;
     // variáveis já declaradas fora do corpo ( pelo carregamento da entidade self) — não redeclarar
     private final Set<String> preDeclaredVars = new HashSet<>();
+    // classe do metodo em geração (owner do diagrama) usada para resolver associações
+    // herdadas — a lifeline pode ser uma subclasse e a associação estar declarada no pai
+    private Class currentClass;
 
     public SequenceBodyGenerator(List<Association> associations) {
         this.associations = associations;
@@ -36,6 +39,7 @@ public class SequenceBodyGenerator {
     public void generateMethodBodyFromInteraction(PrintWriter writer, Class cls, Operation op, Interaction
             interaction) {
         // identificar a lifeline do Service (owner deste metodo)
+        this.currentClass = cls;
         String className = cls.getName();
         String serviceName = className + "Service";
 
@@ -242,10 +246,20 @@ public class SequenceBodyGenerator {
         }
     }
 
+    // ownerType é (ou herda de) a classe desta ponta da associação?
+    // serve para uma subclasse reconhecer associações declaradas no pai.
+    // tenta match direto pelo nomem, senão, se ownerType for a classe em geração,
+    // usa isOrInheritsFrom para apanhar o caso herdado.
+    private boolean participates(String ownerType, String assocEndClass) {
+        if (ownerType != null && ownerType.equals(assocEndClass)) return true;
+        return currentClass != null && currentClass.getName().equals(ownerType)
+                && currentClass.isOrInheritsFrom(assocEndClass);
+    }
+
     // procura a associação cujo campo (no lado do ownerType) se chama attrName
     private Association findAssocByField(String ownerType, String attrName) {
         for (Association a : associations) {
-            if (!ownerType.equals(a.getSourceClass()) && !ownerType.equals(a.getTargetClass())) continue;
+            if (!participates(ownerType, a.getSourceClass()) && !participates(ownerType, a.getTargetClass())) continue;
             if (attrName.equals(fieldNameFor(a, ownerType))) return a;
         }
         return null;
@@ -253,7 +267,7 @@ public class SequenceBodyGenerator {
 
     // nome do campo, no lado do owner, que refere o outro lado da associação
     private String fieldNameFor(Association a, String ownerType) {
-        if (a.getSourceClass().equals(ownerType)) {
+        if (participates(ownerType, a.getSourceClass())) {
             return GeneratorUtils.makeAttributeName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
         }
         return GeneratorUtils.makeAttributeName(a.getSourceClass(), a.getSourceRole(), a.getSourceMultiplicity());

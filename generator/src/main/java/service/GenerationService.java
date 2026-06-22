@@ -5,6 +5,7 @@ import generator.GeneratorUtils;
 import model.ParsedModel;
 import model.ProjectSettings;
 import model.Class;
+import model.Association;
 import model.Attribute;
 import model.Operation;
 import model.annotations.Invariant;
@@ -18,6 +19,7 @@ import generator.spring.*;
 
 public class GenerationService {
     public void generate(ParsedModel model, String target, String outputDir, ProjectSettings opts) throws Exception {
+        validateSelfAssociations(model);
         normalizeDerivedAccess(model);
         switch (target) {
             case "plain"  -> generatePlain(model, outputDir, opts);
@@ -27,6 +29,31 @@ public class GenerationService {
 
             default -> throw new IllegalArgumentException("unknown target: " + target);
         }
+    }
+
+    /**
+     * numa auto associação as parters navegaveis precisa de roles diferentes,
+     * Sem isso, o nome dos campo/variável fica no nome da classe e colide
+     */
+    private void validateSelfAssociations(ParsedModel model) {
+        if (model.getAssociations() == null) return;
+        for (Association a : model.getAssociations()) {
+            if (a.getSourceClass() == null || !a.getSourceClass().equals(a.getTargetClass())) continue;
+            boolean srcMissing = a.isSourceNavigable() && isBlank(a.getSourceRole());
+            boolean tgtMissing = a.isTargetNavigable() && isBlank(a.getTargetRole());
+            boolean sameRole = a.isSourceNavigable() && a.isTargetNavigable()
+                    && !isBlank(a.getSourceRole()) && a.getSourceRole().equals(a.getTargetRole());
+            if (srcMissing || tgtMissing || sameRole) {
+                throw new IllegalArgumentException(
+                        "Auto-associação em '" + a.getSourceClass() + "': cada ponta navegável precisa de um "
+                        + "role distinto (ex: manager / subordinates). Sem roles distintos, os campos e "
+                        + "parâmetros gerados colidem (a classe é os dois lados da associação).");
+            }
+        }
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
     }
 
     /**

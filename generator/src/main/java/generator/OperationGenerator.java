@@ -206,13 +206,13 @@ public class OperationGenerator {
             MessageArgument arg = args.get(0);
             String ownerType = msg.getTarget().getType();
 
-            // field-style: lookup direto por attrName; antes: lookup por par de tipos
+            // lookup direto por attrName
             Association assoc;
             if (attrName != null) {
-                assoc = findAssocByField(associations, ownerType, attrName);
+                assoc = findAssocByField(associations, cls, ownerType, attrName);
             } else {
-                assoc = findAssoc(associations, ownerType, arg.getType());
-                if (assoc != null) attrName = fieldNameFor(assoc, ownerType);
+                assoc = findAssoc(associations, cls, ownerType, arg.getType());
+                if (assoc != null) attrName = fieldNameFor(assoc, cls, ownerType);
             }
 
             if (assoc != null) {
@@ -327,10 +327,11 @@ public class OperationGenerator {
         String fieldName = expr.startsWith("this.") ? expr.substring("this.".length()).trim() : expr.trim();
 
         for (Association assoc : associations) {
-            boolean sourceSide = assoc.getSourceClass().equals(cls.getName())
+            // isOrInheritsFrom (não igual) porque a associação pode ser herdada de um pai
+            boolean sourceSide = cls.isOrInheritsFrom(assoc.getSourceClass())
                     && assoc.isTargetNavigable()
                     && fieldName.equals(GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity()));
-            boolean targetSide = assoc.getTargetClass().equals(cls.getName())
+            boolean targetSide = cls.isOrInheritsFrom(assoc.getTargetClass())
                     && assoc.isSourceNavigable()
                     && fieldName.equals(GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity()));
 
@@ -341,20 +342,29 @@ public class OperationGenerator {
         return expr;
     }
 
+    // ownerType é (ou herda de) a classe desta ponta da associação?
+    // serve para uma subclasse reconhecer associações declaradas no pai.
+    // tenta match direto pelo nomem, senão, se ownerType for a classe em geração,
+    // usa isOrInheritsFrom para apanhar o caso herdado.
+    private static boolean participates(Class cls, String ownerType, String assocEndClass) {
+        if (ownerType != null && ownerType.equals(assocEndClass)) return true;
+        return cls != null && cls.getName().equals(ownerType) && cls.isOrInheritsFrom(assocEndClass);
+    }
+
     // procura a associação entre ownerType e otherType, navegável do lado do owner
-    private static Association findAssoc(List<Association> assocs, String ownerType, String otherType) {
+    private static Association findAssoc(List<Association> assocs, Class cls, String ownerType, String otherType) {
         for (Association a : assocs){
-            if (a.getSourceClass().equals(ownerType) && a.getTargetClass().equals(otherType) && a.isTargetNavigable())
+            if (participates(cls, ownerType, a.getSourceClass()) && a.getTargetClass().equals(otherType) && a.isTargetNavigable())
                 return a;
-            if (a.getTargetClass().equals(ownerType) && a.getSourceClass().equals(otherType) && a.isSourceNavigable())
+            if (participates(cls, ownerType, a.getTargetClass()) && a.getSourceClass().equals(otherType) && a.isSourceNavigable())
                 return a;
         }
         return null;
     }
 
-    private static String fieldNameFor(Association a, String ownerType) {
-        // lado a partir do owner: se owner é source, o campo refere o target, e vice-versa
-        if (a.getSourceClass().equals(ownerType)) {
+    private static String fieldNameFor(Association a, Class cls, String ownerType) {
+        // lado a partir do owner: se owner é (ou herda) o source, o campo refere o target, e vice-versa
+        if (participates(cls, ownerType, a.getSourceClass())) {
             return GeneratorUtils.makeAttributeName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
         }
         return GeneratorUtils.makeAttributeName(a.getSourceClass(), a.getSourceRole(), a.getSourceMultiplicity());
@@ -382,10 +392,10 @@ public class OperationGenerator {
 
     // procura associação cujo field name no lado do owner é attrName
     // reutiliza fieldNameFor para a derivação role-ou-default
-    private static Association findAssocByField(List<Association> assocs, String ownerType, String attrName) {
+    private static Association findAssocByField(List<Association> assocs, Class cls, String ownerType, String attrName) {
         for (Association a : assocs) {
-            if (!ownerType.equals(a.getSourceClass()) && !ownerType.equals(a.getTargetClass())) continue;
-            if (attrName.equals(fieldNameFor(a, ownerType))) return a;
+            if (!participates(cls, ownerType, a.getSourceClass()) && !participates(cls, ownerType, a.getTargetClass())) continue;
+            if (attrName.equals(fieldNameFor(a, cls, ownerType))) return a;
         }
         return null;
     }

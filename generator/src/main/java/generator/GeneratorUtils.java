@@ -133,15 +133,18 @@ public class GeneratorUtils {
     }
 
     /**
-     * A entidade de 'className' é o DONO desta relação (tem @JoinTable/@JoinColumn, não mappedBy)?
-     * Fonte única de verdade da posse — usada pela entidade, services, controllers e CLI, para que
-     * não possam discordar. Quem decide é a NAVEGABILIDADE, não o source/target da associação.
+     * A entidade de "className" é o DONO desta relação
+     * Quem decide é a NAVEGABILIDADE, não o source/target da associação.
      *
-     * Regra: unidirecional -> o lado navegável é sempre dono; bidirecional depende da forma:
-     *   M:N e O:O -> o target é dono;  O:M (coleção) -> inverso (mappedBy);  M:O (singular) -> dono da FK.
+     * Regra: unidirecional -> o lado navegável é sempre dono
+     * bidirecional depende da forma:
+     *   M:N e O:O -> o target é dono;
+     *   O:M (coleção) -> inverso (mappedBy);
+     *   M:O (singular) -> dono da FK.
      */
-    public static boolean isOwningSide(String className, Association assoc) {
-        boolean isSource = assoc.getSourceClass().equals(className);
+    // isSource = este campo é o lado SOURCE da associação. Passa-se o lado em vez de o inferir
+    // pela classe porque numa auto-associação as duas pontas têm a mesma classe.
+    public static boolean isOwningSide(Association assoc, boolean isSource) {
         boolean navigableFromHere = isSource ? assoc.isTargetNavigable() : assoc.isSourceNavigable();
         if (!navigableFromHere) return false;   // nem sequer tem campo
 
@@ -370,10 +373,14 @@ public class GeneratorUtils {
     public static Set<String> getNeededRepositories(Class cls, List<Association> associations, List<Class> allClasses) {
         Set<String> related = new LinkedHashSet<>();
         for (Association assoc : associations) {
-            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
+            // exclui a própria classe (o seu repo é declarado à parte) — senão uma
+            // auto-associação injeta o mesmo repo duas vezes (ex: employeeRepository)
+            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()
+                    && !assoc.getTargetClass().equals(cls.getName())) {
                 related.add(assoc.getTargetClass());
             }
-            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
+            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()
+                    && !assoc.getSourceClass().equals(cls.getName())) {
                 related.add(assoc.getSourceClass());
             }
         }
