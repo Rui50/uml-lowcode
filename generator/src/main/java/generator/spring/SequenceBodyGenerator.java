@@ -101,6 +101,24 @@ public class SequenceBodyGenerator {
         // só processar mensagens enviadas pelo service
         if (serviceLifeline == null || !msg.getSource().getId().equals(serviceLifeline.getId())) return;
 
+        // mensagem «create»: gera "Type var = new Type(args)".
+        // Antes de isPlainAssignment porque "loan =" parece atribuiçã
+        // Só compila se Type tiver construtor público com esses args (em Spring só no-arg) — nota #9 no Main.
+        if ("createMessage".equals(msg.getMessageSort())) {
+            String type = msg.getTarget().getType();
+            String var = msg.getAssignVariable() != null ? msg.getAssignVariable()
+                    : (msg.getTarget().getRepresents() != null && !msg.getTarget().getRepresents().isBlank()
+                        ? msg.getTarget().getRepresents()
+                        : GeneratorUtils.lowercaseFirst(type));
+            StringBuilder a = new StringBuilder();
+            for (int i = 0; i < msg.getArguments().size(); i++) {
+                if (i > 0) a.append(", ");
+                a.append(msg.getArguments().get(i).getName());
+            }
+            writer.println(indent + type + " " + var + " = new " + type + "(" + a + ");");
+            return;
+        }
+
         // atribuição simples (sem chamada): "x = expr" ou "x = expr : Type"
         // ": Type" presente -> declara; ausente -> reatribui
         if (msg.isPlainAssignment()) {

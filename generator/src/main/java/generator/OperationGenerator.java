@@ -169,6 +169,26 @@ public class OperationGenerator {
      */
     private static void generateMessage(PrintWriter writer, Message msg, Message entry,
                                         Class cls, List<Association> associations, String indent) {
+        // mensagem «create»: gera "Type var = new Type(args)".
+        // Antes de isPlainAssignment porque "loan =" parece atribuição
+        // Só compila se Type tiver construtor público com esses args (em Spring só no-arg) — nota #9 no Main.
+        if ("createMessage".equals(msg.getMessageSort())) {
+            String type = msg.getTarget().getType();
+            String var = msg.getAssignVariable() != null ? msg.getAssignVariable()
+                    : (msg.getTarget().getRepresents() != null && !msg.getTarget().getRepresents().isBlank()
+                        ? msg.getTarget().getRepresents()
+                        : GeneratorUtils.lowercaseFirst(type));
+            StringBuilder a = new StringBuilder();
+            if (msg.getArguments() != null) {
+                for (int i = 0; i < msg.getArguments().size(); i++) {
+                    if (i > 0) a.append(", ");
+                    a.append(msg.getArguments().get(i).getName());
+                }
+            }
+            writer.println(indent + type + " " + var + " = new " + type + "(" + a + ");");
+            return;
+        }
+
         // atribuição simples (quando nao tem chamadas a metodos): "x = expr" ou "x = expr : Type"
         // se ": Type" presente -> declara (Type x = expr); ausente -> reatribui (x = expr)
         if (msg.isPlainAssignment()) {
