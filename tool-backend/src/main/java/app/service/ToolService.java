@@ -52,6 +52,7 @@ public class ToolService {
             opts.setOpenApi(settingsDto.getOpenApi());
             opts.setDockerfile(settingsDto.getDockerfile());
             opts.setTimestamps(settingsDto.getTimestamps());
+            opts.setDemoFrontend(settingsDto.getDemoFrontend());
         }
 
         Path tempDir = Files.createTempDirectory("uml-gen-");

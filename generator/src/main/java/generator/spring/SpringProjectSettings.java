@@ -8,8 +8,16 @@ public class SpringProjectSettings {
     private boolean openApi = true;   // incluir OpenAPI/Swagger UI (springdoc)
     private boolean dockerfile = false;   // gerar Dockerfile
     private boolean timestamps = false;   // adicionar createdAt/updatedAt às entidades (Auditable)
+    private boolean demoFrontend = false;   // gerar UI demo HTML+JS em resources/static
 
     // getters and setters
+    public boolean isDemoFrontend() {
+        return demoFrontend;
+    }
+    public void setDemoFrontend(boolean demoFrontend) {
+        this.demoFrontend = demoFrontend;
+    }
+
     public boolean isOpenApi() {
         return openApi;
     }

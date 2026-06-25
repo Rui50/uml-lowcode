@@ -132,6 +132,7 @@ export interface ProjectSettings {
   openApi?: boolean
   dockerfile?: boolean
   timestamps?: boolean
+  demoFrontend?: boolean
 }
 
 ///////////

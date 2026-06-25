@@ -450,4 +450,18 @@ public class GeneratorUtils {
             );
         }
     }
+
+    // para saber se é preciso "import java.time.*" nas classes/DTOs com atributos de data
+    public static boolean isJavaTimeType(String type) {
+        if (type == null) return false;
+        switch (type) {
+            case "LocalDate": case "LocalDateTime": case "LocalTime":
+            case "Instant": case "OffsetDateTime": case "ZonedDateTime":
+            case "OffsetTime": case "Duration": case "Period":
+            case "Year": case "YearMonth": case "MonthDay":
+                return true;
+            default:
+                return false;
+        }
+    }
 }

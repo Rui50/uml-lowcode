@@ -94,6 +94,9 @@ public class SpringControllerGenerator {
             // custom operation endpoints (sequence diag)
             generateCustomOperationEndpoints(writer, cls, interactions, allClasses);
 
+            // trigger manual dos jobs desta classe
+            generateJobTriggerEndpoints(writer, cls);
+
             writer.println("}");
         }
 
@@ -357,6 +360,12 @@ public class SpringControllerGenerator {
         writer.println("import java.util.List;");
         writer.println("import java.util.UUID;");
 
+        // jobs desta classe: importados para o endpoint de trigger manual
+        for (Operation op : cls.getOperations()) {
+            if (op.isJob()) writer.println("import " + basePackage + ".jobs."
+                    + GeneratorUtils.capitalizeFirst(op.getName()) + "Job;");
+        }
+
         // Imports de entidades usadas nas Operations
         List<String> modelsToImport = GeneratorUtils.getModelsToImportFromOperations(cls, allClasses);
         List<String> modelsToImportFromAssociations = GeneratorUtils.getModelsToImportFromAssociations(cls, associations);
@@ -423,6 +432,14 @@ public class SpringControllerGenerator {
         // para cada param de cada operação, se for uma entidade, adicionar como dependência
         for (String extra : getExtraServices(cls, allClasses)) {
             writer.println("    private final " + extra + "Service " + GeneratorUtils.lowercaseFirst(extra) + "Service;");
+        }
+
+        // jobs desta classe: injeta o @Component para o trigger manual
+        for (Operation op : cls.getOperations()) {
+            if (op.isJob()) {
+                String jobClass = GeneratorUtils.capitalizeFirst(op.getName()) + "Job";
+                writer.println("    private final " + jobClass + " " + GeneratorUtils.lowercaseFirst(jobClass) + ";");
+            }
         }
 
         writer.println();
@@ -552,6 +569,23 @@ public class SpringControllerGenerator {
                     writer.println("        return ResponseEntity.ok(result);");
                 }
             }
+            writer.println("    }");
+        }
+    }
+
+    // trigger manual de cada job desta classe: POST /api/<plural>/<op> -> job.run().
+    // Os jobs correm @Scheduled na cron, mas assim também se disparam à mão (útil em demos).
+    private void generateJobTriggerEndpoints(PrintWriter writer, Class cls) {
+        for (Operation op : cls.getOperations()) {
+            if (!op.isJob()) continue;
+            String jobField = GeneratorUtils.lowercaseFirst(GeneratorUtils.capitalizeFirst(op.getName()) + "Job");
+            String path = (op.getEndpointName() != null && !op.getEndpointName().isBlank())
+                    ? op.getEndpointName() : op.getName();
+            writer.println();
+            writer.println("    @PostMapping(\"/" + path + "\")");
+            writer.println("    public ResponseEntity<?> " + op.getName() + "() {");
+            writer.println("        " + jobField + ".run();");
+            writer.println("        return ResponseEntity.ok().build();");
             writer.println("    }");
         }
     }

@@ -167,6 +167,9 @@ public class GenerationService {
             if (opts.getTimestamps() != null) {
                 settings.setTimestamps(opts.getTimestamps());
             }
+            if (opts.getDemoFrontend() != null) {
+                settings.setDemoFrontend(opts.getDemoFrontend());
+            }
         }
         SpringProjectGenerator project = new SpringProjectGenerator(settings, outputDir);
         project.generateProjectStructure();
@@ -189,6 +192,11 @@ public class GenerationService {
         new SpringJobGenerator(outputDir, basePackage)
                 .generateJobs(m.getClasses(), m.getAssociations(), m.getEnumerations());
 
+        // demo é opt (default false)
+        if (settings.isDemoFrontend()) {
+            new generator.spring.SpringFrontendGenerator(outputDir)
+                    .generateFrontend(m.getClasses(), m.getAssociations(), m.getEnumerations());
+        }
     }
 }
 

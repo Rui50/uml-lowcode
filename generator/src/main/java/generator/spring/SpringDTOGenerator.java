@@ -1,6 +1,7 @@
 package generator.spring;
 
 import generator.GeneratorUtils;
+import generator.RelationshipInfo;
 import model.Association;
 import model.Attribute;
 import model.Class;
@@ -84,14 +85,15 @@ public class SpringDTOGenerator {
         try (PrintWriter w = new PrintWriter(new File(filename))) {
             // relações navegáveis (mesmos campos de id que o ResponseDTO)
             List<RelationshipInfo> relationships = collectRelationships(cls, associations);
-            boolean hasCollectionRel = relationships.stream()
-                    .anyMatch(r -> GeneratorUtils.checkMultiplicity(r.multiplicity) || r.assoc.hasQualifier());
 
             w.println("package " + basePackage + ".dto;");
             w.println();
             w.println("import lombok.*;");
-            if (hasCollectionRel) {
-                w.println("import java.util.*;");   // List<...> dos ids de coleção
+            // java.util.* cobre List (ids de coleção) e UUID (chave natural ou id de relação)
+            w.println("import java.util.*;");
+            // atributos de data (LocalDate, etc.) precisam de java.time
+            if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaTimeType(a.getType()))) {
+                w.println("import java.time.*;");
             }
             w.println("import " + basePackage + ".models." + className + ";");
 
@@ -189,8 +191,9 @@ public class SpringDTOGenerator {
             w.println("import lombok.*;");
             w.println("import java.util.*;");
             w.println("import java.util.stream.Collectors;");
-            if (timestamps) {
-                w.println("import java.time.Instant;");
+            // java.time.* cobre Instant (timestamps) e atributos de data (LocalDate, etc.)
+            if (timestamps || cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaTimeType(a.getType()))) {
+                w.println("import java.time.*;");
             }
             w.println("import " + basePackage + ".models." + className + ";");
 
@@ -313,19 +316,6 @@ public class SpringDTOGenerator {
         } else {
             w.println("        dto.set" + capitalizedField + "Id(" + varName + ".get" + capitalizedField + "() != null");
             w.println("            ? " + varName + ".get" + capitalizedField + "()." + idGetterOf(otherClass) + "() : null);");
-        }
-    }
-
-    // helper to carry relationship info
-    private static class RelationshipInfo {
-        String otherClass, role, multiplicity;
-        Association assoc;
-
-        RelationshipInfo(String otherClass, String role, String multiplicity, Association assoc) {
-            this.otherClass = otherClass;
-            this.role = role;
-            this.multiplicity = multiplicity;
-            this.assoc = assoc;
         }
     }
 

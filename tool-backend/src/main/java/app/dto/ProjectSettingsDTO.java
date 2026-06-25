@@ -15,6 +15,7 @@ public class ProjectSettingsDTO {
     private Boolean openApi;          // Spring only — incluir OpenAPI/Swagger
     private Boolean dockerfile;       // Spring / CLI-JPA — gerar Dockerfile (+ compose se Postgres/MySQL)
     private Boolean timestamps;       // Spring only — createdAt/updatedAt nas entidades (Auditable)
+    private Boolean demoFrontend;     // Spring only — gerar UI demo (HTML+JS) em resources/static
 }
 
 

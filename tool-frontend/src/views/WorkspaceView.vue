@@ -49,6 +49,7 @@ function onConfirm() {
     openApi: projectSettings.openApi,
     dockerfile: projectSettings.dockerfile,
     timestamps: projectSettings.timestamps,
+    demoFrontend: projectSettings.demoFrontend,
   })
 }
 

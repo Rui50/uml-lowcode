@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Book</title><link rel="stylesheet" href="style.css"></head>
+<body>
+  <nav class="sidebar">
+    <a href="index.html">Home</a>
+    <a href="library.html">Library</a>
+    <a href="studentmember.html">StudentMember</a>
+    <a href="staffmember.html">StaffMember</a>
+    <a href="book.html" class="active">Book</a>
+    <a href="author.html">Author</a>
+    <a href="loan.html">Loan</a>
+    <a href="librarycard.html">LibraryCard</a>
+  </nav>
+  <main>
+    <h1>Book</h1>
+    <form onsubmit="save(event)">
+      <label>isbn <input name="isbn" type="text"></label>
+      <label>title <input name="title" type="text"></label>
+      <label>status <select name="status"><option value="">-- none --</option><option>AVAILABLE</option><option>LOANED</option><option>LOST</option></select></label>
+      <label>borrowerId <input name="borrowerId" type="number"></label>
+      <button type="submit" id="submitBtn">Create</button>
+      <button type="button" id="cancelBtn" onclick="cancelEdit()" style="display:none">Cancel</button>
+    </form>
+    <table id="list">
+      <thead><tr><th>id</th><th>isbn</th><th>title</th><th>status</th><th>borrowerId</th><th>authorsIds</th><th>editorsIds</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h2>Relationships</h2>
+    <form class="rel" data-path="authors" data-numeric="true" onsubmit="addItem(event)">
+      <label>Book id <input name="parent" type="number"></label>
+      <label>authors <select name="child"></select></label>
+      <button type="submit">Add</button>
+      <button type="button" onclick="removeItem(this)">Remove</button>
+    </form>
+    <form class="rel" data-path="editors" data-numeric="true" onsubmit="addItem(event)">
+      <label>Book id <input name="parent" type="number"></label>
+      <label>editors <select name="child"></select></label>
+      <button type="submit">Add</button>
+      <button type="button" onclick="removeItem(this)">Remove</button>
+    </form>
+  </main>
+<script>
+const API = '/api/books';
+let editId = null;   // null = a criar (POST); senão o id a editar (PUT)
+
+async function load() {
+  const items = await (await fetch(API)).json();
+  const tbody = document.querySelector('#list tbody');
+  tbody.innerHTML = '';
+  for (const item of items) {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${item.id ?? ''}</td>
+      <td>${item.isbn ?? ''}</td>
+      <td>${item.title ?? ''}</td>
+      <td>${item.status ?? ''}</td>
+      <td>${item.borrowerId ?? ''}</td>
+      <td>${item.authorsIds ?? ''}</td>
+      <td>${item.editorsIds ?? ''}</td>
+      <td><button onclick="edit('${item.id}')">edit</button> <button onclick="remove('${item.id}')">delete</button></td>`;
+    tbody.appendChild(row);
+  }
+}
+
+async function loadOptions() {
+  fillSelect('form[data-path="authors"] [name="child"]', '/api/authors', 'id');
+  fillSelect('form[data-path="editors"] [name="child"]', '/api/authors', 'id');
+}
+
+async function fillSelect(selector, url, idField) {
+  const items = await (await fetch(url)).json();
+  const select = document.querySelector(selector);
+  select.innerHTML = '<option value="">-- none --</option>';
+  for (const item of items) {
+    const opt = document.createElement('option');
+    opt.value = item[idField];
+    opt.textContent = item[idField];
+    select.appendChild(opt);
+  }
+}
+
+async function save(event) {
+  event.preventDefault();
+  const form = event.target;
+  const body = {
+    isbn: form.isbn.value,
+    title: form.title.value,
+    status: form.status.value,
+    borrowerId: form.borrowerId.value ? Number(form.borrowerId.value) : null,
+  };
+  const method = editId === null ? 'POST' : 'PUT';
+  const url = editId === null ? API : `${API}/${editId}`;
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) {
+    // o backend devolve {"error": "..."} (validação OCL, etc.); mostra a mensagem
+    const err = await res.json().catch(() => null);
+    alert(err && err.error ? err.error : 'Save failed: ' + res.status);
+    return;
+  }
+  cancelEdit();   // limpa o form e volta ao modo criar
+  load();
+}
+
+async function edit(id) {
+  const item = await (await fetch(`${API}/${id}`)).json();
+  const form = document.querySelector('form');
+  form.isbn.value = item.isbn ?? '';
+  form.title.value = item.title ?? '';
+  form.status.value = item.status ?? '';
+  form.borrowerId.value = item.borrowerId ?? '';
+  editId = id;
+  document.getElementById('submitBtn').textContent = 'Update';
+  document.getElementById('cancelBtn').style.display = '';
+}
+
+function cancelEdit() {
+  document.querySelector('form').reset();
+  editId = null;
+  document.getElementById('submitBtn').textContent = 'Create';
+  document.getElementById('cancelBtn').style.display = 'none';
+}
+
+async function remove(id) {
+  if (!confirm('Delete ' + id + '?')) return;
+  await fetch(`${API}/${id}`, { method: 'DELETE' });
+  load();
+}
+
+async function addItem(event) {
+  event.preventDefault();
+  await sendItem(event.target, 'POST');
+}
+
+async function removeItem(btn) {
+  await sendItem(btn.closest('form'), 'DELETE');
+}
+
+async function sendItem(form, method) {
+  const child = form.dataset.numeric === 'true' ? Number(form.child.value) : form.child.value;
+  const res = await fetch(`${API}/${form.parent.value}/${form.dataset.path}`, {
+    method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify([child]),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    alert(err && err.error ? err.error : method + ' failed: ' + res.status);
+    return;
+  }
+  load();
+}
+
+loadOptions();
+load();
+</script>
+</body>
+</html>

@@ -142,6 +142,10 @@ public class SpringEntityGenerator {
             writer.println("import jakarta.validation.constraints.*;");   // anotações Validation (OCL)
             writer.println("import lombok.*;");
             writer.println("import java.util.*;");
+            // atributos de data precisam de java.time
+            if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaTimeType(a.getType()))) {
+                writer.println("import java.time.*;");
+            }
             // com timestamps a raiz extends Auditable (@SuperBuilder), logo todas usam SuperBuilder
             boolean useSuperBuilder = cls.getParentClass() != null
                     || GeneratorUtils.isParent(cls, allClasses)
