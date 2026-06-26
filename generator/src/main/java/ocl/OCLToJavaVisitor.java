@@ -10,8 +10,30 @@ import org.antlr.v4.runtime.CommonTokenStream;
  * existe um metodo visit para cada regra da gramática, e a tradução é feita recursivamente
  *
  * assume sempre sempre listas ou sets na tradução, se for maps o ValidationGenerator da fix a isso
+ *
+ * OCL NÃO SUPORTADO
+ * Estas caem no fallback "return base + text" (fim de visitPostfixTranslate) e geram
+ * Java que NÃO compila, sem mensagem de erro. Melhoria futura: falhar de forma explícita.
+ *  - tipos: oclIsKindOf, oclIsTypeOf, oclAsType, oclType, oclAsSet,
+ *           oclIsUndefined, oclIsInvalid, oclIsNew
+ *  - coleções: union, intersection, symmetricDifference, excludesAll, prepend,
+ *              append, one, closure, sortedBy, asBag, asOrderedSet, reverse, at, indexOf
+ *
+ * FORA DE ÂMBITO (não dá para suportar no validate() de uma entidade):
+ *  - allInstances()  — precisa de um repositório (todas as instâncias)
+ *  - @pre / oclIsNew / oclIsInvalid — semântica de pós-condição (estado antes/depois)
+ *  - closure         — fecho transitivo (precisa de ponto-fixo)
+ *
+ * LIMITAÇÕES (traduz, mas com cuidado):
+ *  - sum() assume coleção de Integer (não double/float)
+ *  - '=' numérico entre wrappers diferentes dá SEMPRE false (Objects.equals: Long vs Integer,
+ *    Double vs Integer...). Afeta floor()/round() e ex. "double = int". Usar >=, <=, >, <.
  */
 public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
+
+    // bindings de 'let' ativas: nome -> expressão Java já traduzida. Substituição inline
+    // (let é puro em OCL): cada uso de x emite a tradução do seu valor. Ver visitBasicExpression.
+    private final java.util.Map<String, String> letScope = new java.util.HashMap<>();
 
     public static String toJava(String oclExpression) {
         if (oclExpression == null || oclExpression.trim().isEmpty()) {
@@ -64,6 +86,35 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         if (ctx.conditionalExpression() != null) return visit(ctx.conditionalExpression());
         if (ctx.letExpression() != null) return visit(ctx.letExpression());
         return ctx.getText();
+    }
+
+    // Regra: letExpression : 'let' letBinding (',' letBinding)* 'in' expression
+    // 'let' nomeia sub-expressões para reuso/legibilidade. Não há variável local em Java
+    // (traduzimos para UMA expressão), por isso fazemos substituição inline: cada uso do
+    // nome no corpo emite a tradução do seu valor (ver visitBasicExpression).
+    //
+    // ex:  let x = self.preco, y = self.stock in x > y   ->   (this.preco) > (this.stock)
+    //      preenche letScope { x -> "(this.preco)", y -> "(this.stock)" } e depois traduz "x > y"
+    @Override
+    public String visitLetExpression(OCLParser.LetExpressionContext ctx) {
+        // repor o scope no fim: nomes novos saem, nomes que já existiam voltam ao valor antigo
+        java.util.List<String> added = new java.util.ArrayList<>();
+        java.util.Map<String, String> replaced = new java.util.HashMap<>();
+
+        for (OCLParser.LetBindingContext b : ctx.letBinding()) {
+            String name  = b.ID().getText();                  // ex: "x"
+            String value = "(" + visit(b.expression()) + ")"; // ex: "(this.preco)"  (bindings anteriores já ativas)
+            if (letScope.containsKey(name)) replaced.put(name, letScope.get(name)); // já existia -> guardar o antigo
+            else added.add(name);                                                   // novo -> marcar p/ remover
+            letScope.put(name, value);
+        }
+
+        String body = visit(ctx.expression());        // a expressão depois do 'in'
+
+        // repor o scope ao estado anterior a este let
+        for (String n : added) letScope.remove(n);    // os novos -> apagar
+        letScope.putAll(replaced);                    // os tapados -> repor o valor antigo
+        return body;
     }
 
     // Regra:
@@ -158,7 +209,14 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             }
         }
 
-        if (ctx.ID() != null) return ctx.ID().getText();
+        if (ctx.ID() != null) {
+            String name = ctx.ID().getText();
+            if (letScope.containsKey(name)) {
+                return letScope.get(name);   // é variável de let -> devolve a tradução, ex "(this.preco)"
+            } else {
+                return name;                 // não é -> devolve o próprio nome, ex "a"
+            }
+        }
 
         return ctx.getText();
     }
@@ -202,7 +260,12 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
                 case "or":
                     sb.append(" || ").append(right);
                     break;
+                case "xor":
+                    // a xor b -> a ^ b (true quando diferem)
+                    sb.append(" ^ ").append(right);
+                    break;
                 case "implies":
+                case "=>":          // '=>' é só notação alternativa de 'implies'
                     // a implies b -> !(a) || (b)
                     String left = sb.toString();
                     sb.setLength(0);
@@ -402,6 +465,32 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         // (Integer::intValue não compila sobre Double). Suportar tipos numéricos variados
         // exigiria informação de tipo que o visitor não tem a este nível.
         if (text.equals("->sum()")) return base + ".stream().mapToInt(Integer::intValue).sum()";
+
+        // ->max() -> .stream().max(...).orElse(null) ; ->min() análogo
+        if (text.equals("->max()"))
+            return base + ".stream().max(java.util.Comparator.naturalOrder()).orElse(null)";
+        if (text.equals("->min()"))
+            return base + ".stream().min(java.util.Comparator.naturalOrder()).orElse(null)";
+
+        // ->count(x) -> nº de ocorrências de x na coleção
+        if (text.startsWith("->count("))
+            return "java.util.Collections.frequency(" + base + ", " + visit(ctx.expression(0)) + ")";
+
+        // operações numéricas escalares (base é um número)
+        // LIMITAÇÃO: floor()/round() devolvem 'long'. Com COMPARAÇÕES (>=, <=, >, <)
+        if (text.equals("->abs()"))   return "Math.abs(" + base + ")";
+        if (text.equals("->floor()")) return "(long) Math.floor(" + base + ")";
+        if (text.equals("->round()")) return "Math.round(" + base + ")";
+
+        // operações de string (assume base do tipo String)
+        if (text.equals("->toUpperCase()")) return base + ".toUpperCase()";
+        if (text.equals("->toLowerCase()")) return base + ".toLowerCase()";
+        if (text.equals("->toInteger()"))   return "Integer.parseInt(" + base + ")";
+        if (text.equals("->toReal()"))      return "Double.parseDouble(" + base + ")";
+        if (text.equals("->toBoolean()"))   return "Boolean.parseBoolean(" + base + ")";
+        if (text.equals("->characters()"))  return "java.util.Arrays.asList(" + base + ".split(\"\"))";
+        if (text.startsWith("->equalsIgnoreCase("))
+            return base + ".equalsIgnoreCase(" + visit(ctx.expression(0)) + ")";
 
         // .propriedade -> .propriedade
         if (ctx.getChild(0).getText().equals(".") && ctx.ID().size() > 0) {
