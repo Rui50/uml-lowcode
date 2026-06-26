@@ -37,18 +37,12 @@ public class SpringDTOGenerator {
         this.timestamps = timestamps;
     }
 
-    // tipo do id de uma classe (pelo nome), resolvido a partir da raiz; default Long
+    // tipo / getter do id de uma classe (pelo nome), resolvidos a partir da raiz
     private String idTypeOf(String className) {
-        Class c = classMap.get(className);
-        return (c != null) ? c.getRoot().getIdAttributeType() : "Long";
+        return GeneratorUtils.idType(classMap.get(className));
     }
-
-    // getter do id
     private String idGetterOf(String className) {
-        Class c = classMap.get(className);
-        String field = (c != null && c.getRoot().getIdAttributeName() != null)
-                ? c.getRoot().getIdAttributeName() : "id";
-        return "get" + GeneratorUtils.capitalizeFirst(field);
+        return GeneratorUtils.idGetter(classMap.get(className));
     }
 
     public void generateDTOs(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
@@ -84,7 +78,7 @@ public class SpringDTOGenerator {
 
         try (PrintWriter w = new PrintWriter(new File(filename))) {
             // relações navegáveis (mesmos campos de id que o ResponseDTO)
-            List<RelationshipInfo> relationships = collectRelationships(cls, associations);
+            List<RelationshipInfo> relationships = RelationshipInfo.collect(cls, associations);
 
             w.println("package " + basePackage + ".dto;");
             w.println();
@@ -133,12 +127,12 @@ public class SpringDTOGenerator {
 
             // ids de relação (ligados no service, não no toEntity) — mesmo "emit" do ResponseDTO
             for (RelationshipInfo rel : relationships) {
-                generateRelationshipIdField(w, rel.otherClass, rel.role, rel.multiplicity, rel.assoc);
+                generateRelationshipIdField(w, rel);
             }
 
             // toEntity() method
             w.println();
-            String varName = className.substring(0, 1).toLowerCase() + className.substring(1);
+            String varName = GeneratorUtils.lowercaseFirst(className);
             w.println("    public " + className + " toEntity() {");
             w.println("        " + className + " " + varName + " = new " + className + "();");
             for (Attribute attr : allAttrs) {
@@ -157,24 +151,6 @@ public class SpringDTOGenerator {
         }
 
         System.out.println("Generated: " + className + "CreateDTO.java");
-    }
-
-    // relações navs desta classe (ambos os lados) — partilhado por Response e Create DTO.
-    // Inclui associações herdadas de um pai ABSTRATO (assocDeclaringClass): a subclasse
-    // concreta precisa dos campos de id no seu DTO. Pai concreto já tem o seu próprio DTO.
-    private List<RelationshipInfo> collectRelationships(Class cls, List<Association> associations) {
-        List<RelationshipInfo> relationships = new ArrayList<>();
-        for (Association assoc : associations) {
-            String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
-            if (declarer == null) continue;
-            boolean isSource = assoc.getSourceClass().equals(declarer);
-            relationships.add(new RelationshipInfo(
-                    isSource ? assoc.getTargetClass() : assoc.getSourceClass(),
-                    isSource ? assoc.getTargetRole()  : assoc.getSourceRole(),
-                    isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity(),
-                    assoc));
-        }
-        return relationships;
     }
 
     /**
@@ -247,18 +223,18 @@ public class SpringDTOGenerator {
             }
 
             // relationship ID fields (mesma lista usada nos campos e no fromEntity)
-            List<RelationshipInfo> relationships = collectRelationships(cls, associations);
+            List<RelationshipInfo> relationships = RelationshipInfo.collect(cls, associations);
 
             if (!relationships.isEmpty()) {
                 w.println();
                 for (RelationshipInfo rel : relationships) {
-                    generateRelationshipIdField(w, rel.otherClass, rel.role, rel.multiplicity, rel.assoc);
+                    generateRelationshipIdField(w, rel);
                 }
             }
 
             // fromEntity() static factory method
             w.println();
-            String varName = className.substring(0, 1).toLowerCase() + className.substring(1);
+            String varName = GeneratorUtils.lowercaseFirst(className);
             w.println("    public static " + className + "ResponseDTO fromEntity(" + className + " " + varName + ") {");
             w.println("        " + className + "ResponseDTO dto = new " + className + "ResponseDTO();");
             if (defaultId) w.println("        dto.setId(" + varName + ".getId());");
@@ -273,7 +249,7 @@ public class SpringDTOGenerator {
             }
 
             for (RelationshipInfo rel : relationships) {
-                generateRelationshipIdMapping(w, varName, rel.otherClass, rel.role, rel.multiplicity, rel.assoc);
+                generateRelationshipIdMapping(w, varName, rel);
             }
 
             w.println("        return dto;");
@@ -285,26 +261,25 @@ public class SpringDTOGenerator {
         System.out.println("Generated: " + className + "ResponseDTO.java");
     }
 
-    private void generateRelationshipIdField(PrintWriter w, String otherClass, String role,
-                                              String multiplicity, Association assoc) {
-        String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, multiplicity);
+    private void generateRelationshipIdField(PrintWriter w, RelationshipInfo rel) {
+        String fieldName = GeneratorUtils.makeAttributeName(rel.otherClass, rel.role, rel.multiplicity);
 
-        if (GeneratorUtils.checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
+        if (rel.isCollection()) {
             // collection -> List of related IDs
-            w.println("    private List<" + idTypeOf(otherClass) + "> " + fieldName + "Ids;");
+            w.println("    private List<" + idTypeOf(rel.otherClass) + "> " + fieldName + "Ids;");
         } else {
             // single reference -> related ID
-            w.println("    private " + idTypeOf(otherClass) + " " + fieldName + "Id;");
+            w.println("    private " + idTypeOf(rel.otherClass) + " " + fieldName + "Id;");
         }
     }
 
-    private void generateRelationshipIdMapping(PrintWriter w, String varName, String otherClass,
-                                                String role, String multiplicity, Association assoc) {
-        String fieldName = GeneratorUtils.makeAttributeName(otherClass, role, multiplicity);
+    private void generateRelationshipIdMapping(PrintWriter w, String varName, RelationshipInfo rel) {
+        String otherClass = rel.otherClass;
+        String fieldName = GeneratorUtils.makeAttributeName(otherClass, rel.role, rel.multiplicity);
         String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
 
-        if (GeneratorUtils.checkMultiplicity(multiplicity) || assoc.hasQualifier()) {
-            if (assoc.hasQualifier()) {
+        if (rel.isCollection()) {
+            if (rel.assoc.hasQualifier()) {
                 w.println("        dto.set" + capitalizedField + "Ids(" + varName + ".get" + capitalizedField + "() != null");
                 w.println("            ? " + varName + ".get" + capitalizedField + "().values().stream().map(" + otherClass + "::" + idGetterOf(otherClass) + ").collect(Collectors.toList())");
                 w.println("            : new ArrayList<>());");

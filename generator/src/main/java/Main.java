@@ -15,7 +15,7 @@ public class Main {
 
     }
 
-        /*String xmiFilePath = "test-models/interface.uml";
+        /*String xmiFilePath = "test-models/library_test.uml";
 
         System.out.println("Parsing UML model from: " + xmiFilePath);
 

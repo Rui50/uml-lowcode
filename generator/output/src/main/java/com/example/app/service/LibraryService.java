@@ -157,4 +157,10 @@ public class LibraryService {
     }
 
     // operations (TODO: implement)
+
+    public void markOverdue(int currentDay) {
+        throw new UnsupportedOperationException(
+            "Method 'markOverdue' not yet implemented. "
+        );
+    }
 }

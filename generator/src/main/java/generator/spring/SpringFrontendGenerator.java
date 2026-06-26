@@ -118,30 +118,11 @@ public class SpringFrontendGenerator {
     }
     // se id (Long/int) -> Number(); senão string (UUID/chave natural)
     private boolean idNumeric(String className) {
-        Class c = classMap.get(className);
-        return isNumeric(c != null ? c.getRoot().getIdAttributeType() : "Long");
+        return isNumeric(GeneratorUtils.idType(classMap.get(className)));
     }
     // nome do id na resposta json ("id" gerado, ou a chave natural)
     private String idJsonField(String className) {
-        Class c = classMap.get(className);
-        return (c != null && c.getRoot().getIdAttributeName() != null) ? c.getRoot().getIdAttributeName() : "id";
-    }
-
-    // relações single navegáveis desta classe (inclui herdadas de pai abstrato),
-    // mesma lógica do SpringDTOGenerator.collectRelationships mas só as single
-    private List<RelationshipInfo> singleRelationships(Class cls, List<Association> associations) {
-        List<RelationshipInfo> rels = new ArrayList<>();
-        for (Association assoc : associations) {
-            String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
-            if (declarer == null) continue;
-            boolean isSource = assoc.getSourceClass().equals(declarer);
-            String otherClass = isSource ? assoc.getTargetClass() : assoc.getSourceClass();
-            String role = isSource ? assoc.getTargetRole() : assoc.getSourceRole();
-            String mult = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
-            if (GeneratorUtils.checkMultiplicity(mult) || assoc.hasQualifier()) continue; // só single
-            rels.add(new RelationshipInfo(otherClass, role, mult, assoc));
-        }
-        return rels;
+        return GeneratorUtils.idFieldName(classMap.get(className));
     }
 
     // relações de coleção desta classe COM endpoint add/remove (mesma condição que o
@@ -178,7 +159,7 @@ public class SpringFrontendGenerator {
                 && (otherMultiple || assoc.hasQualifier()) && !isBidirectional;
         if (!manyToMany && !oneToManyUni) return;
 
-        rels.add(new RelationshipInfo(otherClass, role, otherMul, assoc));
+        rels.add(new RelationshipInfo(otherClass, role, otherMul, assoc, isSource));
     }
 
     // operações custom desta classe COM endpoint (mesma condição que o controller:
@@ -297,7 +278,7 @@ public class SpringFrontendGenerator {
             if (!a.hasDerive()) columns.add(a.getName());
         }
 
-        List<RelationshipInfo> rels = singleRelationships(cls, associations);
+        List<RelationshipInfo> rels = RelationshipInfo.collectSingle(cls, associations);
         List<RelationshipInfo> colls = collectionRelationships(cls, associations);
         List<Operation> ops = customOperations(cls);
         List<Operation> jobs = jobOperations(cls);

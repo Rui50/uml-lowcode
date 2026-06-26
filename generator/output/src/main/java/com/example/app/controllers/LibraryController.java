@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-import com.example.app.jobs.MarkOverdueJob;
 
 import com.example.app.models.Book;
 import com.example.app.models.Member;
@@ -25,7 +24,6 @@ import com.example.app.models.Member;
 public class LibraryController {
 
     private final LibraryService libraryService;
-    private final MarkOverdueJob markOverdueJob;
 
     // CRUD Endpoints
 
@@ -115,10 +113,4 @@ public class LibraryController {
 
 
     // Custom Operation Endpoints dos diagramas sequencia
-
-    @PostMapping("/markOverdue")
-    public ResponseEntity<?> markOverdue() {
-        markOverdueJob.run();
-        return ResponseEntity.ok().build();
-    }
 }

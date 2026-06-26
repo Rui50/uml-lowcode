@@ -330,7 +330,7 @@ public class GeneratorUtils {
                 if (role != null && !role.trim().isEmpty()) {
                     mapFields.add(role.trim());
                 } else {
-                    String base = assoc.getTargetClass().substring(0, 1).toLowerCase() + assoc.getTargetClass().substring(1);
+                    String base = lowercaseFirst(assoc.getTargetClass());
                     mapFields.add(base + "s");
                 }
             }
@@ -339,7 +339,7 @@ public class GeneratorUtils {
                 if (role != null && !role.trim().isEmpty()) {
                     mapFields.add(role.trim());
                 } else {
-                    String base = assoc.getSourceClass().substring(0, 1).toLowerCase() + assoc.getSourceClass().substring(1);
+                    String base = lowercaseFirst(assoc.getSourceClass());
                     mapFields.add(base + "s");
                 }
             }
@@ -417,7 +417,20 @@ public class GeneratorUtils {
 
     // nome da variável de repositório de uma classe (ex: Aluno -> alunoRepository)
     public static String repoVariable(String className) {
-        return className.substring(0, 1).toLowerCase() + className.substring(1) + "Repository";
+        return lowercaseFirst(className) + "Repository";
+    }
+
+    // id de uma classe — resolvido pela raiz (subclasses partilham o id do pai)
+    // cls null (nome desconhecido) da defaults no tipo Long, campo "id".
+    public static String idType(Class cls) {
+        return (cls != null) ? cls.getRoot().getIdAttributeType() : "Long";
+    }
+    public static String idFieldName(Class cls) {
+        return (cls != null && cls.getRoot().getIdAttributeName() != null)
+                ? cls.getRoot().getIdAttributeName() : "id";
+    }
+    public static String idGetter(Class cls) {
+        return "get" + capitalizeFirst(idFieldName(cls));
     }
 
     // saber se a classe é pai de outra (tem subclasses), para gerar @Inheritance / SuperBuilder

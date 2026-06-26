@@ -44,8 +44,7 @@ public class CLIMenuGenerator {
 
     // tipo do id de uma classe (pelo nome)
     private String idTypeOf(String className) {
-        Class c = classMap.get(className);
-        return (c != null) ? c.getRoot().getIdAttributeType() : "Long";
+        return GeneratorUtils.idType(classMap.get(className));
     }
 
     // metodo do InputUtils a usar
