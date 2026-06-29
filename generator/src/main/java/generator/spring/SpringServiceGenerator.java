@@ -142,6 +142,9 @@ public class SpringServiceGenerator {
         writer.println("import lombok.RequiredArgsConstructor;");
         writer.println("import org.springframework.stereotype.Service;");
         writer.println("import org.springframework.transaction.annotation.Transactional;");
+        writer.println("import org.springframework.data.domain.Page;");
+        writer.println("import org.springframework.data.domain.Pageable;");
+        writer.println("import " + basePackage + ".exception.NotFoundException;");
         writer.println();
         writer.println("import java.util.*;");
         writer.println("import java.util.stream.Collectors;");
@@ -203,14 +206,14 @@ public class SpringServiceGenerator {
 
         writer.println("   // CRUD methods");
 
-        // findAll()
+        // findAll() — paginado: Page<DTO> a partir de findAll(Pageable) do repositório
         writer.println("    /**");
-        writer.println("     * @return list of all entities as DTOs");
+        writer.println("     * @param pageable paginação/ordenação (query params: page, size, sort)");
+        writer.println("     * @return page of entities as DTOs");
         writer.println("     */");
-        writer.println("    public List<" + className + "ResponseDTO> findAll() {");
-        writer.println("        return " + repoName + ".findAll().stream()");
-        writer.println("            .map(" + className + "ResponseDTO::fromEntity)");
-        writer.println("            .collect(Collectors.toList());");
+        writer.println("    public Page<" + className + "ResponseDTO> findAll(Pageable pageable) {");
+        writer.println("        return " + repoName + ".findAll(pageable)");
+        writer.println("            .map(" + className + "ResponseDTO::fromEntity);");
         writer.println("    }");
         writer.println();
 
@@ -354,10 +357,10 @@ public class SpringServiceGenerator {
         writer.println("    public " + className + "ResponseDTO assign" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, " + idTypeOf(otherClass) + " " + otherVar + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
-        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
                 " not found: \" + " + varName + "Id));");
         writer.println("        " + otherClass + " " + otherVar + " = " + otherRepoName + ".findById(" + otherVar + "Id)");
-        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + otherClass +
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + otherClass +
                 " not found: \" + " + otherVar + "Id));");
         writer.println();
 
@@ -410,7 +413,7 @@ public class SpringServiceGenerator {
         writer.println("    public " + className + "ResponseDTO remove" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
-        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
                 " not found: \" + " + varName + "Id));");
         writer.println();
 
@@ -475,7 +478,7 @@ public class SpringServiceGenerator {
         writer.println("    public " + className + "ResponseDTO add" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
-        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
                 " not found: \" + " + varName + "Id));");
         writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
         writer.println();
@@ -541,7 +544,7 @@ public class SpringServiceGenerator {
         writer.println("    public " + className + "ResponseDTO remove" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
-        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
                 " not found: \" + " + varName + "Id));");
         writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
         writer.println();
@@ -598,7 +601,7 @@ public class SpringServiceGenerator {
         writer.println("    public " + className + "ResponseDTO add" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
-        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
                 " not found: \" + " + varName + "Id));");
         writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
         writer.println();
@@ -644,7 +647,7 @@ public class SpringServiceGenerator {
         writer.println("    public " + className + "ResponseDTO remove" + capitalizedField +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
-        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className +
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
                 " not found: \" + " + varName + "Id));");
         writer.println();
 
@@ -731,7 +734,7 @@ public class SpringServiceGenerator {
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println();
         // liga as relações do DTO; se mexeu na própria entidade (FK/coleção própria), grava de novo
-        if (generateRelationshipLinks(writer, cls, associations, "saved")) {
+        if (generateRelationshipLinks(writer, cls, associations, "saved", false)) {
             writer.println("        saved = " + repoName + ".save(saved);");
         }
         writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
@@ -751,7 +754,7 @@ public class SpringServiceGenerator {
      * Devolve selfModified = mexeu na própria entidade. Não grava aqui de propósito: o caller faz
      * o save final (create: repo.save; update: já tem saveAndFlush), para não duplicar o save.
      */
-    private boolean generateRelationshipLinks(PrintWriter writer, Class cls, List<Association> associations, String entityVar) {
+    private boolean generateRelationshipLinks(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean replace) {
         // entityVar é a entidade a ligar ("saved" no create, "existing" no update)
         // selfModified é quando mexemos diretamente em entityVar (caso 1 ou 2) -> o chamador grava
         // anyLinked é quando ligámos alguma relação -> re-validar o estado final antes de gravar
@@ -785,7 +788,7 @@ public class SpringServiceGenerator {
                 boolean ownerSide = GeneratorUtils.isOwningSide(assoc, isSource);
                 writer.println("        if (dto.get" + capField + "Id() != null) {");
                 writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capField + "Id())");
-                writer.println("                .orElseThrow(() -> new RuntimeException(\"" + otherClass + " not found: \" + dto.get" + capField + "Id()));");
+                writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capField + "Id()));");
                 writer.println("            " + entityVar + ".set" + capField + "(" + otherVar + ");");   // sincroniza este lado (resposta)
                 if (ownerSide) {
                     // a FK é deste lado -> id null tira a relação. Em createo campo já vem null,
@@ -815,6 +818,9 @@ public class SpringServiceGenerator {
                 // dono da coleção segundo a NAVEGABILIDADE (mesma decisão da entidade);
                 // se não somos donos, a FK está no outro -> lado inverso
                 boolean ownerSide = GeneratorUtils.isOwningSide(assoc, isSource);
+                // nome do campo desta classe NO OUTRO lado (back-reference) usado no inverso e no
+                // dono M:N bidirecional (para sincronizar/desligar a outra ponta)
+                String capInv = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer, thisRole, thisMul));
 
                 // como adicionar 'other' à coleção deste lado: put se for Map qualificado, senão add
                 String addToSaved;
@@ -826,12 +832,29 @@ public class SpringServiceGenerator {
                 }
 
                 writer.println("        if (dto.get" + capField + "Ids() != null) {");
+                // substitui (não acumula): desliga as ligações atuais e adiciona as novas.
+                // só no update — no create a coleção está vazia; DTO sem o campo -> fica intacta.
+                if (replace) {
+                    String snapshot = assoc.hasQualifier()
+                            ? "new ArrayList<>(" + entityVar + ".get" + capField + "().values())"
+                            : "new ArrayList<>(" + entityVar + ".get" + capField + "())";
+                    writer.println("            for (" + otherClass + " " + otherVar + " : " + snapshot + ") {");
+                    if (!ownerSide) {
+                        writer.println("                " + otherVar + (thisMultiple
+                                ? ".get" + capInv + "().remove(" + entityVar + ");"   // M:N inverso
+                                : ".set" + capInv + "(null);"));                       // O:M inverso: limpa a FK
+                        writer.println("                " + otherRepo + ".save(" + otherVar + ");");
+                    } else if (rel.isBidirectional()) {
+                        writer.println("                " + otherVar + ".get" + capInv + "().remove(" + entityVar + ");");  // M:N dono bidirecional
+                    }
+                    writer.println("            }");
+                    writer.println("            " + entityVar + ".get" + capField + "().clear();");
+                }
                 writer.println("            for (" + otherClass + " " + otherVar + " : " + otherRepo + ".findAllById(dto.get" + capField + "Ids())) {");
                 // adiciona à coleção deste lado (persiste se formos donos, senão é só para a resposta)
                 writer.println("                " + addToSaved);
                 if (!ownerSide) {
                     // lado INVERSO logo a FK está no outro -> ligar a back-reference e gravar o outro
-                    String capInv = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer, thisRole, thisMul));
                     writer.println("                " + otherVar + (thisMultiple
                             ? ".get" + capInv + "().add(" + entityVar + ");"     // M:N inverso: o outro tem coleção desta classe
                             : ".set" + capInv + "(" + entityVar + ");"));         // O:M inverso: o outro tem referência singular
@@ -865,7 +888,7 @@ public class SpringServiceGenerator {
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO update(" + cls.getRoot().getIdAttributeType() + " id, " + className + "CreateDTO dto) {");
         writer.println("        " + className + " existing = " + repoName + ".findById(id)");
-        writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found: \" + id));");
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className + " not found: \" + id));");
         writer.println();
 
         // update all attributes from DTO; o atributo-id (se houver) é excluído:
@@ -891,7 +914,7 @@ public class SpringServiceGenerator {
 
         // ligar relações a partir dos ids do DTO (o mesmo que no create): single refs por id;
         // coleções só se o DTO as enviar (o form de edição manda só as single)
-        generateRelationshipLinks(writer, cls, associations, "existing");
+        generateRelationshipLinks(writer, cls, associations, "existing", true);
 
         // saveAndFlush: força o flush para o @LastModifiedDate (@PreUpdate) ser aplicado
         // antes de mapear para DTO senão o updatedAt na resposta ficaria desatualizado
@@ -1032,7 +1055,7 @@ public class SpringServiceGenerator {
             // mas tipado como a classe dona do diagrama (ex: Member member = studentMemberRepository...)
             String repoName = GeneratorUtils.lowercaseFirst(className) + "Repository";
             writer.println("        " + ownerName + " " + selfVar + " = " + repoName + ".findById(" + idParam + ")");
-            writer.println("            .orElseThrow(() -> new RuntimeException(\"" + className + " not found\"));");
+            writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className + " not found\"));");
             // pré-declara o self (carregado acima) para o SequenceBodyGenerator saltar o
             // "turma = findById(...)" do diagrama e não o declarar duas vezes;
             bodyGen.addPreDeclaredVar(selfVar);

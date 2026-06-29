@@ -7,6 +7,8 @@ import com.example.app.dto.LoanResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,9 +35,8 @@ public class LoanController {
      * @return list of all entities
      */
     @GetMapping
-    public ResponseEntity<List<LoanResponseDTO>> getAll() {
-        List<LoanResponseDTO> entities = loanService.findAll();
-        return ResponseEntity.ok(entities);
+    public ResponseEntity<Page<LoanResponseDTO>> getAll(Pageable pageable) {
+        return ResponseEntity.ok(loanService.findAll(pageable));
     }
 
     /**
@@ -63,7 +64,7 @@ public class LoanController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<LoanResponseDTO> update(
             @PathVariable Long id,
             @RequestBody LoanCreateDTO dto) {

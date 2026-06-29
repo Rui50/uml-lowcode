@@ -8,6 +8,9 @@ import com.example.app.dto.LibraryResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.example.app.exception.NotFoundException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,12 +34,12 @@ public class LibraryService {
 
    // CRUD methods
     /**
-     * @return list of all entities as DTOs
+     * @param pageable paginação/ordenação (query params: page, size, sort)
+     * @return page of entities as DTOs
      */
-    public List<LibraryResponseDTO> findAll() {
-        return libraryRepository.findAll().stream()
-            .map(LibraryResponseDTO::fromEntity)
-            .collect(Collectors.toList());
+    public Page<LibraryResponseDTO> findAll(Pageable pageable) {
+        return libraryRepository.findAll(pageable)
+            .map(LibraryResponseDTO::fromEntity);
     }
 
     /**
@@ -80,12 +83,17 @@ public class LibraryService {
      */
     public LibraryResponseDTO update(Long id, LibraryCreateDTO dto) {
         Library existing = libraryRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Library not found: " + id));
+            .orElseThrow(() -> new NotFoundException("Library not found: " + id));
 
         // Update attributes from DTO
         existing.setName(dto.getName());
 
         if (dto.getMembersIds() != null) {
+            for (Member members : new ArrayList<>(existing.getMembers())) {
+                members.setLibrary(null);
+                memberRepository.save(members);
+            }
+            existing.getMembers().clear();
             for (Member members : memberRepository.findAllById(dto.getMembersIds())) {
                 existing.getMembers().add(members);
                 members.setLibrary(existing);
@@ -93,6 +101,9 @@ public class LibraryService {
             }
         }
         if (dto.getCatalogIds() != null) {
+            for (Book catalog : new ArrayList<>(existing.getCatalog().values())) {
+            }
+            existing.getCatalog().clear();
             for (Book catalog : bookRepository.findAllById(dto.getCatalogIds())) {
                 existing.getCatalog().put(catalog.getIsbn(), catalog);
             }
@@ -126,7 +137,7 @@ public class LibraryService {
      */
     public LibraryResponseDTO addCatalog(Long libraryId, List<Long> bookIds) {
         Library library = libraryRepository.findById(libraryId)
-            .orElseThrow(() -> new RuntimeException("Library not found: " + libraryId));
+            .orElseThrow(() -> new NotFoundException("Library not found: " + libraryId));
         List<Book> books = bookRepository.findAllById(bookIds);
 
         for (Book book : books) {
@@ -145,7 +156,7 @@ public class LibraryService {
      */
     public LibraryResponseDTO removeCatalog(Long libraryId, List<Long> bookIds) {
         Library library = libraryRepository.findById(libraryId)
-            .orElseThrow(() -> new RuntimeException("Library not found: " + libraryId));
+            .orElseThrow(() -> new NotFoundException("Library not found: " + libraryId));
 
         List<Book> books = bookRepository.findAllById(bookIds);
         for (Book book : books) {

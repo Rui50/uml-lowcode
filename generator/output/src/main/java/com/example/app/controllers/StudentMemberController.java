@@ -7,6 +7,8 @@ import com.example.app.dto.StudentMemberResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,9 +40,8 @@ public class StudentMemberController {
      * @return list of all entities
      */
     @GetMapping
-    public ResponseEntity<List<StudentMemberResponseDTO>> getAll() {
-        List<StudentMemberResponseDTO> entities = studentMemberService.findAll();
-        return ResponseEntity.ok(entities);
+    public ResponseEntity<Page<StudentMemberResponseDTO>> getAll(Pageable pageable) {
+        return ResponseEntity.ok(studentMemberService.findAll(pageable));
     }
 
     /**
@@ -68,7 +69,7 @@ public class StudentMemberController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<StudentMemberResponseDTO> update(
             @PathVariable Long id,
             @RequestBody StudentMemberCreateDTO dto) {
@@ -129,12 +130,14 @@ public class StudentMemberController {
 
     /**
      * Remove Book entities from StudentMember by IDs
+     * Ex: DELETE /{id}/reservedbook?ids=1,2,3  (ids na query, não no body:
+     * um body em DELETE não tem semântica definida e pode ser ignorado por proxies/clientes)
      */
     @DeleteMapping("/{id}/reservedbook")
     public ResponseEntity<StudentMemberResponseDTO> removeReservedBook(
             @PathVariable Long id,
-            @RequestBody List<Long> bookIds) {
-        StudentMemberResponseDTO updated = studentMemberService.removeReservedBook(id, bookIds);
+            @RequestParam List<Long> ids) {
+        StudentMemberResponseDTO updated = studentMemberService.removeReservedBook(id, ids);
         return ResponseEntity.ok(updated);
     }
 

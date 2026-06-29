@@ -8,6 +8,9 @@ import com.example.app.dto.StaffMemberResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.example.app.exception.NotFoundException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,12 +42,12 @@ public class StaffMemberService {
 
    // CRUD methods
     /**
-     * @return list of all entities as DTOs
+     * @param pageable paginação/ordenação (query params: page, size, sort)
+     * @return page of entities as DTOs
      */
-    public List<StaffMemberResponseDTO> findAll() {
-        return staffMemberRepository.findAll().stream()
-            .map(StaffMemberResponseDTO::fromEntity)
-            .collect(Collectors.toList());
+    public Page<StaffMemberResponseDTO> findAll(Pageable pageable) {
+        return staffMemberRepository.findAll(pageable)
+            .map(StaffMemberResponseDTO::fromEntity);
     }
 
     /**
@@ -67,7 +70,7 @@ public class StaffMemberService {
 
         if (dto.getLibraryId() != null) {
             Library library = libraryRepository.findById(dto.getLibraryId())
-                .orElseThrow(() -> new RuntimeException("Library not found: " + dto.getLibraryId()));
+                .orElseThrow(() -> new NotFoundException("Library not found: " + dto.getLibraryId()));
             saved.setLibrary(library);
         } else {
             saved.setLibrary(null);
@@ -93,7 +96,7 @@ public class StaffMemberService {
         }
         if (dto.getCardId() != null) {
             LibraryCard card = libraryCardRepository.findById(dto.getCardId())
-                .orElseThrow(() -> new RuntimeException("LibraryCard not found: " + dto.getCardId()));
+                .orElseThrow(() -> new NotFoundException("LibraryCard not found: " + dto.getCardId()));
             saved.setCard(card);
         } else {
             saved.setCard(null);
@@ -109,7 +112,7 @@ public class StaffMemberService {
      */
     public StaffMemberResponseDTO update(Long id, StaffMemberCreateDTO dto) {
         StaffMember existing = staffMemberRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("StaffMember not found: " + id));
+            .orElseThrow(() -> new NotFoundException("StaffMember not found: " + id));
 
         // Update attributes from DTO
         existing.setDepartment(dto.getDepartment());
@@ -121,12 +124,17 @@ public class StaffMemberService {
 
         if (dto.getLibraryId() != null) {
             Library library = libraryRepository.findById(dto.getLibraryId())
-                .orElseThrow(() -> new RuntimeException("Library not found: " + dto.getLibraryId()));
+                .orElseThrow(() -> new NotFoundException("Library not found: " + dto.getLibraryId()));
             existing.setLibrary(library);
         } else {
             existing.setLibrary(null);
         }
         if (dto.getLoansIds() != null) {
+            for (Loan loans : new ArrayList<>(existing.getLoans())) {
+                loans.setMember(null);
+                loanRepository.save(loans);
+            }
+            existing.getLoans().clear();
             for (Loan loans : loanRepository.findAllById(dto.getLoansIds())) {
                 existing.getLoans().add(loans);
                 loans.setMember(existing);
@@ -134,11 +142,20 @@ public class StaffMemberService {
             }
         }
         if (dto.getReservedBookIds() != null) {
+            for (Book reservedBook : new ArrayList<>(existing.getReservedBook())) {
+                reservedBook.getReservedBy().remove(existing);
+            }
+            existing.getReservedBook().clear();
             for (Book reservedBook : bookRepository.findAllById(dto.getReservedBookIds())) {
                 existing.getReservedBook().add(reservedBook);
             }
         }
         if (dto.getBorrowedBooksIds() != null) {
+            for (Book borrowedBooks : new ArrayList<>(existing.getBorrowedBooks())) {
+                borrowedBooks.setBorrower(null);
+                bookRepository.save(borrowedBooks);
+            }
+            existing.getBorrowedBooks().clear();
             for (Book borrowedBooks : bookRepository.findAllById(dto.getBorrowedBooksIds())) {
                 existing.getBorrowedBooks().add(borrowedBooks);
                 borrowedBooks.setBorrower(existing);
@@ -147,7 +164,7 @@ public class StaffMemberService {
         }
         if (dto.getCardId() != null) {
             LibraryCard card = libraryCardRepository.findById(dto.getCardId())
-                .orElseThrow(() -> new RuntimeException("LibraryCard not found: " + dto.getCardId()));
+                .orElseThrow(() -> new NotFoundException("LibraryCard not found: " + dto.getCardId()));
             existing.setCard(card);
         } else {
             existing.setCard(null);
@@ -181,9 +198,9 @@ public class StaffMemberService {
      */
     public StaffMemberResponseDTO assignLibrary(Long staffMemberId, Long libraryId) {
         StaffMember staffMember = staffMemberRepository.findById(staffMemberId)
-            .orElseThrow(() -> new RuntimeException("StaffMember not found: " + staffMemberId));
+            .orElseThrow(() -> new NotFoundException("StaffMember not found: " + staffMemberId));
         Library library = libraryRepository.findById(libraryId)
-            .orElseThrow(() -> new RuntimeException("Library not found: " + libraryId));
+            .orElseThrow(() -> new NotFoundException("Library not found: " + libraryId));
 
         // Remove from previous Library if exists
         if (staffMember.getLibrary() != null) {
@@ -205,7 +222,7 @@ public class StaffMemberService {
      */
     public StaffMemberResponseDTO removeLibrary(Long staffMemberId) {
         StaffMember staffMember = staffMemberRepository.findById(staffMemberId)
-            .orElseThrow(() -> new RuntimeException("StaffMember not found: " + staffMemberId));
+            .orElseThrow(() -> new NotFoundException("StaffMember not found: " + staffMemberId));
 
         // Remove from both sides
         if (staffMember.getLibrary() != null) {
@@ -226,7 +243,7 @@ public class StaffMemberService {
      */
     public StaffMemberResponseDTO addReservedBook(Long staffMemberId, List<Long> bookIds) {
         StaffMember staffMember = staffMemberRepository.findById(staffMemberId)
-            .orElseThrow(() -> new RuntimeException("StaffMember not found: " + staffMemberId));
+            .orElseThrow(() -> new NotFoundException("StaffMember not found: " + staffMemberId));
         List<Book> books = bookRepository.findAllById(bookIds);
 
         for (Book book : books) {
@@ -246,7 +263,7 @@ public class StaffMemberService {
      */
     public StaffMemberResponseDTO removeReservedBook(Long staffMemberId, List<Long> bookIds) {
         StaffMember staffMember = staffMemberRepository.findById(staffMemberId)
-            .orElseThrow(() -> new RuntimeException("StaffMember not found: " + staffMemberId));
+            .orElseThrow(() -> new NotFoundException("StaffMember not found: " + staffMemberId));
         List<Book> books = bookRepository.findAllById(bookIds);
 
         for (Book book : books) {

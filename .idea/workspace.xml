@@ -6,53 +6,28 @@
   <component name="ChangeListManager">
     <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="j">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/CategoriaController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/ClienteController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/ClientePremiumController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/EncomendaController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/LinhaEncomendaController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/ProdutoController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/CategoriaCreateDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/CategoriaResponseDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/ClienteCreateDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/ClientePremiumCreateDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/ClientePremiumResponseDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/ClienteResponseDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/EncomendaCreateDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/EncomendaResponseDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/LinhaEncomendaCreateDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/LinhaEncomendaResponseDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/ProdutoCreateDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/dto/ProdutoResponseDTO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Categoria.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Cliente.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/ClientePremium.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Encomenda.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/LinhaEncomenda.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/models/Produto.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/CategoriaRepository.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/ClientePremiumRepository.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/ClienteRepository.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/EncomendaRepository.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/LinhaEncomendaRepository.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/repository/ProdutoRepository.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/CategoriaService.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/ClientePremiumService.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/ClienteService.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/EncomendaService.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LinhaEncomendaService.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/ProdutoService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/AuthorController.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/AuthorController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/BookController.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/BookController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/LibraryCardController.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/LibraryCardController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/LibraryController.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/LibraryController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/LoanController.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/LoanController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/StaffMemberController.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/StaffMemberController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/StudentMemberController.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/StudentMemberController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/AuthorService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/AuthorService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/BookService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/BookService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LibraryCardService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LibraryCardService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LibraryService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LibraryService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LoanService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LoanService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/StaffMemberService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/StaffMemberService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/StudentMemberService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/StudentMemberService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIEntityGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/Class.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Class.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AnnotationsDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AnnotationsDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/AnnotationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/AnnotationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/api/model.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/api/model.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SequenceBodyGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SequenceBodyGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringFrontendGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringFrontendGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringJobGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringJobGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/Annotations.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/Annotations.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/SettingsModal.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/SettingsModal.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

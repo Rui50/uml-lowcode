@@ -8,6 +8,9 @@ import com.example.app.dto.LoanResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.example.app.exception.NotFoundException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,12 +34,12 @@ public class LoanService {
 
    // CRUD methods
     /**
-     * @return list of all entities as DTOs
+     * @param pageable paginação/ordenação (query params: page, size, sort)
+     * @return page of entities as DTOs
      */
-    public List<LoanResponseDTO> findAll() {
-        return loanRepository.findAll().stream()
-            .map(LoanResponseDTO::fromEntity)
-            .collect(Collectors.toList());
+    public Page<LoanResponseDTO> findAll(Pageable pageable) {
+        return loanRepository.findAll(pageable)
+            .map(LoanResponseDTO::fromEntity);
     }
 
     /**
@@ -59,14 +62,14 @@ public class LoanService {
 
         if (dto.getMemberId() != null) {
             Member member = memberRepository.findById(dto.getMemberId())
-                .orElseThrow(() -> new RuntimeException("Member not found: " + dto.getMemberId()));
+                .orElseThrow(() -> new NotFoundException("Member not found: " + dto.getMemberId()));
             saved.setMember(member);
         } else {
             saved.setMember(null);
         }
         if (dto.getBookId() != null) {
             Book book = bookRepository.findById(dto.getBookId())
-                .orElseThrow(() -> new RuntimeException("Book not found: " + dto.getBookId()));
+                .orElseThrow(() -> new NotFoundException("Book not found: " + dto.getBookId()));
             saved.setBook(book);
         } else {
             saved.setBook(null);
@@ -82,7 +85,7 @@ public class LoanService {
      */
     public LoanResponseDTO update(Long id, LoanCreateDTO dto) {
         Loan existing = loanRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Loan not found: " + id));
+            .orElseThrow(() -> new NotFoundException("Loan not found: " + id));
 
         // Update attributes from DTO
         existing.setLoanDay(dto.getLoanDay());
@@ -91,14 +94,14 @@ public class LoanService {
 
         if (dto.getMemberId() != null) {
             Member member = memberRepository.findById(dto.getMemberId())
-                .orElseThrow(() -> new RuntimeException("Member not found: " + dto.getMemberId()));
+                .orElseThrow(() -> new NotFoundException("Member not found: " + dto.getMemberId()));
             existing.setMember(member);
         } else {
             existing.setMember(null);
         }
         if (dto.getBookId() != null) {
             Book book = bookRepository.findById(dto.getBookId())
-                .orElseThrow(() -> new RuntimeException("Book not found: " + dto.getBookId()));
+                .orElseThrow(() -> new NotFoundException("Book not found: " + dto.getBookId()));
             existing.setBook(book);
         } else {
             existing.setBook(null);
@@ -132,9 +135,9 @@ public class LoanService {
      */
     public LoanResponseDTO assignMember(Long loanId, Long memberId) {
         Loan loan = loanRepository.findById(loanId)
-            .orElseThrow(() -> new RuntimeException("Loan not found: " + loanId));
+            .orElseThrow(() -> new NotFoundException("Loan not found: " + loanId));
         Member member = memberRepository.findById(memberId)
-            .orElseThrow(() -> new RuntimeException("Member not found: " + memberId));
+            .orElseThrow(() -> new NotFoundException("Member not found: " + memberId));
 
         // Remove from previous Member if exists
         if (loan.getMember() != null) {
@@ -156,7 +159,7 @@ public class LoanService {
      */
     public LoanResponseDTO removeMember(Long loanId) {
         Loan loan = loanRepository.findById(loanId)
-            .orElseThrow(() -> new RuntimeException("Loan not found: " + loanId));
+            .orElseThrow(() -> new NotFoundException("Loan not found: " + loanId));
 
         // Remove from both sides
         if (loan.getMember() != null) {
@@ -177,9 +180,9 @@ public class LoanService {
      */
     public LoanResponseDTO assignBook(Long loanId, Long bookId) {
         Loan loan = loanRepository.findById(loanId)
-            .orElseThrow(() -> new RuntimeException("Loan not found: " + loanId));
+            .orElseThrow(() -> new NotFoundException("Loan not found: " + loanId));
         Book book = bookRepository.findById(bookId)
-            .orElseThrow(() -> new RuntimeException("Book not found: " + bookId));
+            .orElseThrow(() -> new NotFoundException("Book not found: " + bookId));
 
         // Remove from previous Book if exists
         if (loan.getBook() != null) {
@@ -201,7 +204,7 @@ public class LoanService {
      */
     public LoanResponseDTO removeBook(Long loanId) {
         Loan loan = loanRepository.findById(loanId)
-            .orElseThrow(() -> new RuntimeException("Loan not found: " + loanId));
+            .orElseThrow(() -> new NotFoundException("Loan not found: " + loanId));
 
         // Remove from both sides
         if (loan.getBook() != null) {

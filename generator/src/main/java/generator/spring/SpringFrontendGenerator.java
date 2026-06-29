@@ -391,7 +391,7 @@ public class SpringFrontendGenerator {
             // ---- script (explícito, um campo por linha) ----
             w.println("<script>");
             w.println("const API = '" + api + "';");
-            w.println("let editId = null;   // null = a criar (POST); senão o id a editar (PUT)");
+            w.println("let editId = null;   // null = a criar (POST); senão o id a editar (PATCH)");
             w.println();
             w.println("async function load() {");
             w.println("  const items = await (await fetch(API)).json();");
@@ -451,7 +451,7 @@ public class SpringFrontendGenerator {
                 w.println();
             }
 
-            // submit do form: POST se a criar, PUT /{editId} se a editar
+            // submit do form: POST se a criar, PATCH /{editId} se a editar (atualização parcial)
             w.println("async function save(event) {");
             w.println("  event.preventDefault();");
             w.println("  const form = event.target;");
@@ -474,7 +474,7 @@ public class SpringFrontendGenerator {
                 w.println("    " + field + ": " + value + ",");
             }
             w.println("  };");
-            w.println("  const method = editId === null ? 'POST' : 'PUT';");
+            w.println("  const method = editId === null ? 'POST' : 'PATCH';");
             w.println("  const url = editId === null ? API : `${API}/${editId}`;");
             w.println("  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });");
             w.println("  if (!res.ok) {");
@@ -526,7 +526,8 @@ public class SpringFrontendGenerator {
             w.println();
 
             // coleções: add/remove genéricos. O endpoint vem do data-path do form, o id do
-            // filho é coagido por data-numeric. Body é uma lista [childId] (igual ao controller).
+            // ADD (POST) manda [childId] no body; REMOVE (DELETE)
+            // manda os ids na query (?ids=), porque um body em DELETE pode ser ignorado.
             if (!colls.isEmpty()) {
                 w.println("async function addItem(event) {");
                 w.println("  event.preventDefault();");
@@ -539,9 +540,11 @@ public class SpringFrontendGenerator {
                 w.println();
                 w.println("async function sendItem(form, method) {");
                 w.println("  const child = form.dataset.numeric === 'true' ? Number(form.child.value) : form.child.value;");
-                w.println("  const res = await fetch(`${API}/${form.parent.value}/${form.dataset.path}`, {");
-                w.println("    method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify([child]),");
-                w.println("  });");
+                w.println("  const base = `${API}/${form.parent.value}/${form.dataset.path}`;");
+                w.println("  // DELETE: ids na query (?ids=...); POST: id no body)");
+                w.println("  const res = method === 'DELETE'");
+                w.println("    ? await fetch(`${base}?ids=${child}`, { method })");
+                w.println("    : await fetch(base, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify([child]) });");
                 w.println("  if (!res.ok) {");
                 w.println("    const err = await res.json().catch(() => null);");
                 w.println("    alert(err && err.error ? err.error : method + ' failed: ' + res.status);");

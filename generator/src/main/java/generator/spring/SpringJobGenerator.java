@@ -91,6 +91,7 @@ public class SpringJobGenerator {
             writer.println("import org.springframework.stereotype.Component;");
             writer.println("import org.springframework.transaction.annotation.Transactional;");
             writer.println("import org.springframework.scheduling.annotation.Scheduled;");
+            writer.println("import " + basePackage + ".exception.NotFoundException;");
             writer.println();
             writer.println("import java.util.*;");
             writer.println("import java.util.stream.Collectors;");

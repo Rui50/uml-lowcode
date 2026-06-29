@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import java.util.Map;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.transaction.TransactionSystemException;
+import com.example.app.exception.NotFoundException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -40,9 +41,17 @@ public class GlobalExceptionHandler {
             .body(Map.of("error", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));
     }
 
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException ex) {
+    // entidade não encontrada -> 404
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleNotFound(NotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));
+    }
+
+    // qualquer outro erro inesperado do servidor -> 500 (NÃO 404)
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, String>> handleServerError(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(Map.of("error", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));
     }
 }

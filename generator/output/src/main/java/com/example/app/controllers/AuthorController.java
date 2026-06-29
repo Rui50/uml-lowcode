@@ -7,6 +7,8 @@ import com.example.app.dto.AuthorResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,9 +32,8 @@ public class AuthorController {
      * @return list of all entities
      */
     @GetMapping
-    public ResponseEntity<List<AuthorResponseDTO>> getAll() {
-        List<AuthorResponseDTO> entities = authorService.findAll();
-        return ResponseEntity.ok(entities);
+    public ResponseEntity<Page<AuthorResponseDTO>> getAll(Pageable pageable) {
+        return ResponseEntity.ok(authorService.findAll(pageable));
     }
 
     /**
@@ -60,7 +61,7 @@ public class AuthorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<AuthorResponseDTO> update(
             @PathVariable Long id,
             @RequestBody AuthorCreateDTO dto) {

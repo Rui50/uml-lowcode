@@ -51,6 +51,7 @@ public class SpringControllerGenerator {
         }
 
         generateExceptionHandler(controllerDir);
+        generateNotFoundException();
 
         System.out.println("Generation of controllers completed.");
     }
@@ -122,9 +123,8 @@ public class SpringControllerGenerator {
         writer.println("     * @return list of all entities");
         writer.println("     */");
         writer.println("    @GetMapping");
-        writer.println("    public ResponseEntity<List<" + className + "ResponseDTO>> getAll() {");
-        writer.println("        List<" + className + "ResponseDTO> entities = " + serviceName + ".findAll();");
-        writer.println("        return ResponseEntity.ok(entities);");
+        writer.println("    public ResponseEntity<Page<" + className + "ResponseDTO>> getAll(Pageable pageable) {");
+        writer.println("        return ResponseEntity.ok(" + serviceName + ".findAll(pageable));");
         writer.println("    }");
         writer.println();
 
@@ -160,7 +160,9 @@ public class SpringControllerGenerator {
         }
 
         // PUT /api/entities/{id} - Update
-        writer.println("    @PutMapping(\"/{id}\")");
+        // PATCH (não PUT): a atualização é PARCIAL — campos/coleções não enviados ficam intactos.
+        // PUT estrito (substituir tudo, omitido = limpar) exigiria presence-tracking (ver nota UpdateDTO).
+        writer.println("    @PatchMapping(\"/{id}\")");
         writer.println("    public ResponseEntity<" + className + "ResponseDTO> update(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
         writer.println("            @RequestBody " + className + "CreateDTO dto) {");
@@ -331,12 +333,14 @@ public class SpringControllerGenerator {
 
         writer.println("    /**");
         writer.println("     * Remove " + otherClass + " entities from " + className + " by IDs");
+        writer.println("     * Ex: DELETE /{id}/" + otherPath + "?ids=1,2,3  (ids na query, não no body:");
+        writer.println("     * um body em DELETE não tem semântica definida e pode ser ignorado por proxies/clientes)");
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
         writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + cap + "(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
-        writer.println("            @RequestBody List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
-        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + cap + "(id, " + otherVar + "Ids);");
+        writer.println("            @RequestParam List<" + idTypeOf(otherClass) + "> ids) {");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".remove" + cap + "(id, ids);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -352,6 +356,8 @@ public class SpringControllerGenerator {
         writer.println("import lombok.RequiredArgsConstructor;");
         writer.println("import org.springframework.http.HttpStatus;");
         writer.println("import org.springframework.http.ResponseEntity;");
+        writer.println("import org.springframework.data.domain.Page;");
+        writer.println("import org.springframework.data.domain.Pageable;");
         writer.println("import org.springframework.web.bind.annotation.*;");
         writer.println();
         writer.println("import java.util.List;");
@@ -442,6 +448,23 @@ public class SpringControllerGenerator {
         writer.println();
     }
 
+    // exceção dedicada para "entidade não encontrada" — mapeada para 404 no GlobalExceptionHandler.
+    private void generateNotFoundException() throws IOException {
+        String exceptionDir = outputDirectory + "/src/main/java/" + basePackage.replace('.', '/') + "/exception";
+        new java.io.File(exceptionDir).mkdirs();
+        String filename = exceptionDir + "/NotFoundException.java";
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("package " + basePackage + ".exception;");
+            writer.println();
+            writer.println("public class NotFoundException extends RuntimeException {");
+            writer.println("    public NotFoundException(String message) {");
+            writer.println("        super(message);");
+            writer.println("    }");
+            writer.println("}");
+        }
+        System.out.println("Generated exception: " + filename);
+    }
+
     private void generateExceptionHandler(String controllerDir) throws IOException {
         String filename = controllerDir + "/GlobalExceptionHandler.java";
 
@@ -456,6 +479,7 @@ public class SpringControllerGenerator {
             writer.println("import java.util.Map;");
             writer.println("import jakarta.validation.ConstraintViolationException;");
             writer.println("import org.springframework.transaction.TransactionSystemException;");
+            writer.println("import " + basePackage + ".exception.NotFoundException;");
             writer.println();
             writer.println("@ControllerAdvice");
             writer.println("public class GlobalExceptionHandler {");
@@ -488,9 +512,17 @@ public class SpringControllerGenerator {
             writer.println("            .body(Map.of(\"error\", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));");
             writer.println("    }");
             writer.println();
-            writer.println("    @ExceptionHandler(RuntimeException.class)");
-            writer.println("    public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException ex) {");
+            writer.println("    // entidade não encontrada -> 404");
+            writer.println("    @ExceptionHandler(NotFoundException.class)");
+            writer.println("    public ResponseEntity<Map<String, String>> handleNotFound(NotFoundException ex) {");
             writer.println("        return ResponseEntity.status(HttpStatus.NOT_FOUND)");
+            writer.println("            .body(Map.of(\"error\", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));");
+            writer.println("    }");
+            writer.println();
+            writer.println("    // qualquer outro erro inesperado do servidor -> 500 (NÃO 404)");
+            writer.println("    @ExceptionHandler(RuntimeException.class)");
+            writer.println("    public ResponseEntity<Map<String, String>> handleServerError(RuntimeException ex) {");
+            writer.println("        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)");
             writer.println("            .body(Map.of(\"error\", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName()));");
             writer.println("    }");
             writer.println("}");

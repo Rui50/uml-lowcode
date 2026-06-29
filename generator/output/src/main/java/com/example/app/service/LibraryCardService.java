@@ -8,6 +8,9 @@ import com.example.app.dto.LibraryCardResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.example.app.exception.NotFoundException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,12 +31,12 @@ public class LibraryCardService {
 
    // CRUD methods
     /**
-     * @return list of all entities as DTOs
+     * @param pageable paginação/ordenação (query params: page, size, sort)
+     * @return page of entities as DTOs
      */
-    public List<LibraryCardResponseDTO> findAll() {
-        return libraryCardRepository.findAll().stream()
-            .map(LibraryCardResponseDTO::fromEntity)
-            .collect(Collectors.toList());
+    public Page<LibraryCardResponseDTO> findAll(Pageable pageable) {
+        return libraryCardRepository.findAll(pageable)
+            .map(LibraryCardResponseDTO::fromEntity);
     }
 
     /**
@@ -56,7 +59,7 @@ public class LibraryCardService {
 
         if (dto.getMemberId() != null) {
             Member member = memberRepository.findById(dto.getMemberId())
-                .orElseThrow(() -> new RuntimeException("Member not found: " + dto.getMemberId()));
+                .orElseThrow(() -> new NotFoundException("Member not found: " + dto.getMemberId()));
             saved.setMember(member);
             member.setCard(saved);
             memberRepository.save(member);
@@ -77,7 +80,7 @@ public class LibraryCardService {
      */
     public LibraryCardResponseDTO update(Long id, LibraryCardCreateDTO dto) {
         LibraryCard existing = libraryCardRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("LibraryCard not found: " + id));
+            .orElseThrow(() -> new NotFoundException("LibraryCard not found: " + id));
 
         // Update attributes from DTO
         existing.setCardNumber(dto.getCardNumber());
@@ -85,7 +88,7 @@ public class LibraryCardService {
 
         if (dto.getMemberId() != null) {
             Member member = memberRepository.findById(dto.getMemberId())
-                .orElseThrow(() -> new RuntimeException("Member not found: " + dto.getMemberId()));
+                .orElseThrow(() -> new NotFoundException("Member not found: " + dto.getMemberId()));
             existing.setMember(member);
             member.setCard(existing);
             memberRepository.save(member);

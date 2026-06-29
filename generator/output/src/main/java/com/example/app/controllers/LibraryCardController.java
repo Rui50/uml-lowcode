@@ -7,6 +7,8 @@ import com.example.app.dto.LibraryCardResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,9 +34,8 @@ public class LibraryCardController {
      * @return list of all entities
      */
     @GetMapping
-    public ResponseEntity<List<LibraryCardResponseDTO>> getAll() {
-        List<LibraryCardResponseDTO> entities = libraryCardService.findAll();
-        return ResponseEntity.ok(entities);
+    public ResponseEntity<Page<LibraryCardResponseDTO>> getAll(Pageable pageable) {
+        return ResponseEntity.ok(libraryCardService.findAll(pageable));
     }
 
     /**
@@ -62,7 +63,7 @@ public class LibraryCardController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<LibraryCardResponseDTO> update(
             @PathVariable Long id,
             @RequestBody LibraryCardCreateDTO dto) {

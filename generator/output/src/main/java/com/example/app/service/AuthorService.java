@@ -8,6 +8,9 @@ import com.example.app.dto.AuthorResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.example.app.exception.NotFoundException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -24,12 +27,12 @@ public class AuthorService {
 
    // CRUD methods
     /**
-     * @return list of all entities as DTOs
+     * @param pageable paginação/ordenação (query params: page, size, sort)
+     * @return page of entities as DTOs
      */
-    public List<AuthorResponseDTO> findAll() {
-        return authorRepository.findAll().stream()
-            .map(AuthorResponseDTO::fromEntity)
-            .collect(Collectors.toList());
+    public Page<AuthorResponseDTO> findAll(Pageable pageable) {
+        return authorRepository.findAll(pageable)
+            .map(AuthorResponseDTO::fromEntity);
     }
 
     /**
@@ -60,7 +63,7 @@ public class AuthorService {
      */
     public AuthorResponseDTO update(Long id, AuthorCreateDTO dto) {
         Author existing = authorRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Author not found: " + id));
+            .orElseThrow(() -> new NotFoundException("Author not found: " + id));
 
         // Update attributes from DTO
         existing.setName(dto.getName());

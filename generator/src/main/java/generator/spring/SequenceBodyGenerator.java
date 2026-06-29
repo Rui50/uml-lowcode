@@ -201,7 +201,7 @@ public class SequenceBodyGenerator {
             if (methodName.equals("findById")) {
                 writer.println(indent + returnType + " " + varName + " = " + targetVar + "." +
                         methodName + "(" + args + ")");
-                writer.println(indent + "    .orElseThrow(() -> new RuntimeException(\"" + returnType + " not found\"));");
+                writer.println(indent + "    .orElseThrow(() -> new NotFoundException(\"" + returnType + " not found\"));");
             } else {
                 writer.println(indent + returnType + " " + varName + " = " + targetVar + "." +
                         methodName + "(" + args + ");");

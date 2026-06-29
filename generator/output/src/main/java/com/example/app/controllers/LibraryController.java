@@ -7,6 +7,8 @@ import com.example.app.dto.LibraryResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,9 +35,8 @@ public class LibraryController {
      * @return list of all entities
      */
     @GetMapping
-    public ResponseEntity<List<LibraryResponseDTO>> getAll() {
-        List<LibraryResponseDTO> entities = libraryService.findAll();
-        return ResponseEntity.ok(entities);
+    public ResponseEntity<Page<LibraryResponseDTO>> getAll(Pageable pageable) {
+        return ResponseEntity.ok(libraryService.findAll(pageable));
     }
 
     /**
@@ -63,7 +64,7 @@ public class LibraryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<LibraryResponseDTO> update(
             @PathVariable Long id,
             @RequestBody LibraryCreateDTO dto) {
@@ -102,12 +103,14 @@ public class LibraryController {
 
     /**
      * Remove Book entities from Library by IDs
+     * Ex: DELETE /{id}/catalog?ids=1,2,3  (ids na query, não no body:
+     * um body em DELETE não tem semântica definida e pode ser ignorado por proxies/clientes)
      */
     @DeleteMapping("/{id}/catalog")
     public ResponseEntity<LibraryResponseDTO> removeCatalog(
             @PathVariable Long id,
-            @RequestBody List<Long> bookIds) {
-        LibraryResponseDTO updated = libraryService.removeCatalog(id, bookIds);
+            @RequestParam List<Long> ids) {
+        LibraryResponseDTO updated = libraryService.removeCatalog(id, ids);
         return ResponseEntity.ok(updated);
     }
 

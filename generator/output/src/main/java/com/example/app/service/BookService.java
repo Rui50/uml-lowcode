@@ -8,6 +8,9 @@ import com.example.app.dto.BookResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.example.app.exception.NotFoundException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,12 +37,12 @@ public class BookService {
 
    // CRUD methods
     /**
-     * @return list of all entities as DTOs
+     * @param pageable paginação/ordenação (query params: page, size, sort)
+     * @return page of entities as DTOs
      */
-    public List<BookResponseDTO> findAll() {
-        return bookRepository.findAll().stream()
-            .map(BookResponseDTO::fromEntity)
-            .collect(Collectors.toList());
+    public Page<BookResponseDTO> findAll(Pageable pageable) {
+        return bookRepository.findAll(pageable)
+            .map(BookResponseDTO::fromEntity);
     }
 
     /**
@@ -81,7 +84,7 @@ public class BookService {
         }
         if (dto.getBorrowerId() != null) {
             Member borrower = memberRepository.findById(dto.getBorrowerId())
-                .orElseThrow(() -> new RuntimeException("Member not found: " + dto.getBorrowerId()));
+                .orElseThrow(() -> new NotFoundException("Member not found: " + dto.getBorrowerId()));
             saved.setBorrower(borrower);
         } else {
             saved.setBorrower(null);
@@ -102,7 +105,7 @@ public class BookService {
      */
     public BookResponseDTO update(Long id, BookCreateDTO dto) {
         Book existing = bookRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Book not found: " + id));
+            .orElseThrow(() -> new NotFoundException("Book not found: " + id));
 
         // Update attributes from DTO
         existing.setIsbn(dto.getIsbn());
@@ -110,6 +113,11 @@ public class BookService {
         existing.setStatus(dto.getStatus());
 
         if (dto.getLoansIds() != null) {
+            for (Loan loans : new ArrayList<>(existing.getLoans())) {
+                loans.setBook(null);
+                loanRepository.save(loans);
+            }
+            existing.getLoans().clear();
             for (Loan loans : loanRepository.findAllById(dto.getLoansIds())) {
                 existing.getLoans().add(loans);
                 loans.setBook(existing);
@@ -117,11 +125,19 @@ public class BookService {
             }
         }
         if (dto.getAuthorsIds() != null) {
+            for (Author authors : new ArrayList<>(existing.getAuthors())) {
+            }
+            existing.getAuthors().clear();
             for (Author authors : authorRepository.findAllById(dto.getAuthorsIds())) {
                 existing.getAuthors().add(authors);
             }
         }
         if (dto.getReservedByIds() != null) {
+            for (Member reservedBy : new ArrayList<>(existing.getReservedBy())) {
+                reservedBy.getReservedBook().remove(existing);
+                memberRepository.save(reservedBy);
+            }
+            existing.getReservedBy().clear();
             for (Member reservedBy : memberRepository.findAllById(dto.getReservedByIds())) {
                 existing.getReservedBy().add(reservedBy);
                 reservedBy.getReservedBook().add(existing);
@@ -130,12 +146,15 @@ public class BookService {
         }
         if (dto.getBorrowerId() != null) {
             Member borrower = memberRepository.findById(dto.getBorrowerId())
-                .orElseThrow(() -> new RuntimeException("Member not found: " + dto.getBorrowerId()));
+                .orElseThrow(() -> new NotFoundException("Member not found: " + dto.getBorrowerId()));
             existing.setBorrower(borrower);
         } else {
             existing.setBorrower(null);
         }
         if (dto.getEditorsIds() != null) {
+            for (Author editors : new ArrayList<>(existing.getEditors())) {
+            }
+            existing.getEditors().clear();
             for (Author editors : authorRepository.findAllById(dto.getEditorsIds())) {
                 existing.getEditors().add(editors);
             }
@@ -169,7 +188,7 @@ public class BookService {
      */
     public BookResponseDTO addAuthors(Long bookId, List<Long> authorIds) {
         Book book = bookRepository.findById(bookId)
-            .orElseThrow(() -> new RuntimeException("Book not found: " + bookId));
+            .orElseThrow(() -> new NotFoundException("Book not found: " + bookId));
         List<Author> authors = authorRepository.findAllById(authorIds);
 
         for (Author author : authors) {
@@ -188,7 +207,7 @@ public class BookService {
      */
     public BookResponseDTO removeAuthors(Long bookId, List<Long> authorIds) {
         Book book = bookRepository.findById(bookId)
-            .orElseThrow(() -> new RuntimeException("Book not found: " + bookId));
+            .orElseThrow(() -> new NotFoundException("Book not found: " + bookId));
         List<Author> authors = authorRepository.findAllById(authorIds);
 
         for (Author author : authors) {
@@ -208,9 +227,9 @@ public class BookService {
      */
     public BookResponseDTO assignBorrower(Long bookId, Long borrowerId) {
         Book book = bookRepository.findById(bookId)
-            .orElseThrow(() -> new RuntimeException("Book not found: " + bookId));
+            .orElseThrow(() -> new NotFoundException("Book not found: " + bookId));
         Member borrower = memberRepository.findById(borrowerId)
-            .orElseThrow(() -> new RuntimeException("Member not found: " + borrowerId));
+            .orElseThrow(() -> new NotFoundException("Member not found: " + borrowerId));
 
         // Remove from previous Member if exists
         if (book.getBorrower() != null) {
@@ -232,7 +251,7 @@ public class BookService {
      */
     public BookResponseDTO removeBorrower(Long bookId) {
         Book book = bookRepository.findById(bookId)
-            .orElseThrow(() -> new RuntimeException("Book not found: " + bookId));
+            .orElseThrow(() -> new NotFoundException("Book not found: " + bookId));
 
         // Remove from both sides
         if (book.getBorrower() != null) {
@@ -253,7 +272,7 @@ public class BookService {
      */
     public BookResponseDTO addEditors(Long bookId, List<Long> authorIds) {
         Book book = bookRepository.findById(bookId)
-            .orElseThrow(() -> new RuntimeException("Book not found: " + bookId));
+            .orElseThrow(() -> new NotFoundException("Book not found: " + bookId));
         List<Author> authors = authorRepository.findAllById(authorIds);
 
         for (Author author : authors) {
@@ -272,7 +291,7 @@ public class BookService {
      */
     public BookResponseDTO removeEditors(Long bookId, List<Long> authorIds) {
         Book book = bookRepository.findById(bookId)
-            .orElseThrow(() -> new RuntimeException("Book not found: " + bookId));
+            .orElseThrow(() -> new NotFoundException("Book not found: " + bookId));
         List<Author> authors = authorRepository.findAllById(authorIds);
 
         for (Author author : authors) {

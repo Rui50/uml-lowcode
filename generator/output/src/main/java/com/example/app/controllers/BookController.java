@@ -7,6 +7,8 @@ import com.example.app.dto.BookResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,9 +36,8 @@ public class BookController {
      * @return list of all entities
      */
     @GetMapping
-    public ResponseEntity<List<BookResponseDTO>> getAll() {
-        List<BookResponseDTO> entities = bookService.findAll();
-        return ResponseEntity.ok(entities);
+    public ResponseEntity<Page<BookResponseDTO>> getAll(Pageable pageable) {
+        return ResponseEntity.ok(bookService.findAll(pageable));
     }
 
     /**
@@ -64,7 +65,7 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<BookResponseDTO> update(
             @PathVariable Long id,
             @RequestBody BookCreateDTO dto) {
@@ -103,12 +104,14 @@ public class BookController {
 
     /**
      * Remove Author entities from Book by IDs
+     * Ex: DELETE /{id}/authors?ids=1,2,3  (ids na query, não no body:
+     * um body em DELETE não tem semântica definida e pode ser ignorado por proxies/clientes)
      */
     @DeleteMapping("/{id}/authors")
     public ResponseEntity<BookResponseDTO> removeAuthors(
             @PathVariable Long id,
-            @RequestBody List<Long> authorIds) {
-        BookResponseDTO updated = bookService.removeAuthors(id, authorIds);
+            @RequestParam List<Long> ids) {
+        BookResponseDTO updated = bookService.removeAuthors(id, ids);
         return ResponseEntity.ok(updated);
     }
 
@@ -148,12 +151,14 @@ public class BookController {
 
     /**
      * Remove Author entities from Book by IDs
+     * Ex: DELETE /{id}/editors?ids=1,2,3  (ids na query, não no body:
+     * um body em DELETE não tem semântica definida e pode ser ignorado por proxies/clientes)
      */
     @DeleteMapping("/{id}/editors")
     public ResponseEntity<BookResponseDTO> removeEditors(
             @PathVariable Long id,
-            @RequestBody List<Long> authorIds) {
-        BookResponseDTO updated = bookService.removeEditors(id, authorIds);
+            @RequestParam List<Long> ids) {
+        BookResponseDTO updated = bookService.removeEditors(id, ids);
         return ResponseEntity.ok(updated);
     }
 

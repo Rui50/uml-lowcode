@@ -174,6 +174,12 @@ function key(name: string) {
   return `${className.value}.${name}`
 }
 
+// placeholder do init: num enum mostra a sintaxe OCL (Tipo::LITERAL) com um exemplo real
+function initPlaceholder(attr: { type: string }) {
+  const lits = enumsText.value[attr.type]
+  return lits?.length ? `ex: ${attr.type}::${lits[0]}` : 'init expression'
+}
+
 function close() {
   model.selectClass(null)
 }
@@ -240,7 +246,7 @@ function close() {
 
               <div v-if="key(attr.name) in annotations.initByAttribute" class="sub-entry">
                 <Textarea
-                  placeholder="init expression"
+                  :placeholder="initPlaceholder(attr)"
                   v-model="annotations.initByAttribute[key(attr.name)]"
                   rows="2" auto-resize
                 />
