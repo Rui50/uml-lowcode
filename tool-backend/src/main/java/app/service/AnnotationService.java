@@ -35,6 +35,16 @@ public class AnnotationService {
         applyEndpointConfig(classes, payload.getEndpointByOperation());
         applyControllerConfig(classes, payload.getGenerateControllerByClass());
         applyBeanValidationConfig(classes, payload.getBeanValidationByClass());
+        applyTableNames(classes, payload.getTableNameByClass());
+    }
+
+    // override do nome da tabela JPA, por classe (painel Persistence); vazio = nome derivado
+    private void applyTableNames(List<Class> classes, Map<String, String> map) {
+        if (map == null) return;
+        map.forEach((className, tableName) -> {
+            Class c = findClass(classes, className);
+            if (c != null) c.setTableName(tableName);   // setter ignora null/vazio
+        });
     }
 
     // gerar (ou não) o controller REST, por classe

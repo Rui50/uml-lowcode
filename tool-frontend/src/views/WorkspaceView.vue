@@ -3,6 +3,8 @@ import { ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useModelStore } from '@/stores/model'
 import { useProjectSettingsStore } from '@/stores/projectSettings'
+import { useAnnotationsStore } from '@/stores/annotations'
+import { SQL_RESERVED } from '@/constants/sqlReserved'
 
 import Select from 'primevue/select'
 import DiagramList from '@/components/DiagramList.vue'
@@ -21,6 +23,7 @@ const targetOptions = [
 
 const showSettings = ref(false);
 const projectSettings = useProjectSettingsStore();
+const annotations = useAnnotationsStore();
 const toast = useToast();
 
 // mostra um toast sempre que o store reporta um erro
@@ -31,7 +34,27 @@ watch(() => modelStore.error, (msg) => {
   }
 });
 
+// avisa para classes cujo nome é palavra reservada SQL e que AINDA não têm override de tabela.
+// definir um Table name (painel Persistence) ou renomear a classe faz o aviso desaparecer.
+function warnReservedNames() {
+  if (target.value !== 'spring' && target.value !== 'cli-jpa') return  // só targets com BD
+  const offending = (modelStore.model?.classes ?? [])
+    .map(c => c.name)
+    .filter(n => SQL_RESERVED.has(n.toLowerCase()))
+    .filter(n => !annotations.tableNameByClass[n]?.trim())            // resolvido = tem Table name
+  if (offending.length) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Nome reservado em SQL',
+      detail: `As classes [${offending.join(', ')}] usam palavras reservadas em SQL — `
+            + `define um Table name no painel Persistence (ou renomeia a classe).`,
+      life: 8000,
+    })
+  }
+}
+
 function startGenerate() {
+  warnReservedNames()
   // cli já usa um package fixo; plain/cli-jpa/spring passam pelo modal para definir o basePackage
   if (target.value === 'cli') {
     modelStore.generate(target.value)

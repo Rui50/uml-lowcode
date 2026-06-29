@@ -234,8 +234,8 @@ public class SpringEntityGenerator {
             // os têm @DiscriminatorValue
             return;
         } else {
-            // @Table , para ja normalizar so para minusculas, depois pensar melhor
-            writer.println("@Table(name = \"" + cls.getName().toLowerCase() + "\")");
+            // nome derivado (minúsculas) ou override do painel Persistence (GeneratorUtils.tableName)
+            writer.println("@Table(name = \"" + GeneratorUtils.tableName(cls) + "\")");
         }
 
         // caso seja parent, gerar @Inheritance

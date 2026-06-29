@@ -51,6 +51,9 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   // key: ClassName -> invariantes OCL viram anotações Bean Validation? (ausente = true)
   const beanValidationByClass = ref<Record<string, boolean>>({})
 
+  // key: ClassName -> override do nome da tabela JPA (ausente/vazio = nome derivado da classe)
+  const tableNameByClass = ref<Record<string, string>>({})
+
   function addInvariant(className: string) {
     if (!invariantsByClass.value[className]) invariantsByClass.value[className] = []
     invariantsByClass.value[className].push({
@@ -151,6 +154,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       endpointByOperation.value = {}
       generateControllerByClass.value = {}
       beanValidationByClass.value = {}
+      tableNameByClass.value = {}
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -166,6 +170,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     endpointByOperation.value = data.endpointByOperation || {}
     generateControllerByClass.value = data.generateControllerByClass || {}
     beanValidationByClass.value = data.beanValidationByClass || {}
+    tableNameByClass.value = data.tableNameByClass || {}
   }
 
   function saveForModel(name: string | null) {
@@ -183,6 +188,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       endpointByOperation: endpointByOperation.value,
       generateControllerByClass: generateControllerByClass.value,
       beanValidationByClass: beanValidationByClass.value,
+      tableNameByClass: tableNameByClass.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
@@ -198,7 +204,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // save current bucket on any annotation change
   watch(
-    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass],
+    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass],
     () => saveForModel(modelStore.fileName),
     { deep: true }
   )
@@ -215,6 +221,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     endpointByOperation.value = {}
     generateControllerByClass.value = {}
     beanValidationByClass.value = {}
+    tableNameByClass.value = {}
   }
 
   return {
@@ -230,6 +237,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     endpointByOperation,
     generateControllerByClass,
     beanValidationByClass,
+    tableNameByClass,
 
     // actions
     addInvariant,

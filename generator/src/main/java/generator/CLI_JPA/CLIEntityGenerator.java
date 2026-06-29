@@ -168,9 +168,9 @@ public class CLIEntityGenerator {
             // só recebe @DiscriminatorValue, gerado mais abaixo.
             return;
         } else {
-            // @Table , para ja normalizar so para minusculas, depois pensar melhor
-            // ter cuidado com nomes de classes que podem colidir depois de normalizar como (USER)
-            writer.println("@Table(name = \"" + cls.getName().toLowerCase() + "\")");
+            // nome derivado (minúsculas) ou override do painel Persistence (GeneratorUtils.tableName).
+            // o override permite contornar nomes que colidem com palavras reservadas (ex: USER)
+            writer.println("@Table(name = \"" + GeneratorUtils.tableName(cls) + "\")");
         }
 
         // caso seja parent, gerar @Inheritance

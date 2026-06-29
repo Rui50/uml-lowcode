@@ -40,4 +40,7 @@ public class AnnotationsDTO {
 
     // key className -> invariantes OCL viram anotações Bean Validation? (Spring; default true)
     private Map<String, Boolean> beanValidationByClass = new HashMap<>();
+
+    // key className -> override do nome da tabela JPA (vazio = nome derivado da classe)
+    private Map<String, String> tableNameByClass = new HashMap<>();
 }

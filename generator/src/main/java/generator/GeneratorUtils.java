@@ -420,6 +420,12 @@ public class GeneratorUtils {
         return lowercaseFirst(className) + "Repository";
     }
 
+    // nome da tabela JPA: override do utilizador (painel Persistence), senão o nome da classe em minúsculas
+    public static String tableName(Class cls) {
+        String t = cls.getTableName();
+        return (t != null && !t.isBlank()) ? t : cls.getName().toLowerCase();
+    }
+
     // id de uma classe — resolvido pela raiz (subclasses partilham o id do pai)
     // cls null (nome desconhecido) da defaults no tipo Long, campo "id".
     public static String idType(Class cls) {

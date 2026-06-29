@@ -17,7 +17,7 @@ import Checkbox from 'primevue/checkbox'
 /**
  * POSSIVEIS MUDANÇAS:
  *  - Nos inits e derives, clicar em add Derive and selecionar um atributo da classe. Assim, a anotação fica diretamente associada ao atributo, e não precisamos de uma sintaxe para referenciar o atributo (ex: key(attr.name)).
- * 
+ *
  */
 
 type Tab = "ocl" | "persistence" | "spring"
@@ -88,6 +88,23 @@ const ELIGIBLE_ID_TYPES = ['Long', 'Integer', 'long', 'int', 'String']
 const isIdRoot = computed(() =>
   !isInterface.value && !!model.selectedClass && !model.selectedClass.parent
 )
+
+// uma classe tem @Table própria — exceto se for filha numa hierarquia SINGLE_TABLE
+// (partilha a tabela do pai).
+const ownsTable = computed(() => {
+  const cls = model.selectedClass
+  if (isInterface.value || !cls) return false
+  if (!cls.parent) return true                       // raiz / standalone -> tabela própria
+  const classes = model.model?.classes ?? []
+  let root = cls
+  while (root.parent) {                              // subir até à raiz da hierarquia
+    const p = classes.find(c => c.name === root.parent)
+    if (!p) break
+    root = p
+  }
+  const strategy = annotations.inheritanceStrategyByClass[root.name] ?? 'SINGLE_TABLE'
+  return strategy !== 'SINGLE_TABLE'                 // filho: só JOINED tem tabela própria
+})
 
 // config atual do id (undefined = id por defeito)
 const idConfig = computed(() =>
@@ -182,7 +199,7 @@ function close() {
           <section class="block">
             <header class="block-head">
               <h4>Invariants</h4>
-              <Button label="Add" icon="pi pi-plus" size="small" @click="annotations.addInvariant(className!)" />            
+              <Button label="Add" icon="pi pi-plus" size="small" @click="annotations.addInvariant(className!)" />
             </header>
 
             <div v-for="inv in invariants" :key="inv.id" class="entry">
@@ -190,10 +207,10 @@ function close() {
                 placeholder="name (optional)"
                 v-model="inv.name"
               />
-              <Textarea 
-                v-model="inv.expression" 
+              <Textarea
+                v-model="inv.expression"
                 placeholder="self.alunos->size() <= 30"
-                rows="3" auto-resize 
+                rows="3" auto-resize
               />
               <InputText
                 placeholder="error message (optional)"
@@ -339,6 +356,23 @@ function close() {
           <p class="tab-note">
             Applies only to the <strong>CLI + JPA</strong> and <strong>Spring</strong> targets.
           </p>
+          <!-- Nome da tabela (override) — só onde a classe tem @Table própria -->
+          <section v-if="ownsTable" class="block">
+            <header class="block-head">
+              <h4>Table name</h4>
+            </header>
+            <div class="entry">
+              <InputText
+                v-model="annotations.tableNameByClass[className!]"
+                :placeholder="className?.toLowerCase()"
+              />
+              <p class="hint">
+                Override do nome da tabela. Vazio = nome da classe em minúsculas.
+                Útil para evitar palavras reservadas em SQL (ex: Order, User).
+              </p>
+            </div>
+          </section>
+
           <!-- Identificador @Id (só na raiz da hierarquia) -->
           <section v-if="isIdRoot" class="block">
             <header class="block-head">
@@ -382,7 +416,7 @@ function close() {
             </div>
           </section>
 
-          <p v-if="!isIdRoot && !isSuperclass" class="empty">
+          <p v-if="!ownsTable && !isIdRoot && !isSuperclass" class="empty">
             Sem opções de persistência para esta classe.
           </p>
         </TabPanel>
@@ -449,7 +483,7 @@ function close() {
       </TabPanels>
     </Tabs>
   </aside>
-  
+
 </template>
 
 <style scoped>

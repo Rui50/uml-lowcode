@@ -42,6 +42,9 @@ public class Class {
     // "SINGLE_TABLE" (default) | "JOINED"
     private String inheritanceStrategy = "SINGLE_TABLE";
 
+    // nome da tabela JPA (override do utilizador); null/vazio = derivado (nome da classe em minúsculas)
+    private String tableName;
+
     // gerar o controller REST para esta classe? (Spring) — default true
     private boolean generateController = true;
 
@@ -137,6 +140,15 @@ public class Class {
         if (inheritanceStrategy != null && !inheritanceStrategy.isBlank()) {
             this.inheritanceStrategy = inheritanceStrategy;
         }
+    }
+
+    public String getTableName() {
+        return tableName;
+    }
+
+    public void setTableName(String tableName) {
+        // só guarda um override real; vazio/branco mantém o nome derivado
+        this.tableName = (tableName != null && !tableName.isBlank()) ? tableName.trim() : null;
     }
 
     public boolean isGenerateController() {
