@@ -315,13 +315,30 @@ public class SpringProjectGenerator {
         }
     }
 
+    // gera 3 ficheiros: application.properties
+    // application-dev.properties (datasource local, schema descartável, logs todos) e
+    // application-prod.properties (datasource via env vars, schema validado, logs ).
+    // Local corre em dev sem config; em produção: SPRING_PROFILES_ACTIVE=prod.
     private void generateApplicationProperties() throws IOException {
-        String filename = outputDirectory + "/src/main/resources/application.properties";
-        try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
+        String resDir = outputDirectory + "/src/main/resources/";
+        String base = settings.getBasePackage();
+
+        // application.properties — partilhado, sempre carregado. Default: profile dev.
+        try (PrintWriter w = new PrintWriter(new FileWriter(resDir + "application.properties"))) {
             w.println("spring.application.name=" + settings.getApplicationName());
             w.println("server.port=" + settings.getServerPort());
             w.println();
+            w.println("# perfil por defeito = dev (corre localmente sem config).");
+            w.println("# em produção: SPRING_PROFILES_ACTIVE=prod");
+            w.println("spring.profiles.active=dev");
+            w.println();
+            w.println("# evita N+1 ao mapear coleções: carrega as coleções lazy de uma página em");
+            w.println("# lotes (WHERE fk IN (...)) em vez de uma query por linha");
+            w.println("spring.jpa.properties.hibernate.default_batch_fetch_size=50");
+        }
 
+        // application-dev.properties — datasource local + schema descartável + logs verbosos
+        try (PrintWriter w = new PrintWriter(new FileWriter(resDir + "application-dev.properties"))) {
             switch (settings.getDatabaseType()) {
                 case H2:
                     w.println("spring.datasource.url=jdbc:h2:mem:testdb");
@@ -347,13 +364,24 @@ public class SpringProjectGenerator {
                     w.println("spring.jpa.hibernate.ddl-auto=update");
                     break;
             }
-
             w.println();
             w.println("spring.jpa.show-sql=true");
             w.println("spring.jpa.properties.hibernate.format_sql=true");
             w.println();
             w.println("logging.level.org.springframework=INFO");
-            w.println("logging.level." + settings.getBasePackage() + "=DEBUG");
+            w.println("logging.level." + base + "=DEBUG");
+        }
+
+        // application-prod.properties — datasource via env vars, schema validado (não apaga), logs
+        try (PrintWriter w = new PrintWriter(new FileWriter(resDir + "application-prod.properties"))) {
+            w.println("# datasource das env vars: SPRING_DATASOURCE_URL / _USERNAME / _PASSWORD");
+            w.println("# (o Spring Boot liga-as automaticamente; o driver é inferido do URL)");
+            w.println("spring.jpa.hibernate.ddl-auto=validate");
+            w.println("spring.h2.console.enabled=false");
+            w.println("spring.jpa.show-sql=false");
+            w.println();
+            w.println("logging.level.org.springframework=INFO");
+            w.println("logging.level." + base + "=INFO");
         }
     }
 

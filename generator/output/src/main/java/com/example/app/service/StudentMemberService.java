@@ -45,6 +45,7 @@ public class StudentMemberService {
      * @param pageable paginação/ordenação (query params: page, size, sort)
      * @return page of entities as DTOs
      */
+    @Transactional(readOnly = true)
     public Page<StudentMemberResponseDTO> findAll(Pageable pageable) {
         return studentMemberRepository.findAll(pageable)
             .map(StudentMemberResponseDTO::fromEntity);
@@ -54,6 +55,7 @@ public class StudentMemberService {
      * @param id the entity id
      * @return Optional containing the entity DTO if found
      */
+    @Transactional(readOnly = true)
     public Optional<StudentMemberResponseDTO> findById(Long id) {
         return studentMemberRepository.findById(id)
             .map(StudentMemberResponseDTO::fromEntity);
@@ -185,6 +187,7 @@ public class StudentMemberService {
      * @param id the entity id
      * @return true if exists
      */
+    @Transactional(readOnly = true)
     public boolean existsById(Long id) {
         return studentMemberRepository.existsById(id);
     }

@@ -34,6 +34,7 @@ public class LibraryCardService {
      * @param pageable paginação/ordenação (query params: page, size, sort)
      * @return page of entities as DTOs
      */
+    @Transactional(readOnly = true)
     public Page<LibraryCardResponseDTO> findAll(Pageable pageable) {
         return libraryCardRepository.findAll(pageable)
             .map(LibraryCardResponseDTO::fromEntity);
@@ -43,6 +44,7 @@ public class LibraryCardService {
      * @param id the entity id
      * @return Optional containing the entity DTO if found
      */
+    @Transactional(readOnly = true)
     public Optional<LibraryCardResponseDTO> findById(Long id) {
         return libraryCardRepository.findById(id)
             .map(LibraryCardResponseDTO::fromEntity);
@@ -114,6 +116,7 @@ public class LibraryCardService {
      * @param id the entity id
      * @return true if exists
      */
+    @Transactional(readOnly = true)
     public boolean existsById(Long id) {
         return libraryCardRepository.existsById(id);
     }

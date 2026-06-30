@@ -37,6 +37,7 @@ public class LibraryService {
      * @param pageable paginação/ordenação (query params: page, size, sort)
      * @return page of entities as DTOs
      */
+    @Transactional(readOnly = true)
     public Page<LibraryResponseDTO> findAll(Pageable pageable) {
         return libraryRepository.findAll(pageable)
             .map(LibraryResponseDTO::fromEntity);
@@ -46,6 +47,7 @@ public class LibraryService {
      * @param id the entity id
      * @return Optional containing the entity DTO if found
      */
+    @Transactional(readOnly = true)
     public Optional<LibraryResponseDTO> findById(Long id) {
         return libraryRepository.findById(id)
             .map(LibraryResponseDTO::fromEntity);
@@ -101,8 +103,6 @@ public class LibraryService {
             }
         }
         if (dto.getCatalogIds() != null) {
-            for (Book catalog : new ArrayList<>(existing.getCatalog().values())) {
-            }
             existing.getCatalog().clear();
             for (Book catalog : bookRepository.findAllById(dto.getCatalogIds())) {
                 existing.getCatalog().put(catalog.getIsbn(), catalog);
@@ -123,6 +123,7 @@ public class LibraryService {
      * @param id the entity id
      * @return true if exists
      */
+    @Transactional(readOnly = true)
     public boolean existsById(Long id) {
         return libraryRepository.existsById(id);
     }

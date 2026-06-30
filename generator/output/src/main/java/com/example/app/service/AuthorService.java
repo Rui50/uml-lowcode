@@ -30,6 +30,7 @@ public class AuthorService {
      * @param pageable paginação/ordenação (query params: page, size, sort)
      * @return page of entities as DTOs
      */
+    @Transactional(readOnly = true)
     public Page<AuthorResponseDTO> findAll(Pageable pageable) {
         return authorRepository.findAll(pageable)
             .map(AuthorResponseDTO::fromEntity);
@@ -39,6 +40,7 @@ public class AuthorService {
      * @param id the entity id
      * @return Optional containing the entity DTO if found
      */
+    @Transactional(readOnly = true)
     public Optional<AuthorResponseDTO> findById(Long id) {
         return authorRepository.findById(id)
             .map(AuthorResponseDTO::fromEntity);
@@ -83,6 +85,7 @@ public class AuthorService {
      * @param id the entity id
      * @return true if exists
      */
+    @Transactional(readOnly = true)
     public boolean existsById(Long id) {
         return authorRepository.existsById(id);
     }

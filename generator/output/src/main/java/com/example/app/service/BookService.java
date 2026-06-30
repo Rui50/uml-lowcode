@@ -40,6 +40,7 @@ public class BookService {
      * @param pageable paginação/ordenação (query params: page, size, sort)
      * @return page of entities as DTOs
      */
+    @Transactional(readOnly = true)
     public Page<BookResponseDTO> findAll(Pageable pageable) {
         return bookRepository.findAll(pageable)
             .map(BookResponseDTO::fromEntity);
@@ -49,6 +50,7 @@ public class BookService {
      * @param id the entity id
      * @return Optional containing the entity DTO if found
      */
+    @Transactional(readOnly = true)
     public Optional<BookResponseDTO> findById(Long id) {
         return bookRepository.findById(id)
             .map(BookResponseDTO::fromEntity);
@@ -125,8 +127,6 @@ public class BookService {
             }
         }
         if (dto.getAuthorsIds() != null) {
-            for (Author authors : new ArrayList<>(existing.getAuthors())) {
-            }
             existing.getAuthors().clear();
             for (Author authors : authorRepository.findAllById(dto.getAuthorsIds())) {
                 existing.getAuthors().add(authors);
@@ -152,8 +152,6 @@ public class BookService {
             existing.setBorrower(null);
         }
         if (dto.getEditorsIds() != null) {
-            for (Author editors : new ArrayList<>(existing.getEditors())) {
-            }
             existing.getEditors().clear();
             for (Author editors : authorRepository.findAllById(dto.getEditorsIds())) {
                 existing.getEditors().add(editors);
@@ -174,6 +172,7 @@ public class BookService {
      * @param id the entity id
      * @return true if exists
      */
+    @Transactional(readOnly = true)
     public boolean existsById(Long id) {
         return bookRepository.existsById(id);
     }

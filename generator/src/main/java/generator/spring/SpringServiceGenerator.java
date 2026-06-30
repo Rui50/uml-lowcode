@@ -211,6 +211,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param pageable paginação/ordenação (query params: page, size, sort)");
         writer.println("     * @return page of entities as DTOs");
         writer.println("     */");
+        writer.println("    @Transactional(readOnly = true)");
         writer.println("    public Page<" + className + "ResponseDTO> findAll(Pageable pageable) {");
         writer.println("        return " + repoName + ".findAll(pageable)");
         writer.println("            .map(" + className + "ResponseDTO::fromEntity);");
@@ -222,6 +223,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param id the entity id");
         writer.println("     * @return Optional containing the entity DTO if found");
         writer.println("     */");
+        writer.println("    @Transactional(readOnly = true)");
         writer.println("    public Optional<" + className + "ResponseDTO> findById(" + cls.getRoot().getIdAttributeType() + " id) {");
         writer.println("        return " + repoName + ".findById(id)");
         writer.println("            .map(" + className + "ResponseDTO::fromEntity);");
@@ -248,6 +250,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param id the entity id");
         writer.println("     * @return true if exists");
         writer.println("     */");
+        writer.println("    @Transactional(readOnly = true)");
         writer.println("    public boolean existsById(" + cls.getRoot().getIdAttributeType() + " id) {");
         writer.println("        return " + repoName + ".existsById(id);");
         writer.println("    }");
@@ -734,7 +737,7 @@ public class SpringServiceGenerator {
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println();
         // liga as relações do DTO; se mexeu na própria entidade (FK/coleção própria), grava de novo
-        if (generateRelationshipLinks(writer, cls, associations, "saved", false)) {
+        if (generateRelationshipLinks(writer, cls, associations, "saved", true)) {
             writer.println("        saved = " + repoName + ".save(saved);");
         }
         writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
@@ -743,18 +746,19 @@ public class SpringServiceGenerator {
     }
 
     /**
-     * Liga as relações de uma entidade a partir dos ids do DTO (e, em update, desliga as que
-     * vierem a null). Partilhado por create() e update(): entityVar é "saved" no create e
-     * "existing" no update.
+     * Liga as relações de uma entidade a partir dos ids do DTO. Partilhado por create() e update():
+     * entityVar é "saved" no create e "existing" no update. includeCollections distingue os dois:
+     * no create ligam-se single refs + coleções; no update só single refs (as coleções são geridas
+     * pelos endpoints dedicados add/remove).
      *
      *   - singular lado dono (M:O / O:O dono): entityVar.set<Field>(other); id null -> set(null).
      *   - singular lado inverso (O:O mappedBy): a FK está no outro -> grava-se lá; id null limpa-a.
-     *   - coleção: add/put no lado dono; no lado inverso grava-se o outro (que tem a FK).
+     *   - coleção (só create): add/put no lado dono; no lado inverso grava-se o outro (que tem a FK).
      *
      * Devolve selfModified = mexeu na própria entidade. Não grava aqui de propósito: o caller faz
      * o save final (create: repo.save; update: já tem saveAndFlush), para não duplicar o save.
      */
-    private boolean generateRelationshipLinks(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean replace) {
+    private boolean generateRelationshipLinks(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean includeCollections) {
         // entityVar é a entidade a ligar ("saved" no create, "existing" no update)
         // selfModified é quando mexemos diretamente em entityVar (caso 1 ou 2) -> o chamador grava
         // anyLinked é quando ligámos alguma relação -> re-validar o estado final antes de gravar
@@ -771,6 +775,8 @@ public class SpringServiceGenerator {
             // nome do campo = o mesmo que o CreateDTO/entidade usam, por isso get<Field>Id()/Ids() existem
             String capField    = GeneratorUtils.capitalizeFirst(rel.field());
             boolean collection = rel.isCollection();
+            // coleções só são ligadas no create; em update são geridas pelos endpoints add/remove dedicados
+            if (collection && !includeCollections) continue;
 
             // dados do MEU lado — preciso para o campo inverso (caso 3)
             String thisRole = rel.thisRole();
@@ -831,25 +837,8 @@ public class SpringServiceGenerator {
                     addToSaved = entityVar + ".get" + capField + "().add(" + otherVar + ");";
                 }
 
+                // só no create: a coleção começa vazia, por isso é só adicionar (sem limpar).
                 writer.println("        if (dto.get" + capField + "Ids() != null) {");
-                // substitui (não acumula): desliga as ligações atuais e adiciona as novas.
-                // só no update — no create a coleção está vazia; DTO sem o campo -> fica intacta.
-                if (replace) {
-                    String snapshot = assoc.hasQualifier()
-                            ? "new ArrayList<>(" + entityVar + ".get" + capField + "().values())"
-                            : "new ArrayList<>(" + entityVar + ".get" + capField + "())";
-                    writer.println("            for (" + otherClass + " " + otherVar + " : " + snapshot + ") {");
-                    if (!ownerSide) {
-                        writer.println("                " + otherVar + (thisMultiple
-                                ? ".get" + capInv + "().remove(" + entityVar + ");"   // M:N inverso
-                                : ".set" + capInv + "(null);"));                       // O:M inverso: limpa a FK
-                        writer.println("                " + otherRepo + ".save(" + otherVar + ");");
-                    } else if (rel.isBidirectional()) {
-                        writer.println("                " + otherVar + ".get" + capInv + "().remove(" + entityVar + ");");  // M:N dono bidirecional
-                    }
-                    writer.println("            }");
-                    writer.println("            " + entityVar + ".get" + capField + "().clear();");
-                }
                 writer.println("            for (" + otherClass + " " + otherVar + " : " + otherRepo + ".findAllById(dto.get" + capField + "Ids())) {");
                 // adiciona à coleção deste lado (persiste se formos donos, senão é só para a resposta)
                 writer.println("                " + addToSaved);
@@ -912,9 +901,8 @@ public class SpringServiceGenerator {
 
         generateValidationBeforeSave(writer, cls, "existing");
 
-        // ligar relações a partir dos ids do DTO (o mesmo que no create): single refs por id;
-        // coleções só se o DTO as enviar (o form de edição manda só as single)
-        generateRelationshipLinks(writer, cls, associations, "existing", true);
+        // liga só single refs por id; coleções não se tocam aqui (geridas pelos endpoints dedicados add/remove)
+        generateRelationshipLinks(writer, cls, associations, "existing", false);
 
         // saveAndFlush: força o flush para o @LastModifiedDate (@PreUpdate) ser aplicado
         // antes de mapear para DTO senão o updatedAt na resposta ficaria desatualizado

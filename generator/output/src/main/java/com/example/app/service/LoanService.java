@@ -37,6 +37,7 @@ public class LoanService {
      * @param pageable paginação/ordenação (query params: page, size, sort)
      * @return page of entities as DTOs
      */
+    @Transactional(readOnly = true)
     public Page<LoanResponseDTO> findAll(Pageable pageable) {
         return loanRepository.findAll(pageable)
             .map(LoanResponseDTO::fromEntity);
@@ -46,6 +47,7 @@ public class LoanService {
      * @param id the entity id
      * @return Optional containing the entity DTO if found
      */
+    @Transactional(readOnly = true)
     public Optional<LoanResponseDTO> findById(Long id) {
         return loanRepository.findById(id)
             .map(LoanResponseDTO::fromEntity);
@@ -121,6 +123,7 @@ public class LoanService {
      * @param id the entity id
      * @return true if exists
      */
+    @Transactional(readOnly = true)
     public boolean existsById(Long id) {
         return loanRepository.existsById(id);
     }
