@@ -7,6 +7,7 @@ import model.ProjectSettings;
 import app.dto.dclass.*;
 import app.dto.dsequence.*;
 import generator.GeneratorUtils;
+import generator.spring.SpringEndpointList;
 import model.*;
 import model.Class;
 import model.Interface;
@@ -73,7 +74,7 @@ public class ToolService {
 
     private ParseResponse toResponse(ParsedModel model) {
         List<ClassDTO> classes = model.getClasses().stream()
-                .map(this::toClassDto)
+                .map(c -> toClassDto(c, model.getAssociations()))
                 .toList();
 
         List<AssociationDTO> associations = model.getAssociations().stream()
@@ -102,7 +103,7 @@ public class ToolService {
      * MOVER DEPOIS PARA MAPPERSW
 
      */
-    private ClassDTO toClassDto(Class c) {
+    private ClassDTO toClassDto(Class c, List<Association> associations) {
         String parent = c.getParentClass() != null ? c.getParentClass().getName() : null;
         List<AttributeDTO> attrs = c.getAttributes().stream()
                 .map(this::toAttributeDto)
@@ -115,7 +116,10 @@ public class ToolService {
         List<String> realizations = c.getRealizations().stream()
                 .map(Interface::getName).toList();
 
-        return new ClassDTO(c.getName(), parent, attrs, ops, c.isAbstract(), realizations);
+        // endpoints REST previstos para o target Spring (CRUD + relações)
+        List<SpringEndpointList.Endpoint> endpoints = SpringEndpointList.getClassEndpoints(c, associations);
+
+        return new ClassDTO(c.getName(), parent, attrs, ops, c.isAbstract(), realizations, endpoints);
     }
 
     private OperationDTO toOperationDTO(String className, Operation o) {

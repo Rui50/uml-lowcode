@@ -8,6 +8,14 @@ export interface AttributeDTO {
   type: string
 }
 
+export interface Endpoint {
+  httpMethod: string                              // GET, POST, PUT, PATCH, DELETE
+  path: string                                    // /api/alunos/{id}/turmaa
+  type: 'CRUD' | 'ASSOCIATION' | 'CUSTOM'
+  label: string
+  dtoType: 'CREATE' | 'UPDATE' | 'RESPONSE' | null
+}
+
 export interface ClassDTO {
   name: string
   parent: string | null
@@ -15,6 +23,7 @@ export interface ClassDTO {
   operations: OperationDTO[]
   isAbstract: boolean
   realizations: string[]
+  endpoints: Endpoint[]
 }
 
 export interface InterfaceDTO {

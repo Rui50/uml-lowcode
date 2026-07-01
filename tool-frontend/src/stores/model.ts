@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { ParseResponse, ProjectSettings } from '../types'
 import { parseModel, generateCode } from '@/api/model'
+import { useLayoutStore } from '@/stores/layout'
 
 export type SelectedDiagram = 
   | { type: 'class' }
@@ -78,6 +79,7 @@ export const useModelStore = defineStore('model', () => {
     error.value = null
     selectedClassName.value = null
     selectedDiagram.value = null
+    useLayoutStore().clear()   // posições do canvas são presentation-state do modelo atual
   }
 
 

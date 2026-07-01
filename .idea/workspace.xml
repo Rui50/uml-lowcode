@@ -5,20 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="j">
+      <change afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEndpointList.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/controllers/GlobalExceptionHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/AuthorService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/AuthorService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/BookService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/BookService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LibraryCardService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LibraryCardService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LibraryService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LibraryService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LoanService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/LoanService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/StaffMemberService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/StaffMemberService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/StudentMemberService.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/java/com/example/app/service/StudentMemberService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/output/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/generator/output/src/main/resources/application.properties" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringProjectGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dclass/ClassDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dclass/ClassDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/ToolService.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/ToolService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/ClassDiagram.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/ClassDiagram.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/stores/model.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/stores/model.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

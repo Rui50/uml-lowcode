@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useModelStore } from '@/stores/model'
 import { useAnnotationsStore } from '@/stores/annotations';
+import type { Endpoint } from '@/types'
 
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
@@ -40,6 +41,30 @@ const attributes = computed(() => isInterface.value ? [] : model.selectedClass?.
 
 const operations = computed(() => isInterface.value ? [] : model.selectedClass?.operations ?? [])
 const interactions = computed(() => model.model?.interactions ?? [])
+
+function pluralPath(name: string) {
+  const p = name.toLowerCase()
+  return p.endsWith('s') ? p : p + 's'
+}
+
+// lista unificada de endpoints da classe: CRUD + relações (backend, estruturais) // add custom despois
+const allEndpoints = computed<Endpoint[]>(() => {
+  const cls = model.selectedClass
+  if (!cls) return []
+  const base = `/api/${pluralPath(cls.name)}`
+  const list: Endpoint[] = [...(cls.endpoints ?? [])]
+
+  for (const op of cls.operations) {
+    const cfg = annotations.endpointByOperation[op.id]
+    const path = cfg?.endpointName?.trim() || op.name
+    if (cfg?.job) {
+      list.push({ httpMethod: 'POST', path: `${base}/${path}`, type: 'CUSTOM', label: op.name, dtoType: null })
+    } else if (annotations.operationToSeqDiagram[op.id]) {
+      list.push({ httpMethod: cfg?.httpMethod || 'POST', path: `${base}/${path}`, type: 'CUSTOM', label: op.name, dtoType: null })
+    }
+  }
+  return list
+})
 
 const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
 // garante uma config de endpoint para cada operação da classe selecionada
@@ -445,6 +470,19 @@ function close() {
             </div>
           </section>
 
+          <!-- Endpoints REST previstos (CRUD + relações), derivados do modelo -->
+          <section v-if="!isInterface && allEndpoints.length" class="block">
+            <header class="block-head">
+              <h4>Available endpoints</h4>
+            </header>
+            <ul class="endpoint-list">
+              <li v-for="(e, i) in allEndpoints" :key="i" class="endpoint-item">
+                <span class="verb" :class="e.httpMethod.toLowerCase()">{{ e.httpMethod }}</span>
+                <code class="ep-path" :title="e.path">{{ e.path.replace('/api', '') }}</code>
+              </li>
+            </ul>
+          </section>
+
           <!-- Invariantes OCL como anotações Bean Validation por classe -->
           <section v-if="beanValidationEligible" class="block">
             <header class="block-head">
@@ -465,7 +503,7 @@ function close() {
           <!-- Endpoint / Job por operação (mapeamento PSM) -->
           <section v-if="!isInterface" class="block">
             <header class="block-head">
-              <h4>Endpoints</h4>
+              <h4>Operation endpoints</h4>
             </header>
             <p v-if="operations.length === 0" class="empty">No operations</p>
             <div v-for="op in operations" :key="op.id" class="entry">
@@ -670,4 +708,17 @@ function close() {
     letter-spacing: 0.4px;
     margin-bottom: 4px;
   }
+
+/* lista de endpoints previstos (preview, read-only) */
+.endpoint-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.endpoint-item { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; line-height: 1.4; }
+.endpoint-item .verb {
+  flex: none; min-width: 48px; text-align: center; padding: 1px 5px; border-radius: 3px;
+  font-weight: 700; font-size: 11px; color: #fff;
+}
+.verb.get { background: #3b82f6; }
+.verb.post { background: #22c55e; }
+.verb.put, .verb.patch { background: #f59e0b; }
+.verb.delete { background: #ef4444; }
+.ep-path { font-family: monospace; color: var(--color-text); overflow-wrap: anywhere; word-break: break-all; }
 </style>

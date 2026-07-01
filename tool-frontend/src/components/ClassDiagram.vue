@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, markRaw } from 'vue'
 import { useModelStore } from '@/stores/model'
+import { useLayoutStore } from '@/stores/layout'
 import { VueFlow } from '@vue-flow/core';
 import ClassNode from './ClassNode.vue';
 import EnumNode from './EnumNode.vue';
 import UmlEdge from './UmlEdge.vue';
 import type { ClassDTO, AssociationDTO, EnumerationDTO } from '@/types'
-import type { NodeMouseEvent } from '@vue-flow/core'
+import type { NodeMouseEvent, NodeDragEvent } from '@vue-flow/core'
 import { MarkerType } from '@vue-flow/core'
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
@@ -17,6 +18,7 @@ import type { InterfaceDTO } from '@/types'
 
 
 const store = useModelStore()
+const layout = useLayoutStore()
 
 const classes = computed<ClassDTO[]>(() => store.model?.classes ?? [])
 const associations = computed<AssociationDTO[]>(() => store.model?.associations ?? [])
@@ -42,7 +44,7 @@ const classNodes = computed(() =>
 	classes.value.map((c, i) => ({
 		id: c.name,
 		type: 'umlClass',
-		position: { x: (i % 4) * 220, y: Math.floor(i / 4) * 160 },
+		position: layout.nodePositions[c.name] ?? { x: (i % 4) * 220, y: Math.floor(i / 4) * 160 },
 		data: c,
 	}))
 )
@@ -52,7 +54,7 @@ const enumNodes = computed(() => {
 	return enumerations.value.map((e, i) => ({
 		id: `enum-${e.name}`,
 		type: 'umlEnum',
-		position: { x: (i % 4) * 220, y: baseY + Math.floor(i / 4) * 140 },
+		position: layout.nodePositions[`enum-${e.name}`] ?? { x: (i % 4) * 220, y: baseY + Math.floor(i / 4) * 140 },
 		data: e,
 	}))
 })
@@ -63,7 +65,7 @@ const interfaceNodes = computed(() => {
   return interfaces.value.map((it, i) => ({
     id: `iface-${it.name}`,
     type: 'umlInterface',
-    position: { x: (i % 4) * 220, y: baseY + Math.floor(i / 4) * 160 },
+    position: layout.nodePositions[`iface-${it.name}`] ?? { x: (i % 4) * 220, y: baseY + Math.floor(i / 4) * 160 },
     data: it,
   }))
 })
@@ -159,6 +161,11 @@ function onNodeClick(event: NodeMouseEvent) {
       return
     }
   }
+
+// ao largar o nó, guarda a posição final (sobrevive a troca de diagrama / reload)
+function onNodeDragStop({ node }: NodeDragEvent) {
+  layout.setNodePosition(node.id, { ...node.position })
+}
 </script>
 
 <template>
@@ -171,6 +178,7 @@ function onNodeClick(event: NodeMouseEvent) {
       fit-view-on-init
       @node-click="onNodeClick"
       @node-drag-start="onNodeClick"
+      @node-drag-stop="onNodeDragStop"
     >
       <Background />
       <Controls />

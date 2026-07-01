@@ -1,6 +1,7 @@
 package app.dto.dclass;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import generator.spring.SpringEndpointList;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import java.util.List;
@@ -17,4 +18,6 @@ public class ClassDTO {
     @JsonProperty("isAbstract")
     private boolean isAbstract;
     private List<String> realizations;
+    // endpoints REST que esta classe vai expor no target Spring so diz crud e de relações
+    private List<SpringEndpointList.Endpoint> endpoints;
 }
