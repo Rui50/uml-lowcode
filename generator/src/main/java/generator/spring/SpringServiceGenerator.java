@@ -134,6 +134,7 @@ public class SpringServiceGenerator {
         writer.println("import " + basePackage + ".models." + cls.getName() + ";");
         writer.println("import " + basePackage + ".repository." + cls.getName() + "Repository;");
         writer.println("import " + basePackage + ".dto." + cls.getName() + "CreateDTO;");
+        writer.println("import " + basePackage + ".dto." + cls.getName() + "UpdateDTO;");
         writer.println("import " + basePackage + ".dto." + cls.getName() + "ResponseDTO;");
         for (model.Interface iface : cls.getRealizations()) {
             writer.println("import " + basePackage + ".models." + iface.getName() + ";");
@@ -875,7 +876,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param dto the data to update");
         writer.println("     * @return the updated entity as DTO");
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO update(" + cls.getRoot().getIdAttributeType() + " id, " + className + "CreateDTO dto) {");
+        writer.println("    public " + className + "ResponseDTO update(" + cls.getRoot().getIdAttributeType() + " id, " + className + "UpdateDTO dto) {");
         writer.println("        " + className + " existing = " + repoName + ".findById(id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className + " not found: \" + id));");
         writer.println();

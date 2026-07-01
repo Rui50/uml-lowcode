@@ -297,15 +297,19 @@ public class SpringFrontendGenerator {
             // o botão edit de cada linha carrega os valores e o submit passa a Update
             w.println("    <form onsubmit=\"save(event)\">");
             for (Attribute a : formFields) {
+                // atributos com init: bloqueados no modo criar (o init OBRIGA o valor inicial;
+                // nem existem no CreateDTO) e desbloqueados no modo editar (existem no UpdateDTO)
+                String locked = a.getInitExpression() != null
+                        ? " disabled title=\"fixed at creation (init)\"" : "";
                 if (enumLiterals.containsKey(a.getType())) {
                     // atributo enum -> <select> com os literais (o valor é o nome da constante)
                     StringBuilder opts = new StringBuilder("<option value=\"\">-- none --</option>");
                     for (String lit : enumLiterals.get(a.getType())) opts.append("<option>").append(lit).append("</option>");
                     w.println("      <label>" + a.getName()
-                            + " <select name=\"" + a.getName() + "\">" + opts + "</select></label>");
+                            + " <select name=\"" + a.getName() + "\"" + locked + ">" + opts + "</select></label>");
                 } else {
                     w.println("      <label>" + a.getName()
-                            + " <input name=\"" + a.getName() + "\" type=\"" + inputType(a.getType()) + "\"></label>");
+                            + " <input name=\"" + a.getName() + "\" type=\"" + inputType(a.getType()) + "\"" + locked + "></label>");
                 }
             }
             for (RelationshipInfo rel : rels) {
@@ -474,6 +478,12 @@ public class SpringFrontendGenerator {
                 w.println("    " + field + ": " + value + ",");
             }
             w.println("  };");
+            // campos com init não fazem parte do CreateDTO (valor obrigado pelo init) -> só no PATCH
+            for (Attribute a : formFields) {
+                if (a.getInitExpression() != null) {
+                    w.println("  if (editId === null) delete body." + a.getName() + ";");
+                }
+            }
             w.println("  const method = editId === null ? 'POST' : 'PATCH';");
             w.println("  const url = editId === null ? API : `${API}/${editId}`;");
             w.println("  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });");
@@ -504,6 +514,12 @@ public class SpringFrontendGenerator {
                 String field = idField(rel);
                 w.println("  form." + field + ".value = item." + field + " ?? '';");
             }
+            // em modo editar os campos com init destrancam (fazem parte do UpdateDTO)
+            for (Attribute a : formFields) {
+                if (a.getInitExpression() != null) {
+                    w.println("  form." + a.getName() + ".disabled = false;");
+                }
+            }
             w.println("  editId = id;");
             w.println("  document.getElementById('submitBtn').textContent = 'Update';");
             w.println("  document.getElementById('cancelBtn').style.display = '';");
@@ -512,7 +528,14 @@ public class SpringFrontendGenerator {
 
             // cancelEdit: volta ao modo criar (limpa o form e o estado)
             w.println("function cancelEdit() {");
-            w.println("  document.querySelector('form').reset();");
+            w.println("  const form = document.querySelector('form');");
+            w.println("  form.reset();");
+            // de volta ao modo criar: campos com init voltam a ficar trancados
+            for (Attribute a : formFields) {
+                if (a.getInitExpression() != null) {
+                    w.println("  form." + a.getName() + ".disabled = true;");
+                }
+            }
             w.println("  editId = null;");
             w.println("  document.getElementById('submitBtn').textContent = 'Create';");
             w.println("  document.getElementById('cancelBtn').style.display = 'none';");

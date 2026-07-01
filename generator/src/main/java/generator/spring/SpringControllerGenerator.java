@@ -159,13 +159,13 @@ public class SpringControllerGenerator {
             writer.println();
         }
 
-        // PUT /api/entities/{id} - Update
         // PATCH (não PUT): a atualização é PARCIAL — campos/coleções não enviados ficam intactos.
         // PUT estrito (substituir tudo, omitido = limpar) exigiria presence-tracking (ver nota UpdateDTO).
+        // corpo = UpdateDTO próprio (sem id, só single-refs) em vez de reutilizar o CreateDTO
         writer.println("    @PatchMapping(\"/{id}\")");
         writer.println("    public ResponseEntity<" + className + "ResponseDTO> update(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
-        writer.println("            @RequestBody " + className + "CreateDTO dto) {");
+        writer.println("            @RequestBody " + className + "UpdateDTO dto) {");
         writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".update(id, dto);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
@@ -352,6 +352,7 @@ public class SpringControllerGenerator {
         writer.println("import " + basePackage + ".models." + className + ";");
         writer.println("import " + basePackage + ".service." + className + "Service;");
         writer.println("import " + basePackage + ".dto." + className + "CreateDTO;");
+        writer.println("import " + basePackage + ".dto." + className + "UpdateDTO;");
         writer.println("import " + basePackage + ".dto." + className + "ResponseDTO;");
         writer.println("import lombok.RequiredArgsConstructor;");
         writer.println("import org.springframework.http.HttpStatus;");

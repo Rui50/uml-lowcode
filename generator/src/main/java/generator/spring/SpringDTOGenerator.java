@@ -14,7 +14,9 @@ import java.util.*;
 
 /**
  * gerar os dtos, por classe, dois:
- * - CreateDTO: para POST/PUT. apenas atributos, sem id, relações
+ * - CreateDTO: para POST. atributos (sem id gerado, sem os com init — o init obriga o valor
+ *   na criação) + ids de relação (single e coleção), toEntity()
+ * - UpdateDTO: para PATCH. atributos (sem id) + só ids de relação SINGULARES, sem toEntity()
  * - ResponseDTO: para GET. id + atributos + relacionamento IDs
  *
  * id: CreateDTO exclui sempre o atributo-id (a BD atribui-o);
@@ -60,8 +62,11 @@ public class SpringDTOGenerator {
         for (Class c : classes) classMap.put(c.getName(), c);
 
         for (Class cls : classes) {
-            // classes abstratas não podem ser instanciadas, logo não têm CreateDTO
-            if (!cls.isAbstract()) generateCreateDTO(cls, associations, dtoDir);
+            // classes abstratas não podem ser instanciadas, logo não têm CreateDTO/UpdateDTO
+            if (!cls.isAbstract()) {
+                generateCreateDTO(cls, associations, dtoDir);
+                generateUpdateDTO(cls, associations, dtoDir);
+            }
             generateResponseDTO(cls, associations, dtoDir);
         }
 
@@ -94,9 +99,12 @@ public class SpringDTOGenerator {
             // id gerado pela BD -> fora do CreateDTO
             // chave natural (String) é
             // atribuída pelo cliente -> mantém-se no CreateDTO
+            // atributos com init -> fora: o init OBRIGA o valor na criação (semântica OCL);
+            // ficam editáveis depois via UpdateDTO/PATCH
             String idName = cls.getRoot().getIdAttributeName();
             List<Attribute> allAttrs = cls.getAllAttributes().stream()
                     .filter(a -> !a.hasDerive())
+                    .filter(a -> a.getInitExpression() == null)
                     .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                     .toList();
 
@@ -118,11 +126,7 @@ public class SpringDTOGenerator {
             w.println("public class " + className + "CreateDTO {");
             w.println();
             for (Attribute attr : allAttrs) {
-                // campos com valor por defeito são "boxed" (int -> Integer) para
-                // poderem ser null, e assim preservar o default quando não enviados
-                String type = attr.getInitExpression() != null
-                        ? GeneratorUtils.fixType(attr.getType()) : attr.getType();
-                w.println("    private " + type + " " + attr.getName() + ";");
+                w.println("    private " + attr.getType() + " " + attr.getName() + ";");
             }
 
             // ids de relação (ligados no service, não no toEntity) — mesmo "emit" do ResponseDTO
@@ -135,14 +139,10 @@ public class SpringDTOGenerator {
             String varName = GeneratorUtils.lowercaseFirst(className);
             w.println("    public " + className + " toEntity() {");
             w.println("        " + className + " " + varName + " = new " + className + "();");
+            // atributos com init nem aparecem aqui: o valor inicial fica com o default da entidade
             for (Attribute attr : allAttrs) {
                 String cap = GeneratorUtils.capitalizeFirst(attr.getName());
-                if (attr.getInitExpression() != null) {
-                    // preserve entity's init default when client didn't send a value
-                    w.println("        if (this.get" + cap + "() != null) " + varName + ".set" + cap + "(this.get" + cap + "());");
-                } else {
-                    w.println("        " + varName + ".set" + cap + "(this.get" + cap + "());");
-                }
+                w.println("        " + varName + ".set" + cap + "(this.get" + cap + "());");
             }
             w.println("        return " + varName + ";");
             w.println("    }");
@@ -151,6 +151,67 @@ public class SpringDTOGenerator {
         }
 
         System.out.println("Generated: " + className + "CreateDTO.java");
+    }
+
+    /**
+     * UpdateDTO: corpo do PATCH. Difere do CreateDTO em:
+     * - exclui SEMPRE o atributo-id (a PK não muda em update, mesmo quando é chave natural);
+     * - só ids de relação SINGULARES (coleções não se tocam no update — endpoints dedicados),
+     *   por isso o campo xIds nem existe no contrato em vez de ser silenciosamente ignorado;
+     * - sem toEntity(): o update mapeia campo-a-campo para a entidade já carregada.
+     */
+    private void generateUpdateDTO(Class cls, List<Association> associations, String dtoDir) throws IOException {
+        String className = cls.getName();
+        String filename = dtoDir + "/" + className + "UpdateDTO.java";
+
+        try (PrintWriter w = new PrintWriter(new File(filename))) {
+            List<RelationshipInfo> relationships = RelationshipInfo.collectSingle(cls, associations);
+
+            w.println("package " + basePackage + ".dto;");
+            w.println();
+            w.println("import lombok.*;");
+            w.println("import java.util.*;");
+            if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaTimeType(a.getType()))) {
+                w.println("import java.time.*;");
+            }
+
+            String idName = cls.getRoot().getIdAttributeName();
+            List<Attribute> allAttrs = cls.getAllAttributes().stream()
+                    .filter(a -> !a.hasDerive())
+                    .filter(a -> !a.getName().equals(idName))
+                    .toList();
+
+            for (Attribute attr : allAttrs) {
+                if (enumNames.contains(attr.getType())) {
+                    w.println("import " + basePackage + ".models." + attr.getType() + ";");
+                }
+            }
+
+            w.println();
+            w.println("@Getter");
+            w.println("@Setter");
+            w.println("@NoArgsConstructor");
+            if (!allAttrs.isEmpty() || !relationships.isEmpty()) {
+                w.println("@AllArgsConstructor");
+                w.println("@Builder");
+            }
+            w.println("public class " + className + "UpdateDTO {");
+            w.println();
+            for (Attribute attr : allAttrs) {
+                // mesmo boxing do CreateDTO (campos com init podem vir null)
+                String type = attr.getInitExpression() != null
+                        ? GeneratorUtils.fixType(attr.getType()) : attr.getType();
+                w.println("    private " + type + " " + attr.getName() + ";");
+            }
+
+            for (RelationshipInfo rel : relationships) {
+                generateRelationshipIdField(w, rel);
+            }
+
+            w.println("}");
+        }
+
+        System.out.println("Generated: " + className + "UpdateDTO.java");
     }
 
     /**
