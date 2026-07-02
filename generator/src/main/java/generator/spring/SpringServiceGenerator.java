@@ -886,6 +886,7 @@ public class SpringServiceGenerator {
         String idAttrName = cls.getRoot().getIdAttributeName();
         List<Attribute> allAttrs = cls.getAllAttributes().stream()
                 .filter(a -> !a.hasDerive())
+                .filter(a -> !a.isHiddenInUpdate())   // escondido do UpdateDTO -> não há getter, não se toca
                 .filter(a -> !a.getName().equals(idAttrName))
                 .toList();
         if (!allAttrs.isEmpty()) {

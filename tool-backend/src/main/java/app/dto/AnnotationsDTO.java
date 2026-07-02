@@ -43,4 +43,7 @@ public class AnnotationsDTO {
 
     // key className -> override do nome da tabela JPA (vazio = nome derivado da classe)
     private Map<String, String> tableNameByClass = new HashMap<>();
+
+    // key className -> atributos escondidos por DTO (ausente = DTOs completos)
+    private Map<String, HiddenFieldsDTO> dtoHiddenByClass = new HashMap<>();
 }

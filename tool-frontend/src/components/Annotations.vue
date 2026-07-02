@@ -66,6 +66,24 @@ const allEndpoints = computed<Endpoint[]>(() => {
   return list
 })
 
+// matriz "DTO fields": uma linha por atributo, células trancadas quando a semântica já
+// (init sai sempre do Create; derive só existe no Response).
+const DTO_ROLES = ['create', 'update', 'response'] as const
+const dtoFieldRows = computed(() => {
+  return attributes.value
+    .filter(a => a.name !== idConfig.value?.attributeName)
+    .map(a => {
+      const hasInit = key(a.name) in annotations.initByAttribute
+      const hasDerive = key(a.name) in annotations.deriveByAttribute
+      return {
+        name: a.name,
+        hasInit,
+        hasDerive,
+        locked: { create: hasInit || hasDerive, update: hasDerive, response: false },
+      }
+    })
+})
+
 const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
 // garante uma config de endpoint para cada operação da classe selecionada
 watch(operations, (ops) => {
@@ -483,6 +501,32 @@ function close() {
             </ul>
           </section>
 
+          <!-- Campos por DTO: desmarcar esconde o atributo desse contrato (default = tudo visível) -->
+          <section v-if="!isInterface && dtoFieldRows.length" class="block">
+            <header class="block-head">
+              <h4>DTO fields</h4>
+            </header>
+            <table class="dto-matrix">
+              <thead>
+                <tr><th></th><th>Create</th><th>Update</th><th>Resp</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in dtoFieldRows" :key="row.name">
+                  <td class="attr-label">{{ row.name }}<span v-if="row.hasInit" class="enum-hint">(init)</span><span v-else-if="row.hasDerive" class="enum-hint">(derive)</span></td>
+                  <td v-for="role in DTO_ROLES" :key="role">
+                    <span v-if="row.locked[role]" class="lock" title="fixed by init/derive">🔒</span>
+                    <Checkbox v-else
+                      :binary="true"
+                      :modelValue="!annotations.isDTOHidden(className!, role, row.name)"
+                      @update:modelValue="annotations.toggleDTOHidden(className!, role, row.name)"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="hint">Unchecked = hidden from that DTO. Init fields are already forced out of Create; derived are response-only.</p>
+          </section>
+
           <!-- Invariantes OCL como anotações Bean Validation por classe -->
           <section v-if="beanValidationEligible" class="block">
             <header class="block-head">
@@ -721,4 +765,11 @@ function close() {
 .verb.put, .verb.patch { background: #f59e0b; }
 .verb.delete { background: #ef4444; }
 .ep-path { font-family: monospace; color: var(--color-text); overflow-wrap: anywhere; word-break: break-all; }
+
+/* matriz de campos por DTO */
+.dto-matrix { width: 100%; border-collapse: collapse; }
+.dto-matrix th { font-size: 10px; font-weight: 600; opacity: .6; text-transform: uppercase; text-align: center; padding-bottom: 4px; }
+.dto-matrix td { padding: 2px 0; text-align: center; }
+.dto-matrix td.attr-label { text-align: left; }
+.dto-matrix .lock { opacity: .5; font-size: 11px; cursor: default; }
 </style>

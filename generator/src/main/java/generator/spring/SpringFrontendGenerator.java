@@ -265,17 +265,19 @@ public class SpringFrontendGenerator {
         String idName = cls.getRoot().getIdAttributeName();
         boolean defaultId = idName == null;
 
-        // inputs do formulário (create) = atributos não-derivados, sem o id auto-gerado
+        // inputs do formulário (create) = atributos não-derivados, sem o id auto-gerado;
+        // escondido do Create E do Update -> o form nunca o pode enviar, nem se renderiza
         List<Attribute> formFields = cls.getAllAttributes().stream()
                 .filter(a -> !a.hasDerive())
+                .filter(a -> !(a.isHiddenInCreate() && a.isHiddenInUpdate()))
                 .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                 .collect(Collectors.toList());
 
-        // colunas da tabela = id (se gerado) + atributos não-derivados
+        // colunas da tabela = id (se gerado) + atributos não-derivados visíveis no Response
         List<String> columns = new ArrayList<>();
         if (defaultId) columns.add("id");
         for (Attribute a : cls.getAllAttributes()) {
-            if (!a.hasDerive()) columns.add(a.getName());
+            if (!a.hasDerive() && !a.isHiddenInResponse()) columns.add(a.getName());
         }
 
         List<RelationshipInfo> rels = RelationshipInfo.collectSingle(cls, associations);
@@ -297,10 +299,10 @@ public class SpringFrontendGenerator {
             // o botão edit de cada linha carrega os valores e o submit passa a Update
             w.println("    <form onsubmit=\"save(event)\">");
             for (Attribute a : formFields) {
-                // atributos com init: bloqueados no modo criar (o init OBRIGA o valor inicial;
-                // nem existem no CreateDTO) e desbloqueados no modo editar (existem no UpdateDTO)
-                String locked = a.getInitExpression() != null
-                        ? " disabled title=\"fixed at creation (init)\"" : "";
+                // bloqueado no modo criar quando não faz parte do CreateDTO: init (valor obrigado)
+                // ou escondido do Create; desbloqueia no modo editar se existir no UpdateDTO
+                String locked = (a.getInitExpression() != null || a.isHiddenInCreate())
+                        ? " disabled title=\"not part of create\"" : "";
                 if (enumLiterals.containsKey(a.getType())) {
                     // atributo enum -> <select> com os literais (o valor é o nome da constante)
                     StringBuilder opts = new StringBuilder("<option value=\"\">-- none --</option>");
@@ -478,10 +480,14 @@ public class SpringFrontendGenerator {
                 w.println("    " + field + ": " + value + ",");
             }
             w.println("  };");
-            // campos com init não fazem parte do CreateDTO (valor obrigado pelo init) -> só no PATCH
+            // campos fora do CreateDTO (init / escondidos do Create) só vão no PATCH;
+            // campos escondidos do Update só vão no POST
             for (Attribute a : formFields) {
-                if (a.getInitExpression() != null) {
+                if (a.getInitExpression() != null || a.isHiddenInCreate()) {
                     w.println("  if (editId === null) delete body." + a.getName() + ";");
+                }
+                if (a.isHiddenInUpdate()) {
+                    w.println("  if (editId !== null) delete body." + a.getName() + ";");
                 }
             }
             w.println("  const method = editId === null ? 'POST' : 'PATCH';");
@@ -514,9 +520,11 @@ public class SpringFrontendGenerator {
                 String field = idField(rel);
                 w.println("  form." + field + ".value = item." + field + " ?? '';");
             }
-            // em modo editar os campos com init destrancam (fazem parte do UpdateDTO)
+            // modo editar: destranca o que faz parte do UpdateDTO, tranca o que não faz
             for (Attribute a : formFields) {
-                if (a.getInitExpression() != null) {
+                if (a.isHiddenInUpdate()) {
+                    w.println("  form." + a.getName() + ".disabled = true;");
+                } else if (a.getInitExpression() != null || a.isHiddenInCreate()) {
                     w.println("  form." + a.getName() + ".disabled = false;");
                 }
             }
@@ -530,10 +538,12 @@ public class SpringFrontendGenerator {
             w.println("function cancelEdit() {");
             w.println("  const form = document.querySelector('form');");
             w.println("  form.reset();");
-            // de volta ao modo criar: campos com init voltam a ficar trancados
+            // de volta ao modo criar: tranca o que não faz parte do CreateDTO, destranca o resto
             for (Attribute a : formFields) {
-                if (a.getInitExpression() != null) {
+                if (a.getInitExpression() != null || a.isHiddenInCreate()) {
                     w.println("  form." + a.getName() + ".disabled = true;");
+                } else if (a.isHiddenInUpdate()) {
+                    w.println("  form." + a.getName() + ".disabled = false;");
                 }
             }
             w.println("  editId = null;");

@@ -21,6 +21,15 @@ export interface EndpointConfig {
   cron: string
 }
 
+export type DTORole = 'create' | 'update' | 'response'
+
+// atributos ESCONDIDOS por DTO (nao ta la = nada escondido = DTOs completos)
+export interface DTOHidden {
+  create: string[]
+  update: string[]
+  response: string[]
+}
+
 export const useAnnotationsStore = defineStore('annotations', () => {
   // key: ClassName -> invariants
   const invariantsByClass = ref<Record<string, OclAnnotation[]>>({})
@@ -53,6 +62,9 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // key: ClassName -> override do nome da tabela JPA (ausente/vazio = nome derivado da classe)
   const tableNameByClass = ref<Record<string, string>>({})
+
+  // key: ClassName -> atributos escondidos por DTO (ausente = DTOs completos, output atual)
+  const dtoHiddenByClass = ref<Record<string, DTOHidden>>({})
 
   function addInvariant(className: string) {
     if (!invariantsByClass.value[className]) invariantsByClass.value[className] = []
@@ -137,6 +149,22 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     else delete idByClass.value[className]
   }
 
+  function isDTOHidden(className: string, role: DTORole, attr: string): boolean {
+    return dtoHiddenByClass.value[className]?.[role].includes(attr) ?? false
+  }
+
+  function toggleDTOHidden(className: string, role: DTORole, attr: string) {
+    const entry = (dtoHiddenByClass.value[className] ??= { create: [], update: [], response: [] })
+    const list = entry[role]
+    const i = list.indexOf(attr)
+    if (i === -1) list.push(attr)
+    else list.splice(i, 1)
+    // sem nada escondido, remove a entrada (payload mínimo; ausente = default)
+    if (!entry.create.length && !entry.update.length && !entry.response.length) {
+      delete dtoHiddenByClass.value[className]
+    }
+  }
+
 
   // Storage
   const STORAGE_KEY = 'annotations'
@@ -155,6 +183,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       generateControllerByClass.value = {}
       beanValidationByClass.value = {}
       tableNameByClass.value = {}
+      dtoHiddenByClass.value = {}
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -171,6 +200,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     generateControllerByClass.value = data.generateControllerByClass || {}
     beanValidationByClass.value = data.beanValidationByClass || {}
     tableNameByClass.value = data.tableNameByClass || {}
+    dtoHiddenByClass.value = data.dtoHiddenByClass || {}
   }
 
   function saveForModel(name: string | null) {
@@ -189,6 +219,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       generateControllerByClass: generateControllerByClass.value,
       beanValidationByClass: beanValidationByClass.value,
       tableNameByClass: tableNameByClass.value,
+      dtoHiddenByClass: dtoHiddenByClass.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
@@ -204,7 +235,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // save current bucket on any annotation change
   watch(
-    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass],
+    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass, dtoHiddenByClass],
     () => saveForModel(modelStore.fileName),
     { deep: true }
   )
@@ -222,6 +253,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     generateControllerByClass.value = {}
     beanValidationByClass.value = {}
     tableNameByClass.value = {}
+    dtoHiddenByClass.value = {}
   }
 
   return {
@@ -238,6 +270,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     generateControllerByClass,
     beanValidationByClass,
     tableNameByClass,
+    dtoHiddenByClass,
 
     // actions
     addInvariant,
@@ -253,6 +286,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     addPostcondition,
     deletePostcondition,
     setId,
+    isDTOHidden,
+    toggleDTOHidden,
     reset,
   }
 })

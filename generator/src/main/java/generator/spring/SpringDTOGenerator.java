@@ -105,6 +105,7 @@ public class SpringDTOGenerator {
             List<Attribute> allAttrs = cls.getAllAttributes().stream()
                     .filter(a -> !a.hasDerive())
                     .filter(a -> a.getInitExpression() == null)
+                    .filter(a -> !a.isHiddenInCreate())
                     .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                     .toList();
 
@@ -178,6 +179,7 @@ public class SpringDTOGenerator {
             String idName = cls.getRoot().getIdAttributeName();
             List<Attribute> allAttrs = cls.getAllAttributes().stream()
                     .filter(a -> !a.hasDerive())
+                    .filter(a -> !a.isHiddenInUpdate())
                     .filter(a -> !a.getName().equals(idName))
                     .toList();
 
@@ -277,8 +279,10 @@ public class SpringDTOGenerator {
                 w.println();
             }
 
-            // attributes
-            List<Attribute> allAttrs = cls.getAllAttributes();
+            // attributes (menos os escondidos do Response — mesma lista no fromEntity)
+            List<Attribute> allAttrs = cls.getAllAttributes().stream()
+                    .filter(a -> !a.isHiddenInResponse())
+                    .toList();
             for (Attribute attr : allAttrs) {
                 w.println("    private " + attr.getType() + " " + attr.getName() + ";");
             }

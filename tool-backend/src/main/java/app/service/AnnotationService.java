@@ -3,6 +3,7 @@ package app.service;
 import app.dto.AnnotationsDTO;
 import app.dto.CustomIdDTO;
 import app.dto.EndpointConfigDTO;
+import app.dto.HiddenFieldsDTO;
 import app.dto.OclDTO;
 
 import model.*;
@@ -36,6 +37,22 @@ public class AnnotationService {
         applyControllerConfig(classes, payload.getGenerateControllerByClass());
         applyBeanValidationConfig(classes, payload.getBeanValidationByClass());
         applyTableNames(classes, payload.getTableNameByClass());
+        applyDtoHidden(classes, payload.getDtoHiddenByClass());
+    }
+
+    // atributos escondidos por DTO (painel Spring); só atributos PRÓPRIOS da classe
+    // (a matriz na UI também só lista os próprios)
+    private void applyDtoHidden(List<Class> classes, Map<String, HiddenFieldsDTO> map) {
+        if (map == null) return;
+        map.forEach((className, hidden) -> {
+            Class c = findClass(classes, className);
+            if (c == null || hidden == null) return;
+            for (Attribute a : c.getAttributes()) {
+                a.setHiddenInCreate(hidden.getCreate().contains(a.getName()));
+                a.setHiddenInUpdate(hidden.getUpdate().contains(a.getName()));
+                a.setHiddenInResponse(hidden.getResponse().contains(a.getName()));
+            }
+        });
     }
 
     // override do nome da tabela JPA, por classe (painel Persistence); vazio = nome derivado
@@ -279,6 +296,9 @@ public class AnnotationService {
                 a.setJavaInitExpression(null);
                 a.setDeriveExpression(null);
                 a.setJavaDeriveExpression(null);
+                a.setHiddenInCreate(false);
+                a.setHiddenInUpdate(false);
+                a.setHiddenInResponse(false);
             }
         }
         for (Interface iface : interfaces) {
