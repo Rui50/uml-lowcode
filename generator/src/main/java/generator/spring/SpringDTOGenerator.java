@@ -200,10 +200,9 @@ public class SpringDTOGenerator {
             w.println("public class " + className + "UpdateDTO {");
             w.println();
             for (Attribute attr : allAttrs) {
-                // mesmo boxing do CreateDTO (campos com init podem vir null)
-                String type = attr.getInitExpression() != null
-                        ? GeneratorUtils.fixType(attr.getType()) : attr.getType();
-                w.println("    private " + type + " " + attr.getName() + ";");
+                // sempre com tipo fixed (Integer/Boolean/...), num PATCH um campo omitido chega a null e o
+                // update ignora-o um primitivo chegaria 0/false, indistinguível de "omitido"
+                w.println("    private " + GeneratorUtils.fixType(attr.getType()) + " " + attr.getName() + ";");
             }
 
             for (RelationshipInfo rel : relationships) {

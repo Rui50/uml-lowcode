@@ -503,6 +503,16 @@ public class SpringFrontendGenerator {
             w.println("    alert(err && err.error ? err.error : 'Save failed: ' + res.status);");
             w.println("    return;");
             w.println("  }");
+            // relações single: o PATCH ignora null (não limpa); se o select ficou vazio na edição,
+            // limpa a relação pelo endpoint dedicado DELETE /{id}/{role}
+            if (!rels.isEmpty()) {
+                w.println("  if (editId !== null) {");
+                for (RelationshipInfo rel : rels) {
+                    String rolePath = GeneratorUtils.makeAttributeName(rel.otherClass, rel.role, rel.multiplicity).toLowerCase();
+                    w.println("    if (!form." + idField(rel) + ".value) await fetch(`${API}/${editId}/" + rolePath + "`, { method: 'DELETE' });");
+                }
+                w.println("  }");
+            }
             w.println("  cancelEdit();   // limpa o form e volta ao modo criar");
             w.println("  load();");
             w.println("}");

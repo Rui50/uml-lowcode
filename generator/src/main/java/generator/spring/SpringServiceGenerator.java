@@ -801,26 +801,34 @@ public class SpringServiceGenerator {
                 writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capField + "Id()));");
                 writer.println("            " + entityVar + ".set" + capField + "(" + otherVar + ");");   // sincroniza este lado (resposta)
                 if (ownerSide) {
-                    // a FK é deste lado -> id null tira a relação. Em createo campo já vem null,
-                    // em update limpa-a
-                    writer.println("        } else {");
-                    writer.println("            " + entityVar + ".set" + capField + "(null);");
-                    writer.println("        }");
-                    selfModified = true;   // a FK pode ter mudado (incl. para null) -> re-gravar entityVar
+                    if (includeCollections) {
+                        // create: id null é no-op (o campo já vem null); mantém-se por simetria
+                        writer.println("        } else {");
+                        writer.println("            " + entityVar + ".set" + capField + "(null);");
+                        writer.println("        }");
+                    } else {
+                        // update (PATCH): id null/omitido NÃO mexe na relação; limpar é via DELETE /{id}/{role}
+                        writer.println("        }");
+                    }
+                    selfModified = true;   // a FK pode ter mudado -> re-gravar entityVar
                 } else {
                     // OneToOne lado inverso (mappedBy): a FK está no outro -> escreve-se lá e grava-se o outro
                     String capInv = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer, thisRole, thisMul));
                     writer.println("            " + otherVar + ".set" + capInv + "(" + entityVar + ");");
                     writer.println("            " + otherRepo + ".save(" + otherVar + ");");
-                    // id null -> desligar: a FK está no antigo dono, logo limpa-se lá e grava-se o dono.
-                    // Em create é no-op (ainda não há dono ligado).
-                    writer.println("        } else {");
-                    writer.println("            if (" + entityVar + ".get" + capField + "() != null) {");
-                    writer.println("                " + entityVar + ".get" + capField + "().set" + capInv + "(null);");
-                    writer.println("                " + otherRepo + ".save(" + entityVar + ".get" + capField + "());");
-                    writer.println("            }");
-                    writer.println("            " + entityVar + ".set" + capField + "(null);");
-                    writer.println("        }");
+                    if (includeCollections) {
+                        // create: no-op (ainda não há dono ligado); mantém-se por simetria
+                        writer.println("        } else {");
+                        writer.println("            if (" + entityVar + ".get" + capField + "() != null) {");
+                        writer.println("                " + entityVar + ".get" + capField + "().set" + capInv + "(null);");
+                        writer.println("                " + otherRepo + ".save(" + entityVar + ".get" + capField + "());");
+                        writer.println("            }");
+                        writer.println("            " + entityVar + ".set" + capField + "(null);");
+                        writer.println("        }");
+                    } else {
+                        // update (PATCH): id null/omitido NÃO mexe na relação; limpar é via DELETE /{id}/{role}
+                        writer.println("        }");
+                    }
                 }
             }
             // casos2/3 é quando é coleção
@@ -893,13 +901,11 @@ public class SpringServiceGenerator {
                 .filter(a -> !a.getName().equals(idAttrName))
                 .toList();
         if (!allAttrs.isEmpty()) {
-            writer.println("        // Update attributes from DTO");
+            writer.println("        // Update attributes from DTO (PATCH: null/omitido -> não mexe; valor -> aplica)");
             for (Attribute attr : allAttrs) {
-                String attrName = attr.getName();
-                String getter = "get" + GeneratorUtils.capitalizeFirst(attrName);
-                String setter = "set" + GeneratorUtils.capitalizeFirst(attrName);
-
-                writer.println("        existing." + setter + "(dto." + getter + "());");
+                String getter = "get" + GeneratorUtils.capitalizeFirst(attr.getName());
+                String setter = "set" + GeneratorUtils.capitalizeFirst(attr.getName());
+                writer.println("        if (dto." + getter + "() != null) existing." + setter + "(dto." + getter + "());");
             }
             writer.println();
         }

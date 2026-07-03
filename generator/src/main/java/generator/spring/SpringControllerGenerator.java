@@ -159,9 +159,15 @@ public class SpringControllerGenerator {
             writer.println();
         }
 
-        // PATCH (não PUT): a atualização é PARCIAL — campos/coleções não enviados ficam intactos.
-        // PUT estrito (substituir tudo, omitido = limpar) exigiria presence-tracking (ver nota UpdateDTO).
+        // PATCH (não PUT): atualização PARCIAL — campo null/omitido NÃO mexe (evita apagar dados num
+        // PATCH parcial); limpar uma relação faz-se via DELETE /{id}/{role}. Não é RFC-7386 (null não
+        // apaga) — presence-tracking (JsonNullable) daria isso mas não funciona em Boot 4/Jackson 3.
         // corpo = UpdateDTO próprio (sem id, só single-refs) em vez de reutilizar o CreateDTO
+        writer.println("    /**");
+        writer.println("     * PATCH /api/" + pluralPath + "/{id} — partial update.");
+        writer.println("     * Null / omitted fields are IGNORED (not cleared). To remove a relationship,");
+        writer.println("     * use DELETE /api/" + pluralPath + "/{id}/{role}. (Not RFC-7386 merge-patch — null does not delete.)");
+        writer.println("     */");
         writer.println("    @PatchMapping(\"/{id}\")");
         writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Update") + "> update(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
