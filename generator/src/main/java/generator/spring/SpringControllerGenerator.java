@@ -123,7 +123,7 @@ public class SpringControllerGenerator {
         writer.println("     * @return list of all entities");
         writer.println("     */");
         writer.println("    @GetMapping");
-        writer.println("    public ResponseEntity<Page<" + className + "ResponseDTO>> getAll(Pageable pageable) {");
+        writer.println("    public ResponseEntity<Page<" + SpringDTOGenerator.responseDTOName(cls, "List") + ">> getAll(Pageable pageable) {");
         writer.println("        return ResponseEntity.ok(" + serviceName + ".findAll(pageable));");
         writer.println("    }");
         writer.println();
@@ -136,7 +136,7 @@ public class SpringControllerGenerator {
         writer.println("     * @return entity if found, 404 if not");
         writer.println("     */");
         writer.println("    @GetMapping(\"/{id}\")");
-        writer.println("    public ResponseEntity<" + className + "ResponseDTO> getById(@PathVariable " + idTypeOf(className) + " id) {");
+        writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Get") + "> getById(@PathVariable " + idTypeOf(className) + " id) {");
         writer.println("        return " + serviceName + ".findById(id)");
         writer.println("            .map(ResponseEntity::ok)");
         writer.println("            .orElse(ResponseEntity.notFound().build());");
@@ -152,8 +152,8 @@ public class SpringControllerGenerator {
             writer.println("     * @return created entity");
             writer.println("     */");
             writer.println("    @PostMapping");
-            writer.println("    public ResponseEntity<" + className + "ResponseDTO> create(@RequestBody " + className + "CreateDTO dto) {");
-            writer.println("        " + className + "ResponseDTO created = " + serviceName + ".create(dto);");
+            writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Create") + "> create(@RequestBody " + className + "CreateDTO dto) {");
+            writer.println("        " + SpringDTOGenerator.responseDTOName(cls, "Create") + " created = " + serviceName + ".create(dto);");
             writer.println("        return ResponseEntity.status(HttpStatus.CREATED).body(created);");
             writer.println("    }");
             writer.println();
@@ -163,10 +163,10 @@ public class SpringControllerGenerator {
         // PUT estrito (substituir tudo, omitido = limpar) exigiria presence-tracking (ver nota UpdateDTO).
         // corpo = UpdateDTO próprio (sem id, só single-refs) em vez de reutilizar o CreateDTO
         writer.println("    @PatchMapping(\"/{id}\")");
-        writer.println("    public ResponseEntity<" + className + "ResponseDTO> update(");
+        writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Update") + "> update(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
         writer.println("            @RequestBody " + className + "UpdateDTO dto) {");
-        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".update(id, dto);");
+        writer.println("        " + SpringDTOGenerator.responseDTOName(cls, "Update") + " updated = " + serviceName + ".update(id, dto);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -354,6 +354,9 @@ public class SpringControllerGenerator {
         writer.println("import " + basePackage + ".dto." + className + "CreateDTO;");
         writer.println("import " + basePackage + ".dto." + className + "UpdateDTO;");
         writer.println("import " + basePackage + ".dto." + className + "ResponseDTO;");
+        // DTOs de override de response (um por endpoint com override)
+        cls.getResponseOverrides().keySet().stream().sorted().forEach(slot ->
+                writer.println("import " + basePackage + ".dto." + SpringDTOGenerator.responseDTOName(cls, slot) + ";"));
         writer.println("import lombok.RequiredArgsConstructor;");
         writer.println("import org.springframework.http.HttpStatus;");
         writer.println("import org.springframework.http.ResponseEntity;");

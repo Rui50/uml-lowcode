@@ -136,6 +136,9 @@ public class SpringServiceGenerator {
         writer.println("import " + basePackage + ".dto." + cls.getName() + "CreateDTO;");
         writer.println("import " + basePackage + ".dto." + cls.getName() + "UpdateDTO;");
         writer.println("import " + basePackage + ".dto." + cls.getName() + "ResponseDTO;");
+        // DTOs de override de response (um por endpoint com override)
+        cls.getResponseOverrides().keySet().stream().sorted().forEach(slot ->
+                writer.println("import " + basePackage + ".dto." + SpringDTOGenerator.responseDTOName(cls, slot) + ";"));
         for (model.Interface iface : cls.getRealizations()) {
             writer.println("import " + basePackage + ".models." + iface.getName() + ";");
         }
@@ -213,9 +216,9 @@ public class SpringServiceGenerator {
         writer.println("     * @return page of entities as DTOs");
         writer.println("     */");
         writer.println("    @Transactional(readOnly = true)");
-        writer.println("    public Page<" + className + "ResponseDTO> findAll(Pageable pageable) {");
+        writer.println("    public Page<" + SpringDTOGenerator.responseDTOName(cls, "List") + "> findAll(Pageable pageable) {");
         writer.println("        return " + repoName + ".findAll(pageable)");
-        writer.println("            .map(" + className + "ResponseDTO::fromEntity);");
+        writer.println("            .map(" + SpringDTOGenerator.responseDTOName(cls, "List") + "::fromEntity);");
         writer.println("    }");
         writer.println();
 
@@ -225,9 +228,9 @@ public class SpringServiceGenerator {
         writer.println("     * @return Optional containing the entity DTO if found");
         writer.println("     */");
         writer.println("    @Transactional(readOnly = true)");
-        writer.println("    public Optional<" + className + "ResponseDTO> findById(" + cls.getRoot().getIdAttributeType() + " id) {");
+        writer.println("    public Optional<" + SpringDTOGenerator.responseDTOName(cls, "Get") + "> findById(" + cls.getRoot().getIdAttributeType() + " id) {");
         writer.println("        return " + repoName + ".findById(id)");
-        writer.println("            .map(" + className + "ResponseDTO::fromEntity);");
+        writer.println("            .map(" + SpringDTOGenerator.responseDTOName(cls, "Get") + "::fromEntity);");
         writer.println("    }");
         writer.println();
 
@@ -731,7 +734,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param dto the data to create the entity");
         writer.println("     * @return the created entity as DTO");
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO create(" + className + "CreateDTO dto) {");
+        writer.println("    public " + SpringDTOGenerator.responseDTOName(cls, "Create") + " create(" + className + "CreateDTO dto) {");
         writer.println("        " + className + " " + varName + " = dto.toEntity();");
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
@@ -741,7 +744,7 @@ public class SpringServiceGenerator {
         if (generateRelationshipLinks(writer, cls, associations, "saved", true)) {
             writer.println("        saved = " + repoName + ".save(saved);");
         }
-        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
+        writer.println("        return " + SpringDTOGenerator.responseDTOName(cls, "Create") + ".fromEntity(saved);");
         writer.println("    }");
         writer.println();
     }
@@ -876,7 +879,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param dto the data to update");
         writer.println("     * @return the updated entity as DTO");
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO update(" + cls.getRoot().getIdAttributeType() + " id, " + className + "UpdateDTO dto) {");
+        writer.println("    public " + SpringDTOGenerator.responseDTOName(cls, "Update") + " update(" + cls.getRoot().getIdAttributeType() + " id, " + className + "UpdateDTO dto) {");
         writer.println("        " + className + " existing = " + repoName + ".findById(id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className + " not found: \" + id));");
         writer.println();
@@ -886,7 +889,7 @@ public class SpringServiceGenerator {
         String idAttrName = cls.getRoot().getIdAttributeName();
         List<Attribute> allAttrs = cls.getAllAttributes().stream()
                 .filter(a -> !a.hasDerive())
-                .filter(a -> !a.isHiddenInUpdate())   // escondido do UpdateDTO -> não há getter, não se toca
+                .filter(a -> !cls.isHiddenInUpdate(a.getName()))   // escondido do UpdateDTO -> não há getter, não se toca
                 .filter(a -> !a.getName().equals(idAttrName))
                 .toList();
         if (!allAttrs.isEmpty()) {
@@ -909,7 +912,7 @@ public class SpringServiceGenerator {
         // saveAndFlush: força o flush para o @LastModifiedDate (@PreUpdate) ser aplicado
         // antes de mapear para DTO senão o updatedAt na resposta ficaria desatualizado
         writer.println("        " + className + " saved = " + repoName + ".saveAndFlush(existing);");
-        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
+        writer.println("        return " + SpringDTOGenerator.responseDTOName(cls, "Update") + ".fromEntity(saved);");
         writer.println("    }");
         writer.println();
     }

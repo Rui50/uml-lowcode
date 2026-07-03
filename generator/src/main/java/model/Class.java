@@ -3,7 +3,11 @@ package model;
 import model.annotations.Invariant;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 // para o vp e o que tem
 //https://www.visual-paradigm.com/guide/uml-unified-modeling-language/uml-class-diagram-tutorial/
@@ -58,6 +62,57 @@ public class Class {
     private String idAttributeType = "Long"; // tipo Java do id (default Long)
 
     private List<Invariant> invariants;
+
+    // atributos (por nome) escondidos de cada DTO gerado desta classe. Guardado na CLASSE e não
+    // no Attribute: atributos herdados são instâncias PARTILHADAS com o pai — flags lá vazariam
+    // para irmãos. A consulta faz união com os antepassados (esconder herda-se; ver isHiddenIn*).
+    private Set<String> hiddenInCreate = new HashSet<>();
+    private Set<String> hiddenInUpdate = new HashSet<>();
+    private Set<String> hiddenInResponse = new HashSet<>();
+
+    public Set<String> getHiddenInCreate() { return hiddenInCreate; }
+    public Set<String> getHiddenInUpdate() { return hiddenInUpdate; }
+    public Set<String> getHiddenInResponse() { return hiddenInResponse; }
+
+    // override do response POR ENDPOINT (slot: "list" | "get" | "create" | "update").
+    // Entrada presente = o endpoint tem ResponseDTO próprio com estes atributos escondidos
+    // (seleção independente do default). Ao contrário dos hiddenIn*, NÃO se herda: um override
+    // é uma verdade do ENDPOINT (o filho tem controller/URLs próprios), não do atributo.
+    private Map<String, ResponseOverride> responseOverrides = new HashMap<>();
+
+    public Map<String, ResponseOverride> getResponseOverrides() { return responseOverrides; }
+
+    public boolean hasResponseOverride(String slot) { return responseOverrides.containsKey(slot); }
+
+    public Set<String> responseOverrideHidden(String slot) {
+        ResponseOverride o = responseOverrides.get(slot);
+        if (o == null) return Set.of();   // sem override -> nada escondido
+        return o.getHidden();
+    }
+
+    // nome custom do DTO do override (vazio = usar o auto <Class><Slot>ResponseDTO)
+    public String responseOverrideName(String slot) {
+        ResponseOverride o = responseOverrides.get(slot);
+        if (o == null) return "";
+        return o.getName();
+    }
+
+    // escondido se ESTA classe ou qualquer antepassado o esconder (união pela cadeia de pais)
+    public boolean isHiddenInCreate(String attrName) {
+        for (Class c = this; c != null; c = c.getParentClass())
+            if (c.hiddenInCreate.contains(attrName)) return true;
+        return false;
+    }
+    public boolean isHiddenInUpdate(String attrName) {
+        for (Class c = this; c != null; c = c.getParentClass())
+            if (c.hiddenInUpdate.contains(attrName)) return true;
+        return false;
+    }
+    public boolean isHiddenInResponse(String attrName) {
+        for (Class c = this; c != null; c = c.getParentClass())
+            if (c.hiddenInResponse.contains(attrName)) return true;
+        return false;
+    }
 
     public boolean isOrInheritsFrom(String name) {
         Class c = this;

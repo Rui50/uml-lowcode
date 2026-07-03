@@ -7,15 +7,18 @@
     <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="j">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringFrontendGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringFrontendGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/Attribute.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Attribute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/Class.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Class.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AnnotationsDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AnnotationsDTO.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/AnnotationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/AnnotationService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tool-frontend/src/api/model.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/api/model.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/Annotations.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/Annotations.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/types.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -143,6 +146,17 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/generator/src/main/java/ocl/OCLtoSpringAnnot.java</url>
+          <line>34</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

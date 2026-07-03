@@ -269,15 +269,19 @@ public class SpringFrontendGenerator {
         // escondido do Create E do Update -> o form nunca o pode enviar, nem se renderiza
         List<Attribute> formFields = cls.getAllAttributes().stream()
                 .filter(a -> !a.hasDerive())
-                .filter(a -> !(a.isHiddenInCreate() && a.isHiddenInUpdate()))
+                .filter(a -> !(cls.isHiddenInCreate(a.getName()) && cls.isHiddenInUpdate(a.getName())))
                 .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                 .collect(Collectors.toList());
 
-        // colunas da tabela = id (se gerado) + atributos não-derivados visíveis no Response
+        // colunas da tabela = id (se gerado) + atributos não-derivados visíveis na LISTA
+        // (a tabela mostra o findAll -> segue o override do slot "list" quando existir)
         List<String> columns = new ArrayList<>();
         if (defaultId) columns.add("id");
         for (Attribute a : cls.getAllAttributes()) {
-            if (!a.hasDerive() && !a.isHiddenInResponse()) columns.add(a.getName());
+            boolean hiddenInList = cls.hasResponseOverride("list")
+                    ? cls.responseOverrideHidden("list").contains(a.getName())
+                    : cls.isHiddenInResponse(a.getName());
+            if (!a.hasDerive() && !hiddenInList) columns.add(a.getName());
         }
 
         List<RelationshipInfo> rels = RelationshipInfo.collectSingle(cls, associations);
@@ -301,7 +305,7 @@ public class SpringFrontendGenerator {
             for (Attribute a : formFields) {
                 // bloqueado no modo criar quando não faz parte do CreateDTO: init (valor obrigado)
                 // ou escondido do Create; desbloqueia no modo editar se existir no UpdateDTO
-                String locked = (a.getInitExpression() != null || a.isHiddenInCreate())
+                String locked = (a.getInitExpression() != null || cls.isHiddenInCreate(a.getName()))
                         ? " disabled title=\"not part of create\"" : "";
                 if (enumLiterals.containsKey(a.getType())) {
                     // atributo enum -> <select> com os literais (o valor é o nome da constante)
@@ -483,10 +487,10 @@ public class SpringFrontendGenerator {
             // campos fora do CreateDTO (init / escondidos do Create) só vão no PATCH;
             // campos escondidos do Update só vão no POST
             for (Attribute a : formFields) {
-                if (a.getInitExpression() != null || a.isHiddenInCreate()) {
+                if (a.getInitExpression() != null || cls.isHiddenInCreate(a.getName())) {
                     w.println("  if (editId === null) delete body." + a.getName() + ";");
                 }
-                if (a.isHiddenInUpdate()) {
+                if (cls.isHiddenInUpdate(a.getName())) {
                     w.println("  if (editId !== null) delete body." + a.getName() + ";");
                 }
             }
@@ -522,9 +526,9 @@ public class SpringFrontendGenerator {
             }
             // modo editar: destranca o que faz parte do UpdateDTO, tranca o que não faz
             for (Attribute a : formFields) {
-                if (a.isHiddenInUpdate()) {
+                if (cls.isHiddenInUpdate(a.getName())) {
                     w.println("  form." + a.getName() + ".disabled = true;");
-                } else if (a.getInitExpression() != null || a.isHiddenInCreate()) {
+                } else if (a.getInitExpression() != null || cls.isHiddenInCreate(a.getName())) {
                     w.println("  form." + a.getName() + ".disabled = false;");
                 }
             }
@@ -540,9 +544,9 @@ public class SpringFrontendGenerator {
             w.println("  form.reset();");
             // de volta ao modo criar: tranca o que não faz parte do CreateDTO, destranca o resto
             for (Attribute a : formFields) {
-                if (a.getInitExpression() != null || a.isHiddenInCreate()) {
+                if (a.getInitExpression() != null || cls.isHiddenInCreate(a.getName())) {
                     w.println("  form." + a.getName() + ".disabled = true;");
-                } else if (a.isHiddenInUpdate()) {
+                } else if (cls.isHiddenInUpdate(a.getName())) {
                     w.println("  form." + a.getName() + ".disabled = false;");
                 }
             }

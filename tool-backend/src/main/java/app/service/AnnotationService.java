@@ -5,6 +5,7 @@ import app.dto.CustomIdDTO;
 import app.dto.EndpointConfigDTO;
 import app.dto.HiddenFieldsDTO;
 import app.dto.OclDTO;
+import app.dto.ResponseOverrideDTO;
 
 import model.*;
 import model.Class;
@@ -12,6 +13,7 @@ import model.sequence.Interaction;
 import parser.AnnotationParser;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -38,20 +40,33 @@ public class AnnotationService {
         applyBeanValidationConfig(classes, payload.getBeanValidationByClass());
         applyTableNames(classes, payload.getTableNameByClass());
         applyDtoHidden(classes, payload.getDtoHiddenByClass());
+        applyResponseOverrides(classes, payload.getResponseOverrideByClass());
     }
 
-    // atributos escondidos por DTO (painel Spring); só atributos PRÓPRIOS da classe
-    // (a matriz na UI também só lista os próprios)
+    // overrides do response por endpoint (slot -> {nome, escondidos}); não se herdam
+    private void applyResponseOverrides(List<Class> classes, Map<String, Map<String, ResponseOverrideDTO>> map) {
+        if (map == null) return;
+        map.forEach((className, bySlot) -> {
+            Class c = findClass(classes, className);
+            if (c == null || bySlot == null) return;
+            bySlot.forEach((slot, ovr) -> {
+                if (ovr == null) return;
+                String name = ovr.getName() != null ? ovr.getName().trim() : "";
+                c.getResponseOverrides().put(slot, new ResponseOverride(name, new HashSet<>(ovr.getHidden())));
+            });
+        });
+    }
+
+    // atributos escondidos por DTO (painel Spring). Guardados como sets de NOMES na classe
+    // (cobre atributos herdados; a consulta nos geradores faz união com os antepassados)
     private void applyDtoHidden(List<Class> classes, Map<String, HiddenFieldsDTO> map) {
         if (map == null) return;
         map.forEach((className, hidden) -> {
             Class c = findClass(classes, className);
             if (c == null || hidden == null) return;
-            for (Attribute a : c.getAttributes()) {
-                a.setHiddenInCreate(hidden.getCreate().contains(a.getName()));
-                a.setHiddenInUpdate(hidden.getUpdate().contains(a.getName()));
-                a.setHiddenInResponse(hidden.getResponse().contains(a.getName()));
-            }
+            c.getHiddenInCreate().addAll(hidden.getCreate());
+            c.getHiddenInUpdate().addAll(hidden.getUpdate());
+            c.getHiddenInResponse().addAll(hidden.getResponse());
         });
     }
 
@@ -296,10 +311,11 @@ public class AnnotationService {
                 a.setJavaInitExpression(null);
                 a.setDeriveExpression(null);
                 a.setJavaDeriveExpression(null);
-                a.setHiddenInCreate(false);
-                a.setHiddenInUpdate(false);
-                a.setHiddenInResponse(false);
             }
+            c.getHiddenInCreate().clear();
+            c.getHiddenInUpdate().clear();
+            c.getHiddenInResponse().clear();
+            c.getResponseOverrides().clear();
         }
         for (Interface iface : interfaces) {
             iface.getInvariants().clear();

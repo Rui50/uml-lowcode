@@ -126,8 +126,10 @@ export interface ClassAnnotations {
   derived: Derived[]
 }
 
-
-
+export interface ResponseDTOoverride {
+  name: string // vazio nome "automatico"
+  hidden: string[]
+}
 
 //////////
 // Project settings

@@ -105,7 +105,7 @@ public class SpringDTOGenerator {
             List<Attribute> allAttrs = cls.getAllAttributes().stream()
                     .filter(a -> !a.hasDerive())
                     .filter(a -> a.getInitExpression() == null)
-                    .filter(a -> !a.isHiddenInCreate())
+                    .filter(a -> !cls.isHiddenInCreate(a.getName()))
                     .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                     .toList();
 
@@ -179,7 +179,7 @@ public class SpringDTOGenerator {
             String idName = cls.getRoot().getIdAttributeName();
             List<Attribute> allAttrs = cls.getAllAttributes().stream()
                     .filter(a -> !a.hasDerive())
-                    .filter(a -> !a.isHiddenInUpdate())
+                    .filter(a -> !cls.isHiddenInUpdate(a.getName()))
                     .filter(a -> !a.getName().equals(idName))
                     .toList();
 
@@ -218,11 +218,39 @@ public class SpringDTOGenerator {
 
     /**
      * ResponseDTO: id + attributes + relationship IDs
-     * Used for GET responses and return values
+     * Used for GET responses and return values.
+     * Além do default da classe, emite um DTO próprio por endpoint com override de response
+     * (<Class><List|Detail|Create|Update>ResponseDTO) — mesma estrutura, atributos do override.
      */
     private void generateResponseDTO(Class cls, List<Association> associations, String dtoDir) throws IOException {
+        // esconde os hiddenInResponse (com herança)
+        Set<String> defaultHidden = new HashSet<>();
+        for (Attribute a : cls.getAllAttributes())
+            if (cls.isHiddenInResponse(a.getName())) {
+                defaultHidden.add(a.getName());
+            }
+        generateResponseDTOFile(cls, associations, dtoDir, cls.getName() + "ResponseDTO", defaultHidden);
+
+        // overrides por endpoint (seleção independente do default); nome via responseDTOName
+        // (custom se definido, senão auto), o mesmo que o controller/service usam
+        for (String responseType : cls.getResponseOverrides().keySet()) {
+            generateResponseDTOFile(cls, associations, dtoDir, responseDTOName(cls, responseType),
+                    cls.responseOverrideHidden(responseType));
+        }
+    }
+
+    // nome do response DTO que um endpoint usa: o do override do responseType, senão o default da classe.
+    // o responseType já vem capitalizado (List/Get/Create/Update) -> nome auto por concatenação direta
+    static String responseDTOName(Class cls, String responseType) {
+        if (!cls.hasResponseOverride(responseType)) return cls.getName() + "ResponseDTO";
+        String custom = cls.responseOverrideName(responseType);
+        return !custom.isBlank() ? custom : cls.getName() + responseType + "ResponseDTO";
+    }
+
+    private void generateResponseDTOFile(Class cls, List<Association> associations, String dtoDir,
+                                         String dtoName, Set<String> hiddenNames) throws IOException {
         String className = cls.getName();
-        String filename = dtoDir + "/" + className + "ResponseDTO.java";
+        String filename = dtoDir + "/" + dtoName + ".java";
 
         try (PrintWriter w = new PrintWriter(new File(filename))) {
             w.println("package " + basePackage + ".dto;");
@@ -262,7 +290,7 @@ public class SpringDTOGenerator {
             w.println("@NoArgsConstructor");
             w.println("@AllArgsConstructor");
             w.println("@Builder");
-            w.println("public class " + className + "ResponseDTO {");
+            w.println("public class " + dtoName + " {");
             w.println();
 
             // id normal, quando há id custom, esse atributo já aparece nos atributos abaixo
@@ -279,9 +307,9 @@ public class SpringDTOGenerator {
                 w.println();
             }
 
-            // attributes (menos os escondidos do Response — mesma lista no fromEntity)
+            // attributes (menos os escondidos deste DTO — mesma lista no fromEntity)
             List<Attribute> allAttrs = cls.getAllAttributes().stream()
-                    .filter(a -> !a.isHiddenInResponse())
+                    .filter(a -> !hiddenNames.contains(a.getName()))
                     .toList();
             for (Attribute attr : allAttrs) {
                 w.println("    private " + attr.getType() + " " + attr.getName() + ";");
@@ -300,8 +328,8 @@ public class SpringDTOGenerator {
             // fromEntity() static factory method
             w.println();
             String varName = GeneratorUtils.lowercaseFirst(className);
-            w.println("    public static " + className + "ResponseDTO fromEntity(" + className + " " + varName + ") {");
-            w.println("        " + className + "ResponseDTO dto = new " + className + "ResponseDTO();");
+            w.println("    public static " + dtoName + " fromEntity(" + className + " " + varName + ") {");
+            w.println("        " + dtoName + " dto = new " + dtoName + "();");
             if (defaultId) w.println("        dto.setId(" + varName + ".getId());");
             if (timestamps) {
                 w.println("        dto.setCreatedAt(" + varName + ".getCreatedAt());");
@@ -323,7 +351,7 @@ public class SpringDTOGenerator {
             w.println("}");
         }
 
-        System.out.println("Generated: " + className + "ResponseDTO.java");
+        System.out.println("Generated: " + dtoName + ".java");
     }
 
     private void generateRelationshipIdField(PrintWriter w, RelationshipInfo rel) {

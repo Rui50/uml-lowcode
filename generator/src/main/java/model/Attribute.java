@@ -14,11 +14,6 @@ public class Attribute {
     private String deriveExpression;
     private String javaDeriveExpression;
 
-    // escondido do DTO gerado correspondente (anotação, default = visível em todos)
-    private boolean hiddenInCreate;
-    private boolean hiddenInUpdate;
-    private boolean hiddenInResponse;
-
     public Attribute() {
         this.name = "";
         this.type = "";
@@ -82,15 +77,6 @@ public class Attribute {
     public void setJavaDeriveExpression(String javaDeriveExpression) { this.javaDeriveExpression = javaDeriveExpression; }
 
     public boolean hasDerive() { return deriveExpression != null; }
-
-    public boolean isHiddenInCreate() { return hiddenInCreate; }
-    public void setHiddenInCreate(boolean hiddenInCreate) { this.hiddenInCreate = hiddenInCreate; }
-
-    public boolean isHiddenInUpdate() { return hiddenInUpdate; }
-    public void setHiddenInUpdate(boolean hiddenInUpdate) { this.hiddenInUpdate = hiddenInUpdate; }
-
-    public boolean isHiddenInResponse() { return hiddenInResponse; }
-    public void setHiddenInResponse(boolean hiddenInResponse) { this.hiddenInResponse = hiddenInResponse; }
 
     @Override
     public String toString() {

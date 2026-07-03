@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { useModelStore } from './model'
+import type { ResponseDTOoverride } from '@/types'
 
 export interface OclAnnotation {
   id: string
@@ -29,6 +30,17 @@ export interface DTOHidden {
   update: string[]
   response: string[]
 }
+
+// endpoints cujo response pode ter override (os 4 CRUD que devolvem a entidade).
+// capitalizados de propósito: o valor É o fragmento do nome <Class><ResponseSlot>ResponseDTO
+export type ResponseSlot = 'List' | 'Get' | 'Create' | 'Update'
+
+//   {
+//     Aluno: { list: { name: 'AlunoSummary', hidden: ['email'] } },
+//     Turma: { create: { name: '', hidden: [] } },
+//   }
+type OverridesBySlot = Partial<Record<ResponseSlot, ResponseDTOoverride>>  // slot -> override (nem todos existem)
+type ResponseOverridesByClass = Record<string, OverridesBySlot>           // className -> os seus overrides
 
 export const useAnnotationsStore = defineStore('annotations', () => {
   // key: ClassName -> invariants
@@ -65,6 +77,12 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // key: ClassName -> atributos escondidos por DTO (ausente = DTOs completos, output atual)
   const dtoHiddenByClass = ref<Record<string, DTOHidden>>({})
+
+  // key: ClassName -> slot -> override do response DESSE endpoint (lazy: ausente = usa o
+  // ResponseDTO da classe). A seleção é independente do default (não é subtração em camadas).
+  // override do response por endpoint. Estrutura: className -> slot -> override.
+  // (ausente em qualquer nível = esse endpoint usa o ResponseDTO normal da classe)
+  const responseOverrideByClass = ref<ResponseOverridesByClass>({})
 
   function addInvariant(className: string) {
     if (!invariantsByClass.value[className]) invariantsByClass.value[className] = []
@@ -165,6 +183,44 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     }
   }
 
+  function hasResponseOverride(className: string, slot: ResponseSlot): boolean {
+    return responseOverrideByClass.value[className]?.[slot] !== undefined
+  }
+
+  // liga o override do slot (se ainda não existe); começa com tudo visível e nome auto
+  function ensureResponseOverride(className: string, slot: ResponseSlot) {
+    const entry = (responseOverrideByClass.value[className] ??= {})
+    if (entry[slot] === undefined) entry[slot] = { name: '', hidden: [] }
+  }
+
+  function removeResponseOverride(className: string, slot: ResponseSlot) {
+    const entry = responseOverrideByClass.value[className]
+    if (!entry) return
+    delete entry[slot]
+    if (Object.keys(entry).length === 0) delete responseOverrideByClass.value[className]
+  }
+
+  function overrideName(className: string, slot: ResponseSlot): string {
+    return responseOverrideByClass.value[className]?.[slot]?.name ?? ''
+  }
+
+  function setOverrideName(className: string, slot: ResponseSlot, name: string) {
+    const ovr = responseOverrideByClass.value[className]?.[slot]
+    if (ovr) ovr.name = name
+  }
+
+  function isOverrideHidden(className: string, slot: ResponseSlot, attr: string): boolean {
+    return responseOverrideByClass.value[className]?.[slot]?.hidden.includes(attr) ?? false
+  }
+
+  function toggleOverrideHidden(className: string, slot: ResponseSlot, attr: string) {
+    const list = responseOverrideByClass.value[className]?.[slot]?.hidden
+    if (!list) return
+    const i = list.indexOf(attr)
+    if (i === -1) list.push(attr)
+    else list.splice(i, 1)
+  }
+
 
   // Storage
   const STORAGE_KEY = 'annotations'
@@ -184,6 +240,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       beanValidationByClass.value = {}
       tableNameByClass.value = {}
       dtoHiddenByClass.value = {}
+      responseOverrideByClass.value = {}
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -201,6 +258,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     beanValidationByClass.value = data.beanValidationByClass || {}
     tableNameByClass.value = data.tableNameByClass || {}
     dtoHiddenByClass.value = data.dtoHiddenByClass || {}
+    responseOverrideByClass.value = data.responseOverrideByClass || {}
   }
 
   function saveForModel(name: string | null) {
@@ -220,6 +278,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       beanValidationByClass: beanValidationByClass.value,
       tableNameByClass: tableNameByClass.value,
       dtoHiddenByClass: dtoHiddenByClass.value,
+      responseOverrideByClass: responseOverrideByClass.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
@@ -235,7 +294,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // save current bucket on any annotation change
   watch(
-    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass, dtoHiddenByClass],
+    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass, dtoHiddenByClass, responseOverrideByClass],
     () => saveForModel(modelStore.fileName),
     { deep: true }
   )
@@ -254,6 +313,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     beanValidationByClass.value = {}
     tableNameByClass.value = {}
     dtoHiddenByClass.value = {}
+    responseOverrideByClass.value = {}
   }
 
   return {
@@ -271,6 +331,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     beanValidationByClass,
     tableNameByClass,
     dtoHiddenByClass,
+    responseOverrideByClass,
 
     // actions
     addInvariant,
@@ -288,6 +349,13 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     setId,
     isDTOHidden,
     toggleDTOHidden,
+    hasResponseOverride,
+    ensureResponseOverride,
+    removeResponseOverride,
+    overrideName,
+    setOverrideName,
+    isOverrideHidden,
+    toggleOverrideHidden,
     reset,
   }
 })
