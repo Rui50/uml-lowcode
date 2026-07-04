@@ -72,12 +72,23 @@ public class RelationshipInfo {
         for (Association assoc : associations) {
             String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
             if (declarer == null) continue;
-            boolean isSource = assoc.getSourceClass().equals(declarer);
-            rels.add(new RelationshipInfo(
-                    isSource ? assoc.getTargetClass() : assoc.getSourceClass(),
-                    isSource ? assoc.getTargetRole() : assoc.getSourceRole(),
-                    isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity(),
-                    assoc, isSource));
+
+            // auto-associação bidirecional: a classe é os DOIS lados -> emite ambos os roles (como o
+            // controller/service já fazem). Senão só sairia um lado e os DTOs/ligação perdiam o outro
+            // (o "outro lado" normalmente vem da chamada da OUTRA classe, que aqui não existe).
+            boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass())
+                    && assoc.isSourceNavigable() && assoc.isTargetNavigable();
+            if (selfBidirectional) {
+                rels.add(new RelationshipInfo(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity(), assoc, true));
+                rels.add(new RelationshipInfo(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity(), assoc, false));
+            } else {
+                boolean isSource = assoc.getSourceClass().equals(declarer);
+                rels.add(new RelationshipInfo(
+                        isSource ? assoc.getTargetClass() : assoc.getSourceClass(),
+                        isSource ? assoc.getTargetRole() : assoc.getSourceRole(),
+                        isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity(),
+                        assoc, isSource));
+            }
         }
         return rels;
     }
