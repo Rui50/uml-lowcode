@@ -323,17 +323,15 @@ function close() {
           <!-- Nome da tabela (override) — só onde a classe tem @Table própria -->
           <section v-if="ownsTable" class="block">
             <header class="block-head">
-              <h4>Table name</h4>
+              <h4>Table name
+                <span class="tip" v-tooltip.top="'Override do nome da tabela. Vazio = nome da classe em minúsculas. Útil para evitar palavras reservadas em SQL (ex: Order, User).'">ⓘ</span>
+              </h4>
             </header>
             <div class="entry">
               <InputText
                 v-model="annotations.tableNameByClass[className!]"
                 :placeholder="className?.toLowerCase()"
               />
-              <p class="hint">
-                Override do nome da tabela. Vazio = nome da classe em minúsculas.
-                Útil para evitar palavras reservadas em SQL (ex: Order, User).
-              </p>
             </div>
           </section>
 
@@ -364,7 +362,9 @@ function close() {
           <!-- Estratégia de herança JPA (só na superclasse) -->
           <section v-if="isSuperclass" class="block">
             <header class="block-head">
-              <h4>Inheritance strategy</h4>
+              <h4>Inheritance strategy
+                <span class="tip" v-tooltip.top="'Mapeamento JPA da hierarquia (alvos Spring e CLI-JPA).'">ⓘ</span>
+              </h4>
             </header>
             <div class="entry">
               <Select
@@ -374,9 +374,6 @@ function close() {
                 optionValue="value"
                 placeholder="Single table"
               />
-              <p class="hint">
-                Mapeamento JPA da hierarquia (alvos Spring e CLI-JPA).
-              </p>
             </div>
           </section>
 
@@ -420,7 +417,10 @@ function close() {
 }
 
 .block {
-  padding: 4px 0;
+  padding: 16px 0;
+}
+.block + .block {
+  border-top: 1px solid var(--color-border);
 }
 .block-head {
   display: flex;
@@ -502,6 +502,7 @@ function close() {
   margin: 0;
   line-height: 1.4;
 }
+.tip { font-size: 11px; opacity: 0.5; cursor: help; margin-left: 4px; font-weight: normal; }
 .hint.warn {
   opacity: 1;
   color: var(--p-orange-600, #c2410c);

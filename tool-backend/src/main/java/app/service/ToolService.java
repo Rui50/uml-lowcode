@@ -7,6 +7,7 @@ import model.ProjectSettings;
 import app.dto.dclass.*;
 import app.dto.dsequence.*;
 import generator.GeneratorUtils;
+import generator.RelationshipInfo;
 import generator.spring.SpringEndpointList;
 import model.*;
 import model.Class;
@@ -119,7 +120,13 @@ public class ToolService {
         // endpoints REST previstos para o target Spring (CRUD + relações)
         List<SpringEndpointList.Endpoint> endpoints = SpringEndpointList.getClassEndpoints(c, associations);
 
-        return new ClassDTO(c.getName(), parent, attrs, ops, c.isAbstract(), realizations, endpoints);
+        // relações próprias (declaradas nesta classe): filtra as herdadas (thisClass != c) da lista completa
+        List<RelationFieldDTO> relations = RelationshipInfo.collect(c, associations).stream()
+                .filter(rel -> rel.thisClass().equals(c.getName()))
+                .map(rel -> new RelationFieldDTO(rel.field(), rel.isCollection()))
+                .toList();
+
+        return new ClassDTO(c.getName(), parent, attrs, ops, c.isAbstract(), realizations, endpoints, relations);
     }
 
     private OperationDTO toOperationDTO(String className, Operation o) {

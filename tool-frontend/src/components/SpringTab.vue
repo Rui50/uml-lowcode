@@ -92,18 +92,15 @@ const fieldRows = computed(() => {
   const ancestorHides = (role: DTORole, attr: string) =>
     hierarchyList.slice(1).some(c => annotations.dtoHiddenByClass[c.name]?.[role].includes(attr))
 
-  return hierarchyList.flatMap((c, depth) =>
-    c.attributes
+  return hierarchyList.flatMap((c, depth) => {
+    const attrRows = c.attributes
       .filter(a => a.name !== idAttr)
       .map(a => {
         const k = `${c.name}.${a.name}`
         const hasInit = k in annotations.initByAttribute
         const hasDerive = k in annotations.deriveByAttribute
         return {
-          name: a.name,
-          inherited: depth > 0,
-          hasInit,
-          hasDerive,
+          name: a.name, inherited: depth > 0, isRelation: false, collection: false, hasInit, hasDerive,
           locked: {
             create: hasInit || hasDerive || ancestorHides('create', a.name),
             update: hasDerive || ancestorHides('update', a.name),
@@ -111,7 +108,17 @@ const fieldRows = computed(() => {
           },
         }
       })
-  )
+    const relRows = c.relations.map(rel => ({
+      name: rel.name, inherited: depth > 0, isRelation: true, collection: rel.collection,
+      hasInit: false, hasDerive: false,
+      locked: {
+        create: ancestorHides('create', rel.name),
+        update: rel.collection || ancestorHides('update', rel.name),  // coleção não está no UpdateDTO
+        response: ancestorHides('response', rel.name),
+      },
+    }))
+    return [...attrRows, ...relRows]
+  })
 })
 
 const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
@@ -157,24 +164,23 @@ watch(className, (name) => {
       <div class="job-toggle">
         <Checkbox v-model="annotations.generateControllerByClass[className!]" :binary="true" inputId="gen-controller" />
         <label for="gen-controller">Generate REST controller</label>
+        <span class="tip" v-tooltip.top="'Se desativado, esta classe não expõe endpoints REST. A entidade, repositório e serviço continuam a ser gerados.'">ⓘ</span>
       </div>
-      <p class="hint">
-        Se desativado, esta classe não expõe endpoints REST.
-        A entidade, repositório e serviço continuam a ser gerados.
-      </p>
     </div>
   </section>
 
   <!-- Endpoints REST previstos (CRUD + relações), derivados do modelo -->
   <section v-if="!isInterface && allEndpoints.length" class="block">
     <header class="block-head">
-      <h4>Available endpoints</h4>
+      <h4>Available endpoints
+        <span class="tip" v-tooltip.top="`'customize' molda só a RESPOSTA de cada endpoint CRUD (ResponseDTO próprio). O corpo de Create/Update define-se em 'Base DTO fields'.`">ⓘ</span>
+      </h4>
     </header>
     <ul class="endpoint-list">
       <li v-for="(e, i) in allEndpoints" :key="i" class="endpoint-item">
         <div class="ep-row">
           <span class="verb" :class="e.httpMethod.toLowerCase()">{{ e.httpMethod }}</span>
-          <code class="ep-path" :title="e.path">{{ e.path.replace('/api', '') }}</code>
+          <code class="ep-path" v-tooltip.top="e.path">{{ e.path.replace('/api', '') }}</code>
           <!-- só nos 4 endpoints CRUD com corpo: um clique liga o override e abre os campos -->
           <a v-if="endpointTypeOf(e)" class="ep-override-btn"
             :class="{ active: annotations.hasResponseOverride(className!, endpointTypeOf(e)!) }"
@@ -207,7 +213,9 @@ watch(className, (name) => {
   <!-- Campos por DTO: desmarcar esconde o atributo desse contrato (default = tudo visível) -->
   <section v-if="!isInterface && fieldRows.length" class="block">
     <header class="block-head">
-      <h4>Base DTO fields</h4>
+      <h4>Base DTO fields
+        <span class="tip" v-tooltip.top="'Unchecked = hidden from that DTO. Init fields are already forced out of Create; derived are response-only.'">ⓘ</span>
+      </h4>
     </header>
     <table class="dto-matrix">
       <thead>
@@ -215,9 +223,9 @@ watch(className, (name) => {
       </thead>
       <tbody>
         <tr v-for="row in fieldRows" :key="row.name">
-          <td class="attr-label">{{ row.name }}<span v-if="row.inherited" class="enum-hint">(herdado)</span><span v-if="row.hasInit" class="enum-hint">(init)</span><span v-else-if="row.hasDerive" class="enum-hint">(derive)</span></td>
+          <td class="attr-label">{{ row.name }}<span v-if="row.isRelation" class="enum-hint">({{ row.collection ? 'coleção' : 'ref' }})</span><span v-if="row.inherited" class="enum-hint">(herdado)</span><span v-if="row.hasInit" class="enum-hint">(init)</span><span v-else-if="row.hasDerive" class="enum-hint">(derive)</span></td>
           <td v-for="role in DTO_ROLES" :key="role">
-            <span v-if="row.locked[role]" class="lock" title="fixed by init/derive or hidden by parent">🔒</span>
+            <span v-if="row.locked[role]" class="lock" v-tooltip.top="'fixed by init/derive or hidden by parent'">🔒</span>
             <Checkbox v-else
               :binary="true"
               :modelValue="!annotations.isDTOHidden(className!, role, row.name)"
@@ -227,7 +235,6 @@ watch(className, (name) => {
         </tr>
       </tbody>
     </table>
-    <p class="hint">Unchecked = hidden from that DTO. Init fields are already forced out of Create; derived are response-only.</p>
   </section>
 
   <!-- Invariantes OCL como anotações Bean Validation por classe -->
@@ -239,11 +246,8 @@ watch(className, (name) => {
       <div class="job-toggle">
         <Checkbox v-model="annotations.beanValidationByClass[className!]" :binary="true" inputId="bean-validation" />
         <label for="bean-validation">Invariantes OCL como anotações</label>
+        <span class="tip" v-tooltip.top="'Invariantes simples (ex: points >= 0) viram anotações Bean Validation no campo; as restantes continuam no método validate().'">ⓘ</span>
       </div>
-      <p class="hint">
-        Invariantes simples (ex: points &gt;= 0) viram anotações Bean Validation no campo;
-        as restantes continuam no método validate().
-      </p>
     </div>
   </section>
 
@@ -275,7 +279,8 @@ watch(className, (name) => {
 <style scoped>
 /* --- estrutura partilhada com o painel de anotações (duplicada por causa do scoped;
    consolidar num stylesheet comum se os outros tabs também forem extraídos) --- */
-.block { padding: 4px 0; }
+.block { padding: 16px 0; }
+.block + .block { border-top: 1px solid var(--color-border); }
 .block-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 4px; }
 .block-head h4 { margin: 0; font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
 .entry {
@@ -287,6 +292,7 @@ watch(className, (name) => {
 .job-toggle { display: flex; align-items: center; gap: 6px; }
 .empty { padding: 1.5rem 1rem; opacity: 0.5; font-style: italic; font-size: 12px; text-align: center; }
 .hint { font-size: 11px; opacity: 0.65; margin: 0; line-height: 1.4; }
+.tip { font-size: 11px; opacity: 0.5; cursor: help; margin-left: 4px; font-weight: normal; }
 .hint.warn { opacity: 1; color: var(--p-orange-600, #c2410c); }
 
 /* --- específico do Spring --- */

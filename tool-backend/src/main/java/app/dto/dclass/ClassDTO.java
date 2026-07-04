@@ -20,4 +20,7 @@ public class ClassDTO {
     private List<String> realizations;
     // endpoints REST que esta classe vai expor no target Spring so diz crud e de relações
     private List<SpringEndpointList.Endpoint> endpoints;
+
+    // relações navegáveis DECLARADAS por esta classe (name = campo/role, collection = multivalorada)
+    private List<RelationFieldDTO> relations;
 }

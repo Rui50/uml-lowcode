@@ -16,6 +16,11 @@ export interface Endpoint {
   dtoType: 'CREATE' | 'UPDATE' | 'RESPONSE' | null
 }
 
+export interface RelationField {
+  name: string        // campo/role da relação (igual ao dos DTOs gerados)
+  collection: boolean // sem toggle no Update (não está no UpdateDTO)
+}
+
 export interface ClassDTO {
   name: string
   parent: string | null
@@ -24,6 +29,7 @@ export interface ClassDTO {
   isAbstract: boolean
   realizations: string[]
   endpoints: Endpoint[]
+  relations: RelationField[]
 }
 
 export interface InterfaceDTO {
@@ -47,8 +53,8 @@ export interface AssociationDTO {
   targetNavigable: boolean
 }
 
-export interface ParameterDTO { 
-  name: string; type: string 
+export interface ParameterDTO {
+  name: string; type: string
 }
 
 export interface OperationDTO {
@@ -108,10 +114,10 @@ export interface Invariant {
   expression: string
 }
 
-export interface Init { 
+export interface Init {
   id: string;
-  attribute: string; 
-  expression: string 
+  attribute: string;
+  expression: string
 }
 
 export interface Derived {
