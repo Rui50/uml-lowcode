@@ -137,8 +137,8 @@ public class SpringServiceGenerator {
         writer.println("import " + basePackage + ".dto." + cls.getName() + "UpdateDTO;");
         writer.println("import " + basePackage + ".dto." + cls.getName() + "ResponseDTO;");
         // DTOs de override de response (um por endpoint com override)
-        cls.getResponseOverrides().keySet().stream().sorted().forEach(slot ->
-                writer.println("import " + basePackage + ".dto." + SpringDTOGenerator.responseDTOName(cls, slot) + ";"));
+        cls.getResponseOverrides().keySet().stream().sorted().forEach(endpointType ->
+                writer.println("import " + basePackage + ".dto." + SpringDTOGenerator.responseDTOName(cls, endpointType) + ";"));
         for (model.Interface iface : cls.getRealizations()) {
             writer.println("import " + basePackage + ".models." + iface.getName() + ";");
         }
@@ -781,6 +781,9 @@ public class SpringServiceGenerator {
             boolean collection = rel.isCollection();
             // coleções só são ligadas no create; em update são geridas pelos endpoints add/remove dedicados
             if (collection && !includeCollections) continue;
+            // relação escondida do DTO que este metodo le (create->CreateDTO, update->UpdateDTO):
+            // o campo get<Field>Id()/Ids() não existe, logo não se liga aqui
+            if (includeCollections ? cls.isHiddenInCreate(rel.field()) : cls.isHiddenInUpdate(rel.field())) continue;
 
             // dados do MEU lado — preciso para o campo inverso (caso 3)
             String thisRole = rel.thisRole();
@@ -967,7 +970,7 @@ public class SpringServiceGenerator {
     }
 
     private void generateCustomOperation(PrintWriter writer, Class cls, Class owner, Operation op, Interaction interaction) {
-        String className = cls.getName();       // classe concreta onde o método é emitido (ex: StudentMember)
+        String className = cls.getName();       // classe concreta onde o metodo é emitido (ex: StudentMember)
         String ownerName = owner.getName();     // classe que declara a op / dona do diagrama (ex: Member)
         String operName = op.getName();
 

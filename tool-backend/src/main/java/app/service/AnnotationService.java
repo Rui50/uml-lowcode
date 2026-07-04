@@ -43,16 +43,16 @@ public class AnnotationService {
         applyResponseOverrides(classes, payload.getResponseOverrideByClass());
     }
 
-    // overrides do response por endpoint (slot -> {nome, escondidos}); não se herdam
+    // overrides do response por endpoint (endpointType -> {nome, escondidos}); não se herdam
     private void applyResponseOverrides(List<Class> classes, Map<String, Map<String, ResponseOverrideDTO>> map) {
         if (map == null) return;
-        map.forEach((className, bySlot) -> {
+        map.forEach((className, byEndpointType) -> {
             Class c = findClass(classes, className);
-            if (c == null || bySlot == null) return;
-            bySlot.forEach((slot, ovr) -> {
+            if (c == null || byEndpointType == null) return;
+            byEndpointType.forEach((endpointType, ovr) -> {
                 if (ovr == null) return;
                 String name = ovr.getName() != null ? ovr.getName().trim() : "";
-                c.getResponseOverrides().put(slot, new ResponseOverride(name, new HashSet<>(ovr.getHidden())));
+                c.getResponseOverrides().put(endpointType, new ResponseOverride(name, new HashSet<>(ovr.getHidden())));
             });
         });
     }

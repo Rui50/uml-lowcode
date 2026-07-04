@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useModelStore } from '@/stores/model'
-import { useAnnotationsStore, type ResponseSlot, type DTORole } from '@/stores/annotations'
+import { useAnnotationsStore, type EndpointType, type DTORole } from '@/stores/annotations'
 import { useSelectedClass } from '@/composables/useSelectedClass'
 import type { Endpoint } from '@/types'
 
@@ -38,8 +38,8 @@ const allEndpoints = computed<Endpoint[]>(() => {
   return list
 })
 
-// slot de override do response de um endpoint CRUD (null = endpoint sem response próprio)
-function responseSlot(e: Endpoint): ResponseSlot | null {
+// endpointType de override do response de um endpoint CRUD (null = endpoint sem response próprio)
+function endpointTypeOf(e: Endpoint): EndpointType | null {
   if (e.type !== 'CRUD') return null
   if (e.httpMethod === 'GET') {
     if (e.path.endsWith('{id}')) return 'Get'   // GET /x/{id}
@@ -50,24 +50,24 @@ function responseSlot(e: Endpoint): ResponseSlot | null {
   return null   // DELETE não devolve corpo
 }
 
-// slot expandido na lista de endpoints (config do override de response)
-const expandedSlot = ref<ResponseSlot | null>(null)
-watch(className, () => { expandedSlot.value = null })
+// endpointType expandido na lista de endpoints (config do override de response)
+const expandedEndpointType = ref<EndpointType | null>(null)
+watch(className, () => { expandedEndpointType.value = null })
 
 // nome auto do DTO de override; o responseType já é o fragmento (List/Get/Create/Update).
 // tem de bater com SpringDTOGenerator.responseDTOName
-function autoDtoName(slot: ResponseSlot) {
-  return `${className.value}${slot}ResponseDTO`
+function autoDtoName(endpointType: EndpointType) {
+  return `${className.value}${endpointType}ResponseDTO`
 }
 
 // um clique liga o override (se ainda não existe) e abre/fecha os campos
-function openOverride(slot: ResponseSlot) {
-  annotations.ensureResponseOverride(className.value!, slot)
-  expandedSlot.value = expandedSlot.value === slot ? null : slot
+function openOverride(endpointType: EndpointType) {
+  annotations.ensureResponseOverride(className.value!, endpointType)
+  expandedEndpointType.value = expandedEndpointType.value === endpointType ? null : endpointType
 }
-function removeOverride(slot: ResponseSlot) {
-  annotations.removeResponseOverride(className.value!, slot)
-  expandedSlot.value = null
+function removeOverride(endpointType: EndpointType) {
+  annotations.removeResponseOverride(className.value!, endpointType)
+  expandedEndpointType.value = null
 }
 
 // matriz "DTO fields": uma linha por atributo, células trancadas quando a semântica já
@@ -176,29 +176,29 @@ watch(className, (name) => {
           <span class="verb" :class="e.httpMethod.toLowerCase()">{{ e.httpMethod }}</span>
           <code class="ep-path" :title="e.path">{{ e.path.replace('/api', '') }}</code>
           <!-- só nos 4 endpoints CRUD com corpo: um clique liga o override e abre os campos -->
-          <a v-if="responseSlot(e)" class="ep-override-btn"
-            :class="{ active: annotations.hasResponseOverride(className!, responseSlot(e)!) }"
-            @click="openOverride(responseSlot(e)!)">
-            {{ annotations.hasResponseOverride(className!, responseSlot(e)!) ? '● custom' : 'customize' }}
+          <a v-if="endpointTypeOf(e)" class="ep-override-btn"
+            :class="{ active: annotations.hasResponseOverride(className!, endpointTypeOf(e)!) }"
+            @click="openOverride(endpointTypeOf(e)!)">
+            {{ annotations.hasResponseOverride(className!, endpointTypeOf(e)!) ? '● custom' : 'customize' }}
           </a>
         </div>
         <!-- painel do override: response próprio deste endpoint (independente do default) -->
-        <div v-if="responseSlot(e) && expandedSlot === responseSlot(e)" class="override-panel">
+        <div v-if="endpointTypeOf(e) && expandedEndpointType === endpointTypeOf(e)" class="override-panel">
           <label class="override-name">
             <span>name</span>
-            <InputText :modelValue="annotations.overrideName(className!, responseSlot(e)!)"
-              @update:modelValue="annotations.setOverrideName(className!, responseSlot(e)!, $event ?? '')"
-              :placeholder="autoDtoName(responseSlot(e)!)" size="small" />
+            <InputText :modelValue="annotations.overrideName(className!, endpointTypeOf(e)!)"
+              @update:modelValue="annotations.setOverrideName(className!, endpointTypeOf(e)!, $event ?? '')"
+              :placeholder="autoDtoName(endpointTypeOf(e)!)" size="small" />
           </label>
           <div class="override-fields">
             <label v-for="row in fieldRows" :key="row.name" class="override-field">
               <Checkbox :binary="true"
-                :modelValue="!annotations.isOverrideHidden(className!, responseSlot(e)!, row.name)"
-                @update:modelValue="annotations.toggleOverrideHidden(className!, responseSlot(e)!, row.name)" />
+                :modelValue="!annotations.isOverrideHidden(className!, endpointTypeOf(e)!, row.name)"
+                @update:modelValue="annotations.toggleOverrideHidden(className!, endpointTypeOf(e)!, row.name)" />
               <span>{{ row.name }}<span v-if="row.inherited" class="enum-hint"> (herdado)</span></span>
             </label>
           </div>
-          <a class="override-remove" @click="removeOverride(responseSlot(e)!)">remove</a>
+          <a class="override-remove" @click="removeOverride(endpointTypeOf(e)!)">remove</a>
         </div>
       </li>
     </ul>

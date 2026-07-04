@@ -82,8 +82,10 @@ public class SpringDTOGenerator {
         String filename = dtoDir + "/" + className + "CreateDTO.java";
 
         try (PrintWriter w = new PrintWriter(new File(filename))) {
-            // relações navegáveis (mesmos campos de id que o ResponseDTO)
-            List<RelationshipInfo> relationships = RelationshipInfo.collect(cls, associations);
+            // relações navegáveis (mesmos campos de id que o ResponseDTO), menos as escondidas do Create
+            List<RelationshipInfo> relationships = RelationshipInfo.collect(cls, associations).stream()
+                    .filter(rel -> !cls.isHiddenInCreate(rel.field()))
+                    .toList();
 
             w.println("package " + basePackage + ".dto;");
             w.println();
@@ -166,7 +168,9 @@ public class SpringDTOGenerator {
         String filename = dtoDir + "/" + className + "UpdateDTO.java";
 
         try (PrintWriter w = new PrintWriter(new File(filename))) {
-            List<RelationshipInfo> relationships = RelationshipInfo.collectSingle(cls, associations);
+            List<RelationshipInfo> relationships = RelationshipInfo.collectSingle(cls, associations).stream()
+                    .filter(rel -> !cls.isHiddenInUpdate(rel.field()))
+                    .toList();
 
             w.println("package " + basePackage + ".dto;");
             w.println();
@@ -222,32 +226,36 @@ public class SpringDTOGenerator {
      * (<Class><List|Detail|Create|Update>ResponseDTO) — mesma estrutura, atributos do override.
      */
     private void generateResponseDTO(Class cls, List<Association> associations, String dtoDir) throws IOException {
-        // esconde os hiddenInResponse (com herança)
-        Set<String> defaultHidden = new HashSet<>();
-        for (Attribute a : cls.getAllAttributes())
-            if (cls.isHiddenInResponse(a.getName())) {
-                defaultHidden.add(a.getName());
-            }
-        generateResponseDTOFile(cls, associations, dtoDir, cls.getName() + "ResponseDTO", defaultHidden);
+        // para o response DEFAULT primeiro, esconde os hiddenInResponse (com herança)
+        List<Attribute> defaultAttrs = cls.getAllAttributes().stream()
+                .filter(a -> !cls.isHiddenInResponse(a.getName())).toList();
+        List<RelationshipInfo> defaultRels = RelationshipInfo.collect(cls, associations).stream()
+                .filter(r -> !cls.isHiddenInResponse(r.field())).toList();
+        generateResponseDTOFile(cls, dtoDir, cls.getName() + "ResponseDTO", defaultAttrs, defaultRels);
 
-        // overrides por endpoint (seleção independente do default); nome via responseDTOName
-        // (custom se definido, senão auto), o mesmo que o controller/service usam
-        for (String responseType : cls.getResponseOverrides().keySet()) {
-            generateResponseDTOFile(cls, associations, dtoDir, responseDTOName(cls, responseType),
-                    cls.responseOverrideHidden(responseType));
+        // um DTO por override de endpoint (não herda). O nome via
+        // responseDTOName (custom se definido, senão auto) é o mesmo que o controller/service usam.
+        for (String endpointType : cls.getResponseOverrides().keySet()) {
+            Set<String> hidden = cls.responseOverrideHidden(endpointType);
+            List<Attribute> attrs = cls.getAllAttributes().stream()
+                    .filter(a -> !hidden.contains(a.getName())).toList();
+            List<RelationshipInfo> rels = RelationshipInfo.collect(cls, associations).stream()
+                    .filter(r -> !hidden.contains(r.field())).toList();
+
+            generateResponseDTOFile(cls, dtoDir, responseDTOName(cls, endpointType), attrs, rels);
         }
     }
 
-    // nome do response DTO que um endpoint usa: o do override do responseType, senão o default da classe.
-    // o responseType já vem capitalizado (List/Get/Create/Update) -> nome auto por concatenação direta
-    static String responseDTOName(Class cls, String responseType) {
-        if (!cls.hasResponseOverride(responseType)) return cls.getName() + "ResponseDTO";
-        String custom = cls.responseOverrideName(responseType);
-        return !custom.isBlank() ? custom : cls.getName() + responseType + "ResponseDTO";
+    // nome do response DTO que um endpoint usa: o do override do endpointType, senão o default da classe.
+    // o endpointType já vem capitalizado (List/Get/Create/Update) -> nome auto por concatenação direta
+    static String responseDTOName(Class cls, String endpointType) {
+        if (!cls.hasResponseOverride(endpointType)) return cls.getName() + "ResponseDTO";
+        String custom = cls.responseOverrideName(endpointType);
+        return !custom.isBlank() ? custom : cls.getName() + endpointType + "ResponseDTO";
     }
 
-    private void generateResponseDTOFile(Class cls, List<Association> associations, String dtoDir,
-                                         String dtoName, Set<String> hiddenNames) throws IOException {
+    private void generateResponseDTOFile(Class cls, String dtoDir, String dtoName,
+                                         List<Attribute> allAttrs, List<RelationshipInfo> relationships) throws IOException {
         String className = cls.getName();
         String filename = dtoDir + "/" + dtoName + ".java";
 
@@ -265,17 +273,14 @@ public class SpringDTOGenerator {
 
             // import enums and related entity classes for fromEntity
             Set<String> extraImports = new LinkedHashSet<>();
-            for (Attribute attr : cls.getAllAttributes()) {
+            for (Attribute attr : allAttrs) {
                 if (enumNames.contains(attr.getType())) {
                     extraImports.add(attr.getType());
                 }
             }
-            // entidades relacionadas para o fromEntity (.map(Other::getId)) — inclui
-            // associações herdadas de pai abstrato, materializadas nesta subclasse
-            for (Association assoc : associations) {
-                String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
-                if (declarer == null) continue;
-                extraImports.add(GeneratorUtils.otherClassOf(declarer, assoc));
+            // entidades relacionadas para o fromEntity (.map(Other::getId)) — só as visíveis neste DTO
+            for (RelationshipInfo rel : relationships) {
+                extraImports.add(rel.otherClass);
             }
             for (String imp : extraImports) {
                 if (!imp.equals(className)) {
@@ -306,17 +311,12 @@ public class SpringDTOGenerator {
                 w.println();
             }
 
-            // attributes (menos os escondidos deste DTO — mesma lista no fromEntity)
-            List<Attribute> allAttrs = cls.getAllAttributes().stream()
-                    .filter(a -> !hiddenNames.contains(a.getName()))
-                    .toList();
+            // attributes ity)
             for (Attribute attr : allAttrs) {
                 w.println("    private " + attr.getType() + " " + attr.getName() + ";");
             }
 
-            // relationship ID fields (mesma lista usada nos campos e no fromEntity)
-            List<RelationshipInfo> relationships = RelationshipInfo.collect(cls, associations);
-
+            // relationship ID fields
             if (!relationships.isEmpty()) {
                 w.println();
                 for (RelationshipInfo rel : relationships) {

@@ -63,9 +63,11 @@ public class Class {
 
     private List<Invariant> invariants;
 
-    // atributos (por nome) escondidos de cada DTO gerado desta classe. Guardado na CLASSE e não
-    // no Attribute: atributos herdados são instâncias PARTILHADAS com o pai — flags lá vazariam
-    // para irmãos. A consulta faz união com os antepassados (esconder herda-se; ver isHiddenIn*).
+    // Atributos escondidos de cada DTO (Create/Update/Response) desta classe.
+    // HERDA-SE: esconder é sobre o ATRIBUTO, e o atributo é herdado -> isHiddenIn* une pela cadeia
+    // de pais (se o pai esconde 'email', a subclasse também, senão reexpunha-o).
+    // Na CLASSE e não no Attribute: instâncias de atributos herdados são partilhadas com o pai,
+    // logo uma flag lá vazaria para os irmãos.
     private Set<String> hiddenInCreate = new HashSet<>();
     private Set<String> hiddenInUpdate = new HashSet<>();
     private Set<String> hiddenInResponse = new HashSet<>();
@@ -74,25 +76,27 @@ public class Class {
     public Set<String> getHiddenInUpdate() { return hiddenInUpdate; }
     public Set<String> getHiddenInResponse() { return hiddenInResponse; }
 
-    // override do response POR ENDPOINT (slot: "list" | "get" | "create" | "update").
-    // Entrada presente = o endpoint tem ResponseDTO próprio com estes atributos escondidos
-    // (seleção independente do default). Ao contrário dos hiddenIn*, NÃO se herda: um override
-    // é uma verdade do ENDPOINT (o filho tem controller/URLs próprios), não do atributo.
+    // Override do response POR ENDPOINT (endpointType: List | Get | Create | Update): esse endpoint
+    // devolve um ResponseDTO próprio, com campos escondidos independentes do default da classe.
+    // NÃO se herda (ao contrário dos hiddenIn*): é sobre um ENDPOINT, não um atributo. Cada classe
+    // tem o seu controller/URLs (List do Aluno != List do AlunoTE) -> configura-se por classe.
     private Map<String, ResponseOverride> responseOverrides = new HashMap<>();
 
+    // mapa keyed pelo endpointType (List|Get|Create|Update); itera-se por entrySet/keySet
     public Map<String, ResponseOverride> getResponseOverrides() { return responseOverrides; }
 
-    public boolean hasResponseOverride(String slot) { return responseOverrides.containsKey(slot); }
+    public boolean hasResponseOverride(String endpointType) { return responseOverrides.containsKey(endpointType); }
 
-    public Set<String> responseOverrideHidden(String slot) {
-        ResponseOverride o = responseOverrides.get(slot);
+    // não herda (endpoint-level, ver responseOverrides); só o mapa desta classe
+    public Set<String> responseOverrideHidden(String endpointType) {
+        ResponseOverride o = responseOverrides.get(endpointType);
         if (o == null) return Set.of();   // sem override -> nada escondido
         return o.getHidden();
     }
 
-    // nome custom do DTO do override (vazio = usar o auto <Class><Slot>ResponseDTO)
-    public String responseOverrideName(String slot) {
-        ResponseOverride o = responseOverrides.get(slot);
+    // nome custom do DTO do override (vazio = usar o auto <Class><EndpointType>ResponseDTO)
+    public String responseOverrideName(String endpointType) {
+        ResponseOverride o = responseOverrides.get(endpointType);
         if (o == null) return "";
         return o.getName();
     }

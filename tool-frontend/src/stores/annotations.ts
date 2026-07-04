@@ -32,15 +32,15 @@ export interface DTOHidden {
 }
 
 // endpoints cujo response pode ter override (os 4 CRUD que devolvem a entidade).
-// capitalizados de propósito: o valor É o fragmento do nome <Class><ResponseSlot>ResponseDTO
-export type ResponseSlot = 'List' | 'Get' | 'Create' | 'Update'
+// capitalizados de propósito: o valor É o fragmento do nome <Class><EndpointType>ResponseDTO
+export type EndpointType = 'List' | 'Get' | 'Create' | 'Update'
 
 //   {
-//     Aluno: { list: { name: 'AlunoSummary', hidden: ['email'] } },
-//     Turma: { create: { name: '', hidden: [] } },
+//     Aluno: { List: { name: 'AlunoSummary', hidden: ['email'] } },
+//     Turma: { Create: { name: '', hidden: [] } },
 //   }
-type OverridesBySlot = Partial<Record<ResponseSlot, ResponseDTOoverride>>  // slot -> override (nem todos existem)
-type ResponseOverridesByClass = Record<string, OverridesBySlot>           // className -> os seus overrides
+type OverridesByEndpointType = Partial<Record<EndpointType, ResponseDTOoverride>>  // endpointType -> override (nem todos existem)
+type ResponseOverridesByClass = Record<string, OverridesByEndpointType>           // className -> os seus overrides
 
 export const useAnnotationsStore = defineStore('annotations', () => {
   // key: ClassName -> invariants
@@ -78,9 +78,9 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   // key: ClassName -> atributos escondidos por DTO (ausente = DTOs completos, output atual)
   const dtoHiddenByClass = ref<Record<string, DTOHidden>>({})
 
-  // key: ClassName -> slot -> override do response DESSE endpoint (lazy: ausente = usa o
+  // key: ClassName -> endpointType -> override do response DESSE endpoint (lazy: ausente = usa o
   // ResponseDTO da classe). A seleção é independente do default (não é subtração em camadas).
-  // override do response por endpoint. Estrutura: className -> slot -> override.
+  // override do response por endpoint. Estrutura: className -> endpointType -> override.
   // (ausente em qualquer nível = esse endpoint usa o ResponseDTO normal da classe)
   const responseOverrideByClass = ref<ResponseOverridesByClass>({})
 
@@ -183,38 +183,38 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     }
   }
 
-  function hasResponseOverride(className: string, slot: ResponseSlot): boolean {
-    return responseOverrideByClass.value[className]?.[slot] !== undefined
+  function hasResponseOverride(className: string, endpointType: EndpointType): boolean {
+    return responseOverrideByClass.value[className]?.[endpointType] !== undefined
   }
 
-  // liga o override do slot (se ainda não existe); começa com tudo visível e nome auto
-  function ensureResponseOverride(className: string, slot: ResponseSlot) {
+  // liga o override do endpointType (se ainda não existe); começa com tudo visível e nome auto
+  function ensureResponseOverride(className: string, endpointType: EndpointType) {
     const entry = (responseOverrideByClass.value[className] ??= {})
-    if (entry[slot] === undefined) entry[slot] = { name: '', hidden: [] }
+    if (entry[endpointType] === undefined) entry[endpointType] = { name: '', hidden: [] }
   }
 
-  function removeResponseOverride(className: string, slot: ResponseSlot) {
+  function removeResponseOverride(className: string, endpointType: EndpointType) {
     const entry = responseOverrideByClass.value[className]
     if (!entry) return
-    delete entry[slot]
+    delete entry[endpointType]
     if (Object.keys(entry).length === 0) delete responseOverrideByClass.value[className]
   }
 
-  function overrideName(className: string, slot: ResponseSlot): string {
-    return responseOverrideByClass.value[className]?.[slot]?.name ?? ''
+  function overrideName(className: string, endpointType: EndpointType): string {
+    return responseOverrideByClass.value[className]?.[endpointType]?.name ?? ''
   }
 
-  function setOverrideName(className: string, slot: ResponseSlot, name: string) {
-    const ovr = responseOverrideByClass.value[className]?.[slot]
+  function setOverrideName(className: string, endpointType: EndpointType, name: string) {
+    const ovr = responseOverrideByClass.value[className]?.[endpointType]
     if (ovr) ovr.name = name
   }
 
-  function isOverrideHidden(className: string, slot: ResponseSlot, attr: string): boolean {
-    return responseOverrideByClass.value[className]?.[slot]?.hidden.includes(attr) ?? false
+  function isOverrideHidden(className: string, endpointType: EndpointType, attr: string): boolean {
+    return responseOverrideByClass.value[className]?.[endpointType]?.hidden.includes(attr) ?? false
   }
 
-  function toggleOverrideHidden(className: string, slot: ResponseSlot, attr: string) {
-    const list = responseOverrideByClass.value[className]?.[slot]?.hidden
+  function toggleOverrideHidden(className: string, endpointType: EndpointType, attr: string) {
+    const list = responseOverrideByClass.value[className]?.[endpointType]?.hidden
     if (!list) return
     const i = list.indexOf(attr)
     if (i === -1) list.push(attr)

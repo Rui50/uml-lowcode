@@ -361,8 +361,8 @@ public class SpringControllerGenerator {
         writer.println("import " + basePackage + ".dto." + className + "UpdateDTO;");
         writer.println("import " + basePackage + ".dto." + className + "ResponseDTO;");
         // DTOs de override de response (um por endpoint com override)
-        cls.getResponseOverrides().keySet().stream().sorted().forEach(slot ->
-                writer.println("import " + basePackage + ".dto." + SpringDTOGenerator.responseDTOName(cls, slot) + ";"));
+        cls.getResponseOverrides().keySet().stream().sorted().forEach(endpointType ->
+                writer.println("import " + basePackage + ".dto." + SpringDTOGenerator.responseDTOName(cls, endpointType) + ";"));
         writer.println("import lombok.RequiredArgsConstructor;");
         writer.println("import org.springframework.http.HttpStatus;");
         writer.println("import org.springframework.http.ResponseEntity;");

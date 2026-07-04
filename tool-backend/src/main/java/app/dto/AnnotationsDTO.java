@@ -47,7 +47,7 @@ public class AnnotationsDTO {
     // key className -> atributos escondidos por DTO (ausente = DTOs completos)
     private Map<String, HiddenFieldsDTO> dtoHiddenByClass = new HashMap<>();
 
-    // key className -> slot ("list"|"get"|"create"|"update") -> override do response DESSE
+    // key className -> endpointType ("list"|"get"|"create"|"update") -> override do response DESSE
     // endpoint (nome + escondidos; entrada presente = override ativo; ausente = ResponseDTO da classe)
     private Map<String, Map<String, ResponseOverrideDTO>> responseOverrideByClass = new HashMap<>();
 }

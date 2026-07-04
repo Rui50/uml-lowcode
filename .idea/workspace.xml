@@ -11,6 +11,12 @@
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringFrontendGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringFrontendGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/Class.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Class.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/ResponseOverride.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/ResponseOverride.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AnnotationsDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/AnnotationsDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/AnnotationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/AnnotationService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/SpringTab.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/SpringTab.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -138,17 +144,6 @@
         </entry>
       </map>
     </option>
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/generator/src/main/java/ocl/OCLtoSpringAnnot.java</url>
-          <line>34</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
