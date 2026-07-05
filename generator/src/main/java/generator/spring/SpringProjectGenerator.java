@@ -440,7 +440,6 @@ public class SpringProjectGenerator {
             w.println("import lombok.Getter;");
             w.println("import lombok.Setter;");
             w.println("import lombok.NoArgsConstructor;");
-            w.println("import lombok.experimental.SuperBuilder;");
             w.println("import org.springframework.data.annotation.CreatedDate;");
             w.println("import org.springframework.data.annotation.LastModifiedDate;");
             w.println("import org.springframework.data.jpa.domain.support.AuditingEntityListener;");
@@ -450,7 +449,6 @@ public class SpringProjectGenerator {
             w.println("@Getter");
             w.println("@Setter");
             w.println("@NoArgsConstructor");
-            w.println("@SuperBuilder");
             w.println("@MappedSuperclass");
             w.println("@EntityListeners(AuditingEntityListener.class)");
             w.println("public abstract class Auditable {");

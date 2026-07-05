@@ -147,12 +147,6 @@ public class SpringEntityGenerator {
                 writer.println("import java.time.*;");
             }
             // com timestamps a raiz extends Auditable (@SuperBuilder), logo todas usam SuperBuilder
-            boolean useSuperBuilder = cls.getParentClass() != null
-                    || GeneratorUtils.isParent(cls, allClasses)
-                    || timestamps;
-            if (useSuperBuilder) {
-                writer.println("import lombok.experimental.SuperBuilder;");
-            }
             writer.println();
 
             // anotações base da classe
@@ -209,22 +203,6 @@ public class SpringEntityGenerator {
         writer.println("@Getter");
         writer.println("@Setter");
         writer.println("@NoArgsConstructor");
-        writer.println("@AllArgsConstructor(access = AccessLevel.PRIVATE)");
-        // need superbuilder se for de herança (ou se extendem Auditable por causa dos timestamps)
-        if (cls.getParentClass() != null || GeneratorUtils.isParent(cls, allClasses) || timestamps) {
-            writer.println("@SuperBuilder");
-        } else {
-            /***
-
-             * ver isto depois
-             *   @Builder.Default
-             *   private List<Aluno> alunos = new ArrayList<>();
-             *
-             *   Without @Builder.Default, Lombok ignores new ArrayList<>() during build and that field can end up null.
-             */
-
-            writer.println("@Builder");
-        }
 
         // @Entity
         writer.println("@Entity");
@@ -304,7 +282,6 @@ public class SpringEntityGenerator {
             }
             if (atr.hasInit()) {
                 String javaInit = atr.getJavaInitExpression();
-                writer.println("    @Builder.Default");
                 writer.println("    private " + fieldType + " " + atr.getName() + " = " + javaInit + ";");
             } else {
                 writer.println("    private " + fieldType + " " + atr.getName() + ";");
@@ -447,13 +424,11 @@ public class SpringEntityGenerator {
         }
 
         if (assoc.hasQualifier()) {
-            writer.println("    @Builder.Default");
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
                     fieldName + " = new HashMap<>();");
         } else {
-            writer.println("    @Builder.Default");
             writer.println("    private List<" + otherClass + "> " + fieldName +
                     " = new ArrayList<>();");
         }
@@ -488,13 +463,11 @@ public class SpringEntityGenerator {
         }
 
         if (assoc.hasQualifier()) {
-            writer.println("    @Builder.Default");
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
                     fieldName + " = new HashMap<>();");
         } else {
-            writer.println("    @Builder.Default");
             writer.println("    private List<" + otherClass + "> " + fieldName +
                     " = new ArrayList<>();");
         }
@@ -545,7 +518,6 @@ public class SpringEntityGenerator {
                 writer.println("    @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\")");
             }
 
-            writer.println("    @Builder.Default");
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
