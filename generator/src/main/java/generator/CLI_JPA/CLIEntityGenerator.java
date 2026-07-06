@@ -509,7 +509,7 @@ public class CLIEntityGenerator {
             } else {
                 writer.println("    @OneToMany");
             }
-            writer.println("    @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\")");
+            writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
         }
 
         if (assoc.hasQualifier()) {
@@ -533,7 +533,7 @@ public class CLIEntityGenerator {
                                    Association assoc) {
 
         writer.println("    @ManyToOne");
-        writer.println("    @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
+        writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
 
         if (assoc.hasQualifier()) {
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
@@ -565,7 +565,7 @@ public class CLIEntityGenerator {
                         GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
             } else {
                 writer.println("    @OneToMany");
-                writer.println("    @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\")");
+                writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
             }
 
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
@@ -580,14 +580,14 @@ public class CLIEntityGenerator {
 
                 if (isOwner) {
                     writer.println("    @OneToOne");
-                    writer.println("    @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
+                    writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
                 } else {
                     writer.println("    @OneToOne(mappedBy = \"" +
                             GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
                 }
             } else {
                 writer.println("    @OneToOne");
-                writer.println("    @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
+                writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
             }
 
             writer.println("    private " + otherClass + " " + fieldName + ";");
