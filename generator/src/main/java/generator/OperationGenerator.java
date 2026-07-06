@@ -86,7 +86,7 @@ public class OperationGenerator {
 
         for (Precondition pre : operation.getPreconditions()){
             writer.println("        if (!(" + pre.getJavaExpression() + ")) {");
-            writer.println("            throw new IllegalStateException(\"" + pre.getMessage() + "\");");
+            writer.println("            throw new IllegalStateException(\"" + GeneratorUtils.fixErrorMessage(pre.getMessage()) + "\");");
             writer.println("        }");
         }
 
@@ -131,7 +131,7 @@ public class OperationGenerator {
 
         for (Postcondition post : operation.getPostconditions()) {
             writer.println("        if (!(" + post.getJavaExpression() + ")) {");
-            writer.println("            throw new IllegalStateException(\"" + post.getMessage() + "\");");
+            writer.println("            throw new IllegalStateException(\"" + GeneratorUtils.fixErrorMessage(post.getMessage()) + "\");");
             writer.println("        }");
         }
 

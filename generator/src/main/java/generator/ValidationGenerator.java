@@ -92,7 +92,7 @@ public class ValidationGenerator {
         writer.println("        // Invariant: " + (fromInterface != null ? "(from " + fromInterface + ") "
                 : "") + inv.getName());
         writer.println("        if (!(" + javaExpression + ")) {");
-        writer.println("            errors.add(\"" + errorMessage + "\");");
+        writer.println("            errors.add(\"" + GeneratorUtils.fixErrorMessage(errorMessage) + "\");");
         writer.println("        }");
         writer.println();
     }

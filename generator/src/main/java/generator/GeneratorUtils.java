@@ -415,6 +415,19 @@ public class GeneratorUtils {
         directory.delete();
     }
 
+    /**
+     * fix mensagens de erro que é texto livre do utilizador
+     * aspas, \ e \n partiam a compilação.
+     * ordem - o backslash primeiro, senão re-escapava os escapes seguintes.
+     */
+    public static String fixErrorMessage(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
+    }
+
     // nome da variável de repositório de uma classe (ex: Aluno -> alunoRepository)
     public static String repoVariable(String className) {
         return lowercaseFirst(className) + "Repository";

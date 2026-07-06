@@ -2,6 +2,7 @@ import ocl.OCLToJavaVisitor;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Testes de tradução OCL -> Java (OCLToJavaVisitor.toJava).
@@ -86,6 +87,19 @@ public class OCLToJavaTest {
         check("self.preco->floor() >= 1", "(long) Math.floor(this.preco) >= 1");
         check("self.itens->count(self.alvo) = 1",
                 "java.util.Objects.equals(java.util.Collections.frequency(this.itens, this.alvo), 1)");
+    }
+
+    @Test
+    void unsupportedOpsThrow() {
+        // operações aceites pela gramática mas fora do subset suportado devem falhar
+        // com IllegalArgumentException (apanhada pelo AnnotationService), nunca gerar Java inválido
+        assertThrows(IllegalArgumentException.class,
+                () -> OCLToJavaVisitor.toJava("self.turmas->union(self.antigas)->size() > 0"));
+        assertThrows(IllegalArgumentException.class,
+                () -> OCLToJavaVisitor.toJava("self.alunos->sortedBy(a | a.nome)"));
+        // sintaxe inválida também falha (error listener)
+        assertThrows(IllegalArgumentException.class,
+                () -> OCLToJavaVisitor.toJava("self.preco >"));
     }
 
     @Test

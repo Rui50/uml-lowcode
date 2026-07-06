@@ -1067,7 +1067,7 @@ public class SpringServiceGenerator {
             for (Precondition pre : op.getPreconditions()) {
                 String javaExpr = pre.getJavaExpression(selfVar);
                 writer.println("        if (!(" + javaExpr + ")) {");
-                writer.println("            throw new IllegalStateException(\"" + pre.getMessage() + "\");");
+                writer.println("            throw new IllegalStateException(\"" + GeneratorUtils.fixErrorMessage(pre.getMessage()) + "\");");
                 writer.println("        }");
             }
 
@@ -1110,7 +1110,7 @@ public class SpringServiceGenerator {
         for (Postcondition post : op.getPostconditions()) {
             String javaExpr = post.getJavaExpression(selfVar);
             writer.println("        if (!(" + javaExpr + ")) {");
-            writer.println("            throw new IllegalStateException(\"" + post.getMessage() + "\");");
+            writer.println("            throw new IllegalStateException(\"" + GeneratorUtils.fixErrorMessage(post.getMessage()) + "\");");
             writer.println("        }");
         }
 

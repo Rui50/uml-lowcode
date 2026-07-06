@@ -12,8 +12,8 @@ import org.antlr.v4.runtime.CommonTokenStream;
  * assume sempre sempre listas ou sets na tradução, se for maps o ValidationGenerator da fix a isso
  *
  * OCL NÃO SUPORTADO
- * Estas caem no fallback "return base + text" (fim de visitPostfixTranslate) e geram
- * Java que NÃO compila, sem mensagem de erro. Melhoria futura: falhar de forma explícita.
+ * Estas lançam IllegalArgumentException ("Operação OCL não suportada") no fim de
+ * visitPostfixTranslate — o erro chega à frontend via AnnotationService.
  *  - tipos: oclIsKindOf, oclIsTypeOf, oclAsType, oclType, oclAsSet,
  *           oclIsUndefined, oclIsInvalid, oclIsNew
  *  - coleções: union, intersection, symmetricDifference, excludesAll, prepend,
@@ -28,6 +28,10 @@ import org.antlr.v4.runtime.CommonTokenStream;
  *  - sum() assume coleção de Integer (não double/float)
  *  - '=' numérico entre wrappers diferentes dá SEMPRE false (Objects.equals: Long vs Integer,
  *    Double vs Integer...). Afeta floor()/round() e ex. "double = int". Usar >=, <=, >, <.
+ *  - misturar operadores lógicos diferentes (ex: 'a and b xor c') pode agrupar mal —
+ *    ver TODO(precedência) em visitLogicalExpression
+ *  - '/' traduz para '/' do Java: divisão inteira se ambos os operandos forem int
+ *    (OCL define '/' como divisão real: 21/2 = 10.5)
  */
 public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
@@ -236,6 +240,10 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
     // regra: logicalExpression : equalityExpression (('and' | 'or' | 'implies' ...) equalityExpression)*
     // : self.x > 0 and self.y > 0  ->  this.x > 0 && this.y > 0
+    //
+    // TODO: misturar operadores diferentes (ex: 'a and b xor c') pode agrupar mal,
+    // porque a tradução não mete parênteses e a precedência do Java difere da do OCL.
+    // Fix: juntar por precedência OCL (and > or > xor > implies) com parênteses.
     @Override
     public String visitLogicalExpression(OCLParser.LogicalExpressionContext ctx) {
         // se so tem uma equalityExpression, visita  diretamente
@@ -492,8 +500,8 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         if (text.startsWith("->equalsIgnoreCase("))
             return base + ".equalsIgnoreCase(" + visit(ctx.expression(0)) + ")";
 
-        // .propriedade -> .propriedade
-        if (ctx.getChild(0).getText().equals(".") && ctx.ID().size() > 0) {
+        // .propriedade -> .propriedade (apenas '.' + ID; '.metodo(args)' cai no throw final)
+        if (ctx.getChild(0).getText().equals(".") && ctx.getChildCount() == 2 && ctx.ID().size() > 0) {
             return base + "." + ctx.ID(0).getText();
         }
 
@@ -560,8 +568,9 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
                     ")).collect(java.util.stream.Collectors.toList())";
         }
 
-        // fallback
-        return base + text;
+        // operação aceite pela gramática mas não suportada na tradução — falhar já,
+        // em vez de gerar Java inválido que só rebenta ao compilar o projeto gerado
+        throw new IllegalArgumentException("Operação OCL não suportada: " + text);
     }
 
     // Regra: conditionalExpression : 'if' expression 'then' expression 'else' expression 'endif'
@@ -583,7 +592,8 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
         if (first.equals("Map{")) {
             if (ctx.expressionList() == null) return "new HashMap<>()";
-            throw new UnsupportedOperationException("Map literals with entries not supported");
+            // IllegalArgumentException para ser apanhada pelo pipeline de erros (AnnotationService)
+            throw new IllegalArgumentException("Literais Map com entradas não são suportados");
         }
 
         if (first.equals("Set{")) javaCollection = "HashSet";
