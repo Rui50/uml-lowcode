@@ -404,7 +404,8 @@ public class SpringFrontendGenerator {
             w.println("let editId = null;   // null = a criar (POST); senão o id a editar (PATCH)");
             w.println();
             w.println("async function load() {");
-            w.println("  const items = await (await fetch(API)).json();");
+            w.println("  const data = await (await fetch(API)).json();");
+            w.println("  const items = data.content ?? data;  // Page -> content; plain array -> itself");
             w.println("  const tbody = document.querySelector('#list tbody');");
             w.println("  tbody.innerHTML = '';");
             w.println("  for (const item of items) {");
@@ -448,7 +449,8 @@ public class SpringFrontendGenerator {
                 w.println("}");
                 w.println();
                 w.println("async function fillSelect(selector, url, idField) {");
-                w.println("  const items = await (await fetch(url)).json();");
+                w.println("  const data = await (await fetch(url)).json();");
+                w.println("  const items = data.content ?? data;");
                 w.println("  const select = document.querySelector(selector);");
                 w.println("  select.innerHTML = '<option value=\"\">-- none --</option>';");
                 w.println("  for (const item of items) {");
