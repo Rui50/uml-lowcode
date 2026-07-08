@@ -71,10 +71,12 @@ public class Class {
     private Set<String> hiddenInCreate = new HashSet<>();
     private Set<String> hiddenInUpdate = new HashSet<>();
     private Set<String> hiddenInResponse = new HashSet<>();
+    private Map<String, String> collectionOrder = new HashMap<>();   // field da coleção -> "attr ASC|DESC" (@OrderBy)
 
     public Set<String> getHiddenInCreate() { return hiddenInCreate; }
     public Set<String> getHiddenInUpdate() { return hiddenInUpdate; }
     public Set<String> getHiddenInResponse() { return hiddenInResponse; }
+    public Map<String, String> getCollectionOrder() { return collectionOrder; }
 
     // Override do response POR ENDPOINT (endpointType: List | Get | Create | Update): esse endpoint
     // devolve um ResponseDTO próprio, com campos escondidos independentes do default da classe.

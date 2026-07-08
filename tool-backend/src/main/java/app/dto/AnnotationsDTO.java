@@ -53,4 +53,7 @@ public class AnnotationsDTO {
 
     // key "ClassName.attrName" -> config de coluna JPA (persistence tab sem nada = @Column só com name-default)
     private Map<String, ColumnConfigDTO> columnByAttribute = new HashMap<>();
+
+    // key "ClassName.relationName" -> @OrderBy da coleção (ausente = sem ordenação)
+    private Map<String, OrderByDTO> orderByCollection = new HashMap<>();
 }

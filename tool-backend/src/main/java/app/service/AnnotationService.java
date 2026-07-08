@@ -2,6 +2,7 @@ package app.service;
 
 import app.dto.AnnotationsDTO;
 import app.dto.ColumnConfigDTO;
+import app.dto.OrderByDTO;
 import app.dto.CustomIdDTO;
 import app.dto.EndpointConfigDTO;
 import app.dto.HiddenFieldsDTO;
@@ -31,6 +32,7 @@ public class AnnotationService {
         applyInits(classes, associations, payload.getInitByAttribute());
         applyDerives(classes, associations, payload.getDeriveByAttribute());
         applyColumnConfig(classes, payload.getColumnByAttribute());
+        applyOrdering(classes, payload.getOrderByCollection());
 
         applyOperationLinks(classes, model.getAllInteractions(), payload.getOperationToSeqDiagram());
         applyPreconditions(classes, associations, payload.getPreconditionsByOperation());
@@ -225,6 +227,19 @@ public class AnnotationService {
         });
     }
 
+    // @OrderBy por coleção (persistence tab): key "Class.relation" -> {attribute, direction}
+    private void applyOrdering(List<Class> classes, Map<String, OrderByDTO> map) {
+        if (map == null) return;
+        map.forEach((key, cfg) -> {
+            String[] parts = key.split("\\.", 2);
+            if (parts.length != 2 || cfg == null || cfg.getAttribute() == null || cfg.getAttribute().isBlank()) return;
+            Class c = findClass(classes, parts[0]);
+            if (c == null) return;
+            String dir = "DESC".equals(cfg.getDirection()) ? "DESC" : "ASC";
+            c.getCollectionOrder().put(parts[1], cfg.getAttribute() + " " + dir);
+        });
+    }
+
     private Class findClass(List<Class> classes, String name) {
         return classes.stream().filter(c -> c.getName().equals(name)).findFirst().orElse(null);
     }
@@ -334,6 +349,7 @@ public class AnnotationService {
             c.getHiddenInUpdate().clear();
             c.getHiddenInResponse().clear();
             c.getResponseOverrides().clear();
+            c.getCollectionOrder().clear();
         }
         for (Interface iface : interfaces) {
             iface.getInvariants().clear();

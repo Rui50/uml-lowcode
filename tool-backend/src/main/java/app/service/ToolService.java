@@ -123,7 +123,7 @@ public class ToolService {
         // relações próprias (declaradas nesta classe): filtra as herdadas (thisClass != c) da lista completa
         List<RelationFieldDTO> relations = RelationshipInfo.collect(c, associations).stream()
                 .filter(rel -> rel.thisClass().equals(c.getName()))
-                .map(rel -> new RelationFieldDTO(rel.field(), rel.isCollection()))
+                .map(rel -> new RelationFieldDTO(rel.field(), rel.isCollection(), rel.otherClass))
                 .toList();
 
         return new ClassDTO(c.getName(), parent, attrs, ops, c.isAbstract(), realizations, endpoints, relations);

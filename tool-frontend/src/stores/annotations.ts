@@ -60,6 +60,9 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   // key: "ClassName.attrName" -> config de coluna JPA (ausente = @Column só com name-default)
   const columnByAttribute = ref<Record<string, ColumnConfig>>({})
 
+  // key "ClassName.relationName" -> ordenação da coleção (ausente = sem @OrderBy, ordem indefinida)
+  const orderByCollection = ref<Record<string, { attribute: string; direction: 'ASC' | 'DESC' }>>({})
+
   const operationToSeqDiagram = ref<Record<string, string>>({})
 
   const preconditionsByOperation = ref<Record<string, OclAnnotation[]>>({})
@@ -133,6 +136,25 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   function deleteColumnConfig(key: string) {
     delete columnByAttribute.value[key]
+  }
+
+  function orderAttribute(key: string): string {
+    return orderByCollection.value[key]?.attribute ?? ''
+  }
+
+  function orderDirection(key: string): 'ASC' | 'DESC' {
+    return orderByCollection.value[key]?.direction ?? 'ASC'
+  }
+
+  function setOrderAttribute(key: string, attr: string) {
+    if (!attr) { delete orderByCollection.value[key]; return }   // — none — = sem @OrderBy
+    const cur = orderByCollection.value[key]
+    orderByCollection.value[key] = { attribute: attr, direction: cur?.direction ?? 'ASC' }
+  }
+
+  function toggleOrderDirection(key: string) {
+    const cur = orderByCollection.value[key]
+    if (cur) cur.direction = cur.direction === 'ASC' ? 'DESC' : 'ASC'
   }
 
   function linkOperationToSeqDiagram(operationKey: string, diagramId: string) {
@@ -259,6 +281,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       dtoHiddenByClass.value = {}
       responseOverrideByClass.value = {}
       columnByAttribute.value = {}
+      orderByCollection.value = {}
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -278,6 +301,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     dtoHiddenByClass.value = data.dtoHiddenByClass || {}
     responseOverrideByClass.value = data.responseOverrideByClass || {}
     columnByAttribute.value = data.columnByAttribute || {}
+    orderByCollection.value = data.orderByCollection || {}
   }
 
   function saveForModel(name: string | null) {
@@ -299,6 +323,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       dtoHiddenByClass: dtoHiddenByClass.value,
       responseOverrideByClass: responseOverrideByClass.value,
       columnByAttribute: columnByAttribute.value,
+      orderByCollection: orderByCollection.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
@@ -314,7 +339,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // save current bucket on any annotation change
   watch(
-    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass, dtoHiddenByClass, responseOverrideByClass, columnByAttribute],
+    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass, dtoHiddenByClass, responseOverrideByClass, columnByAttribute, orderByCollection],
     () => saveForModel(modelStore.fileName),
     { deep: true }
   )
@@ -335,6 +360,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     dtoHiddenByClass.value = {}
     responseOverrideByClass.value = {}
     columnByAttribute.value = {}
+    orderByCollection.value = {}
   }
 
   return {
@@ -354,6 +380,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     dtoHiddenByClass,
     responseOverrideByClass,
     columnByAttribute,
+    orderByCollection,
 
     // actions
     addInvariant,
@@ -364,6 +391,10 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     deleteDerive,
     addColumnConfig,
     deleteColumnConfig,
+    orderAttribute,
+    orderDirection,
+    setOrderAttribute,
+    toggleOrderDirection,
     linkOperationToSeqDiagram,
     unlinkOperationFromSeqDiagram,
     addPrecondition,

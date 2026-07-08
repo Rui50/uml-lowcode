@@ -65,6 +65,7 @@ export async function generateCode(target: string, settings?: ProjectSettings): 
     dtoHiddenByClass: annotations.dtoHiddenByClass,
     responseOverrideByClass: annotations.responseOverrideByClass,
     columnByAttribute: trimEmptyColumnStuff(annotations.columnByAttribute),
+    orderByCollection: annotations.orderByCollection,
   }
   const body = JSON.stringify({ annotations: annotationsPayload, settings: settings ?? null })
   const res = await fetch(`/api/model/generate?target=${encodeURIComponent(target)}`, {

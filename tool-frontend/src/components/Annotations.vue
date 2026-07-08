@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useModelStore } from '@/stores/model'
 import { useAnnotationsStore } from '@/stores/annotations';
 import { useSelectedClass } from '@/composables/useSelectedClass'
+import type { RelationField } from '@/types'
 import SpringTab from './SpringTab.vue'
 
 import Tabs from 'primevue/tabs'
@@ -28,6 +29,15 @@ type Tab = "ocl" | "persistence" | "spring"
 const model = useModelStore()
 const annotations = useAnnotationsStore()
 const { selected, isInterface, className, attributes, operations, key } = useSelectedClass()
+
+// coleções da classe selecionada + atributos da classe alvo (para o dropdown de order-by)
+const collectionRelations = computed(() =>
+  (model.selectedClass?.relations ?? []).filter(r => r.collection)
+)
+function orderOptions(rel: RelationField) {
+  const target = model.model?.classes.find(c => c.name === rel.targetClass)
+  return (target?.attributes ?? []).map(a => ({ label: `${a.name}: ${a.type}`, value: a.name }))
+}
 
 const activeTab = ref<Tab>("ocl")
 
@@ -433,6 +443,30 @@ function close() {
             </table>
           </section>
 
+          <!-- Collection ordering (@OrderBy) por coleção -->
+          <section v-if="collectionRelations.length" class="block">
+            <header class="block-head">
+              <h4>Collection ordering
+                <span class="tip" v-tooltip.top="'@OrderBy — ordena os itens de uma coleção. Vazio = ordem indefinida.'">ⓘ</span>
+              </h4>
+            </header>
+            <div v-for="rel in collectionRelations" :key="rel.name" class="order-row">
+              <span class="order-rel">{{ rel.name }} <span class="type">-> {{ rel.targetClass }}</span></span>
+              <Select
+                :modelValue="annotations.orderAttribute(key(rel.name))"
+                @update:modelValue="annotations.setOrderAttribute(key(rel.name), $event ?? '')"
+                :options="orderOptions(rel)" optionLabel="label" optionValue="value"
+                placeholder="— none —" showClear
+              />
+              <Button
+                v-if="annotations.orderAttribute(key(rel.name))"
+                :label="annotations.orderDirection(key(rel.name))"
+                icon="pi pi-sort-alt" size="small" text
+                @click="annotations.toggleOrderDirection(key(rel.name))"
+              />
+            </div>
+          </section>
+
           <p v-if="!ownsTable && !isIdRoot && !isSuperclass && !attributes.length" class="empty">
             Sem opções de persistência para esta classe.
           </p>
@@ -627,5 +661,10 @@ function close() {
 .col-map .attr-cell .type { color: var(--color-primary); }
 .col-map td.is-disabled { opacity: 0.4; }
 .col-map :deep(.p-inputnumber-input) { width: 3.2rem; padding: 3px 5px; text-align: center; }
+
+.order-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.order-rel { flex: 1; font-family: monospace; font-size: 12px; }
+.order-rel .type { color: var(--color-primary); }
+.order-row :deep(.p-select) { min-width: 8rem; }
 
 </style>

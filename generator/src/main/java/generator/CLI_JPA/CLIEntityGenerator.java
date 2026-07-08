@@ -412,6 +412,13 @@ public class CLIEntityGenerator {
         boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMultiplicity);
         boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
+        // @OrderBy da coleção (persistence tab) — só em campos de coleção (thisMultiple)
+        if (thisMultiple) {
+            Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElse(null);
+            String orderBy = (self != null) ? self.getCollectionOrder().get(fieldName) : null;
+            if (orderBy != null) writer.println("    @OrderBy(\"" + orderBy + "\")");
+        }
+
         // Many to Many
         if (thisMultiple && otherMultiple) {
             generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
