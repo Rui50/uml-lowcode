@@ -484,7 +484,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         if (text.startsWith("->count("))
             return "java.util.Collections.frequency(" + base + ", " + visit(ctx.expression(0)) + ")";
 
-        // operações numéricas escalares (base é um número)
+        // operações numéricas  (base é um número)
         // LIMITAÇÃO: floor()/round() devolvem 'long'. Com COMPARAÇÕES (>=, <=, >, <)
         if (text.equals("->abs()"))   return "Math.abs(" + base + ")";
         if (text.equals("->floor()")) return "(long) Math.floor(" + base + ")";

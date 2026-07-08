@@ -237,8 +237,9 @@ public class SpringServiceGenerator {
         // create() — skip for abstract classes
         if (!cls.isAbstract()) generateCreateMethod(writer, className, cls, associations);
 
-        // update()
-        generateUpdateMethod(writer, className, cls, associations);
+        // update() (PATCH parcial) + replace() (PUT full replace)
+        generateUpdateMethod(writer, className, cls, associations, false);
+        generateUpdateMethod(writer, className, cls, associations, true);
 
         // deleteById()
         writer.println("    /**");
@@ -741,7 +742,7 @@ public class SpringServiceGenerator {
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println();
         // liga as relações do DTO; se mexeu na própria entidade (FK/coleção própria), grava de novo
-        if (generateRelationshipLinks(writer, cls, associations, "saved", true)) {
+        if (generateApplyRelations(writer, cls, associations, "saved", true, true)) {
             writer.println("        saved = " + repoName + ".save(saved);");
         }
         writer.println("        return " + SpringDTOGenerator.responseDTOName(cls, "Create") + ".fromEntity(saved);");
@@ -762,7 +763,7 @@ public class SpringServiceGenerator {
      * Devolve selfModified = mexeu na própria entidade. Não grava aqui de propósito: o caller faz
      * o save final (create: repo.save; update: já tem saveAndFlush), para não duplicar o save.
      */
-    private boolean generateRelationshipLinks(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean includeCollections) {
+    private boolean generateApplyRelations(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean includeCollections, boolean clearSingleOnNull) {
         // entityVar é a entidade a ligar ("saved" no create, "existing" no update)
         // selfModified é quando mexemos diretamente em entityVar (caso 1 ou 2) -> o chamador grava
         // anyLinked é quando ligámos alguma relação -> re-validar o estado final antes de gravar
@@ -804,8 +805,8 @@ public class SpringServiceGenerator {
                 writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capField + "Id()));");
                 writer.println("            " + entityVar + ".set" + capField + "(" + otherVar + ");");   // sincroniza este lado (resposta)
                 if (ownerSide) {
-                    if (includeCollections) {
-                        // create: id null é no-op (o campo já vem null); mantém-se por simetria
+                    if (clearSingleOnNull) {
+                        // clear-on-null: create é no-op (campo já null); PUT replace limpa a relação
                         writer.println("        } else {");
                         writer.println("            " + entityVar + ".set" + capField + "(null);");
                         writer.println("        }");
@@ -819,8 +820,8 @@ public class SpringServiceGenerator {
                     String capInv = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer, thisRole, thisMul));
                     writer.println("            " + otherVar + ".set" + capInv + "(" + entityVar + ");");
                     writer.println("            " + otherRepo + ".save(" + otherVar + ");");
-                    if (includeCollections) {
-                        // create: no-op (ainda não há dono ligado); mantém-se por simetria
+                    if (clearSingleOnNull) {
+                        // clear-on-null: create é no-op; PUT replace desliga a relação inversa
                         writer.println("        } else {");
                         writer.println("            if (" + entityVar + ".get" + capField + "() != null) {");
                         writer.println("                " + entityVar + ".get" + capField + "().set" + capInv + "(null);");
@@ -881,16 +882,17 @@ public class SpringServiceGenerator {
     /**
      * - update() procura a entidade por ID, atualiza os atributos a partir do DTO, valida e guarda
      */
-    private void generateUpdateMethod(PrintWriter writer, String className, Class cls, List<Association> associations) {
+    private void generateUpdateMethod(PrintWriter writer, String className, Class cls, List<Association> associations, boolean fullReplace) {
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
+        String methodName = fullReplace ? "replace" : "update";
 
         writer.println("    /**");
         writer.println("     * @param id the entity id");
-        writer.println("     * @param dto the data to update");
-        writer.println("     * @return the updated entity as DTO");
+        writer.println("     * @param dto the data to " + (fullReplace ? "replace" : "update"));
+        writer.println("     * @return the " + (fullReplace ? "replaced" : "updated") + " entity as DTO");
         writer.println("     */");
-        writer.println("    public " + SpringDTOGenerator.responseDTOName(cls, "Update") + " update(" + cls.getRoot().getIdAttributeType() + " id, " + className + "UpdateDTO dto) {");
+        writer.println("    public " + SpringDTOGenerator.responseDTOName(cls, "Update") + " " + methodName + "(" + cls.getRoot().getIdAttributeType() + " id, " + className + "UpdateDTO dto) {");
         writer.println("        " + className + " existing = " + repoName + ".findById(id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className + " not found: \" + id));");
         writer.println();
@@ -904,11 +906,17 @@ public class SpringServiceGenerator {
                 .filter(a -> !a.getName().equals(idAttrName))
                 .toList();
         if (!allAttrs.isEmpty()) {
-            writer.println("        // Update attributes from DTO (PATCH: null/omitido -> não mexe; valor -> aplica)");
+            writer.println("        // " + (fullReplace
+                    ? "PUT full replace: escreve cada atributo tal e qual (omitido/null -> null)"
+                    : "PATCH partial: null/omitido -> não mexe; valor -> aplica"));
             for (Attribute attr : allAttrs) {
                 String getter = "get" + GeneratorUtils.capitalizeFirst(attr.getName());
                 String setter = "set" + GeneratorUtils.capitalizeFirst(attr.getName());
-                writer.println("        if (dto." + getter + "() != null) existing." + setter + "(dto." + getter + "());");
+                if (fullReplace) {
+                    writer.println("        existing." + setter + "(dto." + getter + "());");
+                } else {
+                    writer.println("        if (dto." + getter + "() != null) existing." + setter + "(dto." + getter + "());");
+                }
             }
             writer.println();
         }
@@ -916,7 +924,7 @@ public class SpringServiceGenerator {
         generateValidationBeforeSave(writer, cls, "existing");
 
         // liga só single refs por id; coleções não se tocam aqui (geridas pelos endpoints dedicados add/remove)
-        generateRelationshipLinks(writer, cls, associations, "existing", false);
+        generateApplyRelations(writer, cls, associations, "existing", false, fullReplace);
 
         // saveAndFlush: força o flush para o @LastModifiedDate (@PreUpdate) ser aplicado
         // antes de mapear para DTO senão o updatedAt na resposta ficaria desatualizado

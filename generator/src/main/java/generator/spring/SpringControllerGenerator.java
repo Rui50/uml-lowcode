@@ -165,14 +165,29 @@ public class SpringControllerGenerator {
         // corpo = UpdateDTO próprio (sem id, só single-refs) em vez de reutilizar o CreateDTO
         writer.println("    /**");
         writer.println("     * PATCH /api/" + pluralPath + "/{id} — partial update.");
-        writer.println("     * Null / omitted fields are IGNORED (not cleared). To remove a relationship,");
-        writer.println("     * use DELETE /api/" + pluralPath + "/{id}/{role}. (Not RFC-7386 merge-patch — null does not delete.)");
+        writer.println("     * Null / omitted fields are IGNORED (not cleared). To fully replace (and null it");
+        writer.println("     * use PUT /api/" + pluralPath + "/{id}, to remove a relationship use");
+        writer.println("     * DELETE /api/" + pluralPath + "/{id}/{role}.");
         writer.println("     */");
         writer.println("    @PatchMapping(\"/{id}\")");
         writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Update") + "> update(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
         writer.println("            @RequestBody " + className + "UpdateDTO dto) {");
         writer.println("        " + SpringDTOGenerator.responseDTOName(cls, "Update") + " updated = " + serviceName + ".update(id, dto);");
+        writer.println("        return ResponseEntity.ok(updated);");
+        writer.println("    }");
+        writer.println();
+
+        // PUT /api/entities/{id} — full replace (not sent -> null); relations same as PATCH
+        writer.println("    /**");
+        writer.println("     * PUT /api/" + pluralPath + "/{id} — full replace. fields that arent sent are set to null.");
+        writer.println("     * Relationships are managed via the dedicated endpoints (same as PATCH).");
+        writer.println("     */");
+        writer.println("    @PutMapping(\"/{id}\")");
+        writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Update") + "> replace(");
+        writer.println("            @PathVariable " + idTypeOf(className) + " id,");
+        writer.println("            @RequestBody " + className + "UpdateDTO dto) {");
+        writer.println("        " + SpringDTOGenerator.responseDTOName(cls, "Update") + " updated = " + serviceName + ".replace(id, dto);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
