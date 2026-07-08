@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useModelStore } from '@/stores/model'
 import { useAnnotationsStore } from '@/stores/annotations';
 import { useSelectedClass } from '@/composables/useSelectedClass'
@@ -14,6 +14,8 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select';
+import Checkbox from 'primevue/checkbox'
+import InputNumber from 'primevue/inputnumber'
 
 /**
  * POSSIVEIS MUDANÇAS:
@@ -28,6 +30,21 @@ const annotations = useAnnotationsStore()
 const { selected, isInterface, className, attributes, operations, key } = useSelectedClass()
 
 const activeTab = ref<Tab>("ocl")
+
+// decimais para precision/scale ativos (senão desativados na tabela)
+const DECIMAL_TYPES = ['double', 'float', 'Double', 'Float', 'BigDecimal']
+function isDecimal(type: string) {
+  return DECIMAL_TYPES.includes(type)
+}
+
+// a tabela de column mapping liga o v-model direto a columnByAttribute[key], por isso
+// cada atributo precisa de um objeto default
+watch([attributes, className], () => {
+  for (const a of attributes.value) {
+    const k = key(a.name)
+    if (!(k in annotations.columnByAttribute)) annotations.addColumnConfig(k)
+  }
+}, { immediate: true })
 
 const invariants = computed(() =>
   className.value ? annotations.invariantsByClass[className.value] ?? [] : []
@@ -377,7 +394,46 @@ function close() {
             </div>
           </section>
 
-          <p v-if="!ownsTable && !isIdRoot && !isSuperclass" class="empty">
+          <!-- Column mapping (@Column JPA) por atributo -->
+          <section v-if="attributes.length" class="block">
+            <header class="block-head">
+              <h4>Column mapping
+                <span class="tip" v-tooltip.top="'Config de coluna JPA que a OCL não exprime: unique e precisão/escala (só em tipos decimais).'">ⓘ</span>
+              </h4>
+            </header>
+            <table class="col-map">
+              <thead>
+                <tr>
+                  <th>Attribute</th>
+                  <th class="c">Unique</th>
+                  <th class="c">Precision</th>
+                  <th class="c">Scale</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="attr in attributes" :key="attr.name">
+                  <td class="attr-cell">{{ attr.name }} <span class="type">{{ attr.type }}</span></td>
+                  <td class="c">
+                    <Checkbox v-model="annotations.columnByAttribute[key(attr.name)].unique" binary />
+                  </td>
+                  <td class="c" :class="{ 'is-disabled': !isDecimal(attr.type) }">
+                    <InputNumber
+                      v-model="annotations.columnByAttribute[key(attr.name)].precision"
+                      :disabled="!isDecimal(attr.type)" :min="1" :useGrouping="false"
+                    />
+                  </td>
+                  <td class="c" :class="{ 'is-disabled': !isDecimal(attr.type) }">
+                    <InputNumber
+                      v-model="annotations.columnByAttribute[key(attr.name)].scale"
+                      :disabled="!isDecimal(attr.type)" :min="0" :useGrouping="false"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <p v-if="!ownsTable && !isIdRoot && !isSuperclass && !attributes.length" class="empty">
             Sem opções de persistência para esta classe.
           </p>
         </TabPanel>
@@ -552,5 +608,24 @@ function close() {
     letter-spacing: 0.4px;
     margin-bottom: 4px;
   }
+
+.col-map { width: 100%; border-collapse: collapse; font-size: 12px; }
+.col-map th, .col-map td { padding: 5px 6px; vertical-align: middle; }
+.col-map thead th { border-bottom: 1px solid var(--color-border); }
+.col-map tbody td { border-bottom: 1px solid var(--color-border); }
+.col-map tbody tr:last-child td { border-bottom: none; }
+.col-map th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.col-map th.c, .col-map td.c { text-align: center; }
+.col-map .attr-cell { font-family: monospace; white-space: nowrap; }
+.col-map .attr-cell .type { color: var(--color-primary); }
+.col-map td.is-disabled { opacity: 0.4; }
+.col-map :deep(.p-inputnumber-input) { width: 3.2rem; padding: 3px 5px; text-align: center; }
 
 </style>

@@ -1,4 +1,4 @@
-import { useAnnotationsStore, type OclAnnotation } from '@/stores/annotations'
+import { useAnnotationsStore, type OclAnnotation, type ColumnConfig } from '@/stores/annotations'
 import type { ParseResponse, ProjectSettings } from '@/types'
 
 // remove entradas OCL com expressão vazia (linhas adicionadas mas não preenchidas) para não
@@ -17,6 +17,15 @@ function trimEmptyStrStuff(map: Record<string, string>): Record<string, string> 
   const out: Record<string, string> = {}
   for (const [key, value] of Object.entries(map)) {
     if (value && value.trim() !== '') out[key] = value
+  }
+  return out
+}
+
+// remove entradas de coluna totalmente vazias (linha seed mas nada definido pelo user)
+function trimEmptyColumnStuff(map: Record<string, ColumnConfig>): Record<string, ColumnConfig> {
+  const out: Record<string, ColumnConfig> = {}
+  for (const [key, v] of Object.entries(map)) {
+    if (v.unique || v.precision != null || v.scale != null) out[key] = v
   }
   return out
 }
@@ -55,6 +64,7 @@ export async function generateCode(target: string, settings?: ProjectSettings): 
     tableNameByClass: annotations.tableNameByClass,
     dtoHiddenByClass: annotations.dtoHiddenByClass,
     responseOverrideByClass: annotations.responseOverrideByClass,
+    columnByAttribute: trimEmptyColumnStuff(annotations.columnByAttribute),
   }
   const body = JSON.stringify({ annotations: annotationsPayload, settings: settings ?? null })
   const res = await fetch(`/api/model/generate?target=${encodeURIComponent(target)}`, {

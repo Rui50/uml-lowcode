@@ -331,7 +331,7 @@ public class CLIEntityGenerator {
             if (enumNames.contains(atr.getType())) {
                 writer.println("    @Enumerated(EnumType.STRING)");
             }
-            writer.println("    @Column(name = \"" + atr.getName() + "\")");
+            writer.println("    " + GeneratorUtils.columnAnnotation(atr));
             if (atr.hasInit()) {
                 String javaInit = atr.getJavaInitExpression();
                 writer.println("    private " + fieldType + " " + atr.getName() + " = " + javaInit + ";");

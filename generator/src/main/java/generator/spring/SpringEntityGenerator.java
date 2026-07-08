@@ -275,7 +275,7 @@ public class SpringEntityGenerator {
             if (enumNames.contains(atr.getType())) {
                 writer.println("    @Enumerated(EnumType.STRING)");
             }
-            writer.println("    @Column(name = \"" + atr.getName() + "\")");
+            writer.println("    " + GeneratorUtils.columnAnnotation(atr));
             // anotações Bean Validation vindas das invariantes OCL
             for (String ann : annsByField.getOrDefault(atr.getName(), List.of())) {
                 writer.println("    " + ann);

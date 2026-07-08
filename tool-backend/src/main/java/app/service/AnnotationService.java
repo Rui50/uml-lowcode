@@ -1,6 +1,7 @@
 package app.service;
 
 import app.dto.AnnotationsDTO;
+import app.dto.ColumnConfigDTO;
 import app.dto.CustomIdDTO;
 import app.dto.EndpointConfigDTO;
 import app.dto.HiddenFieldsDTO;
@@ -29,6 +30,7 @@ public class AnnotationService {
         applyInvariants(classes, associations, payload.getInvariantsByClass(), model.getInterfaces());
         applyInits(classes, associations, payload.getInitByAttribute());
         applyDerives(classes, associations, payload.getDeriveByAttribute());
+        applyColumnConfig(classes, payload.getColumnByAttribute());
 
         applyOperationLinks(classes, model.getAllInteractions(), payload.getOperationToSeqDiagram());
         applyPreconditions(classes, associations, payload.getPreconditionsByOperation());
@@ -210,6 +212,19 @@ public class AnnotationService {
         });
     }
 
+    // persistence tab só as partes que a OCL não exprime (unique/precision/scale/name)
+    private void applyColumnConfig(List<Class> classes, Map<String, ColumnConfigDTO> map) {
+        if (map == null) return;
+        map.forEach((key, cfg) -> {
+            Attribute a = findAttribute(classes, key);
+            if (a != null && cfg != null) {
+                a.setUnique(cfg.isUnique());
+                a.setPrecision(cfg.getPrecision());
+                a.setScale(cfg.getScale());
+            }
+        });
+    }
+
     private Class findClass(List<Class> classes, String name) {
         return classes.stream().filter(c -> c.getName().equals(name)).findFirst().orElse(null);
     }
@@ -311,6 +326,9 @@ public class AnnotationService {
                 a.setJavaInitExpression(null);
                 a.setDeriveExpression(null);
                 a.setJavaDeriveExpression(null);
+                a.setUnique(false);
+                a.setPrecision(null);
+                a.setScale(null);
             }
             c.getHiddenInCreate().clear();
             c.getHiddenInUpdate().clear();

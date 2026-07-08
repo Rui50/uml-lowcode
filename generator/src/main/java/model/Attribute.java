@@ -14,6 +14,11 @@ public class Attribute {
     private String deriveExpression;
     private String javaDeriveExpression;
 
+    // persistence tab (opt-in; false/null = não definido -> não emitido)
+    private boolean unique;      // @Column(unique = true)
+    private Integer precision;   // decimais: total de dígitos
+    private Integer scale;       // decimais: casas decimais
+
     public Attribute() {
         this.name = "";
         this.type = "";
@@ -77,6 +82,20 @@ public class Attribute {
     public void setJavaDeriveExpression(String javaDeriveExpression) { this.javaDeriveExpression = javaDeriveExpression; }
 
     public boolean hasDerive() { return deriveExpression != null; }
+
+    public boolean isUnique() { return unique; }
+    public void setUnique(boolean unique) { this.unique = unique; }
+
+    public Integer getPrecision() { return precision; }
+    public void setPrecision(Integer precision) { this.precision = precision; }
+
+    public Integer getScale() { return scale; }
+    public void setScale(Integer scale) { this.scale = scale; }
+
+    // tem config de coluna (persistence tab) para além do nome-default?
+    public boolean hasColumnConfig() {
+        return unique || precision != null || scale != null;
+    }
 
     @Override
     public String toString() {

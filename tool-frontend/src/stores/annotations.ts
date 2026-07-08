@@ -15,6 +15,13 @@ export interface IdConfig {
   attributeType: string
 }
 
+// config de coluna JPA por atributo (persistence tab) — só o que a OCL não exprime
+export interface ColumnConfig {
+  unique: boolean
+  precision: number | null
+  scale: number | null
+}
+
 export interface EndpointConfig {
   job: boolean
   endpointName: string
@@ -50,6 +57,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   const initByAttribute = ref<Record<string, string>>({})
   // key: "ClassName.attrName" -> derive expression
   const deriveByAttribute = ref<Record<string, string>>({})
+  // key: "ClassName.attrName" -> config de coluna JPA (ausente = @Column só com name-default)
+  const columnByAttribute = ref<Record<string, ColumnConfig>>({})
 
   const operationToSeqDiagram = ref<Record<string, string>>({})
 
@@ -116,6 +125,14 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   function deleteDerive(key: string) {
     delete deriveByAttribute.value[key]
+  }
+
+  function addColumnConfig(key: string) {
+    columnByAttribute.value[key] = { unique: false, precision: null, scale: null }
+  }
+
+  function deleteColumnConfig(key: string) {
+    delete columnByAttribute.value[key]
   }
 
   function linkOperationToSeqDiagram(operationKey: string, diagramId: string) {
@@ -241,6 +258,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       tableNameByClass.value = {}
       dtoHiddenByClass.value = {}
       responseOverrideByClass.value = {}
+      columnByAttribute.value = {}
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -259,6 +277,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     tableNameByClass.value = data.tableNameByClass || {}
     dtoHiddenByClass.value = data.dtoHiddenByClass || {}
     responseOverrideByClass.value = data.responseOverrideByClass || {}
+    columnByAttribute.value = data.columnByAttribute || {}
   }
 
   function saveForModel(name: string | null) {
@@ -279,6 +298,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       tableNameByClass: tableNameByClass.value,
       dtoHiddenByClass: dtoHiddenByClass.value,
       responseOverrideByClass: responseOverrideByClass.value,
+      columnByAttribute: columnByAttribute.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
@@ -294,7 +314,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // save current bucket on any annotation change
   watch(
-    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass, dtoHiddenByClass, responseOverrideByClass],
+    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass, dtoHiddenByClass, responseOverrideByClass, columnByAttribute],
     () => saveForModel(modelStore.fileName),
     { deep: true }
   )
@@ -314,6 +334,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     tableNameByClass.value = {}
     dtoHiddenByClass.value = {}
     responseOverrideByClass.value = {}
+    columnByAttribute.value = {}
   }
 
   return {
@@ -332,6 +353,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     tableNameByClass,
     dtoHiddenByClass,
     responseOverrideByClass,
+    columnByAttribute,
 
     // actions
     addInvariant,
@@ -340,6 +362,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     deleteInit,
     addDerive,
     deleteDerive,
+    addColumnConfig,
+    deleteColumnConfig,
     linkOperationToSeqDiagram,
     unlinkOperationFromSeqDiagram,
     addPrecondition,

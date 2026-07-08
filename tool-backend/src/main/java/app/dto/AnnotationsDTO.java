@@ -50,4 +50,7 @@ public class AnnotationsDTO {
     // key className -> endpointType ("list"|"get"|"create"|"update") -> override do response DESSE
     // endpoint (nome + escondidos; entrada presente = override ativo; ausente = ResponseDTO da classe)
     private Map<String, Map<String, ResponseOverrideDTO>> responseOverrideByClass = new HashMap<>();
+
+    // key "ClassName.attrName" -> config de coluna JPA (persistence tab sem nada = @Column só com name-default)
+    private Map<String, ColumnConfigDTO> columnByAttribute = new HashMap<>();
 }

@@ -132,6 +132,16 @@ public class GeneratorUtils {
         return checkMultiplicity(multiplicity) ? base + "s" : base;
     }
 
+    // @Column(...) a partir da config da persistence tab
+    // (default = nome do atributo), unique/precision/scale só quando definidos
+    public static String columnAnnotation(Attribute atr) {
+        StringBuilder sb = new StringBuilder("@Column(name = \"").append(atr.getName()).append("\"");
+        if (atr.isUnique()) sb.append(", unique = true");
+        if (atr.getPrecision() != null) sb.append(", precision = ").append(atr.getPrecision());
+        if (atr.getScale() != null) sb.append(", scale = ").append(atr.getScale());
+        return sb.append(")").toString();
+    }
+
     /**
      * A entidade de "className" é o DONO desta relação
      * Quem decide é a NAVEGABILIDADE, não o source/target da associação.
