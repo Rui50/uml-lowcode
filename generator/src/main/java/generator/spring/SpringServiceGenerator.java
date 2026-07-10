@@ -161,6 +161,7 @@ public class SpringServiceGenerator {
         // DTOs de override de response (um por endpoint com override)
         cls.getResponseOverrides().keySet().stream().sorted().forEach(endpointType ->
                 writer.println("import " + basePackage + ".dto." + SpringDTOGenerator.responseDTOName(cls, endpointType) + ";"));
+        writer.println("import " + basePackage + ".dto.*;");   // params de ops custom podem ser DTOs de qualquer classe
         for (model.Interface iface : cls.getRealizations()) {
             writer.println("import " + basePackage + ".models." + iface.getName() + ";");
         }

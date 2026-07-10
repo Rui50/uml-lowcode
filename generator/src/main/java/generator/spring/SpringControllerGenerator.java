@@ -378,6 +378,7 @@ public class SpringControllerGenerator {
         // DTOs de override de response (um por endpoint com override)
         cls.getResponseOverrides().keySet().stream().sorted().forEach(endpointType ->
                 writer.println("import " + basePackage + ".dto." + SpringDTOGenerator.responseDTOName(cls, endpointType) + ";"));
+        writer.println("import " + basePackage + ".dto.*;");   // params de ops custom podem ser DTOs de qualquer classe
         writer.println("import lombok.RequiredArgsConstructor;");
         writer.println("import org.springframework.http.HttpStatus;");
         writer.println("import org.springframework.http.ResponseEntity;");
@@ -599,8 +600,8 @@ public class SpringControllerGenerator {
             Message entryMessage = SpringUtils.findEntryMessage(interaction, owner, op);
             List<MessageArgument> entryArgs = (entryMessage != null) ? entryMessage.getArguments() : new ArrayList<>();
 
-            // endpoint parâmetros = mensagem de entrada; chama o service tal e qual
-            // (a forma do request/response por DTO é uma anotação PSM futura — por agora @RequestParam)
+            // endpoint parâmetros = mensagem de entrada; chama o service tal e qual.
+            // binding por tipo: entidade -> erro para ja | DTO -> @RequestBody | simples -> @RequestParam
             writer.println();
             String path = (op.getEndpointName() != null && !op.getEndpointName().isBlank())
                     ? op.getEndpointName() : op.getName();
@@ -610,7 +611,21 @@ public class SpringControllerGenerator {
                 if (i > 0) writer.print(",");
                 MessageArgument arg = entryArgs.get(i);
                 String argType = arg.getType() != null ? GeneratorUtils.removePackageNames(arg.getType()) : "Object";
-                writer.print("\n            @RequestParam " + argType + " " + arg.getName());
+                String binding;
+                if (classMap.containsKey(argType)) {
+                    // param do tipo-entidade para ja nao aceita
+                    throw new IllegalArgumentException("Operação '" + op.getName() + "': o parâmetro '"
+                            + arg.getName() + "' é do tipo-entidade '" + argType + "', ainda não suportado como "
+                            + "parâmetro de operação custom. Usa um DTO ou o id (ex: " + arg.getName() + "Id).");
+                } else if (GeneratorUtils.isSimpleParamType(argType)) {
+                    binding = "@RequestParam";   // primitivo / String / data
+                } else {
+                    // assume-se um DTO
+                    // futuro
+                    // lançar erro claro se o DTO não existir, em vez de deixar falhar na compilação da app gerada.
+                    binding = "@RequestBody";
+                }
+                writer.print("\n            " + binding + " " + argType + " " + arg.getName());
             }
             writer.println(") {");
 

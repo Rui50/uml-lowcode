@@ -506,4 +506,22 @@ public class GeneratorUtils {
                 return false;
         }
     }
+
+    // o que não for simples nem entidade é DTO (@RequestBody)
+    public static boolean isSimpleParamType(String type) {
+        if (type == null) return false;
+        switch (type) {
+            case "int": case "Integer":
+            case "long": case "Long":
+            case "byte": case "Byte":
+            case "double": case "Double":
+            case "float": case "Float":
+            case "boolean": case "Boolean":
+            case "char": case "Character":
+            case "String":
+                return true;
+            default:
+                return isJavaTimeType(type);
+        }
+    }
 }
