@@ -48,6 +48,31 @@ public class SpringServiceGenerator {
         return GeneratorUtils.idType(classMap.get(className));
     }
 
+    /**
+     * entidades em que os repositorios aparecem em lifelines ": XRepository" nos diagramas
+     * das operações desta classe. O SequenceBodyGenerator emite chamadas
+     * a esses campos, por isso têm de ser injetados E importados
+     */
+    private Set<String> diagramRepoEntities(Class cls) {
+        Set<String> entities = new LinkedHashSet<>();   // ordem determinística
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
+            if (op.isJob() || op.getSequenceDiagram() == null) continue;
+            for (Lifeline ll : op.getSequenceDiagram().getLifelines()) {
+                String type = ll.getType();
+                if (type == null || !type.endsWith("Repository")) continue;
+                String entity = type.substring(0, type.length() - "Repository".length());
+                if (entity.isEmpty() || entity.equals(cls.getName())) continue;   // o próprio já está declarado
+                if (classMap.get(entity) == null) {
+                    throw new IllegalArgumentException("Operação '" + op.getName()
+                            + "': o diagrama tem uma lifeline ': " + type + "' mas a classe '"
+                            + entity + "' não existe no modelo.");
+                }
+                entities.add(entity);
+            }
+        }
+        return entities;
+    }
+
     // getter do id de outra entidade
     private String idGetterOf(String className) {
         return GeneratorUtils.idGetter(classMap.get(className));
@@ -112,9 +137,6 @@ public class SpringServiceGenerator {
             // metodos de gestao de relação
             generateRelationShipMethods(writer, cls, associations, classes);
 
-            // queries base para strings
-            //generateQueryMethods(writer, cls);
-
             // operações do diagrama de classe (TODO: implementar)
             generateCustomOperations(writer, cls);
 
@@ -161,6 +183,8 @@ public class SpringServiceGenerator {
         allModelsToImport.addAll(modelsToImport);
         allModelsToImport.addAll(modelsToImportFromAssociations);
 
+        allModelsToImport.addAll(diagramRepoEntities(cls));
+
         if (!allModelsToImport.isEmpty()) {
             writer.println();
             for (String entityName : allModelsToImport) {
@@ -193,6 +217,14 @@ public class SpringServiceGenerator {
             if (!related.equals(className) && addedRepos.add(related)) {
                 writer.println("    private final " + related + "Repository " +
                         GeneratorUtils.lowercaseFirst(related) + "Repository;");
+            }
+        }
+
+        // repositórios referidos por lifelines nos diagramas mas que NÃO são associados
+        for (String entity : diagramRepoEntities(cls)) {
+            if (addedRepos.add(entity)) {
+                writer.println("    private final " + entity + "Repository " +
+                        GeneratorUtils.lowercaseFirst(entity) + "Repository;");
             }
         }
 
@@ -677,51 +709,6 @@ public class SpringServiceGenerator {
         writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
         writer.println();
-    }
-
-    private void generateQueryMethods(PrintWriter writer, Class cls) {
-        List<Attribute> stringAttributes = cls.getAttributes().stream()
-                .filter(attr -> attr.getType().equals("String"))
-                .toList();
-
-        if (stringAttributes.isEmpty()) return;
-
-        writer.println("    // Simple query methods for strings");
-
-        String className = cls.getName();
-        String varName = GeneratorUtils.lowercaseFirst(className);
-        String repoName = varName + "Repository";
-
-        for (Attribute attr : stringAttributes){
-            String attrName = attr.getName();
-            String capitalizedAttr = GeneratorUtils.capitalizeFirst(attrName);
-
-            // findByAttribute()
-            writer.println("    /**");
-            writer.println("     * Find " + className + " by " + attrName);
-            writer.println("     * @param " + attrName + " to search by");
-            writer.println("     * @return list of matching entities");
-            writer.println("     */");
-            writer.println("    public List<" + className + "> findBy" + capitalizedAttr +
-                    "(String " + attrName + ") {");
-            writer.println("        return " + repoName + ".findBy" + capitalizedAttr +
-                    "(" + attrName + ");");
-            writer.println("    }");
-            writer.println();
-
-            // findByAttributeContaining()
-            writer.println("    /**");
-            writer.println("     * Find " + className + " by " + attrName + " containing text");
-            writer.println("     * @param " + attrName + " to search");
-            writer.println("     * @return list of matching entities");
-            writer.println("     */");
-            writer.println("    public List<" + className + "> findBy" + capitalizedAttr +
-                    "Containing(String " + attrName + ") {");
-            writer.println("        return " + repoName + ".findBy" + capitalizedAttr +
-                    "Containing(" + attrName + ");");
-            writer.println("    }");
-            writer.println();
-        }
     }
 
     /**

@@ -114,6 +114,7 @@ public class ClassGenerator {
 
             // imports
             writer.println("import java.util.*;");
+            writer.println("import java.time.*;");   // atributos de data (LocalDate, etc.)
             writer.println();
 
             // class

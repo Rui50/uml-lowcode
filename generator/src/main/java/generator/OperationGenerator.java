@@ -55,7 +55,12 @@ public class OperationGenerator {
     public static void generateOperation(PrintWriter writer, Class cls, Operation operation,
                                          Interaction interaction, List<Association> associations) {
         Message entry = findEntryMessage(interaction);
-        if (entry == null) return;
+
+        if (entry == null) {
+            throw new IllegalArgumentException("Operação '" + operation.getName()
+                    + "': o diagrama não tem mensagem de entrada (actor -> " + cls.getName()
+                    + ") com o nome da operação.");
+        }
 
         // a mensagem de entrada tem de corresponder à operação declarada (pelo nome)
         if (entry.getName() != null && !entry.getName().equals(operation.getName())) {

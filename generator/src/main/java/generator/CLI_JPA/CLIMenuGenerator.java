@@ -103,6 +103,7 @@ public class CLIMenuGenerator {
             w.println("import " + basePackage + ".util.InputUtils;");
             w.println("import jakarta.persistence.EntityManager;");
             w.println("import java.util.*;");
+            w.println("import java.time.*;");
             w.println();
             w.println("public class " + className + " {");
             w.println();
@@ -730,6 +731,7 @@ public class CLIMenuGenerator {
             w.println("import " + basePackage + ".util.InputUtils;");
             w.println("import jakarta.persistence.EntityManager;");
             w.println("import java.util.*;");
+            w.println("import java.time.*;");
             w.println();
             w.println("public class MainMenu {");
             w.println();
@@ -782,6 +784,10 @@ public class CLIMenuGenerator {
             case "Long":
                 w.println("        long " + name + " = InputUtils.readLong(scanner, \"" + name + ": \");");
                 break;
+            case "float":
+            case "Float":
+                w.println("        float " + name + " = (float) InputUtils.readDouble(scanner, \"" + name + ": \");");
+                break;
             case "double":
             case "Double":
                 w.println("        double " + name + " = InputUtils.readDouble(scanner, \"" + name + ": \");");
@@ -799,9 +805,18 @@ public class CLIMenuGenerator {
                     w.println("            try { " + name + " = " + attr.getType() + ".valueOf(scanner.nextLine().trim().toUpperCase()); }");
                     w.println("            catch (IllegalArgumentException ex) { System.out.println(\"Invalid value. Try again.\"); }");
                     w.println("        }");
+                } else if (isTimeType(attr.getType())) {
+                    // mesmo padrão de retry do enum, com parse de data
+                    String type = attr.getType();
+                    w.println("        " + type + " " + name + " = null;");
+                    w.println("        while (" + name + " == null) {");
+                    w.println("            System.out.print(\"" + name + " (ex: " + timeHint(type) + "): \");");
+                    w.println("            try { " + name + " = " + type + ".parse(scanner.nextLine().trim()); }");
+                    w.println("            catch (Exception ex) { System.out.println(\"Invalid value. Try again.\"); }");
+                    w.println("        }");
                 } else {
-                    w.println("        System.out.print(\"" + name + ": \");");
-                    w.println("        String " + name + "Str = scanner.nextLine();");
+                    throw new IllegalArgumentException("Atributo '" + name + "' do tipo '" + attr.getType()
+                            + "': tipo não suportado no target CLI.");
                 }
         }
     }
@@ -830,6 +845,22 @@ public class CLIMenuGenerator {
                 w.println("        if (!" + name + "Str.isEmpty()) entity.set" + capitalized +
                         "(Integer.parseInt(" + name + "Str));");
                 break;
+            case "long":
+            case "Long":
+                w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
+                        "\"]: \");");
+                w.println("        String " + name + "Str = scanner.nextLine();");
+                w.println("        if (!" + name + "Str.isEmpty()) entity.set" + capitalized +
+                        "(Long.parseLong(" + name + "Str));");
+                break;
+            case "float":
+            case "Float":
+                w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
+                        "\"]: \");");
+                w.println("        String " + name + "Str = scanner.nextLine();");
+                w.println("        if (!" + name + "Str.isEmpty()) entity.set" + capitalized +
+                        "(Float.parseFloat(" + name + "Str));");
+                break;
             case "double":
             case "Double":
                 w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
@@ -855,14 +886,34 @@ public class CLIMenuGenerator {
                     w.println("            try { entity.set" + capitalized + "(" + attr.getType() + ".valueOf(" + name + "Str.trim().toUpperCase())); break; }");
                     w.println("            catch (IllegalArgumentException ex) { System.out.println(\"Invalid value. Try again.\"); }");
                     w.println("        }");
+                } else if (isTimeType(attr.getType())) {
+                    // enter mantém; valor inválido mantém com aviso
+                    String type = attr.getType();
+                    w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() + \"] (ex: " + timeHint(type) + "): \");");
+                    w.println("        String " + name + "Str = scanner.nextLine();");
+                    w.println("        if (!" + name + "Str.isEmpty()) {");
+                    w.println("            try { entity.set" + capitalized + "(" + type + ".parse(" + name + "Str.trim())); }");
+                    w.println("            catch (Exception ex) { System.out.println(\"Invalid value, keeping current.\"); }");
+                    w.println("        }");
                 } else {
-                    w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
-                            "\"]: \");");
-                    w.println("        String " + name + " = scanner.nextLine();");
-                    w.println("        if (!" + name + ".isEmpty()) entity.set" + capitalized + "(" + name +
-                            ");");
+                    throw new IllegalArgumentException("Atributo '" + name + "' do tipo '" + attr.getType()
+                            + "': tipo não suportado no target CLI.");
                 }
                 break;
+        }
+    }
+
+    // tipos java.time suportados nos menus
+    private static boolean isTimeType(String type) {
+        return type.equals("LocalDate") || type.equals("LocalDateTime") || type.equals("LocalTime");
+    }
+
+    // mostar exemplo de formato para o user
+    private static String timeHint(String type) {
+        switch (type) {
+            case "LocalDate":     return "2026-01-31";
+            case "LocalDateTime": return "2026-01-31T10:30";
+            default:              return "10:30";   // LocalTime
         }
     }
 

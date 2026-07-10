@@ -69,6 +69,11 @@ public class SpringJobGenerator {
     private void generateJobClass(Class cls, Operation op, List<Class> classes, List<Association> associations,
                                   List<model.Enumeration> enumerations, String jobsDir) throws IOException {
         Interaction interaction = op.getSequenceDiagram();
+
+        if (interaction == null) {
+            throw new IllegalArgumentException("Job '" + op.getName()
+                    + "': não tem diagrama de sequência associado — ligue um diagrama à operação ou desmarque-a como job.");
+        }
         String jobName = GeneratorUtils.capitalizeFirst(op.getName()) + "Job";
         String cron = (op.getCron() != null && !op.getCron().isBlank()) ? op.getCron() : "0 * * * * *";
 
@@ -76,7 +81,16 @@ public class SpringJobGenerator {
         Set<String> repoTypes = new LinkedHashSet<>();
         if (interaction != null) {
             for (Lifeline ll : interaction.getLifelines()) {
-                if (ll.getType() != null && ll.getType().endsWith("Repository")) repoTypes.add(ll.getType());
+                if (ll.getType() == null || !ll.getType().endsWith("Repository")) continue;
+                String entity = ll.getType().substring(0, ll.getType().length() - "Repository".length());
+                boolean known = classes.stream().anyMatch(c -> c.getName().equals(entity));
+                if (!known) {
+                    // lifeline de repo de classe inexistente
+                    throw new IllegalArgumentException("Job '" + op.getName()
+                            + "': o diagrama tem uma lifeline ': " + ll.getType() + "' mas a classe '"
+                            + entity + "' não existe no modelo.");
+                }
+                repoTypes.add(ll.getType());
             }
         }
 
@@ -107,9 +121,7 @@ public class SpringJobGenerator {
             writer.println();
             writer.println("    @Scheduled(cron = \"" + cron + "\")");
             writer.println("    public void run() {");
-            if (interaction != null) {
-                new SequenceBodyGenerator(associations).generateMethodBodyFromInteraction(writer, cls, op, interaction);
-            }
+            new SequenceBodyGenerator(associations).generateMethodBodyFromInteraction(writer, cls, op, interaction);
             writer.println("    }");
             writer.println("}");
         }

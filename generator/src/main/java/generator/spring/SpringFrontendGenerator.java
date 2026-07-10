@@ -333,6 +333,8 @@ public class SpringFrontendGenerator {
             w.println("    </form>");
 
             // tabela
+            w.println("    <p> a tabela e os selects de relação mostram só a");
+            w.println("         1ª página do findAll </p>");
             w.println("    <table id=\"list\">");
             w.print("      <thead><tr>");
             for (String c : columns) w.print("<th>" + c + "</th>");
@@ -500,9 +502,9 @@ public class SpringFrontendGenerator {
             w.println("  const url = editId === null ? API : `${API}/${editId}`;");
             w.println("  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });");
             w.println("  if (!res.ok) {");
-            w.println("    // o backend devolve {\"error\": \"...\"} (validação OCL, etc.); mostra a mensagem");
+            w.println("    // o backend devolve ProblemDetail (RFC 7807): a mensagem (validação OCL, etc.) vem em 'detail'");
             w.println("    const err = await res.json().catch(() => null);");
-            w.println("    alert(err && err.error ? err.error : 'Save failed: ' + res.status);");
+            w.println("    alert(err && (err.detail || err.error) ? (err.detail || err.error) : 'Save failed: ' + res.status);");
             w.println("    return;");
             w.println("  }");
             // relações single: o PATCH ignora null (não limpa); se o select ficou vazio na edição,
@@ -596,7 +598,7 @@ public class SpringFrontendGenerator {
                 w.println("    : await fetch(base, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify([child]) });");
                 w.println("  if (!res.ok) {");
                 w.println("    const err = await res.json().catch(() => null);");
-                w.println("    alert(err && err.error ? err.error : method + ' failed: ' + res.status);");
+                w.println("    alert(err && (err.detail || err.error) ? (err.detail || err.error) : method + ' failed: ' + res.status);");
                 w.println("    return;");
                 w.println("  }");
                 w.println("  load();");
@@ -616,7 +618,7 @@ public class SpringFrontendGenerator {
                 w.println("  const res = await fetch(`${API}/${form.dataset.path}?${params}`, { method: form.dataset.method });");
                 w.println("  const text = await res.text();");
                 w.println("  if (!res.ok) {");
-                w.println("    let msg = text; try { msg = JSON.parse(text).error ?? text; } catch {}");
+                w.println("    let msg = text; try { const j = JSON.parse(text); msg = j.detail ?? j.error ?? text; } catch {}");
                 w.println("    alert('Operation failed: ' + msg);");
                 w.println("    return;");
                 w.println("  }");
@@ -633,7 +635,7 @@ public class SpringFrontendGenerator {
                 w.println("  const res = await fetch(`${API}/${event.target.dataset.path}`, { method: 'POST' });");
                 w.println("  if (!res.ok) {");
                 w.println("    const err = await res.json().catch(() => null);");
-                w.println("    alert(err && err.error ? err.error : 'Job failed: ' + res.status);");
+                w.println("    alert(err && (err.detail || err.error) ? (err.detail || err.error) : 'Job failed: ' + res.status);");
                 w.println("    return;");
                 w.println("  }");
                 w.println("  alert('Job ran');");

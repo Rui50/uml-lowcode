@@ -456,7 +456,9 @@ public class SequenceDiagramParser {
         return arg;
     }
     /**
-     * Divide uma string por , mas ignora as vírgulas dentro de < > (para listas e maps)
+     * Divide uma string por , mas ignora as vírgulas dentro de < > (listas/maps)
+     * e dentro de ( ) — um argumento "criaAluno(nome, numero)" é UM argumento,
+     * senão a heurística de coleções (size()==1) não dispara e gera acesso a campo private
      */
     private List<String> splitArguments(String input) {
         List<String> parts = new ArrayList<>();
@@ -465,8 +467,8 @@ public class SequenceDiagramParser {
 
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
-            if (c == '<') depth++;
-            else if (c == '>') depth--;
+            if (c == '<' || c == '(') depth++;
+            else if (c == '>' || c == ')') depth--;
             else if (c == ',' && depth == 0) {
                 parts.add(input.substring(start, i));
                 start = i + 1;
@@ -478,14 +480,15 @@ public class SequenceDiagramParser {
     }
 
     /**
-     * Encontra o primeiro ':' que não esteja dentro de < > (para evitar confundir com generics como List<User>)
+     * Encontra o primeiro ':' que não esteja dentro de < > nem de ( )
+     * (evita confundir com generics como List<User> ou com um ':' dentro de uma chamada aninhada)
      */
     private int findColonOutsideGenerics(String input) {
         int depth = 0;
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
-            if (c == '<') depth++;
-            else if (c == '>') depth--;
+            if (c == '<' || c == '(') depth++;
+            else if (c == '>' || c == ')') depth--;
             else if (c == ':' && depth == 0) return i;
         }
         return -1;

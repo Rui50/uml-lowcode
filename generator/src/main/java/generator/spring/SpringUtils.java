@@ -15,7 +15,7 @@ public class SpringUtils {
         for (Message msg : interaction.getMessages()) {
             if (msg.getTarget() != null
                     && serviceType.equals(msg.getTarget().getType())
-                    && msg.getName().equals(op.getName())) {
+                    && op.getName().equals(msg.getName())) {   // op primeiro: msg.getName() pode ser null (seta sem nome)
                 return msg;
             }
         }
