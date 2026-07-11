@@ -201,16 +201,14 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
                 return base + ".get(" + visit(ctx.expression()) + ")";
             }
 
-            // accesso a propriedade
-            // se base é "this" (self) -> acesso direto: this.alunos
-            // se base é outro objeto -> usar getter: a.getNumero()
+            // accesso a propriedade -> SEMPRE getter (this.getX() e a.getX()).
+            // this.getX() (em vez de this.x) faz um invariante de SUBCLASSE que refere
+            // atributo herdado compilar (o campo é private no pai, mas o getter é herdado)
+            // e unifica com o acesso a outros objetos numa só forma. Cobre também os
+            // derivados (sem campo, só getter) -> deixou de ser preciso o fixDerivedAccess.
             String prop = ctx.ID().getText();
-            if ("this".equals(base)) {
-                return base + "." + prop;
-            } else {
-                String getter = "get" + prop.substring(0, 1).toUpperCase() + prop.substring(1);
-                return base + "." + getter + "()";
-            }
+            String getter = "get" + prop.substring(0, 1).toUpperCase() + prop.substring(1);
+            return base + "." + getter + "()";
         }
 
         if (ctx.ID() != null) {

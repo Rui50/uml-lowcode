@@ -107,8 +107,12 @@ public class OCLtoSpringAnnot {
         }
     }
 
+    // só atributos PRÓPRIOS: uma anotação de Bean Validation vive no campo, logo aplica-se a
+    // TODAS as instâncias da classe que o declara. Uma invariante numa SUBCLASSE sobre um campo
+    // HERDADO tem âmbito só da subclasse — não se pode exprimir como anotação no campo do pai
+    // (aplicaria a todos os subtipos). Fica no validate() da subclasse (that only runs for it).
     private static String typeOf(Class cls, String field) {
-        for (Attribute a : cls.getAllAttributes()) {
+        for (Attribute a : cls.getAttributes()) {
             if (a.getName().equals(field)) return a.getType();
         }
         return null;

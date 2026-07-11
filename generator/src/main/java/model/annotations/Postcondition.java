@@ -1,6 +1,5 @@
 package model.annotations;
 
-import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,10 +33,8 @@ public class Postcondition {
         if (javaExpression == null || selfVar == null || selfVar.equals("this")) {
             return javaExpression;
         }
-        return Pattern.compile("this\\.(\\w+)").matcher(javaExpression).replaceAll(mr -> {
-            String f = mr.group(1);
-            return selfVar + ".get" + Character.toUpperCase(f.charAt(0)) + f.substring(1) + "()";
-        });
+        // a tradução OCL já usa getters (this.getX()); só trocar o alvo do self
+        return javaExpression.replace("this.", selfVar + ".");
     }
 
     public List<PreSnapshot> getPreSnapshots() { return preSnapshots; }

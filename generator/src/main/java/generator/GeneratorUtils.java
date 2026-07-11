@@ -18,8 +18,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class GeneratorUtils {
 
@@ -304,27 +302,10 @@ public class GeneratorUtils {
         if (cls == null) return java;   // interfaces have no associations/map fields
         List<String> mapFields = getMapFieldNames(cls, associations);
         for (String field : mapFields) {
-            java = java.replace("this." + field + ".stream()", "this." + field + ".values().stream()");
-        }
-        return java;
-    }
-
-    /**
-     * os atributos derivados não têm campo, apenas getter. O visitor traduz
-     * self.<attr> como acesso direto a campo (this.<attr>), o que não compila
-     * para um derivado. Reescrevemos esses acessos para a chamada do getter
-     * (this.get<Attr>()). Inclui derivados herdados, porque getAllAttributes
-     * percorre a cadeia de pais.
-     */
-    public static String fixDerivedAccess(String java, Class cls) {
-        if (java == null || cls == null) return java;
-        for (Attribute a : cls.getAllAttributes()) {
-            if (!a.hasDerive()) continue;
-            String name = a.getName();
-            String replacement = Matcher.quoteReplacement(
-                    "this.get" + capitalizeFirst(name) + "()");
-            // \b para não apanhar prefixos (this.activeLoansX)
-            java = java.replaceAll("\\bthis\\." + Pattern.quote(name) + "\\b", replacement);
+            // o acesso à coleção já vem como getter (this.getAlunos()); um campo-Map precisa
+            // de .values() antes do .stream()
+            String access = "this.get" + capitalizeFirst(field) + "()";
+            java = java.replace(access + ".stream()", access + ".values().stream()");
         }
         return java;
     }

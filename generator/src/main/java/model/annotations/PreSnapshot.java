@@ -1,10 +1,8 @@
 package model.annotations;
 
-import java.util.regex.Pattern;
-
 public class PreSnapshot {
     private final String varName;       //  "alunos_pre"
-    private final String javaInit;      // "new ArrayList<>(this.alunos)"
+    private final String javaInit;      // "new ArrayList<>(this.getAlunos())"
     private final String javaType;      //"List<Aluno>" or "int"
 
     public PreSnapshot(String varName, String javaInit, String javaType) {
@@ -17,14 +15,11 @@ public class PreSnapshot {
     public String getJavaInit() { return javaInit; }
     public String getJavaType() { return javaType; }
 
-    // para spring, substitui "this.campo" por "selfVar.getCampo()"
+    // para spring, aponta o self ao selfVar (o javaInit já usa getters: this.getCampo())
     public String getJavaInit(String selfVar) {
         if (javaInit == null || selfVar == null || selfVar.equals("this")) {
             return javaInit;
         }
-        return Pattern.compile("this\\.(\\w+)").matcher(javaInit).replaceAll(mr -> {
-            String f = mr.group(1);
-            return selfVar + ".get" + Character.toUpperCase(f.charAt(0)) + f.substring(1) + "()";
-        });
+        return javaInit.replace("this.", selfVar + ".");
     }
 }

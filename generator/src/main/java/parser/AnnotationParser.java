@@ -98,7 +98,7 @@ public class AnnotationParser {
         // ver se é atributo — snapshot é cópia por valor
         for (Attribute a : cls.getAttributes()) {
             if (a.getName().equals(attrName)) {
-                return new PreSnapshot(varName, "this." + attrName, a.getType());
+                return new PreSnapshot(varName, "this.get" + GeneratorUtils.capitalizeFirst(attrName) + "()", a.getType());
             }
         }
         // associação (multiplicidade *) ou referência única
@@ -117,13 +117,13 @@ public class AnnotationParser {
             if (assoc.hasQualifier()) {
                 // associação qualifier ->  é Map<QualifierType, OtherClass>
                 return new PreSnapshot(varName,
-                        "new HashMap<>(this." + attrName + ")",
+                        "new HashMap<>(this.get" + GeneratorUtils.capitalizeFirst(attrName) + "())",
                         "Map<" + assoc.getQualifierType() + ", " + otherClass + ">");
             }
             if (mult != null && mult.contains("*")) {
-                return new PreSnapshot(varName, "new ArrayList<>(this." + attrName + ")", "List<" + otherClass + ">");
+                return new PreSnapshot(varName, "new ArrayList<>(this.get" + GeneratorUtils.capitalizeFirst(attrName) + "())", "List<" + otherClass + ">");
             }
-            return new PreSnapshot(varName, "this." + attrName, otherClass);
+            return new PreSnapshot(varName, "this.get" + GeneratorUtils.capitalizeFirst(attrName) + "()", otherClass);
         }
         throw new IllegalArgumentException("@pre references unknown property '" + attrName + "' on class " + cls.getName());
     }

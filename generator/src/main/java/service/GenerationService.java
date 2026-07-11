@@ -20,7 +20,6 @@ import generator.spring.*;
 public class GenerationService {
     public void generate(ParsedModel model, String target, String outputDir, ProjectSettings opts) throws Exception {
         validateSelfAssociations(model);
-        normalizeDerivedAccess(model);
         switch (target) {
             case "plain"  -> generatePlain(model, outputDir, opts);
             case "cli"    -> generateCli(model, outputDir);
@@ -54,32 +53,6 @@ public class GenerationService {
 
     private static boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
-    }
-
-    /**
-     * reescreve os acessos a atributos derivados (this.x -> this.getX()) em todas
-     * as expressões OCL já traduzidas. Corre aqui, com o modelo completo, porque
-     * no parser a ordem de aplicação das anotações não garante que o derivado já
-     * é conhecido — sobretudo quando é herdado da superclasse.
-     */
-    private void normalizeDerivedAccess(ParsedModel model) {
-        for (Class cls : model.getClasses()) {
-            for (Invariant inv : cls.getInvariants()) {
-                inv.setJavaExpression(GeneratorUtils.fixDerivedAccess(inv.getJavaExpression(), cls));
-            }
-            for (Operation op : cls.getOperations()) {
-                for (Precondition pre : op.getPreconditions()) {
-                    pre.setJavaExpression(GeneratorUtils.fixDerivedAccess(pre.getJavaExpression(), cls));
-                }
-                for (Postcondition post : op.getPostconditions()) {
-                    post.setJavaExpression(GeneratorUtils.fixDerivedAccess(post.getJavaExpression(), cls));
-                }
-            }
-            for (Attribute a : cls.getAttributes()) {
-                a.setJavaInitExpression(GeneratorUtils.fixDerivedAccess(a.getJavaInitExpression(), cls));
-                a.setJavaDeriveExpression(GeneratorUtils.fixDerivedAccess(a.getJavaDeriveExpression(), cls));
-            }
-        }
     }
 
     private void generatePlain(ParsedModel m, String outputDir, ProjectSettings opts) throws Exception {
