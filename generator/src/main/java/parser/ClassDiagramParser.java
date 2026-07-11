@@ -470,6 +470,32 @@ public class ClassDiagramParser {
                 }
             }
         }
+
+        mergeInterfaceOperations(classes);
+    }
+
+    // copia para cada classe as ops das interfaces que realiza e que ela ainda não tem (por
+    // nome) — sem isto, "implements X" sem o metodo não compila. Op já existente (própria/herdada) ganha.
+    private void mergeInterfaceOperations(List<Class> classes) {
+        for (Class cls : classes) {
+            for (Interface iface : cls.getRealizations()) {
+                for (Operation op : iface.getOperations()) {
+                    boolean alreadyHas = cls.getAllOperations().stream()
+                            .anyMatch(o -> o.getName().equals(op.getName()));
+                    if (!alreadyHas) cls.addOperation(cloneOperation(op, cls));
+                }
+            }
+        }
+    }
+
+    // clone por classe (id ifaceOpId@Classe) para não partilhar o objeto entre classes que a realizam
+    private static Operation cloneOperation(Operation src, Class cls) {
+        Operation copy = new Operation(src.getId() + "@" + cls.getName(),
+                src.getName(), src.getReturnType(), src.getVisibility());
+        for (Parameter p : src.getParameters()) {
+            copy.addParameter(new Parameter(p.getName(), p.getType(), p.getDirection()));
+        }
+        return copy;
     }
 
     private String buildMultiplicity(String lower, String upper) {

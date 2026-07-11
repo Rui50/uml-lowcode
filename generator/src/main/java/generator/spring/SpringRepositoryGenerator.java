@@ -87,6 +87,7 @@ public class SpringRepositoryGenerator {
         writer.println("    // - existsById(id)");
         writer.println();
 
+        /*
         // gerar query methods para atributos String
         boolean hasStringAttributes = false;
 
@@ -113,5 +114,6 @@ public class SpringRepositoryGenerator {
             writer.println("    // custom query methods TODO");
             writer.println();
         }
+        */
     }
 }
