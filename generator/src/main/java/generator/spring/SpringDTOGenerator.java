@@ -129,7 +129,9 @@ public class SpringDTOGenerator {
             w.println("public class " + className + "CreateDTO {");
             w.println();
             for (Attribute attr : allAttrs) {
-                w.println("    private " + attr.getType() + " " + attr.getName() + ";");
+                // tipo boxed (Integer/Boolean/...) omitido no POST chega a null e o toEntity() ignora-o, em vez
+                // de um primitivo chegar 0/false (valor inventado).
+                w.println("    private " + GeneratorUtils.fixType(attr.getType()) + " " + attr.getName() + ";");
             }
 
             // ids de relação (ligados no service, não no toEntity) — mesmo "emit" do ResponseDTO
@@ -145,7 +147,10 @@ public class SpringDTOGenerator {
             // atributos com init nem aparecem aqui: o valor inicial fica com o default da entidade
             for (Attribute attr : allAttrs) {
                 String cap = GeneratorUtils.capitalizeFirst(attr.getName());
-                w.println("        " + varName + ".set" + cap + "(this.get" + cap + "());");
+                // o campo do DTO é boxed (vem null se omitido) mas a entidade é PRIMITIVA. setX(this.getX())
+                // auto-tira o Integer para int -> NPE se null. O guard evita isso: omitido -> não mexe,
+                // fica o default da entidade em vez de um 0/false inventado.
+                w.println("        if (this.get" + cap + "() != null) " + varName + ".set" + cap + "(this.get" + cap + "());");
             }
             w.println("        return " + varName + ";");
             w.println("    }");
