@@ -8,12 +8,14 @@ export function useSelectedClass() {
 
   const selected = computed(() => model.selectedClass ?? model.selectedInterface)
   const isInterface = computed(() => model.selectedKind === 'interface')
-  const className = computed(() => selected.value?.name ?? null)
+  const className = computed(() => selected.value?.name ?? null)   // só para display
+  // chave das anotações = xmi:id
+  const classKey = computed(() => selected.value?.id ?? null)
   const attributes = computed(() => isInterface.value ? [] : model.selectedClass?.attributes ?? [])
   const operations = computed(() => isInterface.value ? [] : model.selectedClass?.operations ?? [])
 
-  // chave "ClassName.attrName" usada nos mapas de anotação por atributo
-  const key = (name: string) => `${className.value}.${name}`
+  // chave "<classId>.attrName" usada nos mapas de anotação por atributo
+  const key = (name: string) => `${classKey.value}.${name}`
 
-  return { selected, isInterface, className, attributes, operations, key }
+  return { selected, isInterface, className, classKey, attributes, operations, key }
 }

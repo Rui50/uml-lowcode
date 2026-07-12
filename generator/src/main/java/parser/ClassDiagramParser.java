@@ -104,6 +104,7 @@ public class ClassDiagramParser {
         }
 
         String classId = element.getXMIID();
+        cl.setId(classId);   // xmi:id
         List<Invariant> invariants = invariantsCache.get(classId);
 
         if (invariants != null) {
@@ -181,6 +182,7 @@ public class ClassDiagramParser {
         for (ModelElement element : interfaceElements) {
             String name = element.getName();
             Interface iface = new Interface(name, "public");
+            iface.setId(element.getXMIID());   // xmi:id — chavear anotações (nota #32)
 
             // operations dessa interface
             for (ModelElement operationElement : ordered(element.getSetAttribute("ownedoperations"))) {

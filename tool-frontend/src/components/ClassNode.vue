@@ -20,14 +20,14 @@ function splitOp(op: string) {
 const annotations = useAnnotationsStore()
 
 const classAnnotated = computed(() => {
-  const cn = props.data.name
+  const cn = props.data.id   // anotações com chaves por xmi:id
   const hasInvs = (annotations.invariantsByClass[cn]?.length ?? 0) > 0
   //const hasAttrs = props.data.attributes.some(a => attrAnnotated(a.name))
   return hasInvs
 })
 
 function attrAnnotated(attrName: string): boolean {
-  const k = `${props.data.name}.${attrName}`
+  const k = `${props.data.id}.${attrName}`
   return k in annotations.initByAttribute || k in annotations.deriveByAttribute
 }
 </script>
@@ -73,7 +73,7 @@ function attrAnnotated(attrName: string): boolean {
     border-radius: 4px;
     min-width: 180px;
     font-size: 12px;
-    overflow: hidden;          
+    overflow: hidden;
   }
 
   .header {
@@ -98,24 +98,24 @@ function attrAnnotated(attrName: string): boolean {
     list-style: none;
     margin: 0;
     padding: 4px 8px;
-    min-height: 18px;         
+    min-height: 18px;
   }
-  .section li { 
-    padding: 2px 0; 
+  .section li {
+    padding: 2px 0;
   }
   .section + .section {
     border-top: 1px solid var(--color-border);
   }
 
-  .operations li { 
+  .operations li {
     font-family: monospace; font-size: 11px;
   }
 
-  .type { 
-    color: var(--color-primary); font-family: monospace; 
+  .type {
+    color: var(--color-primary); font-family: monospace;
   }
-  .empty { 
-    opacity: 0.4; 
+  .empty {
+    opacity: 0.4;
   }
 
   .dot {

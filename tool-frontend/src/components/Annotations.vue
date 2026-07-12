@@ -28,7 +28,7 @@ type Tab = "ocl" | "persistence" | "spring"
 
 const model = useModelStore()
 const annotations = useAnnotationsStore()
-const { selected, isInterface, className, attributes, operations, key } = useSelectedClass()
+const { selected, isInterface, className, classKey, attributes, operations, key } = useSelectedClass()
 
 // coleções da classe selecionada + atributos da classe alvo (para o dropdown de order-by)
 const collectionRelations = computed(() =>
@@ -57,7 +57,7 @@ watch([attributes, className], () => {
 }, { immediate: true })
 
 const invariants = computed(() =>
-  className.value ? annotations.invariantsByClass[className.value] ?? [] : []
+  classKey.value ? annotations.invariantsByClass[classKey.value] ?? [] : []
 )
 
 const interactions = computed(() => model.model?.interactions ?? [])
@@ -113,20 +113,20 @@ const ownsTable = computed(() => {
     if (!p) break
     root = p
   }
-  const strategy = annotations.inheritanceStrategyByClass[root.name] ?? 'SINGLE_TABLE'
+  const strategy = annotations.inheritanceStrategyByClass[root.id] ?? 'SINGLE_TABLE'
   return strategy !== 'SINGLE_TABLE'                 // filho: só JOINED tem tabela própria
 })
 
 // config atual do id (undefined = id por defeito)
 const idConfig = computed(() =>
-  className.value ? annotations.idByClass[className.value] : undefined
+  classKey.value ? annotations.idByClass[classKey.value] : undefined
 )
 
 // atributos elegíveis: integrais (wrapper) e não derivados
 const idEligibleAttributes = computed(() =>
   (model.selectedClass?.attributes ?? []).filter(a =>
     ELIGIBLE_ID_TYPES.includes(a.type) &&
-    !(`${className.value}.${a.name}` in annotations.deriveByAttribute)
+    !(key(a.name) in annotations.deriveByAttribute)
   )
 )
 
@@ -148,15 +148,15 @@ const idSelection = computed(() =>
 const idIsAssigned = computed(() => idConfig.value?.attributeType === 'String')
 
 function pickId(value: string | null) {
-  if (!className.value) return
-  if (!value) { annotations.setId(className.value, null); return }              // Long default
+  if (!classKey.value) return
+  if (!value) { annotations.setId(classKey.value, null); return }              // Long default
   if (value === UUID_OPTION) {
-    annotations.setId(className.value, { attributeName: '', attributeType: 'UUID' })
+    annotations.setId(classKey.value, { attributeName: '', attributeType: 'UUID' })
     return
   }
   const attr = idEligibleAttributes.value.find(a => a.name === value)
   if (!attr) return
-  annotations.setId(className.value, { attributeName: attr.name, attributeType: attr.type })
+  annotations.setId(classKey.value, { attributeName: attr.name, attributeType: attr.type })
 }
 
 // placeholder do init: num enum mostra a sintaxe OCL (Tipo::LITERAL) com um exemplo real
@@ -194,7 +194,7 @@ function close() {
                 <Button label="Fill required" icon="pi pi-check-square" size="small" severity="secondary"
                         v-tooltip.top="'Cria invariantes de não-nulo para as relações single obrigatórias (mult. 1) de todo o modelo'"
                         @click="annotations.prefillMandatoryRelations()" />
-                <Button label="Add" icon="pi pi-plus" size="small" @click="annotations.addInvariant(className!)" />
+                <Button label="Add" icon="pi pi-plus" size="small" @click="annotations.addInvariant(classKey!)" />
               </div>
             </header>
 
@@ -215,7 +215,7 @@ function close() {
               <Button
                 label="Remove" icon="pi pi-trash" size="small" severity="danger" text
                 class="remove-btn"
-                @click="annotations.deleteInvariant(className!, inv.id)"
+                @click="annotations.deleteInvariant(classKey!, inv.id)"
               />
             </div>
             <p v-if="!invariants.length" class="empty">No invariants yet.</p>
@@ -361,7 +361,7 @@ function close() {
             </header>
             <div class="entry">
               <InputText
-                v-model="annotations.tableNameByClass[className!]"
+                v-model="annotations.tableNameByClass[classKey!]"
                 :placeholder="className?.toLowerCase()"
               />
             </div>
@@ -400,7 +400,7 @@ function close() {
             </header>
             <div class="entry">
               <Select
-                v-model="annotations.inheritanceStrategyByClass[className!]"
+                v-model="annotations.inheritanceStrategyByClass[classKey!]"
                 :options="inheritanceOptions"
                 optionLabel="label"
                 optionValue="value"

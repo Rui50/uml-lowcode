@@ -180,8 +180,8 @@ public class AnnotationService {
         });
     }
 
-    private Interface findInterface(List<Interface> interfaces, String name) {
-        return interfaces.stream().filter(i -> i.getName().equals(name)).findFirst().orElse(null);
+    private Interface findInterface(List<Interface> interfaces, String id) {
+        return interfaces.stream().filter(i -> id.equals(i.getId())).findFirst().orElse(null);
     }
 
     private void applyInits(List<Class> classes, List<Association> associations, Map<String, String> map) {
@@ -240,8 +240,9 @@ public class AnnotationService {
         });
     }
 
-    private Class findClass(List<Class> classes, String name) {
-        return classes.stream().filter(c -> c.getName().equals(name)).findFirst().orElse(null);
+    // anotações tem chave por xmi:id
+    private Class findClass(List<Class> classes, String id) {
+        return classes.stream().filter(c -> id.equals(c.getId())).findFirst().orElse(null);
     }
 
     private Attribute findAttribute(List<Class> classes, String key) {

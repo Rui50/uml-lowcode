@@ -127,7 +127,7 @@ public class ToolService {
                         !rel.isCollection() && isMandatory(rel.multiplicity)))
                 .toList();
 
-        return new ClassDTO(c.getName(), parent, attrs, ops, c.isAbstract(), realizations, endpoints, relations);
+        return new ClassDTO(c.getId(), c.getName(), parent, attrs, ops, c.isAbstract(), realizations, endpoints, relations);
     }
 
     // relação obrigatória = lower bound >= 1 (ex: "1", "1..*"); "0..1"/"*"/null -> false.
@@ -175,7 +175,7 @@ public class ToolService {
     private InterfaceDTO toInterfaceDto(Interface i) {
         List<OperationDTO> ops = i.getOperations().stream()
                 .map(o -> toOperationDTO(i.getName(), o)).toList();
-        return new InterfaceDTO(i.getName(), ops);
+        return new InterfaceDTO(i.getId(), i.getName(), ops);
     }
 
     private InteractionDTO toInteractionDTO(Interaction i) {

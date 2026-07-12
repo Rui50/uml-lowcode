@@ -30,6 +30,7 @@ import java.util.Set;
  */
 public class Class {
     // propriedades basicas para já
+    private String id;          // xmi:id
     private String name;
     private String visibility;
 
@@ -143,6 +144,14 @@ public class Class {
         this.parentClass = null;
         this.invariants = new ArrayList<>();
         this.realizations = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getName() {

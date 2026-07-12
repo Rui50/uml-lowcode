@@ -24,6 +24,7 @@ export interface RelationField {
 }
 
 export interface ClassDTO {
+  id: string  // xmi:id
   name: string
   parent: string | null
   attributes: AttributeDTO[]
@@ -35,6 +36,7 @@ export interface ClassDTO {
 }
 
 export interface InterfaceDTO {
+  id: string  // xmi:id
   name: string
   operations: OperationDTO[]
 }

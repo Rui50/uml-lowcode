@@ -9,6 +9,7 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public class ClassDTO {
+    private String id; // xmi:id
     private String name;
     private String parent;
     private List<AttributeDTO> attributes;

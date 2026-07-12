@@ -120,7 +120,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     for (const cls of modelStore.model?.classes ?? []) {
       for (const rel of cls.relations) {
         if (rel.collection || !rel.mandatory) continue
-        const invs = (invariantsByClass.value[cls.name] ??= [])
+        const invs = (invariantsByClass.value[cls.id] ??= [])
         const expr = `self.${rel.name} <> null`
         if (invs.some(i => i.expression.replace(/\s/g, '') === expr.replace(/\s/g, ''))) continue
         invs.push({

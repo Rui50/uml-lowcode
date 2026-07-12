@@ -9,6 +9,7 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public class InterfaceDTO {
+    private String id; // xmi:id
     private String name;
     private List<OperationDTO> operations;
 

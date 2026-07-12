@@ -12,7 +12,7 @@ import Checkbox from 'primevue/checkbox'
 
 const model = useModelStore()
 const annotations = useAnnotationsStore()
-const { className, isInterface, operations } = useSelectedClass()
+const { className, classKey, isInterface, operations } = useSelectedClass()
 
 function pluralPath(name: string) {
   const p = name.toLowerCase()
@@ -62,11 +62,11 @@ function autoDtoName(endpointType: EndpointType) {
 
 // um clique liga o override (se ainda não existe) e abre/fecha os campos
 function openOverride(endpointType: EndpointType) {
-  annotations.ensureResponseOverride(className.value!, endpointType)
+  annotations.ensureResponseOverride(classKey.value!, endpointType)
   expandedEndpointType.value = expandedEndpointType.value === endpointType ? null : endpointType
 }
 function removeOverride(endpointType: EndpointType) {
-  annotations.removeResponseOverride(className.value!, endpointType)
+  annotations.removeResponseOverride(classKey.value!, endpointType)
   expandedEndpointType.value = null
 }
 
@@ -85,18 +85,18 @@ const fieldRows = computed(() => {
     hierarchyList.push(c)
   }
 
-  // id custom vive na raiz -> excluído da matriz em toda a hierarquia
-  const idAttr = annotations.idByClass[hierarchyList.at(-1)?.name ?? '']?.attributeName
+  // id custom vive na raiz -> excluído da matriz em toda a hierarquia (
+  const idAttr = annotations.idByClass[hierarchyList.at(-1)?.id ?? '']?.attributeName
 
   // escondido por um antepassado (herda-se; o filho não pode des-esconder -> trancado)
   const ancestorHides = (role: DTORole, attr: string) =>
-    hierarchyList.slice(1).some(c => annotations.dtoHiddenByClass[c.name]?.[role].includes(attr))
+    hierarchyList.slice(1).some(c => annotations.dtoHiddenByClass[c.id]?.[role].includes(attr))
 
   return hierarchyList.flatMap((c, depth) => {
     const attrRows = c.attributes
       .filter(a => a.name !== idAttr)
       .map(a => {
-        const k = `${c.name}.${a.name}`
+        const k = `${c.id}.${a.name}`
         const hasInit = k in annotations.initByAttribute
         const hasDerive = k in annotations.deriveByAttribute
         return {
@@ -137,9 +137,9 @@ const controllerEligible = computed(() =>
 )
 
 // garante a entrada do controller (default true) para a classe selecionada
-watch(className, (name) => {
-  if (name && controllerEligible.value && annotations.generateControllerByClass[name] === undefined) {
-    annotations.generateControllerByClass[name] = true
+watch(classKey, (id) => {
+  if (id && controllerEligible.value && annotations.generateControllerByClass[id] === undefined) {
+    annotations.generateControllerByClass[id] = true
   }
 }, { immediate: true })
 
@@ -147,9 +147,9 @@ watch(className, (name) => {
 const beanValidationEligible = computed(() => !isInterface.value && !!model.selectedClass)
 
 // garante a entrada do bean validation (default true) para a classe selecionada
-watch(className, (name) => {
-  if (name && beanValidationEligible.value && annotations.beanValidationByClass[name] === undefined) {
-    annotations.beanValidationByClass[name] = true
+watch(classKey, (id) => {
+  if (id && beanValidationEligible.value && annotations.beanValidationByClass[id] === undefined) {
+    annotations.beanValidationByClass[id] = true
   }
 }, { immediate: true })
 </script>
@@ -162,7 +162,7 @@ watch(className, (name) => {
     </header>
     <div class="entry">
       <div class="job-toggle">
-        <Checkbox v-model="annotations.generateControllerByClass[className!]" :binary="true" inputId="gen-controller" />
+        <Checkbox v-model="annotations.generateControllerByClass[classKey!]" :binary="true" inputId="gen-controller" />
         <label for="gen-controller">Generate REST controller</label>
         <span class="tip" v-tooltip.top="'Se desativado, esta classe não expõe endpoints REST. A entidade, repositório e serviço continuam a ser gerados.'">ⓘ</span>
       </div>
@@ -183,24 +183,24 @@ watch(className, (name) => {
           <code class="ep-path" v-tooltip.top="e.path">{{ e.path.replace('/api', '') }}</code>
           <!-- só nos 4 endpoints CRUD com corpo: um clique liga o override e abre os campos -->
           <a v-if="endpointTypeOf(e)" class="ep-override-btn"
-            :class="{ active: annotations.hasResponseOverride(className!, endpointTypeOf(e)!) }"
+            :class="{ active: annotations.hasResponseOverride(classKey!, endpointTypeOf(e)!) }"
             @click="openOverride(endpointTypeOf(e)!)">
-            {{ annotations.hasResponseOverride(className!, endpointTypeOf(e)!) ? '● custom' : 'customize' }}
+            {{ annotations.hasResponseOverride(classKey!, endpointTypeOf(e)!) ? '● custom' : 'customize' }}
           </a>
         </div>
         <!-- painel do override: response próprio deste endpoint (independente do default) -->
         <div v-if="endpointTypeOf(e) && expandedEndpointType === endpointTypeOf(e)" class="override-panel">
           <label class="override-name">
             <span>name</span>
-            <InputText :modelValue="annotations.overrideName(className!, endpointTypeOf(e)!)"
-              @update:modelValue="annotations.setOverrideName(className!, endpointTypeOf(e)!, $event ?? '')"
+            <InputText :modelValue="annotations.overrideName(classKey!, endpointTypeOf(e)!)"
+              @update:modelValue="annotations.setOverrideName(classKey!, endpointTypeOf(e)!, $event ?? '')"
               :placeholder="autoDtoName(endpointTypeOf(e)!)" size="small" />
           </label>
           <div class="override-fields">
             <label v-for="row in fieldRows" :key="row.name" class="override-field">
               <Checkbox :binary="true"
-                :modelValue="!annotations.isOverrideHidden(className!, endpointTypeOf(e)!, row.name)"
-                @update:modelValue="annotations.toggleOverrideHidden(className!, endpointTypeOf(e)!, row.name)" />
+                :modelValue="!annotations.isOverrideHidden(classKey!, endpointTypeOf(e)!, row.name)"
+                @update:modelValue="annotations.toggleOverrideHidden(classKey!, endpointTypeOf(e)!, row.name)" />
               <span>{{ row.name }}<span v-if="row.inherited" class="enum-hint"> (herdado)</span></span>
             </label>
           </div>
@@ -228,8 +228,8 @@ watch(className, (name) => {
             <span v-if="row.locked[role]" class="lock" v-tooltip.top="'fixed by init/derive or hidden by parent'">🔒</span>
             <Checkbox v-else
               :binary="true"
-              :modelValue="!annotations.isDTOHidden(className!, role, row.name)"
-              @update:modelValue="annotations.toggleDTOHidden(className!, role, row.name)"
+              :modelValue="!annotations.isDTOHidden(classKey!, role, row.name)"
+              @update:modelValue="annotations.toggleDTOHidden(classKey!, role, row.name)"
             />
           </td>
         </tr>
@@ -244,7 +244,7 @@ watch(className, (name) => {
     </header>
     <div class="entry">
       <div class="job-toggle">
-        <Checkbox v-model="annotations.beanValidationByClass[className!]" :binary="true" inputId="bean-validation" />
+        <Checkbox v-model="annotations.beanValidationByClass[classKey!]" :binary="true" inputId="bean-validation" />
         <label for="bean-validation">Invariantes OCL como anotações</label>
         <span class="tip" v-tooltip.top="'Invariantes simples (ex: points >= 0) viram anotações Bean Validation no campo; as restantes continuam no método validate().'">ⓘ</span>
       </div>
