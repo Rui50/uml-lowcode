@@ -212,11 +212,9 @@ public class JavaEntityGenerator {
     }
 
     private void generateConstructor(PrintWriter writer, Class cls) {
-        // pegar nos atributos do pai
-        List<Attribute> parentAttrs = new ArrayList<>();
-        if (cls.getParentClass() != null) {
-            parentAttrs = cls.getParentClass().getAttributes();
-        }
+        // atributos herdados de TODA a cadeia de pais
+        // senão com A->B->C o super(...) de C ficava sem os atributos de A
+        List<Attribute> parentAttrs = GeneratorUtils.ancestorAttributes(cls);
         // só os params do pai (sem derivados nem init)
         List<Attribute> paramParentAttrs = parentAttrs.stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit()).toList();

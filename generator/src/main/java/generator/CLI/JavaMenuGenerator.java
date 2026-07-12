@@ -233,11 +233,10 @@ public class JavaMenuGenerator {
 
         // recolher atributos do pai + próprios (mesma ordem que o construtor)
         List<Attribute> allAttrs = new ArrayList<>();
-        if (cls.getParentClass() != null) {
-            allAttrs.addAll(cls.getParentClass().getAttributes().stream()
-                    .filter(a -> !a.hasDerive() && !a.hasInit())
-                    .collect(Collectors.toList()));
-        }
+        // atributos herdados de TODA a cadeia de pais (raiz-primeiro)
+        allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
+                .filter(a -> !a.hasDerive() && !a.hasInit())
+                .collect(Collectors.toList()));
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
                 .collect(Collectors.toList()));
@@ -360,11 +359,10 @@ public class JavaMenuGenerator {
 
         // para cada atributo (pai + próprios) ler novo valor ou manter atual
         List<Attribute> allAttrs = new ArrayList<>();
-        if (cls.getParentClass() != null) {
-            allAttrs.addAll(cls.getParentClass().getAttributes().stream()
-                    .filter(a -> !a.hasDerive())
-                    .collect(Collectors.toList()));
-        }
+        // atributos herdados de TODA a cadeia de pais (raiz-primeiro), não só do pai directo (nota #30)
+        allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
+                .filter(a -> !a.hasDerive())
+                .collect(Collectors.toList()));
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive())
                 .collect(Collectors.toList()));

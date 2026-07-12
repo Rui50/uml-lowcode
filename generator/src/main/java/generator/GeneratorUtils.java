@@ -58,6 +58,15 @@ public class GeneratorUtils {
         return cls;
     }
 
+    // atributos de todos os ancestrai por ordem raiz-primeiro, para herança a N
+    // níveis. addAll(0,..) = prepend, p/ o avô ficar à frente do pai (ordem do super(...))
+    public static List<Attribute> ancestorAttributes(Class cls) {
+        List<Attribute> attrs = new ArrayList<>();
+        for (Class p = cls.getParentClass(); p != null; p = p.getParentClass())
+            attrs.addAll(0, p.getAttributes());   // prepend -> raiz-primeiro
+        return attrs;
+    }
+
     /**
      * devolve o tipo de referência (wrapper) de um primitivo; necessário quando
      * o campo tem de poder ser null (ex.: campo de CreateDTO com valor por defeito).

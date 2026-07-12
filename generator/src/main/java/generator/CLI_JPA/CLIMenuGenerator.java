@@ -253,12 +253,11 @@ public class CLIMenuGenerator {
         String idName = cls.getRoot().getIdAttributeName();
 
         List<Attribute> allAttrs = new ArrayList<>();
-        if (cls.getParentClass() != null) {
-            allAttrs.addAll(cls.getParentClass().getAttributes().stream()
-                    .filter(a -> !a.hasDerive() && !a.hasInit())
-                    .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
-                    .collect(Collectors.toList()));
-        }
+        // atributos herdados de todos os pais (raiz-primeiro), não só do pai directo
+        allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
+                .filter(a -> !a.hasDerive() && !a.hasInit())
+                .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
+                .collect(Collectors.toList()));
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
                 .filter(a -> !a.getName().equals(idName))
@@ -391,12 +390,11 @@ public class CLIMenuGenerator {
         String idAttrName = cls.getRoot().getIdAttributeName();
 
         List<Attribute> allAttrs = new ArrayList<>();
-        if (cls.getParentClass() != null) {
-            allAttrs.addAll(cls.getParentClass().getAttributes().stream()
-                    .filter(a -> !a.hasDerive())
-                    .filter(a -> !a.getName().equals(idAttrName))
-                    .collect(Collectors.toList()));
-        }
+        // atributos herdados de TODA a cadeia de pais (raiz-primeiro), não só do pai directo (nota #30)
+        allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
+                .filter(a -> !a.hasDerive())
+                .filter(a -> !a.getName().equals(idAttrName))
+                .collect(Collectors.toList()));
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive())
                 .filter(a -> !a.getName().equals(idAttrName))
