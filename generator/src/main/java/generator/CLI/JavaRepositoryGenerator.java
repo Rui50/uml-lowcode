@@ -33,59 +33,100 @@ public class JavaRepositoryGenerator {
     }
 
     private void generateRepository(Class cls, String repoDir) throws IOException {
-        String className = cls.getName() + "Repository";
-        String filename = repoDir + "/" + className + ".java";
-
+        String filename = repoDir + "/" + cls.getName() + "Repository.java";
         try (PrintWriter w = new PrintWriter(filename)) {
-            w.println("package repository;");
-            w.println();
-            w.println("import models." + cls.getName() + ";");
-            w.println("import java.util.*;");
-            w.println();
-            w.println("public class " + className + " {");
-            w.println();
-            w.println("    private Map<Long, " + cls.getName() + "> data = new HashMap<>();");
-            w.println("    private Long nextId = 1L;");
-            w.println();
-
-            // save
-            w.println("    public " + cls.getName() + " save(" + cls.getName() + " entity) {");
-            w.println("        if (entity.getId() == null) {");
-            w.println("            entity.setId(nextId++);");
-            w.println("        }");
-            w.println("        data.put(entity.getId(), entity);");
-            w.println("        return entity;");
-            w.println("    }");
-            w.println();
-
-            // findById
-            w.println("    public " + cls.getName() + " findById(Long id) {");
-            w.println("        return data.get(id);");
-            w.println("    }");
-            w.println();
-
-            // findAll
-            w.println("    public List<" + cls.getName() + "> findAll() {");
-            w.println("        return new ArrayList<>(data.values());");
-            w.println("    }");
-            w.println();
-
-            // deleteById
-            w.println("    public boolean deleteById(Long id) {");
-            w.println("        return data.remove(id) != null;");
-            w.println("    }");
-            w.println();
-
-            // existsById
-            w.println("    public boolean existsById(Long id) {");
-            w.println("        return data.containsKey(id);");
-            w.println("    }");
-            w.println();
-
-            w.println("}");
+            if (cls.getParentClass() == null) generateRootRepository(w, cls);   // dono do Map (store da família)
+            else                              generateChildRepository(w, cls);  // vista tipada sobre o repo da raiz
         }
+        System.out.println("Generated: " + cls.getName() + "Repository.java");
+    }
 
-        System.out.println("Generated: " + className + ".java");
+    // repo RAIZ: dono do Map<Long, Raiz> — o store partilhado por toda a família (mirror do SINGLE_TABLE)
+    private void generateRootRepository(PrintWriter w, Class cls) {
+        String type = cls.getName();
+        w.println("package repository;");
+        w.println();
+        w.println("import models." + type + ";");
+        w.println("import java.util.*;");
+        w.println();
+        w.println("public class " + type + "Repository {");
+        w.println();
+        w.println("    private Map<Long, " + type + "> data = new HashMap<>();");
+        w.println("    private Long nextId = 1L;");
+        w.println();
+        w.println("    public " + type + " save(" + type + " entity) {");
+        w.println("        if (entity.getId() == null) {");
+        w.println("            entity.setId(nextId++);");
+        w.println("        }");
+        w.println("        data.put(entity.getId(), entity);");
+        w.println("        return entity;");
+        w.println("    }");
+        w.println();
+        w.println("    public " + type + " findById(Long id) {");
+        w.println("        return data.get(id);");
+        w.println("    }");
+        w.println();
+        w.println("    public List<" + type + "> findAll() {");
+        w.println("        return new ArrayList<>(data.values());");
+        w.println("    }");
+        w.println();
+        w.println("    public boolean deleteById(Long id) {");
+        w.println("        return data.remove(id) != null;");
+        w.println("    }");
+        w.println();
+        w.println("    public boolean existsById(Long id) {");
+        w.println("        return data.containsKey(id);");
+        w.println("    }");
+        w.println();
+        w.println("}");
+    }
+
+    // repo FILHO: sem Map próprio — vista sobre o rep da RAIZ (instanceof = discriminador), para
+    // que rootRepository.findAll() veja também os subtipos
+    private void generateChildRepository(PrintWriter w, Class cls) {
+        String type = cls.getName();
+        String root = cls.getRoot().getName();
+        w.println("package repository;");
+        w.println();
+        w.println("import models." + type + ";");
+        w.println("import models." + root + ";");
+        w.println("import java.util.*;");
+        w.println("import java.util.stream.Collectors;");
+        w.println();
+        w.println("public class " + type + "Repository {");
+        w.println();
+        w.println("    private final " + root + "Repository root;");
+        w.println();
+        w.println("    public " + type + "Repository(" + root + "Repository root) {");
+        w.println("        this.root = root;");
+        w.println("    }");
+        w.println();
+        w.println("    public " + type + " save(" + type + " entity) {");
+        w.println("        root.save(entity);");
+        w.println("        return entity;");
+        w.println("    }");
+        w.println();
+        w.println("    public " + type + " findById(Long id) {");
+        w.println("        " + root + " found = root.findById(id);");
+        w.println("        return (found instanceof " + type + ") ? (" + type + ") found : null;");
+        w.println("    }");
+        w.println();
+        w.println("    public List<" + type + "> findAll() {");
+        w.println("        return root.findAll().stream()");
+        w.println("                .filter(e -> e instanceof " + type + ")");
+        w.println("                .map(e -> (" + type + ") e)");
+        w.println("                .collect(Collectors.toList());");
+        w.println("    }");
+        w.println();
+        w.println("    public boolean deleteById(Long id) {");
+        w.println("        return findById(id) != null && root.deleteById(id);");
+        w.println("    }");
+        w.println();
+        w.println("    public boolean existsById(Long id) {");
+        w.println("        return findById(id) != null;");
+        w.println("    }");
+        w.println();
+        w.println("}");
     }
 }
 

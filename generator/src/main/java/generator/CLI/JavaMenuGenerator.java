@@ -616,10 +616,20 @@ public class JavaMenuGenerator {
             w.println();
             w.println("    private Scanner scanner = new Scanner(System.in);");
 
-            // all repositories (inclui abstratas — menus relacionados dependem delas)
-            for (Class cls : classes) {
-                w.println("    private " + cls.getName() + "Repository " + GeneratorUtils.repoVariable(cls.getName()) + " = " +
-                        "new " + cls.getName() + "Repository();");
+            // repos (inclui abstratas — menus relacionados dependem delas). RAÍZES primeiro: o repo filho
+            // usa no seu init o campo do repo da RAIZ (getRoot), que assim já está declarado. Os filhos
+            // referenciam só a raiz (nunca uns aos outros) -> dois passos chegam a qualquer nível (nota #31).
+            List<Class> repoOrder = new ArrayList<>();
+            for (Class c : classes) if (c.getParentClass() == null) repoOrder.add(c);   // raízes (donos do store)
+            for (Class c : classes) if (c.getParentClass() != null) repoOrder.add(c);   // filhos (vistas sobre a raiz)
+            for (Class cls : repoOrder) {
+                String var = GeneratorUtils.repoVariable(cls.getName());
+                if (cls.getParentClass() == null) {
+                    w.println("    private " + cls.getName() + "Repository " + var + " = new " + cls.getName() + "Repository();");
+                } else {
+                    String rootVar = GeneratorUtils.repoVariable(cls.getRoot().getName());
+                    w.println("    private " + cls.getName() + "Repository " + var + " = new " + cls.getName() + "Repository(" + rootVar + ");");
+                }
             }
             w.println();
 
