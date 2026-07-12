@@ -6,8 +6,11 @@
   <component name="ChangeListManager">
     <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringRepositoryGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringRepositoryGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dclass/RelationFieldDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/dto/dclass/RelationFieldDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/ToolService.java" beforeDir="false" afterPath="$PROJECT_DIR$/tool-backend/src/main/java/app/service/ToolService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/Annotations.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/Annotations.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/types.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

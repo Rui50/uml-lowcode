@@ -20,6 +20,7 @@ export interface RelationField {
   name: string        // campo/role da relação (igual ao dos DTOs gerados)
   collection: boolean // sem toggle no Update (não está no UpdateDTO)
   targetClass: string // classe do outro lado (p/ listar atributos no order-by)
+  mandatory: boolean  // single com lower bound >= 1 -> semeia invariante <> null
 }
 
 export interface ClassDTO {

@@ -123,10 +123,21 @@ public class ToolService {
         // relações próprias (declaradas nesta classe): filtra as herdadas (thisClass != c) da lista completa
         List<RelationFieldDTO> relations = RelationshipInfo.collect(c, associations).stream()
                 .filter(rel -> rel.thisClass().equals(c.getName()))
-                .map(rel -> new RelationFieldDTO(rel.field(), rel.isCollection(), rel.otherClass))
+                .map(rel -> new RelationFieldDTO(rel.field(), rel.isCollection(), rel.otherClass,
+                        !rel.isCollection() && isMandatory(rel.multiplicity)))
                 .toList();
 
         return new ClassDTO(c.getName(), parent, attrs, ops, c.isAbstract(), realizations, endpoints, relations);
+    }
+
+    // relação obrigatória = lower bound >= 1 (ex: "1", "1..*"); "0..1"/"*"/null -> false.
+    private static boolean isMandatory(String multiplicity) {
+        if (multiplicity == null) return false;
+        String lower = multiplicity.contains("..")
+                ? multiplicity.substring(0, multiplicity.indexOf("..")) : multiplicity;
+        lower = lower.trim();
+        if (lower.equals("*")) return false;
+        try { return Integer.parseInt(lower) >= 1; } catch (NumberFormatException e) { return false; }
     }
 
     private OperationDTO toOperationDTO(String className, Operation o) {

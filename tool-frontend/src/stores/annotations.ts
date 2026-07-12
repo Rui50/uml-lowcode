@@ -114,6 +114,25 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     }
   }
 
+  // pré-preenche uma invariante "<> null" por relação single obrigatória (mult "1") do modelo.
+  // Só no 1º load de um modelo (bucket novo) — não ressuscita as que o user apagou no re-upload.
+  function prefillMandatoryRelations() {
+    for (const cls of modelStore.model?.classes ?? []) {
+      for (const rel of cls.relations) {
+        if (rel.collection || !rel.mandatory) continue
+        const invs = (invariantsByClass.value[cls.name] ??= [])
+        const expr = `self.${rel.name} <> null`
+        if (invs.some(i => i.expression.replace(/\s/g, '') === expr.replace(/\s/g, ''))) continue
+        invs.push({
+          id: crypto.randomUUID(),
+          name: `${rel.name}Required`,
+          expression: expr,
+          message: `Relação '${rel.name}' é obrigatória (multiplicidade 1)`,
+        })
+      }
+    }
+  }
+
   function addInit(key: string) {
     initByAttribute.value[key] = ''
   }
@@ -285,6 +304,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    const isNew = !(name in all)   // 1º load deste modelo (
     const data = all[name] || {}
     invariantsByClass.value = data.invariantsByClass || {}
     initByAttribute.value = data.initByAttribute || {}
@@ -302,6 +322,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     responseOverrideByClass.value = data.responseOverrideByClass || {}
     columnByAttribute.value = data.columnByAttribute || {}
     orderByCollection.value = data.orderByCollection || {}
+
+    if (isNew) prefillMandatoryRelations()
   }
 
   function saveForModel(name: string | null) {
@@ -385,6 +407,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     // actions
     addInvariant,
     deleteInvariant,
+    prefillMandatoryRelations,
     addInit,
     deleteInit,
     addDerive,

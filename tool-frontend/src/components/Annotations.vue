@@ -190,7 +190,12 @@ function close() {
           <section class="block">
             <header class="block-head">
               <h4>Invariants</h4>
-              <Button label="Add" icon="pi pi-plus" size="small" @click="annotations.addInvariant(className!)" />
+              <div style="display: flex; gap: 6px;">
+                <Button label="Fill required" icon="pi pi-check-square" size="small" severity="secondary"
+                        v-tooltip.top="'Cria invariantes de não-nulo para as relações single obrigatórias (mult. 1) de todo o modelo'"
+                        @click="annotations.prefillMandatoryRelations()" />
+                <Button label="Add" icon="pi pi-plus" size="small" @click="annotations.addInvariant(className!)" />
+              </div>
             </header>
 
             <div v-for="inv in invariants" :key="inv.id" class="entry">
