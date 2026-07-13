@@ -39,9 +39,9 @@ watch(() => modelStore.error, (msg) => {
 function warnReservedNames() {
   if (target.value !== 'spring' && target.value !== 'cli-jpa') return  // só targets com BD
   const offending = (modelStore.model?.classes ?? [])
+    .filter(c => SQL_RESERVED.has(c.name.toLowerCase()))
+    .filter(c => !annotations.tableNameByClass[c.id]?.trim())         // resolvido = tem Table name (por id, nota #32)
     .map(c => c.name)
-    .filter(n => SQL_RESERVED.has(n.toLowerCase()))
-    .filter(n => !annotations.tableNameByClass[n]?.trim())            // resolvido = tem Table name
   if (offending.length) {
     toast.add({
       severity: 'warn',

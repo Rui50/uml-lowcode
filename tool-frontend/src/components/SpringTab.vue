@@ -122,6 +122,18 @@ const fieldRows = computed(() => {
 })
 
 const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+
+// valida o cron, o Spring usa 6 campos (seg min hora dia mês dia da semana),
+// Vazio = o gerador usa o default, '-' = desativado; macros @daily etc. válidas.
+function cronError(cron: string): string | null {
+  const c = cron.trim()
+  if (!c || c === '-') return null
+  if (/^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(c)) return null
+  const f = c.split(/\s+/)
+  if (f.length !== 6) return `Cron do Spring tem 6 campos (seg min hora dia mês dia-da-semana) — este tem ${f.length}. Ex: 0 0 * * * *`
+  if (!f.every(x => /^[\d*,\-/?LW#a-zA-Z]+$/.test(x))) return 'Cron com caracteres inválidos'
+  return null
+}
 // garante uma config de endpoint para cada operação da classe selecionada
 watch(operations, (ops) => {
   for (const op of ops) {
@@ -270,7 +282,13 @@ watch(classKey, (id) => {
           <Select v-model="annotations.endpointByOperation[op.id]!.httpMethod" :options="httpMethods" placeholder="POST" />
           <InputText v-model="annotations.endpointByOperation[op.id]!.endpointName" :placeholder="op.name" />
         </div>
-        <InputText v-else v-model="annotations.endpointByOperation[op.id]!.cron" placeholder="cron — ex: 0 0 * * * *" />
+        <div v-else class="cron-field">
+          <InputText v-model="annotations.endpointByOperation[op.id]!.cron" placeholder="cron — ex: 0 0 * * * *"
+                     :invalid="!!cronError(annotations.endpointByOperation[op.id]!.cron)" />
+          <small v-if="cronError(annotations.endpointByOperation[op.id]!.cron)" class="cron-err">
+            {{ cronError(annotations.endpointByOperation[op.id]!.cron) }}
+          </small>
+        </div>
       </div>
     </div>
   </section>
@@ -298,6 +316,9 @@ watch(classKey, (id) => {
 /* --- específico do Spring --- */
 .endpoint-cfg { display: flex; flex-direction: column; gap: 6px; }
 .endpoint-row { display: flex; gap: 4px; }
+.cron-field { display: flex; flex-direction: column; gap: 4px; }
+.cron-field :deep(.p-inputtext) { width: 100%; }
+.cron-err { color: var(--p-red-500, #e24c4c); font-size: 0.72rem; line-height: 1.3; }
 .endpoint-row :deep(.p-select),
 .endpoint-row :deep(.p-inputtext) { flex: 1; min-width: 0; }
 .endpoint-cfg > :deep(.p-inputtext) { width: 100%; }
