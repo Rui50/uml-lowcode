@@ -493,6 +493,20 @@ public class CLIMenuGenerator {
         }
     }
 
+    // valida a entidade que vai ser persistida (saveVar) antes do save. Sem isto, mudar uma relação
+    // (assign/add/remove) nunca corria os invariantes OCL. Estilo dos menus: imprime os erros e return.
+    private void emitRelationValidation(PrintWriter w, String saveClass, String saveVar) {
+        Class c = classMap.get(saveClass);
+        if (c == null || !c.hasAnyInvariants()) return;
+        w.println("        List<String> errors = " + saveVar + ".validate();");
+        w.println("        if (!errors.isEmpty()) {");
+        w.println("            System.out.println(\"Validation errors:\");");
+        w.println("            errors.forEach(e -> System.out.println(\"  - \" + e));");
+        w.println("            return;");
+        w.println("        }");
+        w.println();
+    }
+
     // Assign method (ManyToOne): entity.setOther(other)
     private void generateAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
         String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
@@ -506,6 +520,7 @@ public class CLIMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
         w.println("        owner.set" + capitalized + "(other);");
+        emitRelationValidation(w, ownerClass, "owner");
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + GeneratorUtils.repoVariable(ownerClass) + ".save(owner);");
@@ -531,6 +546,7 @@ public class CLIMenuGenerator {
         w.println();
         w.println("        " + otherClass + " previous = entity.get" + capitalized + "();");
         w.println("        entity.set" + capitalized + "(null);");
+        emitRelationValidation(w, ownerClass, "entity");
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + GeneratorUtils.repoVariable(ownerClass) + ".save(entity);");
@@ -564,15 +580,15 @@ public class CLIMenuGenerator {
         // temos de escrever o campo dono em 'other' e gravaresse  'other'.
         // (qualifier/Map sempre owner.)
         boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
-        String saveVar, saveRepo, refreshVar;
+        String saveVar, saveRepo, refreshVar, saveClass;
 
         if (assoc.hasQualifier()) {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
-            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other";
+            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
         } else if (isOwner) {
             w.println("        owner.get" + capitalized + "().add(other);");
-            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other";
+            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
         } else {
             // lado inverso escrevemos pelo lado DONO na var other
             String ownerCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
@@ -582,9 +598,10 @@ public class CLIMenuGenerator {
             w.println(ownerIsCollection
                     ? "        other.get" + ownerCap + "().add(owner);   // lado DONO: é o que persiste"
                     : "        other.set" + ownerCap + "(owner);   // lado DONO: é o que persiste");
-            saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner";
+            saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner"; saveClass = otherClass;
         }
 
+        emitRelationValidation(w, saveClass, saveVar);
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + saveRepo + ".save(" + saveVar + ");");
@@ -614,15 +631,15 @@ public class CLIMenuGenerator {
 
         // mesmo coisa do add a remoção só persiste pelo lado DONO
         boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
-        String saveVar, saveRepo, refreshVar;
+        String saveVar, saveRepo, refreshVar, saveClass;
 
         if (assoc.hasQualifier()) {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
-            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other";
+            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
         } else if (isOwner) {
             w.println("        owner.get" + capitalized + "().remove(other);");
-            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other";
+            saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
         } else {
             // lado inverso ent remover pelo lado DONO (em "other")
             String ownerCap = GeneratorUtils.capitalizeFirst(
@@ -633,9 +650,10 @@ public class CLIMenuGenerator {
             w.println(ownerIsCollection
                     ? "        other.get" + ownerCap + "().remove(owner);   // lado DONO: é o que persiste"
                     : "        other.set" + ownerCap + "(null);   // lado DONO: é o que persiste");
-            saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner";
+            saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner"; saveClass = otherClass;
         }
 
+        emitRelationValidation(w, saveClass, saveVar);
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + saveRepo + ".save(" + saveVar + ");");

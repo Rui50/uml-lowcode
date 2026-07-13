@@ -387,6 +387,7 @@ public class SpringServiceGenerator {
         String otherVar = GeneratorUtils.lowercaseFirst(fieldName);
         String otherRepoName = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
         String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
+        String prevVar = "previous" + capitalizedField;   // dono anterior deste campo numa reatribuição
 
         writer.println();
         writer.println("    /**");
@@ -412,10 +413,11 @@ public class SpringServiceGenerator {
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
             String capitalizedOtherField = GeneratorUtils.capitalizeFirst(otherSideField);
 
+            // captura o dono ANTIGO (para o desligar E validar depois — perde este elemento)
             writer.println("        // Remove from previous " + otherClass + " if exists");
-            writer.println("        if (" + varName + ".get" + capitalizedField + "() != null) {");
-            writer.println("            " + varName + ".get" + capitalizedField + "().get" +
-                    capitalizedOtherField + "().remove(" + varName + ");");
+            writer.println("        " + otherClass + " " + prevVar + " = " + varName + ".get" + capitalizedField + "();");
+            writer.println("        if (" + prevVar + " != null) {");
+            writer.println("            " + prevVar + ".get" + capitalizedOtherField + "().remove(" + varName + ");");
             writer.println("        }");
             writer.println();
             writer.println("        // Set both sides of the relationship");
@@ -427,6 +429,20 @@ public class SpringServiceGenerator {
 
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
+        if (isBidirectional) {
+            Class otherCls = classMap.get(otherClass);
+            if (otherCls != null && otherCls.hasAnyInvariants()) {
+                // novo outro lado (a coleção dele ganhou este elemento)
+                emitValidation(writer, otherVar, "        ", !cls.hasAnyInvariants());
+                writer.println();
+                // dono ANTIGO, perdeu este elemento -> validar (ex.: cardinalidade
+                // mínima). errors já declarado acima (por cls ou pelo novo outro, mesma classe) -> reuse.
+                writer.println("        if (" + prevVar + " != null) {");
+                emitValidation(writer, prevVar, "            ", false);
+                writer.println("        }");
+                writer.println();
+            }
+        }
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
@@ -458,22 +474,29 @@ public class SpringServiceGenerator {
                 " not found: \" + " + varName + "Id));");
         writer.println();
 
+        // var do outro lado ome do campo, não da classe
+        String otherVar = GeneratorUtils.lowercaseFirst(fieldName);
+
         if (isBidirectional) {
             String otherSideMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
             String otherSideField = GeneratorUtils.makeAttributeName(declarer,
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
             String capitalizedOtherField = GeneratorUtils.capitalizeFirst(otherSideField);
 
+            // captura o outro lado (para o desligar E validar depois — a coleção dele mudou)
             writer.println("        // Remove from both sides");
-            writer.println("        if (" + varName + ".get" + capitalizedField + "() != null) {");
-            writer.println("            " + varName + ".get" + capitalizedField + "().get" +
-                    capitalizedOtherField + "().remove(" + varName + ");");
+            writer.println("        " + otherClass + " " + otherVar + " = " + varName + ".get" + capitalizedField + "();");
+            writer.println("        if (" + otherVar + " != null) {");
+            writer.println("            " + otherVar + ".get" + capitalizedOtherField + "().remove(" + varName + ");");
             writer.println("        }");
         }
 
         writer.println("        " + varName + ".set" + capitalizedField + "(null);");
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
+        if (isBidirectional) {
+            generateOtherSideValidationNullable(writer, otherClass, otherVar, cls);
+        }
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
@@ -545,6 +568,9 @@ public class SpringServiceGenerator {
 
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
+        if (isBidirectional) {
+            generateOtherSideValidationCollection(writer, otherClass, elementVar, otherPlural, cls);
+        }
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
@@ -611,6 +637,9 @@ public class SpringServiceGenerator {
 
         writer.println();
         generateValidationBeforeSave(writer, cls, varName);
+        if (isBidirectional) {
+            generateOtherSideValidationCollection(writer, otherClass, elementVar, otherPlural, cls);
+        }
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
         writer.println("    }");
@@ -807,12 +836,14 @@ public class SpringServiceGenerator {
                     // OneToOne lado inverso (mappedBy): a FK está no outro -> escreve-se lá e grava-se o outro
                     String capInv = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer, thisRole, thisMul));
                     writer.println("            " + otherVar + ".set" + capInv + "(" + entityVar + ");");
+                    emitOtherValidation(writer, otherClass, otherVar, cls, "            ");   // gravamos o outro -> validá-lo
                     writer.println("            " + otherRepo + ".save(" + otherVar + ");");
                     if (clearSingleOnNull) {
                         // clear-on-null: create é no-op; PUT replace desliga a relação inversa
                         writer.println("        } else {");
                         writer.println("            if (" + entityVar + ".get" + capField + "() != null) {");
                         writer.println("                " + entityVar + ".get" + capField + "().set" + capInv + "(null);");
+                        emitOtherValidation(writer, otherClass, entityVar + ".get" + capField + "()", cls, "                ");   // desligamos o antigo -> validá-lo
                         writer.println("                " + otherRepo + ".save(" + entityVar + ".get" + capField + "());");
                         writer.println("            }");
                         writer.println("            " + entityVar + ".set" + capField + "(null);");
@@ -851,6 +882,7 @@ public class SpringServiceGenerator {
                     writer.println("                " + otherVar + (thisMultiple
                             ? ".get" + capInv + "().add(" + entityVar + ");"     // M:N inverso: o outro tem coleção desta classe
                             : ".set" + capInv + "(" + entityVar + ");"));         // O:M inverso: o outro tem referência singular
+                    emitOtherValidation(writer, otherClass, otherVar, cls, "                ");   // gravamos o outro -> validá-lo
                     writer.println("                " + otherRepo + ".save(" + otherVar + ");");
                 }
                 writer.println("            }");
@@ -930,15 +962,56 @@ public class SpringServiceGenerator {
     // declare=false reaproveita a var 'errors' já declarada (ex.: 2ª validação depois de ligar relações)
     private void generateValidationBeforeSave(PrintWriter writer, Class cls, String varName, boolean declare) {
         if (cls.hasAnyInvariants()) {
-            writer.println("        // Validate OCL invariants");
-            writer.println("        " + (declare ? "List<String> " : "") + "errors = " + varName + ".validate();");
-            writer.println("        if (!errors.isEmpty()) {");
-            writer.println("            throw new IllegalArgumentException(");
-            writer.println("                \"Validation failed: \" + String.join(\", \", errors)");
-            writer.println("            );");
-            writer.println("        }");
+            emitValidation(writer, varName, "        ", declare);
             writer.println();
         }
+    }
+
+    // núcleo: emite o bloco de validação de <expr>.validate() com indentação 'ind'.
+    // declare declara a var 'errors' (false reaproveita uma já declarada no mesmo scope).
+    private void emitValidation(PrintWriter writer, String expr, String ind, boolean declare) {
+        writer.println(ind + "// Validate OCL invariants");
+        writer.println(ind + (declare ? "List<String> " : "") + "errors = " + expr + ".validate();");
+        writer.println(ind + "if (!errors.isEmpty()) {");
+        writer.println(ind + "    throw new IllegalArgumentException(");
+        writer.println(ind + "        \"Validation failed: \" + String.join(\", \", errors)");
+        writer.println(ind + "    );");
+        writer.println(ind + "}");
+    }
+
+    // valida a OUTRA entidade que generateApplyRelations também grava (otherRepo.save), se tiver
+    // invariantes — senão o estado inválido dela seria persistido sem verificação. ind = indentação do bloco.
+    private void emitOtherValidation(PrintWriter writer, String otherClass, String expr, Class cls, String ind) {
+        Class otherCls = classMap.get(otherClass);
+        if (otherCls == null || !otherCls.hasAnyInvariants()) return;
+        emitValidation(writer, expr, ind, !cls.hasAnyInvariants());
+    }
+
+    // Numa relação bidirecional os dois lados mudam mas só 'cls' é gravado, por isso um invariante
+    // no OUTRO lado escapava à validação deste endpoint. declare = !cls.hasAnyInvariants(): reaproveita
+    // a var 'errors' se o lado de cls já a declarou.
+
+    // outro lado pode não existir (ex.: removeX quando não havia relação) -> envolve num if != null
+    private void generateOtherSideValidationNullable(PrintWriter writer, String otherClass, String otherVar, Class cls) {
+        Class otherCls = classMap.get(otherClass);
+        if (otherCls == null || !otherCls.hasAnyInvariants()) return;
+        writer.println("        // valida o outro lado se existia relação (a coleção dele mudou)");
+        writer.println("        if (" + otherVar + " != null) {");
+        emitValidation(writer, otherVar, "            ", !cls.hasAnyInvariants());
+        writer.println("        }");
+        writer.println();
+    }
+
+    // outro lado é uma coleção de elementos (ex.: addX/removeX M:N) -> valida cada um
+    private void generateOtherSideValidationCollection(PrintWriter writer, String otherClass,
+                                                       String elementVar, String otherPlural, Class cls) {
+        Class otherCls = classMap.get(otherClass);
+        if (otherCls == null || !otherCls.hasAnyInvariants()) return;
+        writer.println("        // valida o outro lado de cada elemento (a coleção de cada um mudou)");
+        writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
+        emitValidation(writer, elementVar, "            ", !cls.hasAnyInvariants());
+        writer.println("        }");
+        writer.println();
     }
 
     /**
