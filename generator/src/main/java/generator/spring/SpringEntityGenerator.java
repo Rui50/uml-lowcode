@@ -185,6 +185,7 @@ public class SpringEntityGenerator {
             generateRelationships(writer, cls, associations, allClasses);
 
             validationGenerator.generateValidateMethod(writer, cls, constraints.consumed);
+            validationGenerator.generateCheckInvariantsMethod(writer, cls);
 
             writer.println("}");
 

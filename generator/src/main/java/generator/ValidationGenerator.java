@@ -79,6 +79,22 @@ public class ValidationGenerator {
         writer.println();
     }
 
+    // wrapper que LANÇA em vez de devolver a lista — usado pelos services Spring (o
+    // GlobalExceptionHandler mapeia IllegalArgumentException p/ 400). O CLI não o usa (imprime via
+    // validate()). validate() é virtua
+    public void generateCheckInvariantsMethod(PrintWriter writer, Class cls) {
+        if (!cls.hasAnyInvariants()) return;
+        boolean parentHas = cls.getParentClass() != null && cls.getParentClass().hasAnyInvariants();
+        if (parentHas) return;   // herda o checkInvariants() do pai
+        writer.println("    public void checkInvariants() {");
+        writer.println("        List<String> errors = validate();");
+        writer.println("        if (!errors.isEmpty()) {");
+        writer.println("            throw new IllegalArgumentException(\"Validation failed: \" + String.join(\", \", errors));");
+        writer.println("        }");
+        writer.println("    }");
+        writer.println();
+    }
+
     /**
      *
      */
