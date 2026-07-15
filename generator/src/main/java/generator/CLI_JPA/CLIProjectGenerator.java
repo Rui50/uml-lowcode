@@ -250,6 +250,7 @@ public class CLIProjectGenerator {
         try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
             w.println("package " + basePackage + ".util;");
             w.println();
+            w.println("import java.util.List;");
             w.println("import java.util.Scanner;");
             w.println();
             w.println("public class InputUtils {");
@@ -303,6 +304,14 @@ public class CLIProjectGenerator {
             w.println("            try { return java.util.UUID.fromString(scanner.nextLine().trim()); }");
             w.println("            catch (IllegalArgumentException e) { System.out.println(\"Invalid UUID.\"); }");
             w.println("        }");
+            w.println("    }");
+            w.println();
+            w.println("    // imprime os erros de validação e devolve true se havia algum (para o menu abortar)");
+            w.println("    public static boolean printErrors(List<String> errors) {");
+            w.println("        if (errors.isEmpty()) return false;");
+            w.println("        System.out.println(\"Validation errors:\");");
+            w.println("        errors.forEach(e -> System.out.println(\"  - \" + e));");
+            w.println("        return true;");
             w.println("    }");
             w.println("}");
         }

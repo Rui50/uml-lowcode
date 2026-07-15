@@ -473,8 +473,8 @@ public class CLIMenuGenerator {
                     generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, true);
                 }
                 else {
-                    generateAssignMethod(w, cls.getName(), other, fieldName);
-                    generateRemoveAssignMethod(w, cls.getName(), other, fieldName);
+                    generateAssignMethod(w, cls.getName(), other, fieldName, assoc, true);
+                    generateRemoveAssignMethod(w, cls.getName(), other, fieldName, assoc, true);
                 }
             }
             if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
@@ -486,30 +486,44 @@ public class CLIMenuGenerator {
                     generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, false);
                 }
                 else {
-                    generateAssignMethod(w, cls.getName(), other, fieldName);
-                    generateRemoveAssignMethod(w, cls.getName(), other, fieldName);
+                    generateAssignMethod(w, cls.getName(), other, fieldName, assoc, false);
+                    generateRemoveAssignMethod(w, cls.getName(), other, fieldName, assoc, false);
                 }
             }
         }
     }
 
-    // valida a entidade que vai ser persistida (saveVar) antes do save. Sem isto, mudar uma relação
-    // (assign/add/remove) nunca corria os invariantes OCL. Estilo dos menus: imprime os erros e return.
-    private void emitRelationValidation(PrintWriter w, String saveClass, String saveVar) {
-        Class c = classMap.get(saveClass);
-        if (c == null || !c.hasAnyInvariants()) return;
-        w.println("        List<String> errors = " + saveVar + ".validate();");
-        w.println("        if (!errors.isEmpty()) {");
-        w.println("            System.out.println(\"Validation errors:\");");
-        w.println("            errors.forEach(e -> System.out.println(\"  - \" + e));");
-        w.println("            return;");
-        w.println("        }");
+    private boolean hasInvariants(String className) {
+        Class c = classMap.get(className);
+        return c != null && c.hasAnyInvariants();
+    }
+
+    // Valida 'ownerVar' e, se dado, 'otherVar' (o outro lado de uma relação bidirecional, já
+    // sincronizado em memória) — só os lados que têm invariantes — ANTES do save, cada um por si.
+    // Se algum falhar: InputUtils.printErrors imprime, em.clear() desfaz as mudanças em memória
+    // (como o catch) e return. otherVar == null -> valida só um lado. otherNullable -> o outro pode
+    // ser null em runtime (ex.: dono anterior numa reatribuição) -> guarda com != null.
+    private void generateValidation(PrintWriter w, String ownerClass, String ownerVar,
+                                String otherClass, String otherVar, boolean otherNullable) {
+        boolean ownerHas = hasInvariants(ownerClass);
+        boolean otherHas = otherVar != null && hasInvariants(otherClass);
+        if (!ownerHas && !otherHas) return;
+
+        if (ownerHas) {
+            w.println("        if (InputUtils.printErrors(" + ownerVar + ".validate())) { em.clear(); return; }");
+        }
+        if (otherHas) {
+            String cond = "InputUtils.printErrors(" + otherVar + ".validate())";
+            if (otherNullable) cond = otherVar + " != null && " + cond;
+            w.println("        if (" + cond + ") { em.clear(); return; }");
+        }
         w.println();
     }
 
     // Assign method (ManyToOne): entity.setOther(other)
-    private void generateAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
+    private void generateAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc, boolean isSource) {
         String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+        boolean bidir = assoc.isSourceNavigable() && assoc.isTargetNavigable();
         w.println("    private void assign" + capitalized + "() {");
         w.println("        " + idTypeOf(ownerClass) + " ownerId = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
@@ -520,12 +534,23 @@ public class CLIMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
         w.println("        owner.set" + capitalized + "(other);");
-        emitRelationValidation(w, ownerClass, "owner");
+
+        if (bidir) {
+            // sincroniza o inverso EM MEMÓRIA para poder validar o outro lado (ex.: capacidade da Turma).
+            // substitui o em.refresh(other) pós-commit: a coleção fica logo correta em memória.
+            String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+            boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
+            w.println(invColl ? "        other.get" + invCap + "().add(owner);" : "        other.set" + invCap + "(owner);");
+            generateValidation(w, ownerClass, "owner", otherClass, "other", false);
+        } else {
+            generateValidation(w, ownerClass, "owner", null, null, false);
+        }
+
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + GeneratorUtils.repoVariable(ownerClass) + ".save(owner);");
         w.println("            em.getTransaction().commit();");
-        w.println("            em.refresh(other);");
+        if (!bidir) w.println("            em.refresh(other);");   // bidir: já sincronizado em memória
         w.println("            System.out.println(\"Assigned " + otherClass + " to " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
@@ -537,8 +562,9 @@ public class CLIMenuGenerator {
     }
 
     // remove assign
-    private void generateRemoveAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
+    private void generateRemoveAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc, boolean isSource) {
         String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+        boolean bidir = assoc.isSourceNavigable() && assoc.isTargetNavigable();
         w.println("    private void remove" + capitalized + "() {");
         w.println("        " + idTypeOf(ownerClass) + " id = InputUtils." + idReaderOf(ownerClass) + "(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " entity = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(id);");
@@ -546,12 +572,24 @@ public class CLIMenuGenerator {
         w.println();
         w.println("        " + otherClass + " previous = entity.get" + capitalized + "();");
         w.println("        entity.set" + capitalized + "(null);");
-        emitRelationValidation(w, ownerClass, "entity");
+
+        if (bidir) {
+            // desliga o inverso EM MEMÓRIA para poder validar o lado ANTIGO (ex.: cardinalidade mínima).
+            String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+            boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
+            w.println("        if (previous != null) {");
+            w.println(invColl ? "            previous.get" + invCap + "().remove(entity);" : "            previous.set" + invCap + "(null);");
+            w.println("        }");
+            generateValidation(w, ownerClass, "entity", otherClass, "previous", true);
+        } else {
+            generateValidation(w, ownerClass, "entity", null, null, false);
+        }
+
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + GeneratorUtils.repoVariable(ownerClass) + ".save(entity);");
         w.println("            em.getTransaction().commit();");
-        w.println("            if (previous != null) em.refresh(previous);");
+        if (!bidir) w.println("            if (previous != null) em.refresh(previous);");   // bidir: já sincronizado em memória
         w.println("            System.out.println(\"" + otherClass + " removed from \" + entity);");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
@@ -580,33 +618,46 @@ public class CLIMenuGenerator {
         // temos de escrever o campo dono em 'other' e gravaresse  'other'.
         // (qualifier/Map sempre owner.)
         boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
+        boolean bidir = assoc.isSourceNavigable() && assoc.isTargetNavigable();
         String saveVar, saveRepo, refreshVar, saveClass;
+        // 2ª entidade a validar (o inverso, quando o sincronizamos em memória); synced -> dispensa o refresh pós-commit
+        String otherValClass = null, otherValVar = null;
+        boolean synced = false;
 
         if (assoc.hasQualifier()) {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
+            // qualifier/Map: inverso complexo -> valida só o dono (limitação documentada)
         } else if (isOwner) {
             w.println("        owner.get" + capitalized + "().add(other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
+            if (bidir) {   // sincroniza o inverso do ELEMENTO (other) p/ o poder validar
+                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+                boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
+                w.println(invColl ? "        other.get" + invCap + "().add(owner);" : "        other.set" + invCap + "(owner);");
+                otherValClass = otherClass; otherValVar = "other"; synced = true;
+            }
         } else {
             // lado inverso escrevemos pelo lado DONO na var other
             String ownerCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
             boolean ownerIsCollection = GeneratorUtils.checkMultiplicity(
                     isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
-            // escrever só o lado DONO; o em.refresh(owner) no fim recarrega o lado inverso da BD
             w.println(ownerIsCollection
                     ? "        other.get" + ownerCap + "().add(owner);   // lado DONO: é o que persiste"
                     : "        other.set" + ownerCap + "(owner);   // lado DONO: é o que persiste");
             saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner"; saveClass = otherClass;
+            // sincroniza a coleção do owner (inverso, sempre bidirecional aqui) p/ o poder validar
+            w.println("        owner.get" + capitalized + "().add(other);");
+            otherValClass = ownerClass; otherValVar = "owner"; synced = true;
         }
 
-        emitRelationValidation(w, saveClass, saveVar);
+        generateValidation(w, saveClass, saveVar, otherValClass, otherValVar, false);
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + saveRepo + ".save(" + saveVar + ");");
         w.println("            em.getTransaction().commit();");
-        w.println("            em.refresh(" + refreshVar + ");");
+        if (!synced) w.println("            em.refresh(" + refreshVar + ");");   // synced -> já correto em memória
         w.println("            System.out.println(\"Added " + otherClass + " to " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
@@ -631,34 +682,46 @@ public class CLIMenuGenerator {
 
         // mesmo coisa do add a remoção só persiste pelo lado DONO
         boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
+        boolean bidir = assoc.isSourceNavigable() && assoc.isTargetNavigable();
         String saveVar, saveRepo, refreshVar, saveClass;
+        String otherValClass = null, otherValVar = null;
+        boolean synced = false;
 
         if (assoc.hasQualifier()) {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
+            // qualifier/Map: inverso complexo -> valida só o dono (limitação documentada)
         } else if (isOwner) {
             w.println("        owner.get" + capitalized + "().remove(other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
+            if (bidir) {   // desliga o inverso do ELEMENTO (other) p/ o poder validar
+                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+                boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
+                w.println(invColl ? "        other.get" + invCap + "().remove(owner);" : "        other.set" + invCap + "(null);");
+                otherValClass = otherClass; otherValVar = "other"; synced = true;
+            }
         } else {
             // lado inverso ent remover pelo lado DONO (em "other")
             String ownerCap = GeneratorUtils.capitalizeFirst(
                     GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
             boolean ownerIsCollection = GeneratorUtils.checkMultiplicity(
                     isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
-            // escrever só o lado DONO, o em.refresh(owner) no fim recarrega o lado inverso da BD
             w.println(ownerIsCollection
                     ? "        other.get" + ownerCap + "().remove(owner);   // lado DONO: é o que persiste"
                     : "        other.set" + ownerCap + "(null);   // lado DONO: é o que persiste");
             saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner"; saveClass = otherClass;
+            // desliga a coleção do owner (inverso, sempre bidirecional aqui) p/ o poder validar
+            w.println("        owner.get" + capitalized + "().remove(other);");
+            otherValClass = ownerClass; otherValVar = "owner"; synced = true;
         }
 
-        emitRelationValidation(w, saveClass, saveVar);
+        generateValidation(w, saveClass, saveVar, otherValClass, otherValVar, false);
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + saveRepo + ".save(" + saveVar + ");");
         w.println("            em.getTransaction().commit();");
-        w.println("            em.refresh(" + refreshVar + ");");
+        if (!synced) w.println("            em.refresh(" + refreshVar + ");");   // synced -> já correto em memória
         w.println("            System.out.println(\"" + otherClass + " removed from " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
