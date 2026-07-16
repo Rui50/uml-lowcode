@@ -3,6 +3,9 @@ package ocl;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Traduz uma expressão OCL para java
  * utilizando o parser gerado pelo ANTLR4 a partir da gramática OCL.g4
@@ -19,8 +22,8 @@ import org.antlr.v4.runtime.CommonTokenStream;
  *  - coleções: union, intersection, symmetricDifference, excludesAll, prepend,
  *              append, one, closure, sortedBy, asBag, asOrderedSet, reverse, at, indexOf
  *
- * FORA DE ÂMBITO (não dá para suportar no validate() de uma entidade):
- *  - allInstances()  — precisa de um repositório (todas as instâncias)
+ * (não dá para suportar no validate() de uma entidade):
+ *  - allInstances()  — todas as instâncias
  *  - @pre / oclIsNew / oclIsInvalid — semântica de pós-condição (estado antes/depois)
  *  - closure         — fecho transitivo (precisa de ponto-fixo)
  *
@@ -28,8 +31,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
  *  - sum() assume coleção de Integer (não double/float)
  *  - '=' numérico entre wrappers diferentes dá SEMPRE false (Objects.equals: Long vs Integer,
  *    Double vs Integer...). Afeta floor()/round() e ex. "double = int". Usar >=, <=, >, <.
- *  - misturar operadores lógicos diferentes (ex: 'a and b xor c') pode agrupar mal —
- *    ver TODO(precedência) em visitLogicalExpression
+ *  - misturar operadores lógicos diferentes (ex: 'a and b xor c') pode agrupar mal
  *  - '/' traduz para '/' do Java: divisão inteira se ambos os operandos forem int
  *    (OCL define '/' como divisão real: 21/2 = 10.5)
  */
@@ -37,7 +39,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
     // bindings de 'let' ativas: nome -> expressão Java já traduzida. Substituição inline
     // (let é puro em OCL): cada uso de x emite a tradução do seu valor. Ver visitBasicExpression.
-    private final java.util.Map<String, String> letScope = new java.util.HashMap<>();
+    private final Map<String, String> letScope = new HashMap<>();
 
     public static String toJava(String oclExpression) {
         if (oclExpression == null || oclExpression.trim().isEmpty()) {
@@ -126,7 +128,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
     //    : NULL_LITERAL              -> null
     //    | BOOLEAN_LITERAL           -> true / false
     //    | basicExpression '.' ID    -> acesso a propriedade (self.alunos)
-    //    | basicExpression '(' expressionList? ')'  -> chamada de método (self.getName())
+    //    | basicExpression '(' expressionList? ')'  -> chamada de metodo (self.getName())
     //    | basicExpression '[' expression ']'       -> acesso por índice (self.alunos[0])
     //    | INT                       -> número inteiro (30)
     //    | FLOAT_LITERAL             -> número decimal (1.5)
@@ -498,7 +500,13 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         if (text.startsWith("->equalsIgnoreCase("))
             return base + ".equalsIgnoreCase(" + visit(ctx.expression(0)) + ")";
 
-        // .propriedade -> .propriedade (apenas '.' + ID; '.metodo(args)' cai no throw final)
+        // .propriedade -> .propriedade (apenas '.' + ID)
+        // ('.metodo(args)' tem >2 filhos -> não entra aqui, cai no throw final.)
+
+        // .propriedade sem getter, se fosse um acesso normal nao chegava aqui, a cbase eexpression apanha
+        // este ramo é quando a base nao é base expression, mas sim
+        //  setExpression (Set{...}.x) ou de uma op de coleção (->select(...).x, ->asSequence().x).
+        // Aí a base é uma coleção/stream, que não tem getX(),
         if (ctx.getChild(0).getText().equals(".") && ctx.getChildCount() == 2 && ctx.ID().size() > 0) {
             return base + "." + ctx.ID(0).getText();
         }

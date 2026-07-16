@@ -54,7 +54,7 @@ public class JavaMenuGenerator {
 
         List<Class> classesToBuild = classes.stream()
                 .filter(c -> !c.isAbstract())
-                .collect(Collectors.toList());
+                .toList();
 
         for (Class cls : classesToBuild) {
             generateEntityMenu(cls, classes, associations, menusPath);
@@ -160,6 +160,7 @@ public class JavaMenuGenerator {
 
         // adicionar das relações
         for (Association assoc : associations) {
+            // se a classe é source e target é navegável, inclui de pais
             if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
                 String other = assoc.getTargetClass();
                 // nome do campo baseado no role
@@ -193,7 +194,9 @@ public class JavaMenuGenerator {
             }
         }
 
-        for (Operation op : cls.getOperations()) {
+        // inclui ops herdadas de pai abstrato (senão a subclasse concreta
+        // não as oferecia no menu
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction != null) {
                 String label = GeneratorUtils.capitalizeFirst(op.getName());
@@ -231,15 +234,17 @@ public class JavaMenuGenerator {
     private void generateCreateMethod(PrintWriter w, Class cls) {
         w.println("    private void create() {");
 
-        // recolher atributos do pai + próprios (mesma ordem que o construtor)
+        // recolher atributos do pai + próprios
         List<Attribute> allAttrs = new ArrayList<>();
+
         // atributos herdados de TODA a cadeia de pais (raiz-primeiro)
         allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
-                .collect(Collectors.toList()));
+                .toList());
+        // atributos próprios da classe
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
-                .collect(Collectors.toList()));
+                .toList());
 
         // ler cada atributo
         for (Attribute attr : allAttrs) {
@@ -362,10 +367,10 @@ public class JavaMenuGenerator {
         // atributos herdados de TODA a cadeia de pais (raiz-primeiro), não só do pai directo (nota #30)
         allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
                 .filter(a -> !a.hasDerive())
-                .collect(Collectors.toList()));
+                .toList());
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive())
-                .collect(Collectors.toList()));
+                .toList());
         for (Attribute attr : allAttrs) {
             generateUpdateAttribute(w, attr);
         }
@@ -541,7 +546,7 @@ public class JavaMenuGenerator {
         Set<String> classNames = new HashSet<>();
         for (Class c : allClasses) classNames.add(c.getName());
 
-        for (Operation op : cls.getOperations()) {
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
 
@@ -616,9 +621,9 @@ public class JavaMenuGenerator {
             w.println();
             w.println("    private Scanner scanner = new Scanner(System.in);");
 
-            // repos (inclui abstratas — menus relacionados dependem delas). RAÍZES primeiro: o repo filho
-            // usa no seu init o campo do repo da RAIZ (getRoot), que assim já está declarado. Os filhos
-            // referenciam só a raiz (nunca uns aos outros) -> dois passos chegam a qualquer nível (nota #31).
+            // um campo-repo por classe (inclui abstratas — outros menus precisam delas). pais primeiro:
+            // o repo filho inicializa-se com o campo do repo do pai, que tem de já estar declarado acima.
+            // Cada filho aponta só para a raiz (getRoot)
             List<Class> repoOrder = new ArrayList<>();
             for (Class c : classes) if (c.getParentClass() == null) repoOrder.add(c);   // raízes (donos do store)
             for (Class c : classes) if (c.getParentClass() != null) repoOrder.add(c);   // filhos (vistas sobre a raiz)
@@ -699,6 +704,7 @@ public class JavaMenuGenerator {
                 break;
             case "boolean":
             case "Boolean":
+                // parseBoolean: tudo o que não for "true" assume-se false (sem validação nem retry)
                 w.println("        System.out.print(\"" + name + " (true/false): \");");
                 w.println("        boolean " + name + " = Boolean.parseBoolean(scanner.nextLine());");
                 break;

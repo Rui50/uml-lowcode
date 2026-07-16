@@ -156,9 +156,12 @@ public class SequenceDiagramParser {
             // o "container" da mensagem é o owner do seu sendEvent
             ModelElement container = sendEvent.getOwner();
 
-            // obtem a lista de elementos do container da mensagem, e adiciona
-            List<Object> containerList = getOrCreateContainerElements(container, interaction, rootId, operands, fragments);
-            containerList.add(msg);
+            // containerChildren = referência à lista de filhos do container na árvore (não uma cópia):
+            //   raiz               -> interaction.getElements()
+            //   dentro de fragment -> operand.getElements()
+            // por isso add() insere a mensagem logo no sítio certo.
+            List<Object> containerChildren = getOrCreateContainerElements(container, interaction, rootId, operands, fragments);
+            containerChildren.add(msg);
         }
     }
 
@@ -183,19 +186,27 @@ public class SequenceDiagramParser {
     private List<Object> getOrCreateContainerElements(ModelElement container, Interaction interaction, String rootId,
                                               Map<String, Operand> operands, Map<String, Fragment> fragments) {
         String id = container.getXMIID();
+        // container é a propria interação (root
         if (id.equals(rootId)) return interaction.getElements();
 
         Operand op = operands.get(id);
+        // operand já construído por uma mensagem anterior -> reutiliza, não reconstrói
         if (op != null) return op.getElements();
 
         // criar o operand
         op = new Operand();
         op.setId(id);
+        // guard = condição do branch
         ModelElement guardELeme = (ModelElement) container.getRefAttribute("guard");
         if (guardELeme != null) op.setGuard(guardELeme.getPlainAttribute("value"));
         operands.put(id, op);
 
         // anexar ao fragmento pai (criar se preciso e recursivo até a raiz)
+
+        // liga o operand ao seu CombinedFragment (o pai).
+        // se o fragment ainda não exist cria-o e liga o PRÓPRIO fragment ao dono
+        // dele recursivamente
+        // sobe a cadeia de pais até à raiz ou a um nó já criado.
         ModelElement combFragelem = container.getOwner();
         Fragment frag = fragments.get(combFragelem.getXMIID());
         if (frag == null) {

@@ -18,8 +18,6 @@ import model.Enumeration;
 import model.annotations.Invariant;
 import model.sequence.Interaction;
 import parser.VpParser.Qualifier;
-import parser.VpAnnotationsParser;
-
 
 public class XMIParser {
     private Model model;
@@ -27,7 +25,7 @@ public class XMIParser {
 
     private Map<String, Qualifier> qualifiers;
 
-    // chave: elementId da classe
+    // elementId da classe -> lista de invariantes
     private Map<String, List<Invariant>> invariantsCache = new HashMap<>();
     // lista de [attrName, expression]
     private Map<String, List<String[]>> initsCache = new HashMap<>();
@@ -89,9 +87,10 @@ public class XMIParser {
         enumerations = cdp.parseEnumerations();
         interfaces = cdp.parseInterfaces();
 
-        fillGeneralizations(classes, generalizations);
+        cdp.fillGeneralizations(classes, generalizations);
         cdp.fillRealizations(classes, interfaces);
 
+        // debug
         System.out.println("Interfaces extracted: " + interfaces.size());
         if (interfaces.isEmpty()) {
             System.out.println("No interfaces found");
@@ -127,17 +126,6 @@ public class XMIParser {
     public List<Enumeration> getEnumerations()       { return enumerations; }
     public List<Interaction> getInteractions()       { return interactions; }
     public List<Interface> getInterfaces()              { return interfaces; }
-
-    // para preencher as heranças entre as classes
-    private static void fillGeneralizations(List<Class> classes, List<Generalization> generalizations) {
-        for (Generalization gen : generalizations) {
-            Class child = GeneratorUtils.findClassByName(classes, gen.getChildClassName());
-            Class parent = GeneratorUtils.findClassByName(classes, gen.getParentClassName());
-            if (child != null && parent != null) {
-                child.setParentClass(parent);
-            }
-        }
-    }
 
     /*
     * Enquanto nao se faz na ferramenta, o OCL vem em notas

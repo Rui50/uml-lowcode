@@ -340,17 +340,22 @@ public class ClassGenerator {
                 String roleName = association.getTargetRole();
                 String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
 
+                // for maps
                 if (association.hasQualifier()){
                     String keyType = association.getQualifierType();
                     generateMapAssociationMethods(writer, targetClass, attributeName, keyType);
                 }
+                // for lists
                 else if(GeneratorUtils.checkMultiplicity(multiplicity)) {
                     generateListAssociationMethods(writer, targetClass, attributeName);
-                } else {
+                }
+                // for single associations
+                else {
                     generateSingleAssociationMethods(writer, targetClass, attributeName);
                 }
             }
 
+            // where class is the target
             if (association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()) {
                 String sourceClass = association.getSourceClass();
                 String multiplicity = association.getSourceMultiplicity();
@@ -447,8 +452,9 @@ public class ClassGenerator {
     }
 
     /**
-     *
-     * Gera os métodos das operações da classe, com base nas interações do modelo
+     * Gera os métodos das operações da classe. Três casos por operação:
+     * abstrata -> só a assinatura; com diagrama de sequência -> corpo real (OperationGenerator);
+     * sem diagrama -> stub que lança UnsupportedOperationException.
      */
     private void generateOperations(PrintWriter writer, Class cls, List<Association> associations){
         if (cls.getOperations().isEmpty()){
@@ -458,6 +464,7 @@ public class ClassGenerator {
         writer.println("    // Operations");
 
         for (Operation op : cls.getOperations()) {
+            // op abstrata só a assinatura abstract (a subclasse concreta implementa)
             if (op.isAbstract()) {
                 String absReturn = GeneratorUtils.removePackageNames(op.getReturnType());
                 writer.print("    " + op.getVisibility() + " abstract " + absReturn + " " + op.getName() + "(");
@@ -470,11 +477,12 @@ public class ClassGenerator {
                 writer.println(");");
                 continue;
             }
+            // tem diagrama de sequência corpo real gerado a partir dele
             Interaction interaction = op.getSequenceDiagram();
             if (interaction != null) {
                 OperationGenerator.generateOperation(writer, cls, op, interaction, associations);
             } else {
-                // fallback: assinatura + stub
+                // sem diagrama assinatura + stub que lança UnsupportedOperationException
                 String visibility = op.getVisibility();
                 String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
                 String name = op.getName();

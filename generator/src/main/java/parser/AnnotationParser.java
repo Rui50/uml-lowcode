@@ -58,7 +58,7 @@ public class AnnotationParser {
 
 
     // Trata as referências @pre de uma pós-condição antes de passar a expressão ao ANTLR.
-    // O @pre não faz parte da gramática OCL, por isso é resolvemos aqui fora
+    // O @pre não faz parte da gramática OCL, por isso resolvemos aqui fora
     // por cada self.x@pre (ou x@pre), regista um snapshot do estado anterior numa variável x_pre e
     // substitui o @pre por essa variável, deixando uma expressão que o ANTLR já aceita.
     // Devolve a expressão com os @pre substituídos.
@@ -86,13 +86,21 @@ public class AnnotationParser {
         }
         m.appendTail(sb);
 
+        String result = sb.toString();
+        // qualquer @pre que sobrou é uma forma não suportada como self.alunos->size()@pre)
+        // falha aqui em vez de deixar o ANTLR rebentar
+        if (result.contains("@pre")) {
+            throw new IllegalArgumentException(
+                    "@pre só é suportado sobre um atributo simples (self.x@pre); forma não suportada em: " + ocl);
+        }
+
         snapshots.addAll(snapshotsmap.values());
         return sb.toString();
     }
 
     private static PreSnapshot buildSnapshot(String attrName, String varName,
                                              Class cls, List<Association> associations) {
-        // o snapshot @pre é raso: guarda o valor (primitivos/String/enum) ou os elementos que a
+        // o snapshot @pre é raso o u seja guarda o valor (primitivos/String/enum) ou os elementos que a
         // coleção tinha nesse momento, mas não o estado interno de cada objeto. Serve para
         // comparar valores ou tamanhos antes/depois, não o conteúdo profundo dos objetos.
         // ver se é atributo — snapshot é cópia por valor

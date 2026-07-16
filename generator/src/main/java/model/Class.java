@@ -12,13 +12,6 @@ import java.util.Set;
 // para o vp e o que tem
 //https://www.visual-paradigm.com/guide/uml-unified-modeling-language/uml-class-diagram-tutorial/
 
-/*
-* TODO
-* para as associações - Dependencies, Realizations
-*
-* */
-
-
 /**
  * Representa uma classe UML.
  *
@@ -29,7 +22,8 @@ import java.util.Set;
  *  A anotação vive na RAIZ da hierarquia; uma classe filha resolve o id via getRoot().
  */
 public class Class {
-    // propriedades basicas para já
+
+    // propriedades basicas
     private String id;          // xmi:id
     private String name;
     private String visibility;
@@ -43,8 +37,9 @@ public class Class {
     private boolean isAbstract;
     private List<Interface> realizations;
 
-    // estratégia de herança JPA, definida na superclasse
-    // "SINGLE_TABLE" (default) | "JOINED"
+    ///  ANOTACAO
+
+    // estratégia de herança JPA, definida na superclass "SINGLE_TABLE" (default) | "JOINED"
     private String inheritanceStrategy = "SINGLE_TABLE";
 
     // nome da tabela JPA (override do utilizador); null/vazio = derivado (nome da classe em minúsculas)
@@ -64,77 +59,18 @@ public class Class {
 
     private List<Invariant> invariants;
 
-    // Atributos escondidos de cada DTO (Create/Update/Response) desta classe.
-    // HERDA-SE: esconder é sobre o ATRIBUTO, e o atributo é herdado -> isHiddenIn* une pela cadeia
-    // de pais (se o pai esconde 'email', a subclasse também, senão reexpunha-o).
+    // atributos escondidos de cada DTO (Create/Update/Response) desta classe.
+    // é herdado: esconder é sobre o ATRIBUTO, e o atributo é herdado -> isHiddenIn* une pela cadeia
     // Na CLASSE e não no Attribute: instâncias de atributos herdados são partilhadas com o pai,
-    // logo uma flag lá vazaria para os irmãos.
     private Set<String> hiddenInCreate = new HashSet<>();
     private Set<String> hiddenInUpdate = new HashSet<>();
     private Set<String> hiddenInResponse = new HashSet<>();
     private Map<String, String> collectionOrder = new HashMap<>();   // field da coleção -> "attr ASC|DESC" (@OrderBy)
 
-    public Set<String> getHiddenInCreate() { return hiddenInCreate; }
-    public Set<String> getHiddenInUpdate() { return hiddenInUpdate; }
-    public Set<String> getHiddenInResponse() { return hiddenInResponse; }
-    public Map<String, String> getCollectionOrder() { return collectionOrder; }
-
     // Override do response POR ENDPOINT (endpointType: List | Get | Create | Update): esse endpoint
-    // devolve um ResponseDTO próprio, com campos escondidos independentes do default da classe.
-    // NÃO se herda (ao contrário dos hiddenIn*): é sobre um ENDPOINT, não um atributo. Cada classe
-    // tem o seu controller/URLs (List do Aluno != List do AlunoTE) -> configura-se por classe.
+    // devolve um ResponseDTO próprio, com campos escondidos independentes do default da classe
     private Map<String, ResponseOverride> responseOverrides = new HashMap<>();
 
-    // mapa keyed pelo endpointType (List|Get|Create|Update); itera-se por entrySet/keySet
-    public Map<String, ResponseOverride> getResponseOverrides() { return responseOverrides; }
-
-    public boolean hasResponseOverride(String endpointType) { return responseOverrides.containsKey(endpointType); }
-
-    // não herda (endpoint-level, ver responseOverrides); só o mapa desta classe
-    public Set<String> responseOverrideHidden(String endpointType) {
-        ResponseOverride o = responseOverrides.get(endpointType);
-        if (o == null) return Set.of();   // sem override -> nada escondido
-        return o.getHidden();
-    }
-
-    // nome custom do DTO do override (vazio = usar o auto <Class><EndpointType>ResponseDTO)
-    public String responseOverrideName(String endpointType) {
-        ResponseOverride o = responseOverrides.get(endpointType);
-        if (o == null) return "";
-        return o.getName();
-    }
-
-    // escondido se ESTA classe ou qualquer antepassado o esconder (união pela cadeia de pais)
-    public boolean isHiddenInCreate(String attrName) {
-        for (Class c = this; c != null; c = c.getParentClass())
-            if (c.hiddenInCreate.contains(attrName)) return true;
-        return false;
-    }
-    public boolean isHiddenInUpdate(String attrName) {
-        for (Class c = this; c != null; c = c.getParentClass())
-            if (c.hiddenInUpdate.contains(attrName)) return true;
-        return false;
-    }
-    public boolean isHiddenInResponse(String attrName) {
-        for (Class c = this; c != null; c = c.getParentClass())
-            if (c.hiddenInResponse.contains(attrName)) return true;
-        return false;
-    }
-
-    public boolean isOrInheritsFrom(String name) {
-        Class c = this;
-        while (c != null) {
-            if (c.getName().equals(name)) return true;
-            c = c.getParentClass();
-        }
-        return false;
-    }
-
-    public boolean hasAnyInvariants() {
-        return !invariants.isEmpty()
-                || realizations.stream().anyMatch(i -> !i.getInvariants().isEmpty())
-                || (parentClass != null && parentClass.hasAnyInvariants());
-    }
 
     public Class(String name, String visibility) {
         this.name = name;
@@ -237,21 +173,6 @@ public class Class {
         this.beanValidation = beanValidation;
     }
 
-    // raiz da hierarquia (a própria classe se não tiver pai)
-    public Class getRoot() {
-        Class root = this;
-        while (root.getParentClass() != null) {
-            root = root.getParentClass();
-        }
-        return root;
-    }
-
-    // a anotação vive na raiz da hierarquia, por isso uma classe filha
-    // herda a estratégia do seu pai (raiz).
-    public String getRootInheritanceStrategy() {
-        return getRoot().getInheritanceStrategy();
-    }
-
     public String getIdAttributeName() {
         return idAttributeName;
     }
@@ -271,26 +192,10 @@ public class Class {
         this.idAttributeType = fixIdType(idAttributeType);
     }
 
-    private static String fixIdType(String t) {
-        switch (t) {
-            case "int":   return "Integer";
-            case "long":  return "Long";
-            case "short": return "Short";
-            case "byte":  return "Byte";
-            default:      return t;
-        }
-    }
-
-    // id "atribuído" pelo cliente (chave natural String): sem @GeneratedValue e
-    // incluído no CreateDTO. Os restantes (Long/Integer/UUID) são gerados pelo servidor.
-    public boolean isIdAssigned() {
-        return "String".equals(getRoot().getIdAttributeType());
-    }
-
-    //s realizations são por classe e não são herdadas.
+    // realizations são por classe e não são herdadas.
     // Se uma interface for realizada por uma classe abstrata, as subclasses
     // concretas não a herdam (getRealizations() devolve só as próprias).
-    // Para suportar, é preciso percorrer a cadeia de pais, como em isOrInheritsFrom/super.validate().
+    // Para suportar, é preciso percorrer a cadeia de pais, tipo isOrInheritsFrom/super.validate().
     public List<Interface> getRealizations() {
         return realizations;
     }
@@ -299,7 +204,98 @@ public class Class {
         this.realizations.add(i);
     }
 
-    // caso de ser uma classe filha, trazer os atributos e operações da classe pai
+    public List<Invariant> getInvariants() {
+        return invariants;
+    }
+
+    public void addInvariant(Invariant invariant) {
+        this.invariants.add(invariant);
+    }
+
+    // Config de DTOs / anotações
+
+    public Set<String> getHiddenInCreate() { return hiddenInCreate; }
+    public Set<String> getHiddenInUpdate() { return hiddenInUpdate; }
+    public Set<String> getHiddenInResponse() { return hiddenInResponse; }
+    public Map<String, String> getCollectionOrder() { return collectionOrder; }
+
+    // escondido se ESTA classe ou qualquer antepassado o esconder (união pela cadeia de pais)
+    public boolean isHiddenInCreate(String attrName) {
+        for (Class c = this; c != null; c = c.getParentClass())
+            if (c.hiddenInCreate.contains(attrName)) return true;
+        return false;
+    }
+    public boolean isHiddenInUpdate(String attrName) {
+        for (Class c = this; c != null; c = c.getParentClass())
+            if (c.hiddenInUpdate.contains(attrName)) return true;
+        return false;
+    }
+    public boolean isHiddenInResponse(String attrName) {
+        for (Class c = this; c != null; c = c.getParentClass())
+            if (c.hiddenInResponse.contains(attrName)) return true;
+        return false;
+    }
+
+    // mapa keyed pelo endpointType (List|Get|Create|Update)
+    public Map<String, ResponseOverride> getResponseOverrides() { return responseOverrides; }
+
+    public boolean hasResponseOverride(String endpointType) { return responseOverrides.containsKey(endpointType); }
+
+    // não herda (endpoint-level, ver responseOverrides); só o mapa desta classe
+    public Set<String> responseOverrideHidden(String endpointType) {
+        ResponseOverride o = responseOverrides.get(endpointType);
+        if (o == null) return Set.of();   // sem override -> nada escondido
+        return o.getHidden();
+    }
+
+    // nome custom do DTO do override (vazio = usar o auto <Class><EndpointType>ResponseDTO)
+    public String responseOverrideName(String endpointType) {
+        ResponseOverride o = responseOverrides.get(endpointType);
+        if (o == null) return "";
+        return o.getName();
+    }
+
+    // helpers
+
+    public boolean isOrInheritsFrom(String name) {
+        Class c = this;
+        while (c != null) {
+            if (c.getName().equals(name)) return true;
+            c = c.getParentClass();
+        }
+        return false;
+    }
+
+    public boolean hasAnyInvariants() {
+        return !invariants.isEmpty()
+                || realizations.stream().anyMatch(i -> !i.getInvariants().isEmpty())
+                || (parentClass != null && parentClass.hasAnyInvariants());
+    }
+
+    // raiz da hierarquia (a própria classe se não tiver pai)
+    public Class getRoot() {
+        Class root = this;
+        while (root.getParentClass() != null) {
+            root = root.getParentClass();
+        }
+        return root;
+    }
+
+    // a anotação vive na raiz da hierarquia, por isso uma classe filha
+    // herda a estratégia do seu pai (raiz).
+    public String getRootInheritanceStrategy() {
+        return getRoot().getInheritanceStrategy();
+    }
+
+    // id "atribuído" pelo cliente (chave natural String): sem @GeneratedValue e
+    // incluído no CreateDTO. Os restantes (Long/Integer/UUID) são gerados pelo servidor.
+    public boolean isIdAssigned() {
+        return "String".equals(getRoot().getIdAttributeType());
+    }
+
+    // Atributos próprios + herdados, MAIS-DERIVADO primeiro (own, depois pai, depois avô).
+    // NB: GeneratorUtils.ancestorAttributes(cls) é diferente — só os ANCESTRAIS e RAIZ-primeiro
+    // (para a ordem dos args do super(...) no CLI). Escolher conforme o caso.
     public List<Attribute> getAllAttributes() {
         List<Attribute> allAttributes = new ArrayList<>(attributes);
         if (parentClass != null) {
@@ -316,12 +312,14 @@ public class Class {
         return allOperations;
     }
 
-    public List<Invariant> getInvariants() {
-        return invariants;
-    }
-
-    public void addInvariant(Invariant invariant) {
-        this.invariants.add(invariant);
+    private static String fixIdType(String t) {
+        switch (t) {
+            case "int":   return "Integer";
+            case "long":  return "Long";
+            case "short": return "Short";
+            case "byte":  return "Byte";
+            default:      return t;
+        }
     }
 
     @Override
@@ -331,7 +329,7 @@ public class Class {
                 ", visibility:'" + visibility + '\'' +
                 ", attributes:" + attributes +
                 ", operations:" + operations +
-                ", parentClass:'" + parentClass + '\'' +
+                ", parentClass:'" + (parentClass != null ? parentClass.getName() : null) + '\'' +
                 '}';
     }
 }

@@ -27,11 +27,11 @@ public class Operation {
 
     // operação é um job @Scheduled (Spring) sem endpoint REST, sem parâmetros/caller
     private boolean isJob = false;
-    private String cron;                    // expressão cron do job (só usado quando isJob)
+    private String cron;                    // expressão cron do job
 
     // endpoint REST custom (operações que nao sao job)
-    private String endpointName;            // path; null/vazio = usa o nome da operação
-    private String httpMethod = "POST";     // HTTP: GET | POST | PUT | DELETE | PATCH
+    private String endpointName;            // se path null/vazio = usa o nome da operação
+    private String httpMethod = "POST";     //  GET | POST | PUT | DELETE | PATCH
 
 
     public Operation() {

@@ -12,8 +12,8 @@ public class ValidationGenerator {
 
     /**
      * gera função validate() para uma classe
-     * public java.util.List<String> validate() {
-     *     java.util.List<String> errors = new java.util.ArrayList<>();
+     * public List<String> validate() {
+     *     List<String> errors = newArrayList<>();
      *
      *     // invariante teste : MaxAlunos
      *     if (!(this.alunos.size() <= 30)) {
@@ -23,6 +23,8 @@ public class ValidationGenerator {
      *     return errors;
      * }
      */
+
+    // usada pelo cli, a outra leva um set the invs para dar skip (invariantes já transformadas em anotações de Validation Spring)
     public void generateValidateMethod(PrintWriter writer, Class cls) {
         generateValidateMethod(writer, cls, Collections.emptySet());
     }
@@ -31,11 +33,9 @@ public class ValidationGenerator {
     // isso saem do validate(),vazio nos restantes alvos
     public void generateValidateMethod(PrintWriter writer, Class cls, Set<Invariant> skip) {
         // gera validate se tiver invariantes proprias, herdadas de interface, ou herdadas de parent
+        // se todas inv sao skipped produz validate na msm
         if (!cls.hasAnyInvariants()) return;
         boolean parentHas = cls.getParentClass() != null && cls.getParentClass().hasAnyInvariants();
-
-        writer.println("    // Validation (para ja so invariantes OCL simples");
-        writer.println();
 
         // javadoc
         writer.println("    /**");
@@ -45,6 +45,7 @@ public class ValidationGenerator {
             if (skip.contains(inv)) continue;
             writer.println("     * - " + inv.getName() + ": " + inv.getOclExpression());
         }
+        // invariantes herdadas de interfaces
         for (Interface iface : cls.getRealizations()) {
             for (Invariant inv : iface.getInvariants()) {
                 writer.println("     * - [" + iface.getName() + "] " + inv.getName() + ": " +
@@ -55,7 +56,7 @@ public class ValidationGenerator {
         writer.println("     * @return list of validation errors (empty if valid)");
         writer.println("     */");
 
-        // assign metodo
+        // assign metod
         writer.println("    public List<String> validate() {");
         writer.println("       List<String> errors = new ArrayList<>();");
         if (parentHas) {
@@ -79,9 +80,7 @@ public class ValidationGenerator {
         writer.println();
     }
 
-    // wrapper que LANÇA em vez de devolver a lista — usado pelos services Spring (o
-    // GlobalExceptionHandler mapeia IllegalArgumentException p/ 400). O CLI não o usa (imprime via
-    // validate()). validate() é virtua
+    // wrapper que lannça o erro em vez de devolver a lista
     public void generateCheckInvariantsMethod(PrintWriter writer, Class cls) {
         if (!cls.hasAnyInvariants()) return;
         boolean parentHas = cls.getParentClass() != null && cls.getParentClass().hasAnyInvariants();
@@ -99,12 +98,16 @@ public class ValidationGenerator {
      *
      */
     private void generateInvariantCheck(PrintWriter writer, Invariant inv, String fromInterface) {
+        // expressão OCL já traduzida para Java (no parsing)
         String javaExpression = inv.getJavaExpression();
+
+        // mensagem de erro: a do user se existir, senão default; prefixo [Iface] se vier de interface
         String prefix = (fromInterface != null) ? "[" + fromInterface + "] " : "";
         String errorMessage = (inv.getMessage() != null && !inv.getMessage().isEmpty())
                 ? prefix + inv.getMessage()
                 : prefix + "Invariant '" + inv.getName() + "' violated.";
 
+        // escreve o bloco // comentario, if (!(expr)) { errors.add("msg") }
         writer.println("        // Invariant: " + (fromInterface != null ? "(from " + fromInterface + ") "
                 : "") + inv.getName());
         writer.println("        if (!(" + javaExpression + ")) {");

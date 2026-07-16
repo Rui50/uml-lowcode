@@ -277,17 +277,9 @@ public class CLIMenuGenerator {
         }
 
         // validation
-        if (cls.hasAnyInvariants()) {
-            w.println();
-            w.println("        List<String> errors = entity.validate();");
-            w.println("        if (!errors.isEmpty()) {");
-            w.println("            System.out.println(\"Validation errors:\");");
-            w.println("            errors.forEach(e -> System.out.println(\"  - \" + e));");
-            w.println("            return;");
-            w.println("        }");
-        }
-
         w.println();
+        generateValidation(w, cls.getName(), "entity", null, null, false);
+
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".save(entity);");
@@ -404,17 +396,9 @@ public class CLIMenuGenerator {
         }
 
         // validation
-        if (cls.hasAnyInvariants()) {
-            w.println();
-            w.println("        List<String> errors = entity.validate();");
-            w.println("        if (!errors.isEmpty()) {");
-            w.println("            System.out.println(\"Validation errors:\");");
-            w.println("            errors.forEach(e -> System.out.println(\"  - \" + e));");
-            w.println("            return;");
-            w.println("        }");
-        }
-
         w.println();
+        generateValidation(w, cls.getName(), "entity", null, null, false);
+
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".save(entity);");

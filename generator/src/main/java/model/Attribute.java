@@ -14,7 +14,7 @@ public class Attribute {
     private String deriveExpression;
     private String javaDeriveExpression;
 
-    // persistence tab (opt-in; false/null = não definido -> não emitido)
+    // persistence tab (opt-in | false/null = não definido -> não emitido)
     private boolean unique;      // @Column(unique = true)
     private Integer precision;   // decimais: total de dígitos
     private Integer scale;       // decimais: casas decimais
@@ -81,7 +81,7 @@ public class Attribute {
     public String getJavaDeriveExpression() { return javaDeriveExpression; }
     public void setJavaDeriveExpression(String javaDeriveExpression) { this.javaDeriveExpression = javaDeriveExpression; }
 
-    public boolean hasDerive() { return deriveExpression != null; }
+    public boolean hasDerive() { return deriveExpression != null && !deriveExpression.isEmpty(); }
 
     public boolean isUnique() { return unique; }
     public void setUnique(boolean unique) { this.unique = unique; }

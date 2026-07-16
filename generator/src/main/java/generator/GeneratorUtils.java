@@ -150,6 +150,9 @@ public class GeneratorUtils {
     }
 
     /**
+     * Em JPA bidirecional só UM lado pode ser o dono (é ele que tem a FK/join table); o
+     * outro leva mappedBy. Esta função diz se ESTE lado é o dono.
+     *
      * A entidade de "className" é o DONO desta relação
      * Quem decide é a NAVEGABILIDADE, não o source/target da associação.
      *
@@ -384,7 +387,9 @@ public class GeneratorUtils {
                 related.add(assoc.getSourceClass());
             }
         }
-        for (Operation op : cls.getOperations()) {
+        // effectiveOperations (não só as próprias): os menus geram também as ops herdadas de pai
+        // abstrato, cujos parâmetros-entidade precisam do repo declarado
+        for (Operation op : effectiveOperations(cls)) {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
             for (Parameter param : op.getParameters()) {

@@ -68,6 +68,7 @@ public class ClassDiagramParser {
         return classes;
     }
 
+    // parsing de todas as infos de uma classe
     private Class parseClass(ModelElement element) {
         // nome e visibilidade da classe, assumir public
         String className = element.getName();
@@ -474,6 +475,17 @@ public class ClassDiagramParser {
         }
 
         mergeInterfaceOperations(classes);
+    }
+
+    // preenche a herança entre classes (parent link) a partir das generalizations já parseadas.
+    public void fillGeneralizations(List<Class> classes, List<Generalization> generalizations) {
+        for (Generalization gen : generalizations) {
+            Class child = GeneratorUtils.findClassByName(classes, gen.getChildClassName());
+            Class parent = GeneratorUtils.findClassByName(classes, gen.getParentClassName());
+            if (child != null && parent != null) {
+                child.setParentClass(parent);
+            }
+        }
     }
 
     // copia para cada classe as ops das interfaces que realiza e que ela ainda não tem (por

@@ -36,12 +36,14 @@ public class JavaRepositoryGenerator {
         String filename = repoDir + "/" + cls.getName() + "Repository.java";
         try (PrintWriter w = new PrintWriter(filename)) {
             if (cls.getParentClass() == null) generateRootRepository(w, cls);   // dono do Map (store da família)
-            else                              generateChildRepository(w, cls);  // vista tipada sobre o repo da raiz
+            else                              generateChildRepository(w, cls);  // vista sobre o repo da raiz
         }
         System.out.println("Generated: " + cls.getName() + "Repository.java");
     }
 
-    // repo RAIZ: dono do Map<Long, Raiz> — o store partilhado por toda a família (mirror do SINGLE_TABLE)
+    // usado por classes normais (sem pai)
+    // repo RAIZ: dono do Map<Long, Raiz>
+    // store partilhado familia se tiver (mirror do SINGLE_TABLE)
     private void generateRootRepository(PrintWriter w, Class cls) {
         String type = cls.getName();
         w.println("package repository;");
@@ -81,7 +83,8 @@ public class JavaRepositoryGenerator {
         w.println("}");
     }
 
-    // repo FILHO: sem Map próprio — vista sobre o rep da RAIZ (instanceof = discriminador), para
+    // usado só por subclasses
+    // repo filho sem Map próprio — vista sobre o rep da RAIZ para
     // que rootRepository.findAll() veja também os subtipos
     private void generateChildRepository(PrintWriter w, Class cls) {
         String type = cls.getName();

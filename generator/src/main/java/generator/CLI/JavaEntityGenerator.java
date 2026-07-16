@@ -25,9 +25,8 @@ public class JavaEntityGenerator {
     /**
      * Para ja
      *  - todas as classes sem pai recebem um campo Long id
-     *  - atributos com init OCL têm inicialização inline (= valor)
-     *  - tipos enum são prefixados com o nome do enum (ATIVO -> EstadoAluno.ATIVO)
-     *  - gera construtor vazio + construtor com todos os atributos, herdado via super
+     *  - atributos com init OCL são inicializados no construtor
+     *  - gera construtor no-arg (com inits) + construtor completo quando há atributos-parâmetro (super via pai)
      *  - gera toString()
      */
     public JavaEntityGenerator(String baseOutputPath, List<Interaction> interactions) {
@@ -88,6 +87,7 @@ public class JavaEntityGenerator {
             writer.println();
             writer.println("public enum " + enumeration.getName() + " {");
 
+            // cada elemento do ENUM
             List<String> literals = enumeration.getLiterals();
             for (int i = 0; i < literals.size(); i++) {
                 String separator = (i < literals.size() - 1) ? "," : ";";
@@ -115,11 +115,12 @@ public class JavaEntityGenerator {
             writer.println("import java.time.*;");   // atributos de data (LocalDate, etc.)
             writer.println();
 
-            // class declaration
+            // class declaration (se abstract, se extends, se implements)
             writer.print("public " + (cls.isAbstract() ? "abstract " : "") + "class " + cls.getName());
             if (cls.getParentClass() != null) {
                 writer.print(" extends " + cls.getParentClass().getName());
             }
+            // se implementa interface
             if (!cls.getRealizations().isEmpty()) {
                 writer.print(" implements ");
                 for (int i = 0; i < cls.getRealizations().size(); i++) {
@@ -140,19 +141,17 @@ public class JavaEntityGenerator {
             generateAttributes(writer, cls);
 
             // relationships
-            generateRelationships(writer, cls, associations);
+            generateRelationshipAttributes(writer, cls, associations);
 
-            // empty constructor
-            writer.println("    public " + cls.getName() + "() {}");
-            writer.println();
-
-            // constructor with attributes
+            // construtores (no-arg + completo)
             generateConstructor(writer, cls);
 
             // getters/setters for attributes
             if (cls.getParentClass() == null) {
                 generateGetterSetter(writer, "Long", "id");
             }
+
+            // se o atributo é derived, só gera getter com a expressão OCL, sem setter
             for (Attribute attr : cls.getAttributes()) {
                 if (attr.hasDerive()) {
                     generateDerivedGetter(writer, attr);
@@ -186,7 +185,7 @@ public class JavaEntityGenerator {
     }
 
     // gera os campos para as relações navegáveis
-    private void generateRelationships(PrintWriter writer, Class cls, List<Association> associations) {
+    private void generateRelationshipAttributes(PrintWriter writer, Class cls, List<Association> associations) {
         List<String> generatedFields = new ArrayList<>();
 
         for (Association assoc : associations) {
@@ -212,27 +211,41 @@ public class JavaEntityGenerator {
     }
 
     private void generateConstructor(PrintWriter writer, Class cls) {
-        // atributos herdados de TODA a cadeia de pais
-        // senão com A->B->C o super(...) de C ficava sem os atributos de A
+        // herdados vs próprios.
+        // atributos dos pais (não os próprios)
+        // (A->B->C: sem isto o super(...) de C ficava sem os atributos de A)
         List<Attribute> parentAttrs = GeneratorUtils.ancestorAttributes(cls);
-        // só os params do pai (sem derivados nem init)
+
+        // filter aos derives e inits: só os que são parâmetros do construtor (this.x = x recebido)
         List<Attribute> paramParentAttrs = parentAttrs.stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit()).toList();
 
-        // filtrar os nao derivados
+        // atributos próprios, sem derivados
         List<Attribute> ownAttrs = cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive()).toList();
 
-        // os que tem init e que nao
+        // or normais
         List<Attribute> paramAttrs = ownAttrs.stream()
                 .filter(a -> !a.hasInit()).toList();
+
+        // os que têm init OCL (this.x = expr)
         List<Attribute> initAttrs = ownAttrs.stream()
                 .filter(Attribute::hasInit).toList();
 
-        // se não tem atributos nenhuns, não gera
-        if (parentAttrs.isEmpty() && ownAttrs.isEmpty()) return;
+        boolean noParams = paramParentAttrs.isEmpty() && paramAttrs.isEmpty();
 
-        // construtor com atributos do pai + próprios
+        // construtor no-arg existe sempre. Leva os inits para que new X() + setters também os aplique
+        writer.println("    public " + cls.getName() + "() {");
+        for (Attribute attr : initAttrs) {
+            writer.println("        this." + attr.getName() + " = " + attr.getJavaInitExpression() + ";");
+        }
+        writer.println("    }");
+        writer.println();
+
+        // sem parâmetros, o no-arg é o único construtor
+        if (noParams) return;
+
+        // construtor completo: assinatura = params do pai primeiro (mesma ordem do super), depois os próprios
         writer.print("    public " + cls.getName() + "(");
         boolean first = true;
         for (Attribute attr : paramParentAttrs) {
@@ -257,10 +270,12 @@ public class JavaEntityGenerator {
             writer.println(");");
         }
 
+        // corpo: atribui os params próprios (this.x = x recebido)
         for (Attribute attr : paramAttrs) {
             writer.println("        this." + attr.getName() + " = " + attr.getName() + ";");
         }
 
+        // inits OCL — também aqui, para o construtor completo os aplicar (não só o no-arg)
         for (Attribute attr : initAttrs) {
             writer.println("        this." + attr.getName() + " = " + attr.getJavaInitExpression() + ";");
         }
@@ -371,15 +386,11 @@ public class JavaEntityGenerator {
         writer.println();
         writer.print("            \"id=\" + getId()");
 
-        for (Attribute attr : cls.getAttributes()) {
+        // getAllAttributes: inclui os herdados. Sempre via getter — o campo herdado é private no pai
+        for (Attribute attr : cls.getAllAttributes()) {
             writer.println(" +");
             String capitalized = GeneratorUtils.capitalizeFirst(attr.getName());
-            String expr;
-            if (attr.hasDerive()) {
-                expr = "get" + capitalized + "()";
-            } else {
-                expr = attr.getName();
-            }
+            String expr = "get" + capitalized + "()";
             if (attr.getType().equals("String")) {
                 writer.print("            \", " + attr.getName() + "='\" + " + expr + " + \"'\"");
             } else {
