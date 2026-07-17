@@ -40,8 +40,7 @@ public class RelationshipInfo {
         return GeneratorUtils.checkMultiplicity(multiplicity);
     }
 
-    // lado da PRÓPRIA classe
-    // a classe deste lado (= a que declara a associação, ela ou um pai abstrato)
+    // lado da PRÓPRIA classe (a que declara a associação — ela própria ou um pai abstrato)
     public String thisClass() {
         return isSource ? assoc.getSourceClass() : assoc.getTargetClass();
     }

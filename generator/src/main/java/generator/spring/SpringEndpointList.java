@@ -45,6 +45,7 @@ public class SpringEndpointList {
         endpoints.add(new Endpoint("GET",    base + "/{id}", TYPE.CRUD, "Get by id", DTOType.RESPONSE));
         endpoints.add(new Endpoint("POST",   base,           TYPE.CRUD, "Create",    DTOType.CREATE));
         endpoints.add(new Endpoint("PATCH",  base + "/{id}", TYPE.CRUD, "Update",    DTOType.UPDATE));
+        endpoints.add(new Endpoint("PUT",    base + "/{id}", TYPE.CRUD, "Replace",   DTOType.UPDATE));
         endpoints.add(new Endpoint("DELETE", base + "/{id}", TYPE.CRUD, "Delete",    null));
 
 

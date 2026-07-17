@@ -43,41 +43,6 @@ public class SpringServiceGenerator {
         this.basePackage = basePackage;
     }
 
-    // tipo do id de uma classe
-    private String idTypeOf(String className) {
-        return GeneratorUtils.idType(classMap.get(className));
-    }
-
-    /**
-     * entidades em que os repositorios aparecem em lifelines ": XRepository" nos diagramas
-     * das operações desta classe. O SequenceBodyGenerator emite chamadas
-     * a esses campos, por isso têm de ser injetados E importados
-     */
-    private Set<String> diagramRepoEntities(Class cls) {
-        Set<String> entities = new LinkedHashSet<>();   // ordem determinística
-        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
-            if (op.isJob() || op.getSequenceDiagram() == null) continue;
-            for (Lifeline ll : op.getSequenceDiagram().getLifelines()) {
-                String type = ll.getType();
-                if (type == null || !type.endsWith("Repository")) continue;
-                String entity = type.substring(0, type.length() - "Repository".length());
-                if (entity.isEmpty() || entity.equals(cls.getName())) continue;   // o próprio já está declarado
-                if (classMap.get(entity) == null) {
-                    throw new IllegalArgumentException("Operação '" + op.getName()
-                            + "': o diagrama tem uma lifeline ': " + type + "' mas a classe '"
-                            + entity + "' não existe no modelo.");
-                }
-                entities.add(entity);
-            }
-        }
-        return entities;
-    }
-
-    // getter do id de outra entidade
-    private String idGetterOf(String className) {
-        return GeneratorUtils.idGetter(classMap.get(className));
-    }
-
     /**
     * Gera os ficheiros dos services (CRUD)
     * */
@@ -93,6 +58,7 @@ public class SpringServiceGenerator {
         this.associations = associations;
 
         for (Class cls : classes){
+            // does not generate service for abstract classes (they are not instantiated)
             if (cls.isAbstract()) continue;
             generateService(cls, classes, associations, serviceDir, interactions, enumerations);
         }
@@ -137,7 +103,7 @@ public class SpringServiceGenerator {
             // metodos de gestao de relação
             generateRelationShipMethods(writer, cls, associations, classes);
 
-            // operações do diagrama de classe (TODO: implementar)
+            // operações custom (a partir dos diagramas de sequência)
             generateCustomOperations(writer, cls);
 
             writer.println("}");
@@ -942,29 +908,6 @@ public class SpringServiceGenerator {
         writer.println();
     }
 
-    // Escreve <expr>.checkInvariants() (que lança -> 400 via GlobalExceptionHandler) se a classe
-    // 'className' tiver invariantes. Cada op valida TODA a entidade que persiste/muda, não só cls
-    // (ex.: o outro lado de uma relação bidirecional, ou uma entidade gravada no applyRelations).
-    private void generateValidation(PrintWriter writer, String className, String expr) {
-        Class c = classMap.get(className);
-        if (c == null || !c.hasAnyInvariants()) return;
-        writer.println("        " + expr + ".checkInvariants();");
-    }
-
-    // idem, com indentação explícita — para os sítios aninhados (dentro de if/for no applyRelations)
-    private void generateValidationTab(PrintWriter writer, String className, String expr, String ind) {
-        Class c = classMap.get(className);
-        if (c == null || !c.hasAnyInvariants()) return;
-        writer.println(ind + expr + ".checkInvariants();");
-    }
-
-    // idem, mas o alvo pode ser null (ex.: dono anterior numa reatribuição, removeX sem relação)
-    private void generateValidationIfPresent(PrintWriter writer, String className, String var) {
-        Class c = classMap.get(className);
-        if (c == null || !c.hasAnyInvariants()) return;
-        writer.println("        if (" + var + " != null) " + var + ".checkInvariants();");
-    }
-
     /**
      * Diagramas de sequencia
      * */
@@ -974,7 +917,7 @@ public class SpringServiceGenerator {
             return;
         }
 
-        writer.println("    // operations (TODO: implement)");
+        writer.println("    // operations");
 
         for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             if (op.isJob()) continue;   // jobs são gerados como classes próprias em jobs/<Op>Job
@@ -982,11 +925,6 @@ public class SpringServiceGenerator {
             Interaction interaction = op.getSequenceDiagram();
             generateCustomOperation(writer, cls, owner, op, interaction);
         }
-    }
-
-    // uma expressão Java traduzida de OCL refere self quando contém "this." (self -> this na tradução)
-    private boolean refsSelf(String javaExpr) {
-        return javaExpr != null && javaExpr.contains("this.");
     }
 
     private void generateCustomOperation(PrintWriter writer, Class cls, Class owner, Operation op, Interaction interaction) {
@@ -1123,6 +1061,10 @@ public class SpringServiceGenerator {
             throw new IllegalArgumentException("Operação '" + operName
                     + "': uma pós-condição refere 'result' mas o diagrama não tem mensagem de resposta (reply).");
         }
+        if (needsResult && "void".equals(returnType)) {
+            throw new IllegalArgumentException("Operação '" + operName
+                    + "': uma pós-condição refere 'result' mas a operação é void (não tem valor de retorno).");
+        }
         if (needsResult && returnExpr != null && !"void".equals(returnType)) {
             writer.println("        " + returnType + " result = " + returnExpr + ";");
         }
@@ -1139,6 +1081,72 @@ public class SpringServiceGenerator {
         }
 
         writer.println("    }");
+    }
+
+
+    // Helpers
+
+    // tipo do id de uma classe
+    private String idTypeOf(String className) {
+        return GeneratorUtils.idType(classMap.get(className));
+    }
+
+    // getter do id de outra entidade
+    private String idGetterOf(String className) {
+        return GeneratorUtils.idGetter(classMap.get(className));
+    }
+
+    /**
+     * entidades em que os repositorios aparecem em lifelines ": XRepository" nos diagramas
+     * das operações desta classe. O SequenceBodyGenerator emite chamadas
+     * a esses campos, por isso têm de ser injetados E importados
+     */
+    private Set<String> diagramRepoEntities(Class cls) {
+        Set<String> entities = new LinkedHashSet<>();   // ordem determinística
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
+            if (op.isJob() || op.getSequenceDiagram() == null) continue;
+            for (Lifeline ll : op.getSequenceDiagram().getLifelines()) {
+                String type = ll.getType();
+                if (type == null || !type.endsWith("Repository")) continue;
+                String entity = type.substring(0, type.length() - "Repository".length());
+                if (entity.isEmpty() || entity.equals(cls.getName())) continue;   // o próprio já está declarado
+                if (classMap.get(entity) == null) {
+                    throw new IllegalArgumentException("Operação '" + op.getName()
+                            + "': o diagrama tem uma lifeline ': " + type + "' mas a classe '"
+                            + entity + "' não existe no modelo.");
+                }
+                entities.add(entity);
+            }
+        }
+        return entities;
+    }
+
+    // uma expressão Java traduzida de OCL refere self quando contém "this." (self -> this na tradução)
+    private boolean refsSelf(String javaExpr) {
+        return javaExpr != null && javaExpr.contains("this.");
+    }
+
+    // Escreve <expr>.checkInvariants() (que lança -> 400 via GlobalExceptionHandler) se a classe
+    // 'className' tiver invariantes. Cada op valida TODA a entidade que persiste/muda, não só cls
+    // (ex.: o outro lado de uma relação bidirecional, ou uma entidade gravada no applyRelations).
+    private void generateValidation(PrintWriter writer, String className, String expr) {
+        Class c = classMap.get(className);
+        if (c == null || !c.hasAnyInvariants()) return;
+        writer.println("        " + expr + ".checkInvariants();");
+    }
+
+    // idem, com indentação explícita — para os sítios aninhados (dentro de if/for no applyRelations)
+    private void generateValidationTab(PrintWriter writer, String className, String expr, String ind) {
+        Class c = classMap.get(className);
+        if (c == null || !c.hasAnyInvariants()) return;
+        writer.println(ind + expr + ".checkInvariants();");
+    }
+
+    // idem, mas o alvo pode ser null (ex.: dono anterior numa reatribuição, removeX sem relação)
+    private void generateValidationIfPresent(PrintWriter writer, String className, String var) {
+        Class c = classMap.get(className);
+        if (c == null || !c.hasAnyInvariants()) return;
+        writer.println("        if (" + var + " != null) " + var + ".checkInvariants();");
     }
 
 }

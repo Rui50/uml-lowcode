@@ -146,7 +146,6 @@ public class SpringEntityGenerator {
             if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaTimeType(a.getType()))) {
                 writer.println("import java.time.*;");
             }
-            // com timestamps a raiz extends Auditable (@SuperBuilder), logo todas usam SuperBuilder
             writer.println();
 
             // anotações base da classe
@@ -160,7 +159,7 @@ public class SpringEntityGenerator {
                 // a classe raiz carrega os timestamps filhas herdam por transitividade
                 writer.print(" extends Auditable");
             }
-            // nota: interfaces UML são realizadas pelo service (anemic entity), não pela entidade
+            // nota: interfaces UML são realizadas pelo servic não pela entidade
             writer.println(" {");
             writer.println();
 
@@ -171,9 +170,14 @@ public class SpringEntityGenerator {
 
             // invariantes OCL simples -> anotações  Validation. as mapeadas saem do validate().
             // se desativado para a classe, fica tudo no validate() (Result vazio)
-            OCLtoSpringAnnot.Result constraints = cls.isBeanValidation()
-                    ? OCLtoSpringAnnot.map(cls)
-                    : new OCLtoSpringAnnot.Result();
+            OCLtoSpringAnnot.Result constraints;
+            if (cls.isBeanValidation()) {
+                constraints = OCLtoSpringAnnot.map(cls);
+            } else {
+                // desativado para a classe: nada mapeado -> fica tudo no validate()
+                // cria vazio
+                constraints = new OCLtoSpringAnnot.Result();
+            }
 
             // atributos
             generateAttributes(writer, cls, constraints.annotationsByField);
@@ -490,17 +494,12 @@ public class SpringEntityGenerator {
                                    String fieldName,
                                    Association assoc) {
 
+        // lado singular (inverso de um Map qualificado): é sempre uma referência única, nunca um Map.
+        // por isso ignora-se o qualifier aqui (senão saía @ManyToOne sobre um Map -> JPA inválido).
         writer.println("    @ManyToOne");
         writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
+        writer.println("    private " + otherClass + " " + fieldName + ";");
 
-        if (assoc.hasQualifier()) {
-            writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
-            String qualifierType = assoc.getQualifierType();
-            writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
-                    fieldName + " = new HashMap<>();");
-        } else {
-            writer.println("    private " + otherClass + " " + fieldName + ";");
-        }
     }
 
     /**

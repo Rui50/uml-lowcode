@@ -16,6 +16,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Gera os @RestController (camada REST) — um por classe CONCRETA; classes abstratas não têm
+ * controller. Cada controller é @RequestMapping("/api/<plural>") (nome em lowercase + "s"),
+ * @RequiredArgsConstructor, delega no service e fala sempre por DTOs / ids (nunca entidades cruas).
+ *
+ * Endpoints por classe:
+ *  - CRUD: GET /(list) e /{id}, POST / (create, salta em abstratas), PATCH /{id} (parcial),
+ *    PUT /{id} (replace: campos não enviados -> null), DELETE /{id};
+ *  - relação ManyToOne: PUT /{id}/{role}/{otherId} (assign) + DELETE /{id}/{role} (unassign);
+ *  - relação coleção (ManyToMany do lado dono, ou OneToMany unidir/qualifier): POST + DELETE
+ *    /{id}/{role} (add/remove, ids no body/na query);
+ *  - operações custom (dos diagramas de sequência): método de op.getHttpMethod() (default POST),
+ *    path endpointName|nome, params = args da mensagem de entrada (simples -> @RequestParam,
+ *    DTO -> @RequestBody, tipo-entidade -> erro), retorno mapeado p/ ResponseDTO/List/valor;
+ *  - jobs: trigger manual POST /api/<plural>/<op> -> <op>Job.run() (correm @Scheduled na cron).
+ *
+ * Notas:
+ *  - ops custom seguem effectiveOperations (incl. herdadas); jobs seguem getOperations() (próprias);
+ *  - erros do backend saem como ProblemDetail (RFC 7807) — 'detail' leva a msg (ex: validação OCL).
+ */
 // id: @PathVariable/@RequestBody usam o tipo do id da própria classe e o das classes relacionadas (idTypeOf)
 public class SpringControllerGenerator {
     private String outputDirectory;
@@ -541,9 +561,9 @@ public class SpringControllerGenerator {
             writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, msg(ex));");
             writer.println("    }");
             writer.println();
-            // violação de integridade referencial (apagar entidade ainda")
-            // referenciada por outra, ou valor único duplicado) -> 409. NÃO expõe");
-            // ex.getMessage() porque traz SQL/constraint cru (info leak).");;
+            // violação de integridade referencial (apagar entidade ainda referenciada por outra,
+            // ou valor único duplicado) -> 409. NÃO expõe ex.getMessage() porque traz SQL/constraint
+            // cru (info leak).
             writer.println("    @ExceptionHandler(DataIntegrityViolationException.class)");
             writer.println("    public ProblemDetail handleIntegrity(DataIntegrityViolationException ex) {");
             writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,");

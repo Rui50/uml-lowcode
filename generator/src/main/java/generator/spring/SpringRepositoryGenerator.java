@@ -10,6 +10,20 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
+/**
+ * Gera os repositórios Spring Data JPA — uma interface @Repository por classe (models.<X> ->
+ * repository.<X>Repository), a estender JpaRepository<Entity, IdType>. Sem implementação: o CRUD
+ * (save/findById/findAll/deleteById/count/existsById) é fornecido em runtime pelo Spring Data.
+ * São estes repos que os services injetam (@RequiredArgsConstructor) para toda a persistência.
+ *
+ * Notas:
+ *  - um repo POR classe, mesmo com herança — o split raiz/filho não existe aqui; a hierarquia é
+ *    resolvida pelo JPA via discriminador (SINGLE_TABLE), logo findAll do pai traz também os filhos;
+ *  - IdType = tipo do id da RAIZ da hierarquia (cls.getRoot().getIdAttributeType()), para bater com
+ *    findById/deleteById; o import de java.util.UUID só é emitido quando esse tipo é UUID;
+ *  - query methods derivados (findByX / existsByX para atributos String) estão escritos mas
+ *    COMENTADOS/desligados por agora — só sai o CRUD base.
+ */
 // id: JpaRepository<Entity, T>, em que T = tipo do id (cls.getRoot().getIdAttributeType())
 public class SpringRepositoryGenerator {
     private String baseOutputPath;
@@ -54,7 +68,7 @@ public class SpringRepositoryGenerator {
             writer.println("import org.springframework.data.jpa.repository.JpaRepository;");
             writer.println("import org.springframework.stereotype.Repository;");
             writer.println("import java.util.List;");
-            writer.println("import java.util.UUID;");
+            if ("UUID".equals(cls.getRoot().getIdAttributeType())) writer.println("import java.util.UUID;");   // só quando o id é UUID
             writer.println();
 
             // Interface

@@ -13,6 +13,57 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/*
+ * SequenceBodyGenerator —  completa de como funciona
+ *
+ * VISÃO GERAL
+ *   Transcreve um DIAGRAMA DE SEQUÊNCIA para o CORPO de um método Java do SERVICE (operações custom)
+ *   ou de um job. É o análogo Spring do OperationGenerator, mas ORIENTADO A SERVICE: o dono do método
+ *   é a lifeline do ": XService", e as entidades/relações são acedidas via repositórios e ids, não via
+ *   "this" numa entidade rica. A ASSINATURA + o scaffolding OCL (pré/pós, @pre, result, return, guards)
+ *   NÃO estão aqui — vivem em SpringServiceGenerator.generateCustomOperation, que chama este para o corpo.
+ *   Modelo mental: o corpo = as mensagens que a lifeline do SERVICE envia, por ordem.
+ *
+ * REGRAS PARA DESENHAR O DIAGRAMA (versão Spring)
+ *   - Tem de existir uma lifeline do tipo "<Classe>Service" (o dono do método); sem ela -> erro.
+ *   - Os repositórios aparecem como lifelines tipadas "<Classe>Repository" -> viram os campos injetados
+ *     (turmaRepository, alunoRepository, ...); o SERVICE dispara chamadas a esses repos.
+ *   - self (a entidade sobre a qual a op corre) é carregado ANTES do corpo pelo wrapper, a partir de um
+ *     parâmetro "<var>Id" (ex: turmaId) -> registado em preDeclaredVars para o corpo não o redeclarar.
+ *   - findById(id) : Tipo  -> Tipo var = repo.findById(id).orElseThrow(NotFoundException).
+ *   - Tipos explícitos nos argumentos/return (mesma convenção do OperationGenerator).
+ *
+ * PASSO A PASSO — generateMethodBodyFromInteraction
+ *   1. Encontra a lifeline do "<Classe>Service" (dono); se não há -> erro.
+ *   2. Mapeia lifelines: "<X>Repository" -> var "xRepository"; "<X>Service" -> "self".
+ *   3. Percorre a árvore de elements (Messages + Fragments) com generateElements.
+ *
+ * generateMessageCode — O FILTRO DE POSSE + os casos (por ordem)
+ *   Só processa mensagens cuja source é a lifeline do SERVICE (as outras são de outros participantes).
+ *   Ignora replies (o return é tratado pelo wrapper). Casos:
+ *     1. «create» -> Tipo var = new Tipo(args); (caveat: Spring só tem no-arg, ver nota #9 no Main).
+ *     2. atribuição simples (isPlainAssignment) -> [Tipo] x = expr;
+ *     3. heurística de coleção: <campo>.add/remove/get(x) sobre uma entidade carregada -> acesso via
+ *        getter (Map qualificado: put/remove/get por chave; senão add/remove; get(k) vira atribuição).
+ *     4. self-message (source==target) -> methodName(args); direto.
+ *     5. chamada com retorno -> Tipo var = alvo.metodo(args); (findById -> .orElseThrow(NotFoundException)).
+ *        pula se a var já está em preDeclaredVars (self já carregado pelo wrapper).
+ *     6. chamada sem retorno -> alvo.metodo(args);
+ *   'alvo' vem do lifelineVarMap (repo/self) ou, para entidades carregadas, do represents (turma vs
+ *   destino) senão do tipo.
+ *
+ * generateFragmentCode — estruturas de controlo (pelo guard do operando)
+ *   - loop: guard "for (...)" ou "while (...)" TRANSCRITO tal e qual (NÃO adapta Map->.values(),
+ *     ao contrário do OperationGenerator — mais literal; o modelador escreve .values() se for Map).
+ *   - opt: if (guard) { }; guard em falta -> ERRO (opt sem condição não faz sentido).
+ *   - alt: if / else if / else pelos guards (o 1º tem de ter guard; "else" -> else final).
+ *   Fragments aninhados recorrem via generateElements com indent+1.
+ *
+ * HELPERS
+ *   - participates/findAssocByField/fieldNameFor — resolvem a que associação um <campo>.add/remove se
+ *     refere e o nome do campo, com isOrInheritsFrom para reconhecer associações herdadas de um pai.
+ * ============================================================================
+ */
 /**
  * diagrama de sequência (com service, com lifelines
  * de repositórios) para o corpo de um metodo Java. Usado pelos services (operações custom)
@@ -36,8 +87,7 @@ public class SequenceBodyGenerator {
         preDeclaredVars.add(varName);
     }
 
-    public void generateMethodBodyFromInteraction(PrintWriter writer, Class cls, Operation op, Interaction
-            interaction) {
+    public void generateMethodBodyFromInteraction(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
         // identificar a lifeline do Service (owner deste metodo)
         this.currentClass = cls;
         String className = cls.getName();
@@ -195,8 +245,7 @@ public class SequenceBodyGenerator {
                     ? msg.getAssignVariable()
                     : GeneratorUtils.lowercaseFirst(returnType);
 
-            // skip cuz this message would duplicate a variable already declared by a precondition check at the start of the method
-            if (preDeclaredVars.contains(varName)) return;
+             if (preDeclaredVars.contains(varName)) return;
 
             if (methodName.equals("findById")) {
                 writer.println(indent + returnType + " " + varName + " = " + targetVar + "." +
@@ -238,7 +287,11 @@ public class SequenceBodyGenerator {
 
         else if ("opt".equals(operator)) {
             Operand operand = frag.getOperands().get(0);
-            writer.println(indentStr + "if (" + operand.getGuard() + ") {");
+            String guard = operand.getGuard();
+            if (guard == null || guard.isBlank()) {
+                throw new IllegalArgumentException("Fragmento 'opt' tem de ter uma condição (guarda).");
+            }
+            writer.println(indentStr + "if (" + guard + ") {");
             generateElements(writer, operand.getElements(), serviceLifeline, lifelineVarMap, indent + 1);
             writer.println(indentStr + "}");
         }

@@ -25,6 +25,7 @@ import java.nio.file.StandardCopyOption;
 public class SpringProjectGenerator {
     private SpringProjectSettings settings;
     private String outputDirectory;
+    // tem de ser run de uma pasta filha da raiz do repo (não da raiz nem de um jar empacotado).
     private String baseTemplateDir = "../generator/templates/spring-boot-static";
 
     public SpringProjectGenerator(SpringProjectSettings settings, String outputDirectory) {
@@ -44,6 +45,8 @@ public class SpringProjectGenerator {
         }
 
         createDirectoryStructure();
+        // o template só tem assets estáticos (lombok.config, wrapper Maven, etc.);
+        // pom.xml/application.properties/main/test copiados daqui são reescritos pelos geradores abaixo.
         copyBaseTemplate();
         generatePomXml();
         generateApplicationProperties();

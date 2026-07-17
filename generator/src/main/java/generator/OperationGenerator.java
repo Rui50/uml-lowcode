@@ -493,7 +493,10 @@ public class OperationGenerator {
         } else if ("opt".equals(op)) {
             Operand operand = frag.getOperands().get(0);
             String guard = operand.getGuard();
-            writer.println(indentStr + "if (" + (guard != null ? guard : "true") + ") {");
+            if (guard == null || guard.isBlank()) {
+                throw new IllegalArgumentException("Fragmento 'opt' tem de ter uma condição (guarda).");
+            }
+            writer.println(indentStr + "if (" + guard + ") {");
             generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1);
             writer.println(indentStr + "}");
         } else if ("alt".equals(op)) {

@@ -109,7 +109,7 @@ public class SpringFrontendGenerator {
 
     // nome do campo de id no CreateDTO/ResponseDTO desta relação single (ex: "memberId")
     private String idField(RelationshipInfo rel) {
-        return GeneratorUtils.makeAttributeName(rel.otherClass, rel.role, rel.multiplicity) + "Id";
+        return rel.field() + "Id";
     }
 
     private boolean hasApi(String className) {
@@ -299,7 +299,7 @@ public class SpringFrontendGenerator {
             w.println("  <main>");
             w.println("    <h1>" + name + "</h1>");
 
-            // formulário create/edit: o mesmo form serve para criar (POST) e editar (PUT);
+            // formulário create/edit: o mesmo form serve para criar (POST) e editar (PATCH);
             // o botão edit de cada linha carrega os valores e o submit passa a Update
             w.println("    <form onsubmit=\"save(event)\">");
             for (Attribute a : formFields) {
@@ -340,7 +340,7 @@ public class SpringFrontendGenerator {
             for (String c : columns) w.print("<th>" + c + "</th>");
             for (RelationshipInfo rel : rels) w.print("<th>" + idField(rel) + "</th>");
             for (RelationshipInfo coll : colls) {
-                w.print("<th>" + GeneratorUtils.makeAttributeName(coll.otherClass, coll.role, coll.multiplicity) + "Ids</th>");
+                w.print("<th>" + coll.field() + "Ids</th>");
             }
             w.println("<th></th></tr></thead>");
             w.println("      <tbody></tbody>");
@@ -352,7 +352,7 @@ public class SpringFrontendGenerator {
             if (!colls.isEmpty()) {
                 w.println("    <h2>Relationships</h2>");
                 for (RelationshipInfo coll : colls) {
-                    String field = GeneratorUtils.makeAttributeName(coll.otherClass, coll.role, coll.multiplicity);
+                    String field = coll.field();
                     boolean numeric = idNumeric(coll.otherClass);
                     w.println("    <form class=\"rel\" data-path=\"" + field.toLowerCase()
                             + "\" data-numeric=\"" + numeric + "\" onsubmit=\"addItem(event)\">");
@@ -374,6 +374,7 @@ public class SpringFrontendGenerator {
             // runOp lê data-path/data-method, por isso não há função por operação.
             if (!ops.isEmpty()) {
                 w.println("    <h2>Operations</h2>");
+                w.println("    <p><small>Only operations with simple (query) parameters work here; operations taking a request body aren't supported by this demo UI.</small></p>");
                 for (Operation op : ops) {
                     w.println("    <form class=\"op\" data-path=\"" + opPath(op) + "\" data-method=\""
                             + opMethod(op) + "\" onsubmit=\"runOp(event)\">");
@@ -420,7 +421,7 @@ public class SpringFrontendGenerator {
                 w.println("      <td>${item." + idField(rel) + " ?? ''}</td>");
             }
             for (RelationshipInfo coll : colls) {
-                w.println("      <td>${item." + GeneratorUtils.makeAttributeName(coll.otherClass, coll.role, coll.multiplicity) + "Ids ?? ''}</td>");
+                w.println("      <td>${item." + coll.field() + "Ids ?? ''}</td>");
             }
             // id da linha: "id" gerado, ou a chave natural (que não aparece como "id" no json).
             // Entre aspas para funcionar com id numérico (Long) e string (UUID/chave natural).
@@ -444,7 +445,7 @@ public class SpringFrontendGenerator {
                 }
                 for (RelationshipInfo coll : colls) {
                     if (!hasApi(coll.otherClass)) continue;
-                    String path = GeneratorUtils.makeAttributeName(coll.otherClass, coll.role, coll.multiplicity).toLowerCase();
+                    String path = coll.field().toLowerCase();
                     w.println("  fillSelect('form[data-path=\"" + path + "\"] [name=\"child\"]', '/api/"
                             + plural(coll.otherClass) + "', '" + idJsonField(coll.otherClass) + "');");
                 }
@@ -512,7 +513,7 @@ public class SpringFrontendGenerator {
             if (!rels.isEmpty()) {
                 w.println("  if (editId !== null) {");
                 for (RelationshipInfo rel : rels) {
-                    String rolePath = GeneratorUtils.makeAttributeName(rel.otherClass, rel.role, rel.multiplicity).toLowerCase();
+                    String rolePath = rel.field().toLowerCase();
                     w.println("    if (!form." + idField(rel) + ".value) await fetch(`${API}/${editId}/" + rolePath + "`, { method: 'DELETE' });");
                 }
                 w.println("  }");

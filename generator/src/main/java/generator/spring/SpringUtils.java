@@ -9,9 +9,11 @@ public class SpringUtils {
 
     // encontra a mensagem de entrada Controller -> Service (ou equivalente) dentro da interação
     // usada pelo controller e pelo service para ter a mesma assinatura
+    // variante Spring (match por target <X>Service); ≠ OperationGenerator.findEntryMessage (1ª msg)
     public static Message findEntryMessage(Interaction interaction, Class cls, Operation op) {
         if (interaction == null) return null;
         String serviceType = cls.getName() + "Service";
+        // devolve a 1ª que casar (assume ordem: a entrada vem antes de re-invocações self)
         for (Message msg : interaction.getMessages()) {
             if (msg.getTarget() != null
                     && serviceType.equals(msg.getTarget().getType())

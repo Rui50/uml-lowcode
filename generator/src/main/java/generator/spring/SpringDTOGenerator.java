@@ -297,13 +297,18 @@ public class SpringDTOGenerator {
             w.println("@Getter");
             w.println("@Setter");
             w.println("@NoArgsConstructor");
-            w.println("@AllArgsConstructor");
-            w.println("@Builder");
+            // @AllArgsConstructor sobre 0 campos gera um no-arg -> colide com @NoArgsConstructor.
+            // ResponseDTO pode ficar sem campos (id custom + tudo escondido no response) -> guardar.
+            boolean defaultId = cls.getRoot().getIdAttributeName() == null;
+            if (defaultId || timestamps || !allAttrs.isEmpty() || !relationships.isEmpty()) {
+                w.println("@AllArgsConstructor");
+                w.println("@Builder");
+            }
             w.println("public class " + dtoName + " {");
             w.println();
 
             // id normal, quando há id custom, esse atributo já aparece nos atributos abaixo
-            boolean defaultId = cls.getRoot().getIdAttributeName() == null;
+            // (defaultId já calculado acima)
             if (defaultId) {
                 w.println("    private " + cls.getRoot().getIdAttributeType() + " id;");
                 w.println();
@@ -359,7 +364,7 @@ public class SpringDTOGenerator {
     }
 
     private void generateRelationshipIdField(PrintWriter w, RelationshipInfo rel) {
-        String fieldName = GeneratorUtils.makeAttributeName(rel.otherClass, rel.role, rel.multiplicity);
+        String fieldName = rel.field();
 
         if (rel.isCollection()) {
             // collection -> List of related IDs
@@ -372,7 +377,7 @@ public class SpringDTOGenerator {
 
     private void generateRelationshipIdMapping(PrintWriter w, String varName, RelationshipInfo rel) {
         String otherClass = rel.otherClass;
-        String fieldName = GeneratorUtils.makeAttributeName(otherClass, rel.role, rel.multiplicity);
+        String fieldName = rel.field();
         String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
 
         if (rel.isCollection()) {
