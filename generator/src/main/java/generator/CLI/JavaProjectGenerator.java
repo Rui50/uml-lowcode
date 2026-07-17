@@ -13,6 +13,10 @@ import java.io.PrintWriter;
 import java.util.List;
 
 /**
+ * Gera a ESTRUTURA do projeto CLI plain: fontes .java cruas sob src/ (sem pom/Maven — compila com javac),
+ * Main (default package) + InputUtils, e delega para os geradores de entity/repository/menu.
+ */
+/**
  * gera a estrutura do projeto CLI.
  */
 public class JavaProjectGenerator {

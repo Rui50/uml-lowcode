@@ -17,6 +17,21 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * Gera os menus CLI (plain, interativos, sobre repositórios EM MEMÓRIA — sem BD).
+ * Por entidade concreta: CRUD + opções de associação (add/remove | assign/remove) + operações custom
+ * (ligadas a uma Interaction) + MainMenu que cria os repos (partilhados) e delega para os sub-menus.
+ *
+ * Notas:
+ *  - sem persistência real: repos são Map em memória; ids sempre Long;
+ *  - MainMenu cria UMA instância de cada repo e partilha-a (senão os dados fragmentavam).
+ *
+ * Lim
+ *  - SEM transações: se uma op falha a meio, as mudanças à entidade não são revertidas (fica parcial);
+ *  - input: boolean sem retry; short/byte/char/BigDecimal não suportados (lançam na geração);
+ *  - info de relação recalculada em 3 sítios (risco de divergência — TODO refactor);
+ *  - operação custom não valida invariantes e ignora o valor de retorno.
+ */
+/**
  * Gera os menus CLI
  *
  * para cada classe gera um menu com:

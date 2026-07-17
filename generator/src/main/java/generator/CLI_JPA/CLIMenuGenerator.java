@@ -16,6 +16,24 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * Gera os menus CLI-JPA interativos com EntityManager/JPA.
+ * cada entidade "concreta" tem CRUD + opções de associação (add/remove | assign/remove) + operações custom
+ * (ligadas a uma Interaction) + MainMenu que delega para os sub-menus.
+ *
+ * Notas:
+ *  - toda a mutação é transacional (begin/commit, rollback + em.clear() no erro);
+ *  - validação de invariantes ANTES do save; relações bidirecionais validam os dois lados
+ *    (inverso sincronizado em memória);
+ *  - relações persistem pelo lado DONO (isOwningSide); id resolvido pela raiz.
+ *
+ * lim:
+ *  - operações custom não validam invariantes (só as suas pré/pós OCL);
+ *  - input: boolean sem retry; short/byte/char/BigDecimal não suportados (lançam na geração);
+ *  - info de relação recalculada em run()/generateRelationshipMethods/generateRelationShipPrints
+ *    (risco de divergência — TODO refactor);
+ *  - operação custom ignora o valor de retorno.
+ */
+/**
  * Gera os menus CLI
  *
  * para cada classe gera um menu com:
@@ -257,11 +275,12 @@ public class CLIMenuGenerator {
         allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
                 .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
-                .collect(Collectors.toList()));
+                .toList());
+        // atributos próprios da classe
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
                 .filter(a -> !a.getName().equals(idName))
-                .collect(Collectors.toList()));
+                .toList());
 
         // ler cada atributo
         for (Attribute attr : allAttrs) {
@@ -719,6 +738,9 @@ public class CLIMenuGenerator {
      * opções para operações custom
      * pede owner por ID, lê cada parâmetro
      * invoca owner.op(args) e grava.
+     *
+     * Limitação: não valida invariantes (validate()) aqui — a op só corre as suas pré/pós-condições
+     * OCL. Só o CRUD gerado valida. A rever quando se rever o OperationGenerator.
      */
     private void generateCustomOperationMethods(PrintWriter w, Class cls, List<Class> allClasses) {
         Set<String> classNames = new HashSet<>();
@@ -857,6 +879,7 @@ public class CLIMenuGenerator {
                 break;
             case "boolean":
             case "Boolean":
+                // parseBoolean: tudo o que não for "true" assume-se false (sem validação nem retry)
                 w.println("        System.out.print(\"" + name + " (true/false): \");");
                 w.println("        boolean " + name + " = Boolean.parseBoolean(scanner.nextLine());");
                 break;

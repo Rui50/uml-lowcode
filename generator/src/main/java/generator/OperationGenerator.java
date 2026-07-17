@@ -13,6 +13,72 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/*
+ * ========
+ * OperationGenerator
+ * ==========
+ *
+ * VISÃO GERAL
+ *   Uma operação (ex.: Turma.inscrever(a: Aluno)) não tem corpo no diagrama de classes — só assinatura.
+ *   Para gerar um corpo, o utilizador desenha um DIAGRAMA DE SEQUÊNCIA para a operação, e este gerador
+ *   transcreve-o para Java. É o único sítio onde o COMPORTAMENTO UML (não só a estrutura) vira código;
+ *   é partilhado por plain/CLI/CLI-JPA (e alimenta o Spring via SequenceBodyGenerator).
+ *   Modelo mental: o corpo do metodo = as mensagens que o DONO da operação envia, por ordem.
+ *
+ * REGRAS PARA DESENHAR O DIAGRAMA (contrato assumido; a maioria é validada com erro claro)
+ *   - Um actor (lifeline sem tipo) chama a operação; essa 1ª mensagem é a "entry message".
+ *   - O nome da entry message === nome da operação.
+ *   - Todos os argumentos e o return são tipados explicitamente (a: Aluno; ... : boolean).
+ *   - O nome de uma lifeline === o parâmetro/variável que representa (para chamadas cross-lifeline).
+ *   - As lifelines do dono são tipadas (turma: Turma).
+ *   - Uma reply para o actor dá o valor de retorno; sem reply => void.
+ *   - Mensagens «create» sem argumentos; pôr os valores com setters a seguir.
+ *
+ * PASSO A PASSO — generateOperation
+ *   1. Encontra a entry message (primeira mensagem, actor->dono); se não há -> erro.
+ *   2. Valida que o nome da entry === nome da operação.
+ *   3. Resolve o tipo de retorno (entry -> class diagram -> void).
+ *   4. Emite a assinatura a partir dos ARGUMENTOS DA ENTRY (não do class diagram); cada arg tem de ter tipo.
+ *   5. Precondições OCL -> if (!(expr)) throw IllegalStateException(msg).
+ *   6. Snapshots @pre (para pós-condições que referem x@pre) declarados ANTES do corpo.
+ *   7. Corpo -> generateElements.
+ *   8. Expressão de retorno -> findReplyToActor (última reply para o actor); non-void sem reply -> erro.
+ *   9. Alias "result" (se uma pós-condição o referir) declarado DEPOIS do corpo.
+ *   10. Pós-condições OCL -> mesma forma if (!(...)) throw.
+ *   11. return result / return <expr>.
+ *
+ * generateElements — O FILTRO DE POSSE (decisão central)
+ *   Só emite uma Message se a sua source for o DONO (entry.getTarget()) e não for reply. Fragments recorrem.
+ *   Consequência: o corpo é só as chamadas DIRETAS do dono. Se o dono chama a.foo() e a chama b.bar(),
+ *   a mensagem b.bar() (source = a) é IGNORADA. Transcrição UM NÍVEL DE PROFUNDIDADE, por design — os
+ *   callees têm as suas próprias operações/diagramas.
+ *
+ * generateMessage — os cinco casos (por ordem de prioridade)
+ *   1. «create» -> Type var = new Type(args);
+ *   2. atribuição simples (isPlainAssignment, ex.: points = points - amount) -> [Type] x = expr;
+ *   3. receiver: "this" se o target é o próprio dono, senão o nome da lifeline (= nome de um parâmetro).
+ *   4. heurística add/remove: <campo>.add(x)/.remove(x) (ou add/remove com 1 arg cujo tipo casa numa
+ *      associação) -> acesso à coleção (qualifier/Map: put/remove por chave; senão add/remove).
+ *   5. fallback: chamada literal receiver.name(args), com atribuição se houver assign var.
+ *
+ * generateFragment — estruturas de controlo (pelo guard do operando)
+ *   - loop com guard "for (Tipo v : coll)" -> for-each Java; "while (cond)" -> while; outro -> erro.
+ *     Coleções Map levam .values() (adaptCollectionAccess).
+ *   - opt -> if (guard) { }.
+ *   - alt -> if / else if / else pelos guards dos operandos (o 1º tem de ter guard; "else" -> else final).
+ *   Fragments aninhados recorrem via generateElements com indent+1.
+ *
+ * CAMADA OCL
+ *   Pré/pós-condições -> if (!(javaExpr)) throw IllegalStateException(msg). @pre precisa de um snapshot
+ *   ANTES do corpo; "result" precisa de um alias DEPOIS do corpo (por isso um vai acima e o outro abaixo).
+ *
+ * HELPERS
+ *   - findEntryMessage/firstMessage — primeira mensagem, descendo em fragments.
+ *   - participates — ownerType é (ou herda de) a classe desta ponta da associação (subclasse reconhece
+ *     associação do pai).
+ *   - findAssoc/findAssocByField/fieldNameFor — resolvem a que associação um add/remove se refere e o campo.
+ *   - adaptCollectionAccess — acrescenta .values() ao iterar uma associação Map (qualificada).
+ */
 /**
  * Pega numa interação (diagrama de sequência) ligada a uma operação de uma classe
  * e gera o corpo do metodo correspondente.
@@ -20,8 +86,9 @@ import java.util.Map;
  * processo:
  *   1. generateOperation — cria metodo, emite preconditions, @pre snapshots,
  *      corpo (via generateElements), result alias, postconditions, return
- *   2. generateElements — itera mensagens e fragmentos, só processa
- *      mensagens enviadas pelo dono da operação
+ *   2. generateElements — itera mensagens e fragmentos, só processa mensagens enviadas pelo DONO da
+ *      operação (UM nível de profundidade, por design): o que os callees fazem em resposta NÃO é
+ *      inlined — pertence às operações deles. (Por isso um fragmento sem ação do dono sai vazio.)
  *   3. generateMessage — gera código para uma mensagem (heurística + fallback)
  *   4. generateFragment — gera código para loop / alt / opt (recursivo)
  *
@@ -43,6 +110,7 @@ import java.util.Map;
  *   - Nome da mensagem do actor === nome da operação
  *   - Nome da lifeline === nome do parâmetro (para cross-lifeline calls)
  *   - Lifelines do owner devem ser tipadas (turma:Turma)
+ *   - Mensagens «create» SEM argumentos (new Type()); pôr os valores com mensagens setter a seguir
  *
  *
  *   TODO
@@ -128,6 +196,11 @@ public class OperationGenerator {
             throw new IllegalArgumentException(
                     "Operação '" + operation.getName() + "': uma poscondição refere 'result' "
                     + "mas o diagrama de sequência não tem mensagem de resposta (reply) para o ator.");
+        }
+        if (needsResult && "void".equals(returnType)) {
+            throw new IllegalArgumentException(
+                    "Operação '" + operation.getName() + "': uma pós-condição refere 'result' "
+                    + "mas a operação é void (não tem valor de retorno).");
         }
 
         if (needsResult && returnExpr != null && !"void".equals(returnType)) {
@@ -281,6 +354,104 @@ public class OperationGenerator {
     }
 
     /**
+     * VERSÃO ALTERNATIVA (mais literal) de generateMessage — NÃO ligada ainda.
+     * Igual à original, mas a heurística add/remove reduz-se ao ADAPTADOR DE MAP: só um campo
+     * QUALIFICADO (<campo>.add/.remove) vira put/remove por chave. Listas planas e chamadas normais
+     * caem no fallback (transcrição literal); um "add(x)" SEM campo passa a ser chamada a método.
+     * Muda o contrato de modelação: diagramas com "add(x)" por match de tipo (ex.: add(aluno : Aluno))
+     * partiriam — teriam de passar a "alunos.add(a)". Ver nota no Main. Decidir com orientador.
+     */
+    private static void generateMessage2(PrintWriter writer, Message msg, Message entry,
+                                        Class cls, List<Association> associations, String indent) {
+        // mensagem «create»: gera "Type var = new Type(args)".
+        if ("createMessage".equals(msg.getMessageSort())) {
+            String type = msg.getTarget().getType();
+            String var = msg.getAssignVariable() != null ? msg.getAssignVariable()
+                    : (msg.getTarget().getRepresents() != null && !msg.getTarget().getRepresents().isBlank()
+                        ? msg.getTarget().getRepresents()
+                        : GeneratorUtils.lowercaseFirst(type));
+            StringBuilder a = new StringBuilder();
+            if (msg.getArguments() != null) {
+                for (int i = 0; i < msg.getArguments().size(); i++) {
+                    if (i > 0) a.append(", ");
+                    a.append(msg.getArguments().get(i).getName());
+                }
+            }
+            writer.println(indent + type + " " + var + " = new " + type + "(" + a + ");");
+            return;
+        }
+
+        // atribuição simples: "x = expr" ou "x = expr : Type"
+        if (msg.isPlainAssignment()) {
+            String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
+                    ? msg.getReturnType() + " " : "";
+            writer.println(indent + declType + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
+            return;
+        }
+
+        String receiver;
+        if (msg.getTarget().getId().equals(entry.getTarget().getId())) {
+            receiver = "this";
+        } else {
+            receiver = msg.getTarget().getName();
+            if (receiver == null || receiver.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Diagrama de sequência: a lifeline do tipo '" + msg.getTarget().getType()
+                        + "' não tem nome — o nome tem de ser igual ao parâmetro/variável que está a ser chamado.");
+            }
+        }
+
+        String name = msg.getName();
+        List<MessageArgument> args = msg.getArguments();
+
+        // "alunos.add(a)" -> attrName="alunos", op="add"
+        String attrName = null;
+        String op = name;
+        int sep = name.indexOf(".");
+        if (sep > 0) {
+            attrName = name.substring(0, sep);
+            op = name.substring(sep + 1);
+        }
+
+        // só o caso Map: <campo>.add(x)/.remove(x) sobre um campo QUALIFICADO -> put/remove por chave.
+        // listas planas e chamadas normais caem no fallback (transcrição literal).
+        if (args != null && args.size() == 1 && attrName != null
+                && ("add".equals(op) || "remove".equals(op))) {
+            Association assoc = findAssocByField(associations, cls, msg.getTarget().getType(), attrName);
+            if (assoc != null && assoc.hasQualifier()) {
+                MessageArgument arg = args.get(0);
+                String q = assoc.getQualifierName();
+                String getter = "get" + Character.toUpperCase(q.charAt(0)) + q.substring(1) + "()";
+                String base = receiver + "." + attrName;
+                writer.println(indent + ("add".equals(op)
+                        ? base + ".put(" + arg.getName() + "." + getter + ", " + arg.getName() + ");"
+                        : base + ".remove(" + arg.getName() + "." + getter + ");"));
+                return;
+            }
+            // não-Map -> cai no fallback
+        }
+
+        // fallback: chamada literal receiver.name(args)
+        StringBuilder call = new StringBuilder();
+        call.append(receiver).append(".").append(name).append("(");
+        if (args != null) {
+            for (int i = 0; i < args.size(); i++) {
+                if (i > 0) call.append(", ");
+                call.append(args.get(i).getName());
+            }
+        }
+        call.append(")");
+
+        if (msg.getAssignVariable() != null) {
+            String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
+                    ? msg.getReturnType() + " " : "";
+            writer.println(indent + declType + msg.getAssignVariable() + " = " + call + ";");
+        } else {
+            writer.println(indent + call + ";");
+        }
+    }
+
+    /**
      * fragments para estruturas Java:
      *  - loop com guard "x: coll"  -> for (x : coll)
      *  - loop sem iterador         -> while (guard)
@@ -292,6 +463,7 @@ public class OperationGenerator {
         String indentStr = "    ".repeat(indent);
         String op = frag.getOperator();
 
+        // fragmento sem mensagens do dono -> bloco vazio (for/if {}); é modelação, não bug
         if ("loop".equals(op)) {
             Operand operand = frag.getOperands().get(0);
             String guard = operand.getGuard() != null ? operand.getGuard().trim() : "";

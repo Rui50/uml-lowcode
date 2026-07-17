@@ -7,6 +7,19 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
+/**
+ * Gera os repositórios JPA (CLI-JPA) — um por classe, a envolver o EntityManager partilhado.
+ * save (persist/merge), findById (em.find), findAll (JPQL "from X"), deleteById (find + remove).
+ *
+ * Notas:
+ *  - repos planos: a herança é resolvida pelo JPA (discriminador), sem split raiz/filho;
+ *  - id (tipo/nome) resolvido pela raiz — usado em findById/deleteById e no getter do save();
+ *  - a transação é do que chama (menu): persist/remove precisam de tx ativa (RESOURCE_LOCAL).
+ *
+ * lim:
+ *  - save() assume id gerado pelo servidor (null no create); ids String atribuídos não são suportados
+ *    (o frontend não os expõe no CLI-JPA).
+ */
 // id: findById/deleteById e o getter usado no save() usam o tipo/nome do id resolvido pela raiz
 public class CLIRepositoryGenerator {
     private final String baseOutputPath;
@@ -44,7 +57,7 @@ public class CLIRepositoryGenerator {
             w.println("import " + basePackage + ".models." + name + ";");
             w.println("import jakarta.persistence.EntityManager;");
             w.println("import java.util.List;");
-            w.println("import java.util.UUID;");
+            if ("UUID".equals(idType)) w.println("import java.util.UUID;");   // só quando o id é UUID
             w.println();
             w.println("public class " + name + "Repository {");
             w.println();
@@ -54,6 +67,8 @@ public class CLIRepositoryGenerator {
             w.println("        this.em = em;");
             w.println("    }");
             w.println();
+            // save() assume id gerado pelo servidor (null no create -> persist, senão merge).
+            // não funciona com ids String atribuídos pelo cliente — o frontend não os expõe no CLI-JPA.
             w.println("    public " + name + " save(" + name + " entity) {");
             w.println("        if (entity." + idGetter + "() == null) {");
             w.println("            em.persist(entity);");

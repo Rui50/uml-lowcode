@@ -222,7 +222,7 @@ public class SpringEntityGenerator {
             // pai
             if (strategy.equals("SINGLE_TABLE")) {
                 writer.println("@Inheritance(strategy = InheritanceType.SINGLE_TABLE)");
-                writer.println("@DiscriminatorColumn(name = \"type\")");
+                writer.println("@DiscriminatorColumn(name = \"dtype\")");
                 writer.println("@DiscriminatorValue(\"" + cls.getName() + "\")");
             } else if (strategy.equals("JOINED")) {
                 writer.println("@Inheritance(strategy = InheritanceType.JOINED)");

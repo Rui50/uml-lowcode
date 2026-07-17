@@ -16,6 +16,20 @@ import java.util.List;
 import java.util.Set;
 
 /**
+ * Gera as entidades JPA (CLI-JPA).
+ * Para cada classe @Entity/@Table, id (@Id/@GeneratedValue), atributos (@Column/@Enumerated/init inline),
+ * relações (@OneToMany/@ManyToOne/@ManyToMany/@MapKey, dono via isOwningSide), getters derivados,
+ * getters/setters, toString, validate() (se invariantes) e operações.
+ *
+ * Notas de design:
+ *  - herança: SINGLE_TABLE (discriminador "dtype") ou JOINED; só a raiz leva @Table/@Inheritance;
+ *  - id resolvido pela raiz (idAttributeName/idAttributeType, default Long); só no-arg constructor (JPA);
+ *  - associação qualificada -> Map<qualifier, outro> (@MapKey); o lado singular nunca é Map.
+ *
+ * aa
+ *  - generateOperations duplicado com plain/CLI (TODO refactor).
+ */
+/**
  * Gera as entidades JPA
  * - por classe: anotações base de entity table etc, id
  * - atributos: tipo, coluna, enumeração, init
@@ -163,7 +177,7 @@ public class CLIEntityGenerator {
 
         if (strategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
             // para herança single table, só a classe pai tem @Table
-            // os têm @DiscriminatorValue
+            // os outros têm @DiscriminatorValue
 
             // filho em SINGLE_TABLE: partilha a tabela do pai, por isso não leva @Table.
             // só recebe @DiscriminatorValue, gerado mais abaixo.
@@ -179,7 +193,7 @@ public class CLIEntityGenerator {
             // pai
             if (strategy.equals("SINGLE_TABLE")) {
                 writer.println("@Inheritance(strategy = InheritanceType.SINGLE_TABLE)");
-                writer.println("@DiscriminatorColumn(name = \"type\")");
+                writer.println("@DiscriminatorColumn(name = \"dtype\")");
                 writer.println("@DiscriminatorValue(\"" + cls.getName() + "\")");
             } else if (strategy.equals("JOINED")) {
                 writer.println("@Inheritance(strategy = InheritanceType.JOINED)");
@@ -274,10 +288,11 @@ public class CLIEntityGenerator {
             sb.append(" + \"id=\" + getId()");
             first = false;
         }
-        for (Attribute attr : cls.getAttributes()) {
+        // getAllAttributes: inclui herdados. Via getter — o campo herdado é private no pai
+        for (Attribute attr : cls.getAllAttributes()) {
             if (attr.hasDerive()) continue;
             String sep = first ? "" : ", ";
-            sb.append(" + \"").append(sep).append(attr.getName()).append("=\" + ").append(attr.getName());
+            sb.append(" + \"").append(sep).append(attr.getName()).append("=\" + get").append(capitalize(attr.getName())).append("()");
             first = false;
         }
         sb.append(" + \"}\";");
@@ -540,17 +555,11 @@ public class CLIEntityGenerator {
                                    String fieldName,
                                    Association assoc) {
 
+        // lado singular (inverso de um Map qualificado): é sempre uma referência única, nunca um Map.
+        // por isso ignora-se o qualifier aqui (senão saía @ManyToOne sobre um Map -> JPA inválido).
         writer.println("    @ManyToOne");
         writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
-
-        if (assoc.hasQualifier()) {
-            writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
-            String qualifierType = assoc.getQualifierType();
-            writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
-                    fieldName + " = new HashMap<>();");
-        } else {
-            writer.println("    private " + otherClass + " " + fieldName + ";");
-        }
+        writer.println("    private " + otherClass + " " + fieldName + ";");
     }
 
     /**

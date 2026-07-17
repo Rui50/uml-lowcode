@@ -8,6 +8,11 @@ import java.io.PrintWriter;
 import java.util.List;
 
 /**
+ * Gera os repositórios do CLI plain (EM MEMÓRIA, sem BD).
+ * Raiz: dona do Map<Long,T> (store da família); subclasses: vista instanceof sobre o repo da raiz
+ * (mirror do SINGLE_TABLE). Sem transações; ids sempre Long.
+ */
+/**
  * Para ja gera repositorio em memoria por classe
  * Cada repositório usa um Map<Long, T> com auto-incremento de id,
  * e expõe save / findById / findAll / deleteById / existsById.

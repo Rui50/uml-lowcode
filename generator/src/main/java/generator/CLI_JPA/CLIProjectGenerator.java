@@ -7,6 +7,13 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+/**
+ * Gera a ESTRUTURA do projeto CLI-JPA (Maven, JPA/Hibernate + H2/Postgres/MySQL).
+ * Layout, pom.xml, persistence.xml, config.properties, Main (cria o EntityManager e corre o MainMenu),
+ * InputUtils e, se ativado, Dockerfile + docker-compose (BD em container p/ Postgres/MySQL).
+ *
+ * Notas: um EntityManager para toda a sessão (single-thread); show_sql=false para não poluir o CLI.
+ */
 public class CLIProjectGenerator {
     private final CLIProjectSettings settings;
 
@@ -18,9 +25,10 @@ public class CLIProjectGenerator {
     }
     /**
      * 1 - wipe output
-     * 2 - criar layout maven (src/main/java/<package>, src/main/resources/META-INF)
-     * 3 - pom.xml      (próximo passo)
-     * 4 - persistence.xml (próximo passo)
+     * 2 - layout maven (src/main/java/<package>, src/main/resources/META-INF)
+     * 3 - pom.xml, persistence.xml, config.properties
+     * 4 - Main (cria o EntityManager e corre o MainMenu), InputUtils
+     * 5 - Dockerfile + docker-compose (se ativado)
      */
     public void generateProjectStructure() throws IOException {
         System.out.println("Generating CLI-JPA App...");
@@ -206,7 +214,7 @@ public class CLIProjectGenerator {
             w.println("        <exclude-unlisted-classes>false</exclude-unlisted-classes>");
             w.println("        <properties>");
             w.println("            <property name=\"hibernate.hbm2ddl.auto\" value=\"update\"/>");
-            w.println("            <property name=\"hibernate.show_sql\" value=\"true\"/>");
+            w.println("            <property name=\"hibernate.show_sql\" value=\"false\"/>");
             w.println("        </properties>");
             w.println("    </persistence-unit>");
             w.println("</persistence>");

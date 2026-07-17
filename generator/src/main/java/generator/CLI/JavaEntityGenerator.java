@@ -17,6 +17,15 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Gera as entidades do CLI plain (Java simples, sem JPA).
+ * Por classe: campo Long id (só na raiz), atributos, relações (List/Map/ref), construtores
+ * (no-arg com inits + completo quando há params), getters/setters, getters derivados, toString,
+ * validate() (se invariantes) e operações.
+ *
+ * Lim:
+ *  - generateOperations duplicado com plain/CLI-JPA (TODO refactor).
+ */
 public class JavaEntityGenerator {
     private String baseOutputPath;
     private ValidationGenerator validationGenerator;
