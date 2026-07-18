@@ -18,12 +18,6 @@ import Select from 'primevue/select';
 import Checkbox from 'primevue/checkbox'
 import InputNumber from 'primevue/inputnumber'
 
-/**
- * POSSIVEIS MUDANÇAS:
- *  - Nos inits e derives, clicar em add Derive and selecionar um atributo da classe. Assim, a anotação fica diretamente associada ao atributo, e não precisamos de uma sintaxe para referenciar o atributo (ex: key(attr.name)).
- *
- */
-
 type Tab = "ocl" | "persistence" | "spring"
 
 const model = useModelStore()
@@ -245,10 +239,14 @@ function close() {
                   @click="annotations.deleteInit(key(attr.name))"
                 />
               </div>
-              <Button
-                v-else label="Add init" icon="pi pi-plus" size="small" text
-                @click="annotations.addInit(key(attr.name))"
-              />
+              <!-- init e derive são exclusivos: bloqueia add init se já tem derive -->
+              <span v-else :title="key(attr.name) in annotations.deriveByAttribute ? 'Already has a derive — an attribute can\'t be both' : ''">
+                <Button
+                  label="Add init" icon="pi pi-plus" size="small" text
+                  :disabled="key(attr.name) in annotations.deriveByAttribute"
+                  @click="annotations.addInit(key(attr.name))"
+                />
+              </span>
 
               <div v-if="key(attr.name) in annotations.deriveByAttribute" class="sub-entry">
                 <Textarea
@@ -261,10 +259,14 @@ function close() {
                   @click="annotations.deleteDerive(key(attr.name))"
                 />
               </div>
-              <Button
-                v-else label="Add derive" icon="pi pi-plus" size="small" text
-                @click="annotations.addDerive(key(attr.name))"
-              />
+              <!-- bloqueia add derive se já tem init -->
+              <span v-else :title="key(attr.name) in annotations.initByAttribute ? 'Already has an init — an attribute can\'t be both' : ''">
+                <Button
+                  label="Add derive" icon="pi pi-plus" size="small" text
+                  :disabled="key(attr.name) in annotations.initByAttribute"
+                  @click="annotations.addDerive(key(attr.name))"
+                />
+              </span>
             </div>
             <p v-if="!attributes.length" class="empty">No attributes.</p>
           </section>
@@ -429,17 +431,17 @@ function close() {
                 <tr v-for="attr in attributes" :key="attr.name">
                   <td class="attr-cell">{{ attr.name }} <span class="type">{{ attr.type }}</span></td>
                   <td class="c">
-                    <Checkbox v-model="annotations.columnByAttribute[key(attr.name)].unique" binary />
+                    <Checkbox v-model="annotations.columnByAttribute[key(attr.name)]!.unique" binary />
                   </td>
                   <td class="c" :class="{ 'is-disabled': !isDecimal(attr.type) }">
                     <InputNumber
-                      v-model="annotations.columnByAttribute[key(attr.name)].precision"
+                      v-model="annotations.columnByAttribute[key(attr.name)]!.precision"
                       :disabled="!isDecimal(attr.type)" :min="1" :useGrouping="false"
                     />
                   </td>
                   <td class="c" :class="{ 'is-disabled': !isDecimal(attr.type) }">
                     <InputNumber
-                      v-model="annotations.columnByAttribute[key(attr.name)].scale"
+                      v-model="annotations.columnByAttribute[key(attr.name)]!.scale"
                       :disabled="!isDecimal(attr.type)" :min="0" :useGrouping="false"
                     />
                   </td>
@@ -487,152 +489,152 @@ function close() {
 </template>
 
 <style scoped>
-.right-panel {
-  border-left: 1px solid var(--color-border);
-  /*background: var(--color-secondary);*/
-  background: var(--background);
-  color: var(--color-text);
-  width: 360px;
-  flex-shrink: 0;
-  height: 100%;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
+  .right-panel {
+    border-left: 1px solid var(--color-border);
+    /*background: var(--color-secondary);*/
+    background: var(--background);
+    color: var(--color-text);
+    width: 360px;
+    flex-shrink: 0;
+    height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
 
-.panel-head {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border);
-}
-.panel-head h3 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
+  .panel-head {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .panel-head h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
 
-.block {
-  padding: 16px 0;
-}
-.block + .block {
-  border-top: 1px solid var(--color-border);
-}
-.block-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  padding: 0 4px;
-}
-.block-head h4 {
-  margin: 0;
-  font-size: 12px;
-  opacity: 0.8;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+  .block {
+    padding: 16px 0;
+  }
+  .block + .block {
+    border-top: 1px solid var(--color-border);
+  }
+  .block-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 0 4px;
+  }
+  .block-head h4 {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
-.entry {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  margin-bottom: 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--background);
-}
-.entry .remove-btn {
-  align-self: flex-end;
-}
-.attr-label {
-  font-family: monospace;
-  font-size: 12px;
-}
-.attr-label .type {
-  color: var(--color-primary);
-}
-.attr-label .enum-hint {
-  opacity: 0.6;
-  font-size: 11px;
-  margin-left: 4px;
-}
-.sub-entry {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
+  .entry {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--background);
+  }
+  .entry .remove-btn {
+    align-self: flex-end;
+  }
+  .attr-label {
+    font-family: monospace;
+    font-size: 12px;
+  }
+  .attr-label .type {
+    color: var(--color-primary);
+  }
+  .attr-label .enum-hint {
+    opacity: 0.6;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .sub-entry {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
 
-.sub-entry :deep(.p-inputtext),
-.sub-entry :deep(.p-textarea) {
-  flex: 1;
-}
+  .sub-entry :deep(.p-inputtext),
+  .sub-entry :deep(.p-textarea) {
+    flex: 1;
+  }
 
-.sub-entry :deep(.p-select) {
-  flex: 1;
-  min-width: 0;
-}
-.sub-entry :deep(.p-select-label) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  .sub-entry :deep(.p-select) {
+    flex: 1;
+    min-width: 0;
+  }
+  .sub-entry :deep(.p-select-label) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-.job-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+  .job-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 
-.empty {
-  padding: 1.5rem 1rem;
-  opacity: 0.5;
-  font-style: italic;
-  font-size: 12px;
-  text-align: center;
-}
-.hint {
-  font-size: 11px;
-  opacity: 0.65;
-  margin: 0;
-  line-height: 1.4;
-}
-.tip { font-size: 11px; opacity: 0.5; cursor: help; margin-left: 4px; font-weight: normal; }
-.hint.warn {
-  opacity: 1;
-  color: var(--p-orange-600, #c2410c);
-}
+  .empty {
+    padding: 1.5rem 1rem;
+    opacity: 0.5;
+    font-style: italic;
+    font-size: 12px;
+    text-align: center;
+  }
+  .hint {
+    font-size: 11px;
+    opacity: 0.65;
+    margin: 0;
+    line-height: 1.4;
+  }
+  .tip { font-size: 11px; opacity: 0.5; cursor: help; margin-left: 4px; font-weight: normal; }
+  .hint.warn {
+    opacity: 1;
+    color: var(--p-orange-600, #c2410c);
+  }
 
-.tab-note {
-  margin: 0 0 12px;
-  padding: 8px 10px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-}
-.tab-note strong {
-  font-weight: 600;
-}
+  .tab-note {
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+  }
+  .tab-note strong {
+    font-weight: 600;
+  }
 
-:deep(.p-tabs) {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-:deep(.p-tabpanels) {
-  flex: 1;
-  min-height: 0;
-  /*background: var(--color-secondary);*/
-  background: var(--background);
-}
-:deep(.p-tabpanel) {
-  height: 100%;
-}
+  :deep(.p-tabs) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  :deep(.p-tabpanels) {
+    flex: 1;
+    min-height: 0;
+    /*background: var(--color-secondary);*/
+    background: var(--background);
+  }
+  :deep(.p-tabpanel) {
+    height: 100%;
+  }
 
-.sub-block {
+  .sub-block {
     margin-top: 6px;
     padding-left: 8px;
     border-left: 2px solid var(--color-border);
@@ -648,28 +650,73 @@ function close() {
     margin-bottom: 4px;
   }
 
-.col-map { width: 100%; border-collapse: collapse; font-size: 12px; }
-.col-map th, .col-map td { padding: 5px 6px; vertical-align: middle; }
-.col-map thead th { border-bottom: 1px solid var(--color-border); }
-.col-map tbody td { border-bottom: 1px solid var(--color-border); }
-.col-map tbody tr:last-child td { border-bottom: none; }
-.col-map th {
-  text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  opacity: 0.7;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.col-map th.c, .col-map td.c { text-align: center; }
-.col-map .attr-cell { font-family: monospace; white-space: nowrap; }
-.col-map .attr-cell .type { color: var(--color-primary); }
-.col-map td.is-disabled { opacity: 0.4; }
-.col-map :deep(.p-inputnumber-input) { width: 3.2rem; padding: 3px 5px; text-align: center; }
+  .col-map { 
+    width: 100%; border-collapse: collapse; font-size: 12px; 
+  }
 
-.order-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
-.order-rel { flex: 1; font-family: monospace; font-size: 12px; }
-.order-rel .type { color: var(--color-primary); }
-.order-row :deep(.p-select) { min-width: 8rem; }
+  .col-map th, .col-map td { 
+    padding: 5px 6px; vertical-align: middle; 
+  }
+
+  .col-map thead th { 
+    border-bottom: 1px solid var(--color-border); 
+  }
+
+  .col-map tbody td { 
+    border-bottom: 1px solid var(--color-border); 
+  }
+
+  .col-map tbody tr:last-child td { 
+    border-bottom: none; 
+  }
+
+  .col-map th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .col-map th.c, .col-map td.c { 
+    text-align: center; 
+  }
+
+  .col-map .attr-cell { 
+    font-family: monospace; 
+    white-space: nowrap; 
+  }
+
+  .col-map .attr-cell .type { color: var(--color-primary); }
+
+  .col-map td.is-disabled { opacity: 0.4; }
+
+  .col-map :deep(.p-inputnumber-input) {
+    width: 3.2rem; 
+    padding: 3px 5px; 
+    text-align: center; 
+  }
+
+  .order-row {
+    display: flex;
+    align-items: center; 
+    gap: 8px; 
+    padding: 3px 0;
+  }
+
+  .order-rel { 
+    flex: 1; 
+    font-family: monospace; 
+    font-size: 12px; 
+  }
+
+  .order-rel .type { 
+    color: var(--color-primary); 
+  }
+
+  .order-row :deep(.p-select) { 
+    min-width: 8rem; 
+  }
 
 </style>

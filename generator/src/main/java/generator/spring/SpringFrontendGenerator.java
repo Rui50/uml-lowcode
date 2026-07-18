@@ -274,12 +274,12 @@ public class SpringFrontendGenerator {
                 .collect(Collectors.toList());
 
         // colunas da tabela = id (se gerado) + atributos não-derivados visíveis na LISTA
-        // (a tabela mostra o findAll -> segue o override do endpointType "list" quando existir)
+        // (a tabela mostra o findAll -> segue o override do endpointType "List" quando existir)
         List<String> columns = new ArrayList<>();
         if (defaultId) columns.add("id");
         for (Attribute a : cls.getAllAttributes()) {
-            boolean hiddenInList = cls.hasResponseOverride("list")
-                    ? cls.responseOverrideHidden("list").contains(a.getName())
+            boolean hiddenInList = cls.hasResponseOverride("List")
+                    ? cls.responseOverrideHidden("List").contains(a.getName())
                     : cls.isHiddenInResponse(a.getName());
             if (!a.hasDerive() && !hiddenInList) columns.add(a.getName());
         }

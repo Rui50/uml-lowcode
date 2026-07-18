@@ -784,15 +784,17 @@ public class CLIMenuGenerator {
 
             w.println("        em.getTransaction().begin();");
             w.println("        try {");
-            w.print  ("            owner." + op.getName() + "(");
-            for (int i = 0; i < argNames.size(); i++) {
-                if (i > 0) w.print(", ");
-                w.print(argNames.get(i));
-            }
-            w.println(");");
+            // retorno da operação usado com base na entry message e mostrado
+            // se não for void. Só owner é persistido — um return-entidade NÃO é guardado
+            String call = "owner." + op.getName() + "(" + String.join(", ", argNames) + ")";
+            String rt = (entry.getReturnType() != null && !entry.getReturnType().isBlank())
+                    ? entry.getReturnType() : (op.getReturnType() != null ? op.getReturnType() : "void");
+            boolean voidReturn = rt.isBlank() || "void".equals(rt);
+            w.println("            " + (voidReturn ? "" : GeneratorUtils.removePackageNames(rt) + " ret = ") + call + ";");
             w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".save(owner);");
             w.println("            em.getTransaction().commit();");
             w.println("            System.out.println(\"" + op.getName() + " executed.\");");
+            if (!voidReturn) w.println("            System.out.println(\"Result: \" + ret);");
             w.println("        } catch (RuntimeException ex) {");
             w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
             w.println("            em.clear();");

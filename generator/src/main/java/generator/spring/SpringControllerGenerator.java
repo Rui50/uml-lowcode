@@ -412,7 +412,7 @@ public class SpringControllerGenerator {
         // jobs desta classe: importados para o endpoint de trigger manual
         for (Operation op : cls.getOperations()) {
             if (op.isJob()) writer.println("import " + basePackage + ".jobs."
-                    + GeneratorUtils.capitalizeFirst(op.getName()) + "Job;");
+                    + cls.getName() + GeneratorUtils.capitalizeFirst(op.getName()) + "Job;");
         }
 
         // Imports de entidades usadas nas Operations
@@ -464,7 +464,9 @@ public class SpringControllerGenerator {
         for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             for (Parameter param : op.getParameters()) {
                 for (Class c : allClasses) {
-                    if (c.getName().equals(param.getType()) && !c.getName().equals(cls.getName())) {
+                    // classes abstratas não têm service gerado -> não importar/injetar <Abstract>Service
+                    if (c.getName().equals(param.getType()) && !c.getName().equals(cls.getName())
+                            && !c.isAbstract()) {
                         extraServices.add(c.getName());
                     }
                 }
@@ -486,7 +488,7 @@ public class SpringControllerGenerator {
         // jobs desta classe: injeta o @Component para o trigger manual
         for (Operation op : cls.getOperations()) {
             if (op.isJob()) {
-                String jobClass = GeneratorUtils.capitalizeFirst(op.getName()) + "Job";
+                String jobClass = cls.getName() + GeneratorUtils.capitalizeFirst(op.getName()) + "Job";
                 writer.println("    private final " + jobClass + " " + GeneratorUtils.lowercaseFirst(jobClass) + ";");
             }
         }
@@ -685,7 +687,7 @@ public class SpringControllerGenerator {
     private void generateJobTriggerEndpoints(PrintWriter writer, Class cls) {
         for (Operation op : cls.getOperations()) {
             if (!op.isJob()) continue;
-            String jobField = GeneratorUtils.lowercaseFirst(GeneratorUtils.capitalizeFirst(op.getName()) + "Job");
+            String jobField = GeneratorUtils.lowercaseFirst(cls.getName() + GeneratorUtils.capitalizeFirst(op.getName()) + "Job");
             String path = (op.getEndpointName() != null && !op.getEndpointName().isBlank())
                     ? op.getEndpointName() : op.getName();
             writer.println();

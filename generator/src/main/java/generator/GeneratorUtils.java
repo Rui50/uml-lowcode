@@ -8,6 +8,7 @@ import model.Parameter;
 import model.sequence.Fragment;
 import model.sequence.Interaction;
 import model.sequence.Message;
+import model.sequence.MessageArgument;
 import model.sequence.Operand;
 
 import java.io.File;
@@ -388,12 +389,16 @@ public class GeneratorUtils {
             }
         }
         // effectiveOperations (não só as próprias): os menus geram também as ops herdadas de pai
-        // abstrato, cujos parâmetros-entidade precisam do repo declarado
+        // abstrato, cujos parâmetros-entidade precisam do repo declarado. Usa os args do ENTRY MESSAGE
+        // (o que generateCustomOperationMethods realmente lê p/ emitir findById), não os params do
+        // class diagram — senão um arg-entidade do entry que não está na assinatura fica sem repo.
         for (Operation op : effectiveOperations(cls)) {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
-            for (Parameter param : op.getParameters()) {
-                String type = param.getType();
+            Message entry = OperationGenerator.findEntryMessage(interaction);
+            if (entry == null) continue;
+            for (MessageArgument arg : entry.getArguments()) {
+                String type = arg.getType();
                 // só incluir se for uma classe-domínio (corresponde a uma das classes conhecidas)
                 for (Class other : allClasses) {
                     if (other.getName().equals(type) && !type.equals(cls.getName())) {

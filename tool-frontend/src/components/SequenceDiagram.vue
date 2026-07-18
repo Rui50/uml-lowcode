@@ -134,7 +134,7 @@ watch(() => props.interaction, render)
   padding: 1rem;
   display: flex;
   justify-content: center;
-  background: var(--background);  /* same as flow */
+  background: var(--background);
   /* dot grid para parecer como do diag de classes */
   background-image: radial-gradient(circle, #444 1px, transparent 1px);
   background-size: 16px 16px;

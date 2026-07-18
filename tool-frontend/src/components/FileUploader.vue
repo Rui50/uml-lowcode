@@ -17,7 +17,7 @@
   function onInputChange(e: Event) {
     const target = e.target as HTMLInputElement
     emitFirst(target.files)
-    target.value = ''          // allow re-selecting the same file
+    target.value = '' // allow re-selecting the same file
   }
 
   function onDrop(e: DragEvent) {

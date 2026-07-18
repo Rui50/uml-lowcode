@@ -79,7 +79,7 @@ public class AnnotationService {
         if (map == null) return;
         map.forEach((className, tableName) -> {
             Class c = findClass(classes, className);
-            if (c != null) c.setTableName(tableName);   // setter ignora null/vazio
+            if (c != null) c.setTableName(tableName);   // setter põe null se vazio (vazio = limpa o override)
         });
     }
 
@@ -332,6 +332,7 @@ public class AnnotationService {
             for (Operation op : c.getOperations()) {
                 op.getPreconditions().clear();
                 op.getPostconditions().clear();
+                op.setSequenceDiagram(null);   // unlinka; applyOperationLinks re-liga os que vierem no payload (modelo é reutilizado -> senão fica link antigo)
                 op.setJob(false);
                 op.setEndpointName(null);
                 op.setHttpMethod("POST");

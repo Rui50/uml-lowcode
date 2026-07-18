@@ -1,8 +1,8 @@
 import { useAnnotationsStore, type OclAnnotation, type ColumnConfig } from '@/stores/annotations'
 import type { ParseResponse, ProjectSettings } from '@/types'
 
-// remove entradas OCL com expressão vazia (linhas adicionadas mas não preenchidas) para não
-// enviarem garbage ao backend nem abortarem a geração com "Expressão OCL vazia"
+// remove entradas OCL com expressão vazia (linhas adicionadas mas não preenchidas) 
+// se enviasse aparecia "Expressão OCL vazia"
 function trimEmptyOclStuff(map: Record<string, OclAnnotation[]>): Record<string, OclAnnotation[]> {
   const out: Record<string, OclAnnotation[]> = {}
   for (const [key, list] of Object.entries(map)) {

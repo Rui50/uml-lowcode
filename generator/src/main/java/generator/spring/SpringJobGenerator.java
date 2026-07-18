@@ -74,7 +74,8 @@ public class SpringJobGenerator {
             throw new IllegalArgumentException("Job '" + op.getName()
                     + "': não tem diagrama de sequência associado — ligue um diagrama à operação ou desmarque-a como job.");
         }
-        String jobName = GeneratorUtils.capitalizeFirst(op.getName()) + "Job";
+        // prefixo da classe evita colisão entre jobs  classes diferentes ivroSyncJob x AutorSyncJob
+        String jobName = cls.getName() + GeneratorUtils.capitalizeFirst(op.getName()) + "Job";
         String cron = (op.getCron() != null && !op.getCron().isBlank()) ? op.getCron() : "0 * * * * *";
 
         // repos = lifelines do tipo *Repository desenhadas no diagrama do job

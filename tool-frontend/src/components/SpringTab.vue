@@ -70,10 +70,15 @@ function removeOverride(endpointType: EndpointType) {
   expandedEndpointType.value = null
 }
 
-// matriz "DTO fields": uma linha por atributo, células trancadas quando a semântica já
-// (init sai sempre do Create; derive só existe no Response).
-// Inclui atributos HERDADOS (os DTOs gerados também os têm); init/derive procuram-se
-// pela chave da classe que DECLARA o atributo. O atributo-id custom (da raiz) não aparece.
+// Linhas da tabela "Base DTO fields": uma por atributo e relação (da classe E dos pais — os DTOs
+// gerados também incluem os campos herdados). Cada linha tem 3 toggles, Create/Update/Response:
+// marcado = o campo entra nesse DTO. O id custom (vive na raiz) não é campo de DTO -> não aparece.
+// init/derive procuram-se pela chave da classe que DECLARA o atributo.
+//
+// 'locked' = toggle que o user não pode desmarcar porque a semântica já o decide:
+//   - init   -> o campo nunca entra no Create (o valor é obrigado na criação);
+//   - derive -> o campo só existe no Response;
+//   - escondido por um pai -> o filho não o pode voltar a mostrar.
 const DTO_ROLES = ['create', 'update', 'response'] as const
 const fieldRows = computed(() => {
   const classes = model.model?.classes ?? []
@@ -90,7 +95,7 @@ const fieldRows = computed(() => {
 
   // escondido por um antepassado (herda-se; o filho não pode des-esconder -> trancado)
   const ancestorHides = (role: DTORole, attr: string) =>
-    hierarchyList.slice(1).some(c => annotations.dtoHiddenByClass[c.id]?.[role].includes(attr))
+    hierarchyList.slice(1).some(c => annotations.dtoHiddenByClass[c.id]?.[role]?.includes(attr))
 
   return hierarchyList.flatMap((c, depth) => {
     const attrRows = c.attributes
@@ -182,7 +187,7 @@ watch(classKey, (id) => {
   </section>
 
   <!-- Endpoints REST previstos (CRUD + relações), derivados do modelo -->
-  <section v-if="!isInterface && allEndpoints.length" class="block">
+  <section v-if="!isInterface && allEndpoints.length && annotations.generateControllerByClass[classKey!] !== false" class="block">
     <header class="block-head">
       <h4>Available endpoints
         <span class="tip" v-tooltip.top="`'customize' molda só a RESPOSTA de cada endpoint CRUD (ResponseDTO próprio). O corpo de Create/Update define-se em 'Base DTO fields'.`">ⓘ</span>
@@ -297,58 +302,223 @@ watch(classKey, (id) => {
 <style scoped>
 /* --- estrutura partilhada com o painel de anotações (duplicada por causa do scoped;
    consolidar num stylesheet comum se os outros tabs também forem extraídos) --- */
-.block { padding: 16px 0; }
-.block + .block { border-top: 1px solid var(--color-border); }
-.block-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 4px; }
-.block-head h4 { margin: 0; font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
-.entry {
-  display: flex; flex-direction: column; gap: 6px; padding: 8px; margin-bottom: 8px;
-  border: 1px solid var(--color-border); border-radius: 6px; background: var(--background);
+.block {
+  padding: 16px 0;
 }
-.attr-label { font-family: monospace; font-size: 12px; }
-.attr-label .enum-hint { opacity: 0.6; font-size: 11px; margin-left: 4px; }
-.job-toggle { display: flex; align-items: center; gap: 6px; }
-.empty { padding: 1.5rem 1rem; opacity: 0.5; font-style: italic; font-size: 12px; text-align: center; }
-.hint { font-size: 11px; opacity: 0.65; margin: 0; line-height: 1.4; }
-.tip { font-size: 11px; opacity: 0.5; cursor: help; margin-left: 4px; font-weight: normal; }
-.hint.warn { opacity: 1; color: var(--p-orange-600, #c2410c); }
+.block + .block {
+  border-top: 1px solid var(--color-border);
+}
+.block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+.block-head h4 {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--background);
+}
+.attr-label {
+  font-family: monospace;
+  font-size: 12px;
+}
+.attr-label .enum-hint {
+  opacity: 0.6;
+  font-size: 11px;
+  margin-left: 4px;
+}
+.job-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.empty {
+  padding: 1.5rem 1rem;
+  opacity: 0.5;
+  font-style: italic;
+  font-size: 12px;
+  text-align: center;
+}
+.hint {
+  font-size: 11px;
+  opacity: 0.65;
+  margin: 0;
+  line-height: 1.4;
+}
+.tip {
+  font-size: 11px;
+  opacity: 0.5;
+  cursor: help;
+  margin-left: 4px;
+  font-weight: normal;
+}
+.hint.warn {
+  opacity: 1;
+  color: var(--p-orange-600, #c2410c);
+}
 
 /* --- específico do Spring --- */
-.endpoint-cfg { display: flex; flex-direction: column; gap: 6px; }
-.endpoint-row { display: flex; gap: 4px; }
-.cron-field { display: flex; flex-direction: column; gap: 4px; }
-.cron-field :deep(.p-inputtext) { width: 100%; }
-.cron-err { color: var(--p-red-500, #e24c4c); font-size: 0.72rem; line-height: 1.3; }
+.endpoint-cfg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.endpoint-row {
+  display: flex;
+  gap: 4px;
+}
+.cron-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cron-field :deep(.p-inputtext) {
+  width: 100%;
+}
+.cron-err {
+  color: var(--p-red-500, #e24c4c);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
 .endpoint-row :deep(.p-select),
-.endpoint-row :deep(.p-inputtext) { flex: 1; min-width: 0; }
-.endpoint-cfg > :deep(.p-inputtext) { width: 100%; }
+.endpoint-row :deep(.p-inputtext) {
+  flex: 1;
+  min-width: 0;
+}
+.endpoint-cfg > :deep(.p-inputtext) {
+  width: 100%;
+}
 
 /* lista de endpoints previstos (preview, read-only) */
-.endpoint-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
-.endpoint-item { display: flex; flex-direction: column; font-size: 12px; line-height: 1.4; }
-.ep-row { display: flex; align-items: flex-start; gap: 6px; }
-.ep-override-btn { margin-left: auto; font-size: 11px; color: var(--color-primary); cursor: pointer; white-space: nowrap; }
-.ep-override-btn.active { color: #f59e0b; font-weight: 600; }
-.override-panel { margin: 4px 0 6px 54px; display: flex; flex-direction: column; gap: 6px; }
-.override-name { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-.override-name span { opacity: .7; }
-.override-remove { font-size: 11px; color: #ef4444; cursor: pointer; align-self: flex-start; }
-.override-fields { display: flex; flex-direction: column; gap: 4px; }
-.override-field { display: flex; align-items: center; gap: 6px; font-family: monospace; font-size: 12px; }
-.endpoint-item .verb {
-  flex: none; min-width: 48px; text-align: center; padding: 1px 5px; border-radius: 3px;
-  font-weight: 700; font-size: 11px; color: #fff;
+.endpoint-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
-.verb.get { background: #3b82f6; }
-.verb.post { background: #22c55e; }
-.verb.put, .verb.patch { background: #f59e0b; }
-.verb.delete { background: #ef4444; }
-.ep-path { font-family: monospace; color: var(--color-text); overflow-wrap: anywhere; word-break: break-all; }
+.endpoint-item {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.ep-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.ep-override-btn {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ep-override-btn.active {
+  color: #f59e0b;
+  font-weight: 600;
+}
+.override-panel {
+  margin: 4px 0 6px 54px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.override-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.override-name span {
+  opacity: 0.7;
+}
+.override-remove {
+  font-size: 11px;
+  color: #ef4444;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.override-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.override-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: monospace;
+  font-size: 12px;
+}
+.endpoint-item .verb {
+  flex: none;
+  min-width: 48px;
+  text-align: center;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 700;
+  font-size: 11px;
+  color: #fff;
+}
+.verb.get {
+  background: #3b82f6;
+}
+.verb.post {
+  background: #22c55e;
+}
+.verb.put, .verb.patch {
+  background: #f59e0b;
+}
+.verb.delete {
+  background: #ef4444;
+}
+.ep-path {
+  font-family: monospace;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
 
 /* matriz de campos por DTO */
-.dto-matrix { width: 100%; border-collapse: collapse; }
-.dto-matrix th { font-size: 10px; font-weight: 600; opacity: .6; text-transform: uppercase; text-align: center; padding-bottom: 4px; }
-.dto-matrix td { padding: 2px 0; text-align: center; }
-.dto-matrix td.attr-label { text-align: left; }
-.dto-matrix .lock { opacity: .5; font-size: 11px; cursor: default; }
+.dto-matrix {
+  width: 100%;
+  border-collapse: collapse;
+}
+.dto-matrix th {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.6;
+  text-transform: uppercase;
+  text-align: center;
+  padding-bottom: 4px;
+}
+.dto-matrix td {
+  padding: 2px 0;
+  text-align: center;
+}
+.dto-matrix td.attr-label {
+  text-align: left;
+}
+.dto-matrix .lock {
+  opacity: 0.5;
+  font-size: 11px;
+  cursor: default;
+}
 </style>

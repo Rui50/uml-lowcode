@@ -600,14 +600,16 @@ public class JavaMenuGenerator {
             // try/catch para que uma pré/pós-condição violada (IllegalStateException)
             // mostra o erro e volta ao menu, em vez de rebentar a app
             w.println("        try {");
-            w.print("            owner." + op.getName() + "(");
-            for (int i = 0; i < argNames.size(); i++) {
-                if (i > 0) w.print(", ");
-                w.print(argNames.get(i));
-            }
-            w.println(");");
+            // retorno da op: capturado no tipo real (via entry/op, como o OperationGenerator) e mostrado
+            // se não-void. Só owner é persistido — um return-entidade NÃO é guardado
+            String call = "owner." + op.getName() + "(" + String.join(", ", argNames) + ")";
+            String rt = (entry.getReturnType() != null && !entry.getReturnType().isBlank())
+                    ? entry.getReturnType() : (op.getReturnType() != null ? op.getReturnType() : "void");
+            boolean voidReturn = rt.isBlank() || "void".equals(rt);
+            w.println("            " + (voidReturn ? "" : GeneratorUtils.removePackageNames(rt) + " ret = ") + call + ";");
             w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".save(owner);");
             w.println("            System.out.println(\"" + op.getName() + " executed.\");");
+            if (!voidReturn) w.println("            System.out.println(\"Result: \" + ret);");
             w.println("        } catch (RuntimeException ex) {");
             w.println("            System.out.println(\"Error: \" + ex.getMessage());");
             w.println("        }");

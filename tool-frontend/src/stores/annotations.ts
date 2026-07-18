@@ -47,20 +47,20 @@ export type EndpointType = 'List' | 'Get' | 'Create' | 'Update'
 //     Turma: { Create: { name: '', hidden: [] } },
 //   }
 type OverridesByEndpointType = Partial<Record<EndpointType, ResponseDTOoverride>>  // endpointType -> override (nem todos existem)
-type ResponseOverridesByClass = Record<string, OverridesByEndpointType>           // className -> os seus overrides
+type ResponseOverridesByClass = Record<string, OverridesByEndpointType>           // classId (xmi:id) -> os seus overrides
 
 export const useAnnotationsStore = defineStore('annotations', () => {
-  // key: ClassName -> invariants
+  // key: classId (xmi:id) -> invariants
   const invariantsByClass = ref<Record<string, OclAnnotation[]>>({})
 
-  // key: "ClassName.attrName" -> init expression
+  // key: "classId.attrName" -> init expression
   const initByAttribute = ref<Record<string, string>>({})
-  // key: "ClassName.attrName" -> derive expression
+  // key: "classId.attrName" -> derive expression
   const deriveByAttribute = ref<Record<string, string>>({})
-  // key: "ClassName.attrName" -> config de coluna JPA (ausente = @Column só com name-default)
+  // key: "classId.attrName" -> config de coluna JPA (ausente = @Column só com name-default)
   const columnByAttribute = ref<Record<string, ColumnConfig>>({})
 
-  // key "ClassName.relationName" -> ordenação da coleção (ausente = sem @OrderBy, ordem indefinida)
+  // key "classId.relationName" -> ordenação da coleção (ausente = sem @OrderBy, ordem indefinida)
   const orderByCollection = ref<Record<string, { attribute: string; direction: 'ASC' | 'DESC' }>>({})
 
   const operationToSeqDiagram = ref<Record<string, string>>({})
@@ -69,30 +69,30 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   const postconditionsByOperation = ref<Record<string, OclAnnotation[]>>({})
 
-  // key: ClassName (superclasse) -> "SINGLE_TABLE" | "JOINED"
+  // key: classId (xmi:id, superclasse) -> "SINGLE_TABLE" | "JOINED"
   const inheritanceStrategyByClass = ref<Record<string, 'SINGLE_TABLE' | 'JOINED'>>({})
 
-  // key: ClassName (raiz) -> config do @Id (ausente = id por defeito auto-gerado)
+  // key: classId (xmi:id, raiz) -> config do @Id (ausente = id por defeito auto-gerado)
   const idByClass = ref<Record<string, IdConfig>>({})
 
   // key: operationId -> config do endpoint REST / job (ausente = POST /<opName>, não-job)
   const endpointByOperation = ref<Record<string, EndpointConfig>>({})
 
-  // key: ClassName -> gerar controller REST? (ausente = true)
+  // key: classId (xmi:id) -> gerar controller REST? (ausente = true)
   const generateControllerByClass = ref<Record<string, boolean>>({})
 
-  // key: ClassName -> invariantes OCL viram anotações Bean Validation? (ausente = true)
+  // key: classId (xmi:id) -> invariantes OCL viram anotações Bean Validation? (ausente = true)
   const beanValidationByClass = ref<Record<string, boolean>>({})
 
-  // key: ClassName -> override do nome da tabela JPA (ausente/vazio = nome derivado da classe)
+  // key: classId (xmi:id) -> override do nome da tabela JPA (ausente/vazio = nome derivado da classe)
   const tableNameByClass = ref<Record<string, string>>({})
 
-  // key: ClassName -> atributos escondidos por DTO (ausente = DTOs completos, output atual)
+  // key: classId (xmi:id) -> atributos escondidos por DTO (ausente = DTOs completos, output atual)
   const dtoHiddenByClass = ref<Record<string, DTOHidden>>({})
 
-  // key: ClassName -> endpointType -> override do response DESSE endpoint (lazy: ausente = usa o
+  // key: classId (xmi:id) -> endpointType -> override do response DESSE endpoint (lazy: ausente = usa o
   // ResponseDTO da classe). A seleção é independente do default (não é subtração em camadas).
-  // override do response por endpoint. Estrutura: className -> endpointType -> override.
+  // override do response por endpoint. Estrutura: classId -> endpointType -> override.
   // (ausente em qualquer nível = esse endpoint usa o ResponseDTO normal da classe)
   const responseOverrideByClass = ref<ResponseOverridesByClass>({})
 
@@ -176,14 +176,6 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     if (cur) cur.direction = cur.direction === 'ASC' ? 'DESC' : 'ASC'
   }
 
-  function linkOperationToSeqDiagram(operationKey: string, diagramId: string) {
-    operationToSeqDiagram.value[operationKey] = diagramId
-  }
-
-  function unlinkOperationFromSeqDiagram(operationKey: string) {
-    delete operationToSeqDiagram.value[operationKey]
-  }
-
   function addPrecondition(opId: string) {
     if (!preconditionsByOperation.value[opId]) preconditionsByOperation.value[opId] = []
     preconditionsByOperation.value[opId].push({
@@ -226,7 +218,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   }
 
   function isDTOHidden(className: string, role: DTORole, attr: string): boolean {
-    return dtoHiddenByClass.value[className]?.[role].includes(attr) ?? false
+    return dtoHiddenByClass.value[className]?.[role]?.includes(attr) ?? false
   }
 
   function toggleDTOHidden(className: string, role: DTORole, attr: string) {
@@ -418,8 +410,6 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     orderDirection,
     setOrderAttribute,
     toggleOrderDirection,
-    linkOperationToSeqDiagram,
-    unlinkOperationFromSeqDiagram,
     addPrecondition,
     deletePrecondition,
     addPostcondition,
