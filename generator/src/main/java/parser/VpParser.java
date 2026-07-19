@@ -65,7 +65,9 @@ public class VpParser {
         }
 
         Pattern modelRefPattern = Pattern.compile("<modelRef value=\"([^\"]+)\"/>");
-        Pattern ownedEndPattern = Pattern.compile("<ownedEnd[^>]+xmi:id=\"([^\"]+)\"");
+        // ponta da associação: <ownedEnd> (não-navegável) OU <ownedAttribute> (navegável) — o qualifier
+        // pode estar em qualquer uma, sem o ownedAttribute, um qualifier navegável perdia o Map
+        Pattern ownedEndPattern = Pattern.compile("<(?:ownedEnd|ownedAttribute)[^>]+xmi:id=\"([^\"]+)\"");
 
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -102,10 +104,9 @@ public class VpParser {
                     hasQualifier = false;
                 }
 
-                // detetar fim ownedEnd
-                if (line.contains("</ownedEnd>")) {
+                // detetar fim da ponta (ownedEnd ou ownedAttribute)
+                if (line.contains("</ownedEnd>") || line.contains("</ownedAttribute>")) {
                     currentOwnedEndId = null;
-
                 }
             }
             return qualifiers;

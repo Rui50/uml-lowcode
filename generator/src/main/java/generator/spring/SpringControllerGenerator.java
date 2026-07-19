@@ -280,16 +280,14 @@ public class SpringControllerGenerator {
             generateAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
             generateRemoveAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
         }
-
         // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others} — no lado DONO (isOwningSide)
-        if (thisMultiple && otherMultiple && rel.isOwner()) {
+        else if (thisMultiple && otherMultiple && rel.isOwner()) {
             if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
             generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
             generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);
         }
-
-        // OneToMany unidirectional (or qualifier/Map): POST /{id}/{others} e DELETE /{id}/{others}
-        if ((!thisMultiple || rel.assoc.hasQualifier()) && (otherMultiple || rel.assoc.hasQualifier()) && !rel.isBidirectional()) {
+        // OneToMany unidirectional (or qualifier/Map): POST + DELETE /{id}/{others}
+        else if (rel.hasCollectionEndpoint()) {
             if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
             generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
             generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);

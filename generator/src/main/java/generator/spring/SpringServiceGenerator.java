@@ -316,16 +316,14 @@ public class SpringServiceGenerator {
             generateAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
             generateRemoveAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
         }
-
         // ManyToMany: addX / removeX no lado DONO (@JoinTable), decidido por isOwningSide
-        if (thisMultiple && otherMultiple && rel.isOwner()) {
+        else if (thisMultiple && otherMultiple && rel.isOwner()) {
             if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
             generateManyToManyAddMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
             generateManyToManyRemoveMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
         }
-
-        // OneToMany unidirectional: esta classe tem a coleção, sem back-reference -> addX / removeX
-        if ((!thisMultiple || assoc.hasQualifier()) && (otherMultiple || assoc.hasQualifier()) && !isBidirectional) {
+        // OneToMany unidirectional (ou Map qualificado, incl. bidirecional na ponta dona) -> addX / removeX
+        else if (rel.hasCollectionEndpoint()) {
             if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
             generateOneToManyUniAddMethod(writer, cls, otherClass, fieldName, assoc);
             generateOneToManyUniRemoveMethod(writer, cls, otherClass, fieldName, assoc);
@@ -383,12 +381,23 @@ public class SpringServiceGenerator {
             writer.println("        // Remove from previous " + otherClass + " if exists");
             writer.println("        " + otherClass + " " + prevVar + " = " + varName + ".get" + capitalizedField + "();");
             writer.println("        if (" + prevVar + " != null) {");
-            writer.println("            " + prevVar + ".get" + capitalizedOtherField + "().remove(" + varName + ");");
-            writer.println("        }");
-            writer.println();
-            writer.println("        // Set both sides of the relationship");
-            writer.println("        " + varName + ".set" + capitalizedField + "(" + otherVar + ");");
-            writer.println("        " + otherVar + ".get" + capitalizedOtherField + "().add(" + varName + ");");
+            // inverso Map (qualificado) -> remove/put por chave; senão List -> remove/add por valor
+            if (assoc.hasQualifier()) {
+                String qKey = varName + ".get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName()) + "()";
+                writer.println("            " + prevVar + ".get" + capitalizedOtherField + "().remove(" + qKey + ");");
+                writer.println("        }");
+                writer.println();
+                writer.println("        // Set both sides of the relationship");
+                writer.println("        " + varName + ".set" + capitalizedField + "(" + otherVar + ");");
+                writer.println("        " + otherVar + ".get" + capitalizedOtherField + "().put(" + qKey + ", " + varName + ");");
+            } else {
+                writer.println("            " + prevVar + ".get" + capitalizedOtherField + "().remove(" + varName + ");");
+                writer.println("        }");
+                writer.println();
+                writer.println("        // Set both sides of the relationship");
+                writer.println("        " + varName + ".set" + capitalizedField + "(" + otherVar + ");");
+                writer.println("        " + otherVar + ".get" + capitalizedOtherField + "().add(" + varName + ");");
+            }
         } else {
             writer.println("        " + varName + ".set" + capitalizedField + "(" + otherVar + ");");
         }
@@ -443,7 +452,11 @@ public class SpringServiceGenerator {
             writer.println("        // Remove from both sides");
             writer.println("        " + otherClass + " " + otherVar + " = " + varName + ".get" + capitalizedField + "();");
             writer.println("        if (" + otherVar + " != null) {");
-            writer.println("            " + otherVar + ".get" + capitalizedOtherField + "().remove(" + varName + ");");
+            if (assoc.hasQualifier()) {   // inverso Map -> remove por chave
+                writer.println("            " + otherVar + ".get" + capitalizedOtherField + "().remove(" + varName + ".get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName()) + "());");
+            } else {
+                writer.println("            " + otherVar + ".get" + capitalizedOtherField + "().remove(" + varName + ");");
+            }
             writer.println("        }");
         }
 

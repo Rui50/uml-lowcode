@@ -136,30 +136,25 @@ public class SpringFrontendGenerator {
             if (declarer == null) continue;
             boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass()) && isBidirectional;
             if (selfBidirectional) {
-                addCollectionSide(rels, assoc, isBidirectional, true, declarer);
-                addCollectionSide(rels, assoc, isBidirectional, false, declarer);
+                addCollectionSide(rels, assoc, true, declarer);
+                addCollectionSide(rels, assoc, false, declarer);
             } else {
-                addCollectionSide(rels, assoc, isBidirectional, assoc.getSourceClass().equals(declarer), declarer);
+                addCollectionSide(rels, assoc, assoc.getSourceClass().equals(declarer), declarer);
             }
         }
         return rels;
     }
 
-    private void addCollectionSide(List<RelationshipInfo> rels, Association assoc, boolean isBidirectional,
-                                   boolean isSource, String declarer) {
-        String thisMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-        String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
-        boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMul);
-        boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMul);
+    private void addCollectionSide(List<RelationshipInfo> rels, Association assoc, boolean isSource, String declarer) {
         String otherClass = GeneratorUtils.otherClassOf(declarer, assoc);
         String role = isSource ? assoc.getTargetRole() : assoc.getSourceRole();
+        String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
+        RelationshipInfo rel = new RelationshipInfo(otherClass, role, otherMul, assoc, isSource);
 
-        boolean manyToMany = thisMultiple && otherMultiple && GeneratorUtils.isOwningSide(assoc, isSource);
-        boolean oneToManyUni = (!thisMultiple || assoc.hasQualifier())
-                && (otherMultiple || assoc.hasQualifier()) && !isBidirectional;
-        if (!manyToMany && !oneToManyUni) return;
-
-        rels.add(new RelationshipInfo(otherClass, role, otherMul, assoc, isSource));
+        // M:N do lado dono, ou coleção com endpoint (O:M unidir / Map)
+        boolean manyToMany = rel.thisMultiple() && rel.otherMultiple() && rel.isOwner();
+        if (!manyToMany && !rel.hasCollectionEndpoint()) return;
+        rels.add(rel);
     }
 
     // operações custom desta classe COM endpoint (mesma condição que o controller:

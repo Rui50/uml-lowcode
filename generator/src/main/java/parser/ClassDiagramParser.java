@@ -370,14 +370,22 @@ public class ClassDiagramParser {
                     association.setSourceNavigable(sourceNavigable == null || Boolean.parseBoolean(sourceNavigable));
                     association.setTargetNavigable(targetNavigable == null || Boolean.parseBoolean(targetNavigable));
 
+                    // só se suporta 1 qualifier por associação (o Map fica numa ponta só)
+                    if (sourceQualifier != null && targetQualifier != null) {
+                        throw new IllegalArgumentException("Associação " + association.getSourceClass()
+                                + " <-> " + association.getTargetClass() + " tem qualificador nas DUAS pontas — "
+                                + "não suportado (um qualificador/Map por associação).");
+                    }
                     if(sourceQualifier != null) {
                         association.setQualifierName(sourceQualifier.name);
                         association.setQualifierType(sourceQualifier.type);
-                        System.out.println("Association " + association.getSourceClass() + " -> " + association.getTargetClass() + " has qualifier: " + sourceQualifier);
+                        association.setQualifierOnSource(true);
+                        System.out.println("Association " + association.getSourceClass() + " -> " + association.getTargetClass() + " has qualifier: " + sourceQualifier + " (onSource=true)");
                     } else if (targetQualifier != null) {
                         association.setQualifierName(targetQualifier.name);
                         association.setQualifierType(targetQualifier.type);
-                        System.out.println("Association " + association.getSourceClass() + " -> " + association.getTargetClass() + " has qualifier: " + targetQualifier);
+                        association.setQualifierOnSource(false);
+                        System.out.println("Association " + association.getSourceClass() + " -> " + association.getTargetClass() + " has qualifier: " + targetQualifier + " (onSource=false)");
                     }
 
                     associations.add(association);

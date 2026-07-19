@@ -329,7 +329,8 @@ public class GeneratorUtils {
     public static List<String> getMapFieldNames(Class cls, List<Association> associations) {
         List<String> mapFields = new ArrayList<>();
         for (Association assoc : associations) {
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable() && assoc.hasQualifier()) {
+            // o Map fica só na ponta DONA do qualifier (isQualifierOnSource), não nas duas
+            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable() && assoc.hasQualifier() && assoc.isQualifierOnSource()) {
                 String role = assoc.getTargetRole();
                 if (role != null && !role.trim().isEmpty()) {
                     mapFields.add(role.trim());
@@ -338,7 +339,7 @@ public class GeneratorUtils {
                     mapFields.add(base + "s");
                 }
             }
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable() && assoc.hasQualifier()) {
+            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable() && assoc.hasQualifier() && !assoc.isQualifierOnSource()) {
                 String role = assoc.getSourceRole();
                 if (role != null && !role.trim().isEmpty()) {
                     mapFields.add(role.trim());

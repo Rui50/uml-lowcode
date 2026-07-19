@@ -83,12 +83,12 @@ public class SpringEndpointList {
             endpoints.add(new Endpoint("DELETE", base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Unassign " + rel.otherClass, null));
         }
         // ManyToMany lado dono que gera POST + DELETE /{id}/{others}
-        if (rel.thisMultiple() && rel.otherMultiple() && rel.isOwner()) {
+        else if (rel.thisMultiple() && rel.otherMultiple() && rel.isOwner()) {
             endpoints.add(new Endpoint("POST",   base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Add " + plural(rel.otherClass), null));
             endpoints.add(new Endpoint("DELETE", base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Remove " + rel.otherClass, null));
         }
-        // OneToMany unidir / qualifier: POST + DELETE /{id}/{others}
-        if((!rel.thisMultiple() || rel.assoc.hasQualifier()) && (rel.otherMultiple() || rel.assoc.hasQualifier()) && !rel.isBidirectional()) {
+        // OneToMany unidir / Map POST + DELETE /{id}/{others}
+        else if (rel.hasCollectionEndpoint()) {
             endpoints.add(new Endpoint("POST",   base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Add " + plural(rel.otherClass), null));
             endpoints.add(new Endpoint("DELETE", base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Remove " + rel.otherClass, null));
         }

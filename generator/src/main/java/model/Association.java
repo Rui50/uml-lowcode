@@ -15,6 +15,7 @@ public class Association extends Relationship {
     // para os maps
     private String qualifierName;
     private String qualifierType;
+    private boolean qualifierOnSource;   // o qualifier/Map esta onde;
 
     public Association() {
         super();
@@ -112,6 +113,14 @@ public class Association extends Relationship {
 
     public void setQualifierType(String qualifierType) {
         this.qualifierType = toJavaKeyType(qualifierType);
+    }
+
+    public boolean isQualifierOnSource() {
+        return qualifierOnSource;
+    }
+
+    public void setQualifierOnSource(boolean qualifierOnSource) {
+        this.qualifierOnSource = qualifierOnSource;
     }
 
     // as chaves de um Map têm de ser tipos de referência; o VP exporta os
