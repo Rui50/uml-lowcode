@@ -115,6 +115,7 @@ public class Association extends Relationship {
         this.qualifierType = toJavaKeyType(qualifierType);
     }
 
+    // means it exists
     public boolean isQualifierOnSource() {
         return qualifierOnSource;
     }

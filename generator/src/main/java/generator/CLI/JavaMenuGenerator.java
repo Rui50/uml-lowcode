@@ -182,7 +182,9 @@ public class JavaMenuGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
                 String cap = GeneratorUtils.capitalizeFirst(fieldName);
 
-                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
+                // Map só na ponta que TEM o qualifier (aqui a source)
+                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity())
+                        || (assoc.hasQualifier() && assoc.isQualifierOnSource())) {
                     // OneToMany, ManyToMany ou Map: Add e Remove
                     options.add(new String[]{"Add " + fieldName, "add" + cap});
                     options.add(new String[]{"Remove " + fieldName, "remove" + cap});
@@ -198,7 +200,9 @@ public class JavaMenuGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
                 String cap = GeneratorUtils.capitalizeFirst(fieldName);
 
-                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
+                // aqui target -> o Map é aqui se o qualifier NÃO está na source
+                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity())
+                        || (assoc.hasQualifier() && !assoc.isQualifierOnSource())) {
                     options.add(new String[]{"Add " + fieldName, "add" + cap});
                     options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
@@ -336,10 +340,12 @@ public class JavaMenuGenerator {
             String other = null;
             String role = null;
             String mult = null;
+            boolean isSource = false;
             if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
                 other = assoc.getTargetClass();
                 role = assoc.getTargetRole();
                 mult = assoc.getTargetMultiplicity();
+                isSource = true;
             } else if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
                 other = assoc.getSourceClass();
                 role = assoc.getSourceRole();
@@ -351,7 +357,8 @@ public class JavaMenuGenerator {
             String cap = GeneratorUtils.capitalizeFirst(fieldName);
             String getter = "entity.get" + cap + "()";
 
-            if (assoc.hasQualifier()) {
+            // .values() só se o campo desta ponta for mesmo um Map
+            if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ".values());");
             } else {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ");");
@@ -438,9 +445,10 @@ public class JavaMenuGenerator {
                 String other = assoc.getTargetClass();
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
-                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
-                    generateAddMethod(w, cls.getName(), other, fieldName, assoc);
-                    generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc);
+                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity())
+                        || (assoc.hasQualifier() && assoc.isQualifierOnSource())) {
+                    generateAddMethod(w, cls.getName(), other, fieldName, assoc, true);
+                    generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, true);
                 }
                 else {
                     generateAssignMethod(w, cls.getName(), other, fieldName);
@@ -451,9 +459,10 @@ public class JavaMenuGenerator {
                 String other = assoc.getSourceClass();
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
-                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
-                    generateAddMethod(w, cls.getName(), other, fieldName, assoc);
-                    generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc);
+                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity())
+                        || (assoc.hasQualifier() && !assoc.isQualifierOnSource())) {
+                    generateAddMethod(w, cls.getName(), other, fieldName, assoc, false);
+                    generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, false);
                 }
                 else {
                     generateAssignMethod(w, cls.getName(), other, fieldName);
@@ -497,7 +506,8 @@ public class JavaMenuGenerator {
     }
 
     // add (OneToMany/ManyToMany/Map): list.add(other) ou map.put(key, other)
-    private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc) {
+    // isSource = a classe do menu está na ponta SOURCE desta associação
+    private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc, boolean isSource) {
         String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
         w.println("    private void add" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
@@ -509,7 +519,7 @@ public class JavaMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
-        if (assoc.hasQualifier()) {
+        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
             // Map fazemos put com a chave sendo o qualifier do outro objeto
             // owner.getAlunos().put(other.getNumero(), other)
             String qualifierName = assoc.getQualifierName();
@@ -526,7 +536,7 @@ public class JavaMenuGenerator {
     }
 
     // remove da lista/map
-    private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc) {
+    private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc, boolean isSource) {
         String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
         w.println("    private void remove" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
@@ -538,7 +548,7 @@ public class JavaMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
-        if (assoc.hasQualifier()) {
+        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
             // map remove pela chave
             String qualifierName = assoc.getQualifierName();
             String qualCap = GeneratorUtils.capitalizeFirst(qualifierName);

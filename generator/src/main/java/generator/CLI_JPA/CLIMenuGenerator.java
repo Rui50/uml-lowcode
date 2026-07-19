@@ -201,7 +201,10 @@ public class CLIMenuGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
                 String cap = GeneratorUtils.capitalizeFirst(fieldName);
 
-                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
+                // Map só na ponta que TEM o qualifier (aqui é source) — na outra ponta é
+                // uma referência normal e leva Assign/Remove
+                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity())
+                        || (assoc.hasQualifier() && assoc.isQualifierOnSource())) {
                     // OneToMany, ManyToMany ou Map: Add e Remove
                     options.add(new String[]{"Add " + fieldName, "add" + cap});
                     options.add(new String[]{"Remove " + fieldName, "remove" + cap});
@@ -217,7 +220,9 @@ public class CLIMenuGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
                 String cap = GeneratorUtils.capitalizeFirst(fieldName);
 
-                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
+                // aqui é atarget -> o Map é daqui se o qualifier NÃO está na source
+                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity())
+                        || (assoc.hasQualifier() && !assoc.isQualifierOnSource())) {
                     options.add(new String[]{"Add " + fieldName, "add" + cap});
                     options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
@@ -355,10 +360,12 @@ public class CLIMenuGenerator {
             String other = null;
             String role = null;
             String mult = null;
+            boolean isSource = false;
             if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
                 other = assoc.getTargetClass();
                 role = assoc.getTargetRole();
                 mult = assoc.getTargetMultiplicity();
+                isSource = true;
             } else if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
                 other = assoc.getSourceClass();
                 role = assoc.getSourceRole();
@@ -370,7 +377,8 @@ public class CLIMenuGenerator {
             String cap = GeneratorUtils.capitalizeFirst(fieldName);
             String getter = "entity.get" + cap + "()";
 
-            if (assoc.hasQualifier()) {
+            // .values() só se o campo desta ponta for mesmo um Map; senão imprime a referência
+            if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ".values());");
             } else {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ");");
@@ -471,7 +479,8 @@ public class CLIMenuGenerator {
                 String other = assoc.getTargetClass();
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
-                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity()) || assoc.hasQualifier()) {
+                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity())
+                        || (assoc.hasQualifier() && assoc.isQualifierOnSource())) {
                     generateAddMethod(w, cls.getName(), other, fieldName, assoc, true);
                     generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, true);
                 }
@@ -484,7 +493,8 @@ public class CLIMenuGenerator {
                 String other = assoc.getSourceClass();
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
-                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity()) || assoc.hasQualifier()) {
+                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity())
+                        || (assoc.hasQualifier() && !assoc.isQualifierOnSource())) {
                     generateAddMethod(w, cls.getName(), other, fieldName, assoc, false);
                     generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, false);
                 }
@@ -543,7 +553,15 @@ public class CLIMenuGenerator {
             // substitui o em.refresh(other) pós-commit: a coleção fica logo correta em memória.
             String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
             boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
-            w.println(invColl ? "        other.get" + invCap + "().add(owner);" : "        other.set" + invCap + "(owner);");
+            // inv Map -> sync por CHAVE.
+            // Basta hasQualifier(): esta ponta é SINGULAR,
+            // logo se há qualifier ele só pode estar no inverso
+            if (assoc.hasQualifier()) {
+                String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
+                w.println("        other.get" + invCap + "().put(owner.get" + qualCap + "(), owner);");
+            } else {
+                w.println(invColl ? "        other.get" + invCap + "().add(owner);" : "        other.set" + invCap + "(owner);");
+            }
             generateValidation(w, ownerClass, "owner", otherClass, "other", false);
         } else {
             generateValidation(w, ownerClass, "owner", null, null, false);
@@ -580,8 +598,14 @@ public class CLIMenuGenerator {
             // desliga o inverso EM MEMÓRIA para poder validar o lado ANTIGO (ex.: cardinalidade mínima).
             String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
             boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
+            // inverso Map -> remove pela CHAVE
             w.println("        if (previous != null) {");
-            w.println(invColl ? "            previous.get" + invCap + "().remove(entity);" : "            previous.set" + invCap + "(null);");
+            if (assoc.hasQualifier()) {
+                String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
+                w.println("            previous.get" + invCap + "().remove(entity.get" + qualCap + "());");
+            } else {
+                w.println(invColl ? "            previous.get" + invCap + "().remove(entity);" : "            previous.set" + invCap + "(null);");
+            }
             w.println("        }");
             generateValidation(w, ownerClass, "entity", otherClass, "previous", true);
         } else {
@@ -627,7 +651,7 @@ public class CLIMenuGenerator {
         String otherValClass = null, otherValVar = null;
         boolean synced = false;
 
-        if (assoc.hasQualifier()) {
+        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
@@ -690,7 +714,7 @@ public class CLIMenuGenerator {
         String otherValClass = null, otherValVar = null;
         boolean synced = false;
 
-        if (assoc.hasQualifier()) {
+        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;

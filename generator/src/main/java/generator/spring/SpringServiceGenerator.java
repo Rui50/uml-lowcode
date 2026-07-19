@@ -382,6 +382,8 @@ public class SpringServiceGenerator {
             writer.println("        " + otherClass + " " + prevVar + " = " + varName + ".get" + capitalizedField + "();");
             writer.println("        if (" + prevVar + " != null) {");
             // inverso Map (qualificado) -> remove/put por chave; senão List -> remove/add por valor
+            // basta hasQualifier(): ramo ManyToOne -> esta ponta é non mult,
+            // logo o qualifier só pode estar no inverso
             if (assoc.hasQualifier()) {
                 String qKey = varName + ".get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName()) + "()";
                 writer.println("            " + prevVar + ".get" + capitalizedOtherField + "().remove(" + qKey + ");");

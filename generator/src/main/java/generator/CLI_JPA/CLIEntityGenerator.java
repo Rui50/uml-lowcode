@@ -264,14 +264,14 @@ public class CLIEntityGenerator {
                 String otherRole = assoc.getTargetRole();
                 String thisMult = assoc.getSourceMultiplicity();
                 String otherMult = assoc.getTargetMultiplicity();
-                generateRelationshipGetterSetter(writer, otherClass, otherRole, thisMult, otherMult, assoc, emittedRelations);
+                generateRelationshipGetterSetter(writer, otherClass, otherRole, thisMult, otherMult, assoc, true, emittedRelations);
             }
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
                 String otherClass = assoc.getSourceClass();
                 String otherRole = assoc.getSourceRole();
                 String thisMult = assoc.getTargetMultiplicity();
                 String otherMult = assoc.getSourceMultiplicity();
-                generateRelationshipGetterSetter(writer, otherClass, otherRole, thisMult, otherMult, assoc, emittedRelations);
+                generateRelationshipGetterSetter(writer, otherClass, otherRole, thisMult, otherMult, assoc, false, emittedRelations);
             }
         }
 
@@ -300,19 +300,22 @@ public class CLIEntityGenerator {
         writer.println("    }");
     }
 
+    // isSource = a classe que estamos a gerar está na ponta SOURCE desta associação
     private void generateRelationshipGetterSetter(PrintWriter writer,
                                           String otherClass,
                                           String otherRole,
                                           String thisMult,
                                           String otherMult,
                                           Association assoc,
+                                          boolean isSource,
                                           List<String> emitted) {
         String fieldName = GeneratorUtils.makeAttributeName(otherClass, otherRole, otherMult);
         if (emitted.contains(fieldName)) return;
         emitted.add(fieldName);
 
         String type = otherClass;
-        if (assoc.hasQualifier()) {
+        // só a ponta que TEM o qualifier vira Map a outra é referência normal.
+        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
             type = "Map<" + assoc.getQualifierType() + ", " + otherClass + ">";
         }
         else if (GeneratorUtils.checkMultiplicity(otherMult)) {   // multi side

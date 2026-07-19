@@ -203,7 +203,7 @@ public class JavaEntityGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
                 if (!generatedFields.contains(fieldName)) {
-                    generateRelationshipField(writer, assoc.getTargetClass(), fieldName, assoc.getTargetMultiplicity(), assoc);
+                    generateRelationshipField(writer, assoc.getTargetClass(), fieldName, assoc.getTargetMultiplicity(), assoc, true);
                     generatedFields.add(fieldName);
                 }
             }
@@ -212,7 +212,7 @@ public class JavaEntityGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
                 if (!generatedFields.contains(fieldName)) {
-                    generateRelationshipField(writer, assoc.getSourceClass(), fieldName, assoc.getSourceMultiplicity(), assoc);
+                    generateRelationshipField(writer, assoc.getSourceClass(), fieldName, assoc.getSourceMultiplicity(), assoc, false);
                     generatedFields.add(fieldName);
                 }
             }
@@ -328,7 +328,7 @@ public class JavaEntityGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
                 if (!generatedFields.contains(fieldName)) {
-                    String type = getRelationshipType(assoc.getTargetClass(), assoc.getTargetMultiplicity(), assoc);
+                    String type = getRelationshipType(assoc.getTargetClass(), assoc.getTargetMultiplicity(), assoc, true);
                     generateGetterSetter(writer, type, fieldName);
                     generatedFields.add(fieldName);
                 }
@@ -337,7 +337,7 @@ public class JavaEntityGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
                 if (!generatedFields.contains(fieldName)) {
-                    String type = getRelationshipType(assoc.getSourceClass(), assoc.getSourceMultiplicity(), assoc);
+                    String type = getRelationshipType(assoc.getSourceClass(), assoc.getSourceMultiplicity(), assoc, false);
                     generateGetterSetter(writer, type, fieldName);
                     generatedFields.add(fieldName);
                 }
@@ -414,8 +414,10 @@ public class JavaEntityGenerator {
     }
 
     // gera com base se é map list ou normal
-    private void generateRelationshipField(PrintWriter writer, String otherClass, String fieldName, String multiplicity, Association assoc) {
-        if (assoc.hasQualifier()) {
+    // isSource = a classe que estamos a gerar está na ponta SOURCE desta associação
+    private void generateRelationshipField(PrintWriter writer, String otherClass, String fieldName, String multiplicity, Association assoc, boolean isSource) {
+        // só a ponta que TEM o qualifier vira Map; a outra é referência normal
+        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " + fieldName + " = new HashMap<>();");
         } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
@@ -425,9 +427,9 @@ public class JavaEntityGenerator {
         }
     }
 
-    // se é map ou list
-    private String getRelationshipType(String otherClass, String multiplicity, Association assoc) {
-        if (assoc.hasQualifier()) {
+    // se é map ou list — tem de bater certo com generateRelationshipField (mesmo guard)
+    private String getRelationshipType(String otherClass, String multiplicity, Association assoc, boolean isSource) {
+        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
             return "Map<" + assoc.getQualifierType() + ", " + otherClass + ">";
         } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
             return "List<" + otherClass + ">";
