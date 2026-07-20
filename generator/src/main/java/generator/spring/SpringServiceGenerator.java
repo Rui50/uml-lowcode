@@ -1,6 +1,7 @@
 package generator.spring;
 
 import generator.GeneratorUtils;
+import generator.OperationGenerator;
 import generator.RelationshipInfo;
 import model.*;
 import model.Class;
@@ -1070,42 +1071,10 @@ public class SpringServiceGenerator {
 
         bodyGen.generateMethodBodyFromInteraction(writer, owner, op, interaction);   // lifeline do service = a do diagrama (owner)
 
-        // a expressão de return vem da reply-message para o actor  sem reply não é feito return
+        // fim da op (result/pós-condições/return) partilhado com o entity generator; selfVar é a var
+        // self carregada do repo (o service é id-based, não this-based). DTO fica no controller, não aqui.
         String returnExpr = GeneratorUtils.findReplyToActor(interaction.getElements());
-        // OCL postcondition pode referir "result"
-        // se for o caso, declarar variável "result" para o valor de return
-        boolean needsResult = op.getPostconditions().stream()
-                .anyMatch(p -> {
-                    String je = p.getJavaExpression(selfVar);
-                    return je != null && je.matches(".*\\bresult\\b.*");
-                });
-        // operação não-void precisa de reply; uma pós-condição que refere 'result' também
-        if (!"void".equals(returnType) && returnExpr == null) {
-            throw new IllegalArgumentException("Operação '" + operName + "': devolve '" + returnType
-                    + "' mas o diagrama não tem mensagem de resposta (reply) para o ator.");
-        }
-        if (needsResult && returnExpr == null) {
-            throw new IllegalArgumentException("Operação '" + operName
-                    + "': uma pós-condição refere 'result' mas o diagrama não tem mensagem de resposta (reply).");
-        }
-        if (needsResult && "void".equals(returnType)) {
-            throw new IllegalArgumentException("Operação '" + operName
-                    + "': uma pós-condição refere 'result' mas a operação é void (não tem valor de retorno).");
-        }
-        if (needsResult && returnExpr != null && !"void".equals(returnType)) {
-            writer.println("        " + returnType + " result = " + returnExpr + ";");
-        }
-
-        for (Postcondition post : op.getPostconditions()) {
-            String javaExpr = post.getJavaExpression(selfVar);
-            writer.println("        if (!(" + javaExpr + ")) {");
-            writer.println("            throw new IllegalStateException(\"" + GeneratorUtils.fixErrorMessage(post.getMessage()) + "\");");
-            writer.println("        }");
-        }
-
-        if (!"void".equals(returnType) && returnExpr != null) {
-            writer.println("        return " + (needsResult ? "result" : returnExpr) + ";");
-        }
+        OperationGenerator.generateReturnAndPostconditions(writer, op, returnType, returnExpr, selfVar);
 
         writer.println("    }");
     }

@@ -231,37 +231,46 @@ public class OperationGenerator {
 
         generateElements(writer, interaction.getElements(), entry, cls, associations, 2);
 
-        // a expressão de return vem da reply-message para o actor;
-        // sem reply, não é feito return
+        // a expressão de return vem da reply-message para o actor; sem reply, não é feito return.
+        // fim da op (result/pós-condições/return) é partilhado com o Spring — selfVar="this" aqui
+        // porque o corpo corre na própria entidade (this-based)
         String returnExpr = GeneratorUtils.findReplyToActor(interaction.getElements());
+        generateReturnAndPostconditions(writer, operation, returnType, returnExpr, "this");
 
-        // OCL postcondition pode referir "result" — declaramos alias se algum a usar
-        boolean needsResult = operation.getPostconditions().stream()
-                .anyMatch(p -> p.getJavaExpression() != null
-                        && p.getJavaExpression().matches(".*\\bresult\\b.*"));
+        writer.println("    }");
+    }
+
+    // Fim de uma op com corpo - declara 'result' (se uma pós-condição o referir), pós-condições OCL e
+    // return (+ guards de reply/void). selfVar = como o OCL referencia o self: "this" no entity (o corpo
+    // corre na entidade) ou a var self carregada do repo no service Spring — getJavaExpression(selfVar)
+    // troca o alvo ("this.getX()" -> "member.getX()").
+    public static void generateReturnAndPostconditions(PrintWriter writer, Operation op, String returnType,
+                                                       String returnExpr, String selfVar) {
+        boolean needsResult = op.getPostconditions().stream()
+                .anyMatch(p -> {
+                    String je = p.getJavaExpression(selfVar);
+                    return je != null && je.matches(".*\\bresult\\b.*");
+                });
 
         if (!"void".equals(returnType) && returnExpr == null) {
-            throw new IllegalArgumentException(
-                    "Operação '" + operation.getName() + "' devolve '" + returnType
-                    + "' mas o diagrama de sequência não tem mensagem de resposta (reply) para o ator.");
+            throw new IllegalArgumentException("Operação '" + op.getName() + "': devolve '" + returnType
+                    + "' mas o diagrama não tem mensagem de resposta (reply) para o ator.");
         }
         if (needsResult && returnExpr == null) {
-            throw new IllegalArgumentException(
-                    "Operação '" + operation.getName() + "': uma poscondição refere 'result' "
-                    + "mas o diagrama de sequência não tem mensagem de resposta (reply) para o ator.");
+            throw new IllegalArgumentException("Operação '" + op.getName()
+                    + "': uma pós-condição refere 'result' mas o diagrama não tem mensagem de resposta (reply).");
         }
         if (needsResult && "void".equals(returnType)) {
-            throw new IllegalArgumentException(
-                    "Operação '" + operation.getName() + "': uma pós-condição refere 'result' "
-                    + "mas a operação é void (não tem valor de retorno).");
+            throw new IllegalArgumentException("Operação '" + op.getName()
+                    + "': uma pós-condição refere 'result' mas a operação é void (não tem valor de retorno).");
         }
 
         if (needsResult && returnExpr != null && !"void".equals(returnType)) {
             writer.println("        " + returnType + " result = " + returnExpr + ";");
         }
 
-        for (Postcondition post : operation.getPostconditions()) {
-            writer.println("        if (!(" + post.getJavaExpression() + ")) {");
+        for (Postcondition post : op.getPostconditions()) {
+            writer.println("        if (!(" + post.getJavaExpression(selfVar) + ")) {");
             writer.println("            throw new IllegalStateException(\"" + GeneratorUtils.fixErrorMessage(post.getMessage()) + "\");");
             writer.println("        }");
         }
@@ -269,8 +278,6 @@ public class OperationGenerator {
         if (!"void".equals(returnType) && returnExpr != null) {
             writer.println("        return " + (needsResult ? "result" : returnExpr) + ";");
         }
-
-        writer.println("    }");
     }
 
     // Itera as messages e fragments, delegando para generateMessage / generateFragment
