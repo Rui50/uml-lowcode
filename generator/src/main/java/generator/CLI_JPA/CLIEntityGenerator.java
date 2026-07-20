@@ -315,7 +315,7 @@ public class CLIEntityGenerator {
 
         String type = otherClass;
         // só a ponta que TEM o qualifier vira Map a outra é referência normal.
-        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
+        if (assoc.isMapEnd(isSource)) {
             type = "Map<" + assoc.getQualifierType() + ", " + otherClass + ">";
         }
         else if (GeneratorUtils.checkMultiplicity(otherMult)) {   // multi side
@@ -387,7 +387,7 @@ public class CLIEntityGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(targetClass, targetRole, targetMultiplicity);
 
                 if(!generatedRelations.contains(fieldName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, fieldName, targetMultiplicity, association, "target", allClasses);
+                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, fieldName, targetMultiplicity, association, true, allClasses);
                     generatedRelations.add(fieldName);
                 }
             }
@@ -400,7 +400,7 @@ public class CLIEntityGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
 
                 if(!generatedRelations.contains(fieldName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, fieldName, sourceMultiplicity, association, "source", allClasses);
+                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, fieldName, sourceMultiplicity, association, false, allClasses);
                     generatedRelations.add(fieldName);
                 }
             }
@@ -415,17 +415,13 @@ public class CLIEntityGenerator {
     private void generateRelationshipBaseAnnotations(PrintWriter writer, String thisClass,
                                                      String otherClass, String fieldName,
                                                      String multiplicity, Association assoc,
-                                                     String side, List<Class> allClasses){
+                                                     boolean isSource, List<Class> allClasses){
         writer.println("    // relationship: " + thisClass + " -> " + otherClass);
 
-
-        String thisMultiplicity = side.equals("source")
-                ? assoc.getSourceMultiplicity()
-                : assoc.getTargetMultiplicity();
-
-        String otherMultiplicity = side.equals("source")
-                ? assoc.getTargetMultiplicity()
-                : assoc.getSourceMultiplicity();
+        // thisMultiplicity = multiplicidade do CAMPO desta classe (quantos do outro lado);
+        // otherMultiplicity = quantos desta classe é que o outro lado vê
+        String thisMultiplicity  = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
+        String otherMultiplicity = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
 
         boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMultiplicity);
         boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMultiplicity);
@@ -440,11 +436,11 @@ public class CLIEntityGenerator {
 
         // Many to Many
         if (thisMultiple && otherMultiple) {
-            generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
+            generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
         }
         // One to many
         else if (thisMultiple) {
-            generateOneToMany(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
+            generateOneToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
         }
         // Many to one
         else if (otherMultiple) {
@@ -452,7 +448,7 @@ public class CLIEntityGenerator {
         }
         // One to one
         else {
-            generateOneToOne(writer, thisClass, otherClass, fieldName, assoc, side, isBidirectional);
+            generateOneToOne(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
         }
 
         writer.println();
@@ -468,7 +464,7 @@ public class CLIEntityGenerator {
                                     String otherClass,
                                     String fieldName,
                                     Association assoc,
-                                    String side,
+                                    boolean isSource,
                                     boolean isBidirectional) {
 
         // no caso de auto associação as duas colunas seriam iguais ("employee_id")
@@ -477,7 +473,7 @@ public class CLIEntityGenerator {
 
         if (isBidirectional) {
             // decide se o campo gerado é @JoinTable (dono) ou mappedBy (inverso)
-            boolean isOwner = GeneratorUtils.isOwningSide(assoc, side.equals("target"));
+            boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
 
             if (isOwner) {
                 writer.println("    @ManyToMany");
@@ -488,7 +484,7 @@ public class CLIEntityGenerator {
                 writer.println("    )");
             } else {
                 writer.println("    @ManyToMany(mappedBy = \"" +
-                        GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
+                        GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
             }
         } else {
             writer.println("    @ManyToMany");
@@ -499,7 +495,8 @@ public class CLIEntityGenerator {
             writer.println("    )");
         }
 
-        if (assoc.hasQualifier()) {
+        // numa M:N as DUAS pontas são coleções -> só a que TEM o qualifier vira Map
+        if (assoc.isMapEnd(isSource)) {
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
@@ -520,7 +517,7 @@ public class CLIEntityGenerator {
                                    String otherClass,
                                    String fieldName,
                                    Association assoc,
-                                   String side,
+                                   boolean isSource,
                                    boolean isBidirectional) {
 
         boolean isComposite = "composite".equals(assoc.getAggregationType());
@@ -528,7 +525,7 @@ public class CLIEntityGenerator {
 
         if (isBidirectional) {
             writer.println("    @OneToMany(mappedBy = \"" +
-                    GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\"" + cascade + ")");
+                    GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\"" + cascade + ")");
         } else {
             if (isComposite) {
                 writer.println("    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)");
@@ -575,14 +572,14 @@ public class CLIEntityGenerator {
                                   String otherClass,
                                   String fieldName,
                                   Association assoc,
-                                  String side,
+                                  boolean isSource,
                                   boolean isBidirectional) {
 
         // tem qualifier, é OneToMany
         if (assoc.hasQualifier()) {
             if (isBidirectional) {
                 writer.println("    @OneToMany(mappedBy = \"" +
-                        GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
+                        GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
             } else {
                 writer.println("    @OneToMany");
                 writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
@@ -596,14 +593,14 @@ public class CLIEntityGenerator {
             // Sem qualifier: OneToOne normal
             if (isBidirectional) {
                 // decide se o campo gerado é @OneToOne (dono) ou mappedBy (inverso)
-                boolean isOwner = GeneratorUtils.isOwningSide(assoc, side.equals("target"));
+                boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
 
                 if (isOwner) {
                     writer.println("    @OneToOne");
                     writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
                 } else {
                     writer.println("    @OneToOne(mappedBy = \"" +
-                            GeneratorUtils.getOtherSideAttributeName(assoc, side) + "\")");
+                            GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
                 }
             } else {
                 writer.println("    @OneToOne");

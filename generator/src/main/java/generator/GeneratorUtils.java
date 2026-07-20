@@ -172,16 +172,21 @@ public class GeneratorUtils {
         boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
         if (!isBidirectional) return true;      // unidirecional: o lado navegável é o dono
 
-        // bidirecional: forma do campo no sentido do EntityGenerator (far = para onde o campo aponta)
-        String farMul  = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
-        String nearMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-        boolean fieldIsCollection = checkMultiplicity(farMul);
-        boolean nearMultiple      = checkMultiplicity(nearMul);
+        // bidirecional: decide-se pela forma do campo DESTE lado e do campo no lado INVERSO
+        String thisFieldMul    = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
+        String inverseFieldMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+        boolean fieldIsCollection   = checkMultiplicity(thisFieldMul);
+        boolean inverseIsCollection = checkMultiplicity(inverseFieldMul);
 
-        if (fieldIsCollection && nearMultiple)  return !isSource;  // M:N -> target é dono
-        if (fieldIsCollection && !nearMultiple) return false;      // O:M -> mappedBy (inverso)
-        if (!fieldIsCollection && nearMultiple) return true;       // M:O -> dono da FK
-        return !isSource;                                          // O:O -> target é dono
+        // M:N qualifier: dona é a ponta do QUALIFIER — é lá que está o Map e é lá que a coleção se
+        // gere (add/remove por chave). Senão o @JoinTable caía numa ponta e o Map na outra.
+        if (fieldIsCollection && inverseIsCollection && assoc.hasQualifier()) {
+            return assoc.isMapEnd(isSource);
+        }
+        if ( fieldIsCollection &&  inverseIsCollection) return !isSource;  // M:N -> target é dono
+        if ( fieldIsCollection && !inverseIsCollection) return false;      // O:M -> mappedBy (inverso)
+        if (!fieldIsCollection &&  inverseIsCollection) return true;       // M:O -> dono da FK
+        return !isSource;                                                  // O:O -> target é dono
     }
 
     // Decidem o lado por igualdade de nome (não cobrem associações herdadas — ver menus).
@@ -329,8 +334,8 @@ public class GeneratorUtils {
     public static List<String> getMapFieldNames(Class cls, List<Association> associations) {
         List<String> mapFields = new ArrayList<>();
         for (Association assoc : associations) {
-            // o Map fica só na ponta DONA do qualifier (isQualifierOnSource), não nas duas
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable() && assoc.hasQualifier() && assoc.isQualifierOnSource()) {
+            // o Map fica só na ponta DONA do qualifier (isMapEnd), não nas duas
+            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable() && assoc.isMapEnd(true)) {
                 String role = assoc.getTargetRole();
                 if (role != null && !role.trim().isEmpty()) {
                     mapFields.add(role.trim());
@@ -339,7 +344,7 @@ public class GeneratorUtils {
                     mapFields.add(base + "s");
                 }
             }
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable() && assoc.hasQualifier() && !assoc.isQualifierOnSource()) {
+            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable() && assoc.isMapEnd(false)) {
                 String role = assoc.getSourceRole();
                 if (role != null && !role.trim().isEmpty()) {
                     mapFields.add(role.trim());

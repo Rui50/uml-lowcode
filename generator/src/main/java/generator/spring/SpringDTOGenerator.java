@@ -381,7 +381,8 @@ public class SpringDTOGenerator {
         String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
 
         if (rel.isCollection()) {
-            if (rel.assoc.hasQualifier()) {
+            // .values() só se ESTA ponta for o Map; numa M:N a outra ponta é coleção na mesma (List)
+            if (rel.assoc.isMapEnd(rel.isSource)) {
                 w.println("        dto.set" + capitalizedField + "Ids(" + varName + ".get" + capitalizedField + "() != null");
                 w.println("            ? " + varName + ".get" + capitalizedField + "().values().stream().map(" + otherClass + "::" + idGetterOf(otherClass) + ").collect(Collectors.toList())");
                 w.println("            : new ArrayList<>());");

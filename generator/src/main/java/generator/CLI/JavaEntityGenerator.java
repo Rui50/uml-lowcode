@@ -417,7 +417,7 @@ public class JavaEntityGenerator {
     // isSource = a classe que estamos a gerar está na ponta SOURCE desta associação
     private void generateRelationshipField(PrintWriter writer, String otherClass, String fieldName, String multiplicity, Association assoc, boolean isSource) {
         // só a ponta que TEM o qualifier vira Map; a outra é referência normal
-        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
+        if (assoc.isMapEnd(isSource)) {
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " + fieldName + " = new HashMap<>();");
         } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
@@ -429,7 +429,7 @@ public class JavaEntityGenerator {
 
     // se é map ou list — tem de bater certo com generateRelationshipField (mesmo guard)
     private String getRelationshipType(String otherClass, String multiplicity, Association assoc, boolean isSource) {
-        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
+        if (assoc.isMapEnd(isSource)) {
             return "Map<" + assoc.getQualifierType() + ", " + otherClass + ">";
         } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
             return "List<" + otherClass + ">";

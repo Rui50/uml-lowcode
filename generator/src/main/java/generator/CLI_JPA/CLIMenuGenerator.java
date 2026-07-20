@@ -204,7 +204,7 @@ public class CLIMenuGenerator {
                 // Map só na ponta que TEM o qualifier (aqui é source) — na outra ponta é
                 // uma referência normal e leva Assign/Remove
                 if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity())
-                        || (assoc.hasQualifier() && assoc.isQualifierOnSource())) {
+                        || assoc.isMapEnd(true)) {
                     // OneToMany, ManyToMany ou Map: Add e Remove
                     options.add(new String[]{"Add " + fieldName, "add" + cap});
                     options.add(new String[]{"Remove " + fieldName, "remove" + cap});
@@ -222,7 +222,7 @@ public class CLIMenuGenerator {
 
                 // aqui é atarget -> o Map é daqui se o qualifier NÃO está na source
                 if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity())
-                        || (assoc.hasQualifier() && !assoc.isQualifierOnSource())) {
+                        || assoc.isMapEnd(false)) {
                     options.add(new String[]{"Add " + fieldName, "add" + cap});
                     options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
@@ -378,7 +378,7 @@ public class CLIMenuGenerator {
             String getter = "entity.get" + cap + "()";
 
             // .values() só se o campo desta ponta for mesmo um Map; senão imprime a referência
-            if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
+            if (assoc.isMapEnd(isSource)) {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ".values());");
             } else {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ");");
@@ -480,7 +480,7 @@ public class CLIMenuGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity())
-                        || (assoc.hasQualifier() && assoc.isQualifierOnSource())) {
+                        || assoc.isMapEnd(true)) {
                     generateAddMethod(w, cls.getName(), other, fieldName, assoc, true);
                     generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, true);
                 }
@@ -494,7 +494,7 @@ public class CLIMenuGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity())
-                        || (assoc.hasQualifier() && !assoc.isQualifierOnSource())) {
+                        || assoc.isMapEnd(false)) {
                     generateAddMethod(w, cls.getName(), other, fieldName, assoc, false);
                     generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, false);
                 }
@@ -651,7 +651,7 @@ public class CLIMenuGenerator {
         String otherValClass = null, otherValVar = null;
         boolean synced = false;
 
-        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
+        if (assoc.isMapEnd(isSource)) {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
@@ -670,9 +670,16 @@ public class CLIMenuGenerator {
             String ownerCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
             boolean ownerIsCollection = GeneratorUtils.checkMultiplicity(
                     isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
-            w.println(ownerIsCollection
-                    ? "        other.get" + ownerCap + "().add(owner);   // lado DONO: é o que persiste"
-                    : "        other.set" + ownerCap + "(owner);   // lado DONO: é o que persiste");
+            // o lado DONO pode ser um Map (M:N com qualifier: dono = ponta do qualifier) -> put por chave
+            boolean ownerIsMapEnd = assoc.isMapEnd(!isSource);   // !isSource = a ponta oposta
+            if (ownerIsMapEnd) {
+                String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
+                w.println("        other.get" + ownerCap + "().put(owner.get" + qualCap + "(), owner);   // lado DONO: é o que persiste");
+            } else {
+                w.println(ownerIsCollection
+                        ? "        other.get" + ownerCap + "().add(owner);   // lado DONO: é o que persiste"
+                        : "        other.set" + ownerCap + "(owner);   // lado DONO: é o que persiste");
+            }
             saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner"; saveClass = otherClass;
             // sincroniza a coleção do owner (inverso, sempre bidirecional aqui) p/ o poder validar
             w.println("        owner.get" + capitalized + "().add(other);");
@@ -714,7 +721,7 @@ public class CLIMenuGenerator {
         String otherValClass = null, otherValVar = null;
         boolean synced = false;
 
-        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
+        if (assoc.isMapEnd(isSource)) {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
@@ -734,9 +741,16 @@ public class CLIMenuGenerator {
                     GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
             boolean ownerIsCollection = GeneratorUtils.checkMultiplicity(
                     isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
-            w.println(ownerIsCollection
-                    ? "        other.get" + ownerCap + "().remove(owner);   // lado DONO: é o que persiste"
-                    : "        other.set" + ownerCap + "(null);   // lado DONO: é o que persiste");
+            // o lado DONO pode ser um Map (M:N qualifier) -> remove pela CHAVE
+            boolean ownerIsMapEnd = assoc.isMapEnd(!isSource);   // !isSource = a ponta oposta
+            if (ownerIsMapEnd) {
+                String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
+                w.println("        other.get" + ownerCap + "().remove(owner.get" + qualCap + "());   // lado DONO: é o que persiste");
+            } else {
+                w.println(ownerIsCollection
+                        ? "        other.get" + ownerCap + "().remove(owner);   // lado DONO: é o que persiste"
+                        : "        other.set" + ownerCap + "(null);   // lado DONO: é o que persiste");
+            }
             saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner"; saveClass = otherClass;
             // desliga a coleção do owner (inverso, sempre bidirecional aqui) p/ o poder validar
             w.println("        owner.get" + capitalized + "().remove(other);");

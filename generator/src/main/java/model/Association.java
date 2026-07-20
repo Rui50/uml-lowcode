@@ -115,13 +115,13 @@ public class Association extends Relationship {
         this.qualifierType = toJavaKeyType(qualifierType);
     }
 
-    // means it exists
-    public boolean isQualifierOnSource() {
-        return qualifierOnSource;
-    }
-
     public void setQualifierOnSource(boolean qualifierOnSource) {
         this.qualifierOnSource = qualifierOnSource;
+    }
+
+
+    public boolean isMapEnd(boolean isSource) {
+        return hasQualifier() && isSource == qualifierOnSource;
     }
 
     // as chaves de um Map têm de ser tipos de referência; o VP exporta os

@@ -524,8 +524,9 @@ public class SpringServiceGenerator {
             writer.println("            " + varName + ".get" + capitalizedField + "().put(" +
                     elementVar + "." + qualifierGetter + "(), " + elementVar + ");");
             if (isBidirectional) {
-                writer.println("            " + elementVar + ".get" + inverseCap + "().put(" +
-                        varName + "." + qualifierGetter + "(), " + varName + ");");
+                // numa M:N qualificada só a ponta do qualifier (= esta, o dono) é Map; o inverso é
+                // List, por isso sincroniza-se com add e não com put
+                writer.println("            " + elementVar + ".get" + inverseCap + "().add(" + varName + ");");
                 generateValidationTab(writer, otherClass, elementVar, "            ");   // valida o elemento (o inverso dele mudou)
             }
             writer.println("        }");
@@ -592,8 +593,8 @@ public class SpringServiceGenerator {
             writer.println("            " + varName + ".get" + capitalizedField + "().remove(" +
                     elementVar + "." + qualifierGetter + "());");
             if (isBidirectional) {
-                writer.println("            " + elementVar + ".get" + inverseCap + "().remove(" +
-                        varName + "." + qualifierGetter + "());");
+                // inverso de uma M:N qualificada é List -> remove por VALOR
+                writer.println("            " + elementVar + ".get" + inverseCap + "().remove(" + varName + ");");
                 generateValidationTab(writer, otherClass, elementVar, "            ");   // valida o elemento (o inverso dele mudou)
             }
             writer.println("        }");
@@ -832,9 +833,11 @@ public class SpringServiceGenerator {
                 // dono M:N bidirecional (para sincronizar/desligar a outra ponta)
                 String capInv = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer, thisRole, thisMul));
 
+                boolean thisIsMapEnd = assoc.isMapEnd(isSource);
+
                 // como adicionar 'other' à coleção deste lado: put se for Map qualificado, senão add
                 String addToSaved;
-                if (assoc.hasQualifier()) {
+                if (thisIsMapEnd) {
                     String qGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
                     addToSaved = entityVar + ".get" + capField + "().put(" + otherVar + "." + qGetter + "(), " + otherVar + ");";
                 } else {
@@ -848,9 +851,18 @@ public class SpringServiceGenerator {
                 writer.println("                " + addToSaved);
                 if (!ownerSide) {
                     // lado INVERSO logo a FK está no outro -> ligar a back-reference e gravar o outro
-                    writer.println("                " + otherVar + (thisMultiple
-                            ? ".get" + capInv + "().add(" + entityVar + ");"     // M:N inverso: o outro tem coleção desta classe
-                            : ".set" + capInv + "(" + entityVar + ");"));         // O:M inverso: o outro tem referência singular
+                    if (!thisMultiple) {
+                        // O:M inverso: o outro tem referência singular
+                        writer.println("                " + otherVar + ".set" + capInv + "(" + entityVar + ");");
+                    } else if (assoc.hasQualifier() && !thisIsMapEnd) {
+                        // M:N inverso e o Map está do lado do OUTRO -> a back-reference é put por chave
+                        String qInv = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
+                        writer.println("                " + otherVar + ".get" + capInv + "().put(" +
+                                entityVar + "." + qInv + "(), " + entityVar + ");");
+                    } else {
+                        // M:N inverso: o outro tem coleção (List) desta classe
+                        writer.println("                " + otherVar + ".get" + capInv + "().add(" + entityVar + ");");
+                    }
                     generateValidationTab(writer, otherClass, otherVar, "                ");   // gravamos o outro -> validá-lo
                     writer.println("                " + otherRepo + ".save(" + otherVar + ");");
                 }

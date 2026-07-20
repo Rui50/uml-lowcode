@@ -11,7 +11,11 @@
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaMenuGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaMenuGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIEntityGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIMenuGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIMenuGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/RelationshipInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/RelationshipInfo.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/plain/ClassGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/plain/ClassGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringDTOGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/model/Association.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/model/Association.java" afterDir="false" />
     </list>

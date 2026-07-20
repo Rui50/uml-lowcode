@@ -201,7 +201,7 @@ public class ClassGenerator {
 
                 if (!generatedAttributes.contains(attributeName)){
                     // maps só na ponta que TEM o qualifier
-                    if (association.hasQualifier() && association.isQualifierOnSource()){
+                    if (association.isMapEnd(true)){
                         String keyType = association.getQualifierType();
                         writer.println("   " + "private Map<" + keyType + ", " + targetClass + "> " + attributeName + ";");
                     }
@@ -223,7 +223,7 @@ public class ClassGenerator {
 
                 if (!generatedAttributes.contains(attributeName)){
                     // o Map é deste se o qualifier NÃO está na source
-                    if (association.hasQualifier() && !association.isQualifierOnSource()){
+                    if (association.isMapEnd(false)){
                         String keyType = association.getQualifierType();
                         writer.println("   " + "private Map<" + keyType + ", " + sourceClass + "> " + attributeName + ";");
                     }
@@ -258,7 +258,7 @@ public class ClassGenerator {
                 String roleName = association.getTargetRole();
                 String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
 
-                if (association.hasQualifier() && association.isQualifierOnSource()) {
+                if (association.isMapEnd(true)) {
                     writer.println("        this." + attributeName + " = new HashMap<>();");
                 } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
                     writer.println("        this." + attributeName + " = new ArrayList<>();");
@@ -272,7 +272,7 @@ public class ClassGenerator {
                 String roleName = association.getSourceRole();
                 String attributeName = GeneratorUtils.makeAttributeName(sourceClass, roleName, multiplicity);
 
-                if (association.hasQualifier() && !association.isQualifierOnSource()) {
+                if (association.isMapEnd(false)) {
                     writer.println("        this." + attributeName + " = new HashMap<>();");
                 } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
                     writer.println("        this." + attributeName + " = new ArrayList<>();");
@@ -343,7 +343,7 @@ public class ClassGenerator {
                 String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
 
                 // para maps — só na ponta que TEM o qualifier (aqui somos a source)
-                if (association.hasQualifier() && association.isQualifierOnSource()){
+                if (association.isMapEnd(true)){
                     String keyType = association.getQualifierType();
                     generateMapAssociationMethods(writer, targetClass, attributeName, keyType);
                 }
@@ -364,7 +364,7 @@ public class ClassGenerator {
                 String roleName = association.getSourceRole();
                 String attributeName = GeneratorUtils.makeAttributeName(sourceClass, roleName, multiplicity);
 
-                if (association.hasQualifier() && !association.isQualifierOnSource()){
+                if (association.isMapEnd(false)){
                     String keyType = association.getQualifierType();
                     generateMapAssociationMethods(writer, sourceClass, attributeName, keyType);
                 }

@@ -32,10 +32,10 @@ public class RelationshipInfo {
         return GeneratorUtils.makeAttributeName(otherClass, role, multiplicity);
     }
 
-    // coleção OU Map. O qualifier só torna coleção a ponta que DONA do Map (isQualifierOnSource),
+    // coleção OU Map. O qualifier só torna coleção a ponta que é DONA do Map (isMapEnd),
     public boolean isCollection() {
         // return otherMultiple() || assoc.hasQualifier();
-        return otherMultiple() || (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource());
+        return otherMultiple() || (assoc.isMapEnd(isSource));
     }
     public boolean otherMultiple() {
         return GeneratorUtils.checkMultiplicity(multiplicity);
@@ -66,7 +66,7 @@ public class RelationshipInfo {
     // esta ponta expõe endpoints de coleção (add/remove) owner d Map  ,
     // OU um OneToMany unidirecional (o lado * de uma relação não-bidirecional)
     public boolean hasCollectionEndpoint() {
-        boolean qualifierHere = assoc.hasQualifier() && isSource == assoc.isQualifierOnSource();
+        boolean qualifierHere = assoc.isMapEnd(isSource);
         return qualifierHere || (!thisMultiple() && otherMultiple() && !isBidirectional());
     }
 

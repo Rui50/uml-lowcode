@@ -184,7 +184,7 @@ public class JavaMenuGenerator {
 
                 // Map só na ponta que TEM o qualifier (aqui a source)
                 if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity())
-                        || (assoc.hasQualifier() && assoc.isQualifierOnSource())) {
+                        || assoc.isMapEnd(true)) {
                     // OneToMany, ManyToMany ou Map: Add e Remove
                     options.add(new String[]{"Add " + fieldName, "add" + cap});
                     options.add(new String[]{"Remove " + fieldName, "remove" + cap});
@@ -202,7 +202,7 @@ public class JavaMenuGenerator {
 
                 // aqui target -> o Map é aqui se o qualifier NÃO está na source
                 if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity())
-                        || (assoc.hasQualifier() && !assoc.isQualifierOnSource())) {
+                        || assoc.isMapEnd(false)) {
                     options.add(new String[]{"Add " + fieldName, "add" + cap});
                     options.add(new String[]{"Remove " + fieldName, "remove" + cap});
                 }
@@ -358,7 +358,7 @@ public class JavaMenuGenerator {
             String getter = "entity.get" + cap + "()";
 
             // .values() só se o campo desta ponta for mesmo um Map
-            if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
+            if (assoc.isMapEnd(isSource)) {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ".values());");
             } else {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ");");
@@ -446,7 +446,7 @@ public class JavaMenuGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity())
-                        || (assoc.hasQualifier() && assoc.isQualifierOnSource())) {
+                        || assoc.isMapEnd(true)) {
                     generateAddMethod(w, cls.getName(), other, fieldName, assoc, true);
                     generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, true);
                 }
@@ -460,7 +460,7 @@ public class JavaMenuGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
                 if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity())
-                        || (assoc.hasQualifier() && !assoc.isQualifierOnSource())) {
+                        || assoc.isMapEnd(false)) {
                     generateAddMethod(w, cls.getName(), other, fieldName, assoc, false);
                     generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, false);
                 }
@@ -519,7 +519,7 @@ public class JavaMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
-        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
+        if (assoc.isMapEnd(isSource)) {
             // Map fazemos put com a chave sendo o qualifier do outro objeto
             // owner.getAlunos().put(other.getNumero(), other)
             String qualifierName = assoc.getQualifierName();
@@ -548,7 +548,7 @@ public class JavaMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
-        if (assoc.hasQualifier() && isSource == assoc.isQualifierOnSource()) {
+        if (assoc.isMapEnd(isSource)) {
             // map remove pela chave
             String qualifierName = assoc.getQualifierName();
             String qualCap = GeneratorUtils.capitalizeFirst(qualifierName);
