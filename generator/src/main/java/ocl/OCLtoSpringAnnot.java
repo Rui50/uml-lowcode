@@ -1,5 +1,7 @@
 package ocl;
 
+import generator.RelationshipInfo;
+import model.Association;
 import model.Class;
 import model.Attribute;
 import model.annotations.Invariant;
@@ -54,11 +56,13 @@ public class OCLtoSpringAnnot {
             // @Pattern: regra especial (precisa escapar a regex) — tratada à parte no map()
     );
 
-    // mapeia as invariantes de uma classe -> anotações por campo + invariantes consumidas
-    public static Result map(Class cls) {
+    // mapeia as invariantes de uma classe -> anotações por campo + invariantes consumidas.
+    // 'associations' é preciso porque um campo de RELAÇÃO não vive na Class (deriva-se das
+    // associações) — ver getFieldType
+    public static Result map(Class cls, List<Association> associations) {
         Result result = new Result();
         for (Invariant inv : cls.getInvariants()) {
-            List<String[]> mapped = mapInvariant(inv, cls);   // null = não-mapeável
+            List<String[]> mapped = mapInvariant(inv, cls, associations);   // null = não-mapeável
             if (mapped == null) continue;                     // fica no validate()
             for (String[] fa : mapped) {
                 result.annotationsByField.computeIfAbsent(fa[0], k -> new ArrayList<>()).add(fa[1]);
@@ -70,10 +74,10 @@ public class OCLtoSpringAnnot {
 
     // mapeia UMA invariante: as partes (split por "and") têm todas de mapear (tudo-ou-nada),
     // senão devolve null e a invariante fica no validate()
-    private static List<String[]> mapInvariant(Invariant inv, Class cls) {
+    private static List<String[]> mapInvariant(Invariant inv, Class cls, List<Association> associations) {
         List<String[]> mapped = new ArrayList<>();
         for (String part : normalize(inv.getOclExpression()).split(" and ")) {
-            String[] fa = annotationFor(part.trim(), cls);
+            String[] fa = annotationFor(part.trim(), cls, associations);
             if (fa == null) return null;     // uma parte falha -> invariante inteira falha
             mapped.add(fa);
         }
@@ -107,13 +111,25 @@ public class OCLtoSpringAnnot {
         }
     }
 
-    // só atributos PRÓPRIOS: uma anotação de Bean Validation vive no campo, logo aplica-se a
-    // TODAS as instâncias da classe que o declara. Uma invariante numa SUBCLASSE sobre um campo
-    // HERDADO tem âmbito só da subclasse — não se pode exprimir como anotação no campo do pai
-    // (aplicaria a todos os subtipos). Fica no validate() da subclasse (that only runs for it).
-    private static String typeOf(Class cls, String field) {
+    // Tipo Java de um campo PRÓPRIO da classe — atributo OU relação — ou null se não existir/for herdado.
+    // Um campo de entidade tem duas origens: atributos (vivem na Class) e relações (não vivem na Class,
+    // derivam-se das associações via RelationshipInfo). Esta função unifica as duas.
+    // Só campos PRÓPRIOS: uma anotação de Bean Validation vive no campo, logo aplica-se a TODAS as
+    // instâncias da classe que o declara. Uma invariante numa SUBCLASSE sobre um campo HERDADO tem âmbito
+    // só da subclasse — não se pode pôr no campo do pai (aplicaria a todos os subtipos). Fica no validate().
+    private static String getFieldType(Class cls, String field, List<Association> associations) {
         for (Attribute a : cls.getAttributes()) {
             if (a.getName().equals(field)) return a.getType();
+        }
+        // relações declaradas por ESTA classe (thisClass == cls): devolve o tipo REAL do campo,
+        for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
+            if (rel.field().equals(field) && rel.thisClass().equals(cls.getName())) {
+                if (rel.assoc.isMapEnd(rel.isSource))
+                    return "Map<" + rel.assoc.getQualifierType() + ", " + rel.otherClass + ">";
+                if (rel.isCollection())
+                    return "List<" + rel.otherClass + ">";
+                return rel.otherClass;
+            }
         }
         return null;
     }
@@ -122,11 +138,11 @@ public class OCLtoSpringAnnot {
 
     // recebe uma parte da invariante ja normalizada ("points >= 0") e devolve
     // {campo, anotação} se for reconhecida, ou null se não for.
-    private static String[] annotationFor(String part, Class cls) {
+    private static String[] annotationFor(String part, Class cls, List<Association> associations) {
         // caso especial @Pattern: matches('regex')
         Matcher m = MATCHES.matcher(part);
         if (m.matches()) {
-            String type = typeOf(cls, m.group(1)); // grupo 1 = camp
+            String type = getFieldType(cls, m.group(1), associations); // grupo 1 = campo
             if(type != null && fits(type, AppliesTo.STRING)) { // matches é só de texto
                 // escapar para caber numa string Java: \ -> \\  e  " -> \"
                 String regex = m.group(2).replace("\\", "\\\\").replace("\"", "\\\"");
@@ -140,7 +156,7 @@ public class OCLtoSpringAnnot {
             if (!m2.matches()) continue;            // a forma não bate -> próxima regra
 
             String field = m2.group(1);
-            String type = typeOf(cls, field);
+            String type = getFieldType(cls, field, associations);
 
             // o campo tem de existir E o tipo ser compatível (ex: @Positive só em numérico),
             // senão tenta a regra seguinte

@@ -1,5 +1,6 @@
 package generator.CLI_JPA;
 
+import generator.JpaEntityWriter;
 import generator.GeneratorUtils;
 import generator.OperationGenerator;
 import generator.ValidationGenerator;
@@ -141,14 +142,14 @@ public class CLIEntityGenerator {
 
             // se nao tem parent gera id
             if (cls.getParentClass() == null) {
-                generateId(writer, cls);
+                JpaEntityWriter.generateId(writer, cls);
             }
 
             // atributos
             generateAttributes(writer, cls);
 
             // getters derivados
-            generateDerivedGetters(writer, cls);
+            JpaEntityWriter.generateDerivedGetters(writer, cls);
 
             // relações
             generateRelationships(writer, cls, associations, allClasses);
@@ -206,23 +207,6 @@ public class CLIEntityGenerator {
                 writer.println("@PrimaryKeyJoinColumn(name = \"" + cls.getParentClass().getName().toLowerCase() + "_id\")");
             }
         }
-    }
-
-    // id default quando nao foi set um custom;
-    // se houver id custom, o @Id é colocado no atributo escolhido em generateAttributes
-    private void generateId(PrintWriter writer, Class cls) {
-        if (cls.getIdAttributeName() != null) return;
-        // id sintético: Long (default) ou UUID gerado
-        String idType = cls.getRoot().getIdAttributeType();
-        writer.println("    @Id");
-        if ("UUID".equals(idType)) {
-            writer.println("    @GeneratedValue(strategy = GenerationType.UUID)");
-            writer.println("    private UUID id;");
-        } else {
-            writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
-            writer.println("    private Long id;");
-        }
-        writer.println();
     }
 
     private void generateBaseStuff(PrintWriter writer, Class cls, List<Association> associations) {
@@ -361,17 +345,6 @@ public class CLIEntityGenerator {
         }
     }
 
-    private void generateDerivedGetters(PrintWriter writer, Class cls) {
-        for (Attribute atr : cls.getAttributes()) {
-            if (!atr.hasDerive()) continue;
-            String cap = GeneratorUtils.capitalizeFirst(atr.getName());
-            writer.println("    public " + atr.getType() + " get" + cap + "() {");
-            writer.println("        return " + atr.getJavaDeriveExpression() + ";");
-            writer.println("    }");
-            writer.println();
-        }
-    }
-
     /**
      * Intera as associações navegáveis e emite o campo de relação.
      */
@@ -434,181 +407,25 @@ public class CLIEntityGenerator {
             if (orderBy != null) writer.println("    @OrderBy(\"" + orderBy + "\")");
         }
 
+        // writers de relação partilhados com o Spring (JpaEntityWriter): o que sai é JPA puro
         // Many to Many
         if (thisMultiple && otherMultiple) {
-            generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
         }
         // One to many
         else if (thisMultiple) {
-            generateOneToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateOneToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
         }
         // Many to one
         else if (otherMultiple) {
-            generateManyToOne(writer, otherClass, fieldName, assoc);
+            JpaEntityWriter.generateManyToOne(writer, otherClass, fieldName, assoc);
         }
         // One to one
         else {
-            generateOneToOne(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateOneToOne(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
         }
 
         writer.println();
-    }
-
-    /**
-     * @ManyToOne: bidirecional: owner tem @JoinColumn, inverse tem mappedBy
-     * unidirecional: @JoinColumn
-     * Com qualifier: @MapKey e Map<qualifier, otherClass>
-     */
-    private void generateManyToMany(PrintWriter writer,
-                                    String thisClass,
-                                    String otherClass,
-                                    String fieldName,
-                                    Association assoc,
-                                    boolean isSource,
-                                    boolean isBidirectional) {
-
-        // no caso de auto associação as duas colunas seriam iguais ("employee_id")
-        // entao nesse caso usa-se o campo inverso
-        String invJoinCol = (thisClass.equals(otherClass) ? fieldName.toLowerCase() : otherClass.toLowerCase()) + "_id";
-
-        if (isBidirectional) {
-            // decide se o campo gerado é @JoinTable (dono) ou mappedBy (inverso)
-            boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
-
-            if (isOwner) {
-                writer.println("    @ManyToMany");
-                writer.println("    @JoinTable(");
-                writer.println("        name = \"" + thisClass.toLowerCase() + "_" + fieldName.toLowerCase() + "\",");
-                writer.println("        joinColumns = @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\"),");
-                writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + invJoinCol + "\")");
-                writer.println("    )");
-            } else {
-                writer.println("    @ManyToMany(mappedBy = \"" +
-                        GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
-            }
-        } else {
-            writer.println("    @ManyToMany");
-            writer.println("    @JoinTable(");
-            writer.println("        name = \"" + thisClass.toLowerCase() + "_" + fieldName.toLowerCase() + "\",");
-            writer.println("        joinColumns = @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\"),");
-            writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
-            writer.println("    )");
-        }
-
-        // numa M:N as DUAS pontas são coleções -> só a que TEM o qualifier vira Map
-        if (assoc.isMapEnd(isSource)) {
-            writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
-            String qualifierType = assoc.getQualifierType();
-            writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
-                    fieldName + " = new HashMap<>();");
-        } else {
-            writer.println("    private List<" + otherClass + "> " + fieldName +
-                    " = new ArrayList<>();");
-        }
-    }
-
-    /**
-     * @OneToMany: se for bidirecional, tem mappedBy, senão tem @JoinColumn
-     * se for composição, tem cascade all e orphanRemoval
-     * se assoc tiver qualifier, é Map<qualifier, otherClass>, senão é List<otherClass>
-     */
-    private void generateOneToMany(PrintWriter writer,
-                                   String thisClass,
-                                   String otherClass,
-                                   String fieldName,
-                                   Association assoc,
-                                   boolean isSource,
-                                   boolean isBidirectional) {
-
-        boolean isComposite = "composite".equals(assoc.getAggregationType());
-        String cascade = isComposite ? ", cascade = CascadeType.ALL, orphanRemoval = true" : "";
-
-        if (isBidirectional) {
-            writer.println("    @OneToMany(mappedBy = \"" +
-                    GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\"" + cascade + ")");
-        } else {
-            if (isComposite) {
-                writer.println("    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)");
-            } else {
-                writer.println("    @OneToMany");
-            }
-            writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
-        }
-
-        if (assoc.hasQualifier()) {
-            writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
-            String qualifierType = assoc.getQualifierType();
-            writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
-                    fieldName + " = new HashMap<>();");
-        } else {
-            writer.println("    private List<" + otherClass + "> " + fieldName +
-                    " = new ArrayList<>();");
-        }
-    }
-
-    /**
-     * @ManyToOne com @JoinColumn
-     * se assoc tiver qualifier, é Map<qualifier, otherClass>, senão é só otherClass
-     */
-    private void generateManyToOne(PrintWriter writer,
-                                   String otherClass,
-                                   String fieldName,
-                                   Association assoc) {
-
-        // lado singular (inverso de um Map qualificado): é sempre uma referência única, nunca um Map.
-        // por isso ignora-se o qualifier aqui (senão saía @ManyToOne sobre um Map -> JPA inválido).
-        writer.println("    @ManyToOne");
-        writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
-        writer.println("    private " + otherClass + " " + fieldName + ";");
-    }
-
-    /**
-     * @OneToOne: se tiver qualifier, é OneToMany, senão é OneToOne normal
-     * sem qualifie: owner tem @JoinColumn, inverse tem mappedBy
-     * unidirecional: @JoinColumn
-     */
-    private void generateOneToOne(PrintWriter writer,
-                                  String thisClass,
-                                  String otherClass,
-                                  String fieldName,
-                                  Association assoc,
-                                  boolean isSource,
-                                  boolean isBidirectional) {
-
-        // tem qualifier, é OneToMany
-        if (assoc.hasQualifier()) {
-            if (isBidirectional) {
-                writer.println("    @OneToMany(mappedBy = \"" +
-                        GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
-            } else {
-                writer.println("    @OneToMany");
-                writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
-            }
-
-            writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
-            String qualifierType = assoc.getQualifierType();
-            writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
-                    fieldName + " = new HashMap<>();");
-        } else {
-            // Sem qualifier: OneToOne normal
-            if (isBidirectional) {
-                // decide se o campo gerado é @OneToOne (dono) ou mappedBy (inverso)
-                boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
-
-                if (isOwner) {
-                    writer.println("    @OneToOne");
-                    writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
-                } else {
-                    writer.println("    @OneToOne(mappedBy = \"" +
-                            GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
-                }
-            } else {
-                writer.println("    @OneToOne");
-                writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
-            }
-
-            writer.println("    private " + otherClass + " " + fieldName + ";");
-        }
     }
 
     /**
