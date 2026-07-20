@@ -3,6 +3,7 @@ package generator;
 import model.Association;
 import model.Class;
 import model.Operation;
+import model.Parameter;
 import model.annotations.Postcondition;
 import model.annotations.PreSnapshot;
 import model.annotations.Precondition;
@@ -118,6 +119,58 @@ import java.util.Map;
  */
 
 public class OperationGenerator {
+
+    // Emite a secção "// Operations" de uma entidade: por cada operação decide entre 3 formas —
+    // abstrata (só assinatura abstract), com diagrama de sequência (corpo real via generateOperation)
+    // ou sem diagrama (assinatura + stub UnsupportedOperationException). Partilhado pelos entity
+    // generators dos 3 targets entity-based (plain, CLI, CLI-JPA) — o Spring gera as ops no service.
+    public static void generateOperations(PrintWriter writer, Class cls, List<Association> associations) {
+        if (cls.getOperations().isEmpty()) {
+            return;
+        }
+
+        writer.println("    // Operations");
+
+        for (Operation op : cls.getOperations()) {
+            // op abstrata só a assinatura abstract (a subclasse concreta implementa)
+            if (op.isAbstract()) {
+                String absReturn = GeneratorUtils.removePackageNames(op.getReturnType());
+                writer.print("    " + op.getVisibility() + " abstract " + absReturn + " " + op.getName() + "(");
+                List<Parameter> absParams = op.getParameters();
+                for (int i = 0; i < absParams.size(); i++) {
+                    Parameter p = absParams.get(i);
+                    if (i > 0) writer.print(", ");
+                    writer.print(GeneratorUtils.removePackageNames(p.getType()) + " " + p.getName());
+                }
+                writer.println(");");
+                continue;
+            }
+            // tem diagrama de sequência corpo real gerado a partir dele
+            Interaction interaction = op.getSequenceDiagram();
+            if (interaction != null) {
+                generateOperation(writer, cls, op, interaction, associations);
+            } else {
+                // sem diagrama assinatura + stub que lança UnsupportedOperationException
+                String visibility = op.getVisibility();
+                String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
+                String name = op.getName();
+                writer.println("    " + visibility + " " + returnType + " " + name + "(");
+
+                List<Parameter> parameters = op.getParameters();
+                for (int i = 0; i < parameters.size(); i++) {
+                    Parameter param = parameters.get(i);
+                    String paramType = GeneratorUtils.removePackageNames(param.getType());
+                    String paramName = param.getName();
+                    writer.print("        " + paramType + " " + paramName);
+                    writer.println(i < parameters.size() - 1 ? "," : "");
+                }
+
+                writer.println("    ) {");
+                writer.println("        throw new UnsupportedOperationException(\"Not implemented yet\");");
+                writer.println("    }");
+            }
+        }
+    }
 
     // gera a operação PIM, assinatura, precondições e corpo
     public static void generateOperation(PrintWriter writer, Class cls, Operation operation,

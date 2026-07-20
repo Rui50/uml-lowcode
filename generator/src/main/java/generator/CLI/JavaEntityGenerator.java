@@ -21,10 +21,7 @@ import java.util.List;
  * Gera as entidades do CLI plain (Java simples, sem JPA).
  * Por classe: campo Long id (só na raiz), atributos, relações (List/Map/ref), construtores
  * (no-arg com inits + completo quando há params), getters/setters, getters derivados, toString,
- * validate() (se invariantes) e operações.
- *
- * Lim:
- *  - generateOperations duplicado com plain/CLI-JPA (TODO refactor).
+ * validate() (se invariantes) e operações (secção // Operations via OperationGenerator.generateOperations).
  */
 public class JavaEntityGenerator {
     private String baseOutputPath;
@@ -177,7 +174,7 @@ public class JavaEntityGenerator {
             // validation
             validationGenerator.generateValidateMethod(writer, cls);
 
-            generateOperations(writer, cls, associations);
+            OperationGenerator.generateOperations(writer, cls, associations);
 
             writer.println("}");
         }
@@ -345,47 +342,6 @@ public class JavaEntityGenerator {
         }
     }
 
-    private void generateOperations(PrintWriter writer, Class cls, List<Association> associations) {
-        if (cls.getOperations().isEmpty()) return;
-
-        writer.println("    // Operations");
-
-        for (Operation op : cls.getOperations()) {
-            if (op.isAbstract()) {
-                String absReturn = GeneratorUtils.removePackageNames(op.getReturnType());
-                writer.print("    " + op.getVisibility() + " abstract " + absReturn + " " + op.getName() + "(");
-                List<Parameter> absParams = op.getParameters();
-                for (int i = 0; i < absParams.size(); i++) {
-                    Parameter p = absParams.get(i);
-                    if (i > 0) writer.print(", ");
-                    writer.print(GeneratorUtils.removePackageNames(p.getType()) + " " + p.getName());
-                }
-                writer.println(");");
-                continue;
-            }
-            Interaction interaction = op.getSequenceDiagram();
-            if (interaction != null) {
-                OperationGenerator.generateOperation(writer, cls, op, interaction, associations);
-            } else {
-                // fallback, se a operação nao tiver diagrama sequencia respetivo
-                String visibility = op.getVisibility();
-                String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
-                writer.println("    " + visibility + " " + returnType + " " + op.getName() + "(");
-
-                List<Parameter> parameters = op.getParameters();
-                for (int i = 0; i < parameters.size(); i++) {
-                    Parameter param = parameters.get(i);
-                    String paramType = GeneratorUtils.removePackageNames(param.getType());
-                    writer.print("        " + paramType + " " + param.getName());
-                    writer.println(i < parameters.size() - 1 ? "," : "");
-                }
-
-                writer.println("    ) {");
-                writer.println("        throw new UnsupportedOperationException(\"Not implemented yet\");");
-                writer.println("    }");
-            }
-        }
-    }
 
     // gera um metodo toString para a classe
     private void generateToString(PrintWriter writer, Class cls) {

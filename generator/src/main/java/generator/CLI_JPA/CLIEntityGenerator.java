@@ -27,8 +27,6 @@ import java.util.Set;
  *  - id resolvido pela raiz (idAttributeName/idAttributeType, default Long); só no-arg constructor (JPA);
  *  - associação qualificada -> Map<qualifier, outro> (@MapKey); o lado singular nunca é Map.
  *
- * aa
- *  - generateOperations duplicado com plain/CLI (TODO refactor).
  */
 /**
  * Gera as entidades JPA
@@ -158,7 +156,7 @@ public class CLIEntityGenerator {
 
             validationGenerator.generateValidateMethod(writer, cls);
 
-            generateOperations(writer, cls, associations);
+            OperationGenerator.generateOperations(writer, cls, associations);
 
             writer.println("}");
 
@@ -438,47 +436,6 @@ public class CLIEntityGenerator {
      * Caso contrário, gera stub que lança UnsupportedOperationException.
      * Necessário para satisfazer contratos de interfaces e para o menu poder chamar owner.<op>().
      */
-    private void generateOperations(PrintWriter writer, Class cls, List<Association> associations) {
-        if (cls.getOperations().isEmpty()) return;
-
-        writer.println("    // Operations");
-
-        for (Operation op : cls.getOperations()) {
-            if (op.isAbstract()) {
-                String absReturn = GeneratorUtils.removePackageNames(op.getReturnType());
-                writer.print("    " + op.getVisibility() + " abstract " + absReturn + " " + op.getName() + "(");
-                List<Parameter> absParams = op.getParameters();
-                for (int i = 0; i < absParams.size(); i++) {
-                    Parameter p = absParams.get(i);
-                    if (i > 0) writer.print(", ");
-                    writer.print(GeneratorUtils.removePackageNames(p.getType()) + " " + p.getName());
-                }
-                writer.println(");");
-                continue;
-            }
-            Interaction interaction = op.getSequenceDiagram();
-            if (interaction != null) {
-                OperationGenerator.generateOperation(writer, cls, op, interaction, associations);
-            } else {
-                String visibility = op.getVisibility();
-                String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
-                writer.println("    " + visibility + " " + returnType + " " + op.getName() + "(");
-
-                List<Parameter> parameters = op.getParameters();
-                for (int i = 0; i < parameters.size(); i++) {
-                    Parameter param = parameters.get(i);
-                    String paramType = GeneratorUtils.removePackageNames(param.getType());
-                    writer.print("        " + paramType + " " + param.getName());
-                    writer.println(i < parameters.size() - 1 ? "," : "");
-                }
-
-                writer.println("    ) {");
-                writer.println("        throw new UnsupportedOperationException(\"Not implemented yet\");");
-                writer.println("    }");
-            }
-        }
-    }
-
     public void generateInterfaces(List<Interface> interfaces) throws IOException {
         if (interfaces == null || interfaces.isEmpty()) return;
 

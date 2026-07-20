@@ -7,9 +7,10 @@
     <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI/JavaEntityGenerator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIEntityGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/ocl/OCLtoSpringAnnot.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/ocl/OCLtoSpringAnnot.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/OperationGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/OperationGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/plain/ClassGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/plain/ClassGenerator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
