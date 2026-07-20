@@ -100,6 +100,28 @@ public class RelationshipInfo {
         return rels;
     }
 
+    /**
+     * Como collect(), mas TAMBÉM inclui relações herdadas de um pai CONCRETO.
+     * Os menus precisam disto: o menu de AlunoTE tem de deixar gerir as
+     * relações herdadas de Aluno. collect() exclui-as de propósito — a entidade/DTO herda o
+     * campo do pai, redeclará-lo duplicava-o (a diferença está no ownOrAbstract).
+     * Nas duas pontas de uma auto-associação entra uma vez por role (dois if, não else-if).
+     */
+    public static List<RelationshipInfo> collectForMenus(Class cls, List<Association> associations) {
+        List<RelationshipInfo> rels = new ArrayList<>();
+        for (Association assoc : associations) {
+            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
+                rels.add(new RelationshipInfo(assoc.getTargetClass(), assoc.getTargetRole(),
+                        assoc.getTargetMultiplicity(), assoc, true));
+            }
+            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
+                rels.add(new RelationshipInfo(assoc.getSourceClass(), assoc.getSourceRole(),
+                        assoc.getSourceMultiplicity(), assoc, false));
+            }
+        }
+        return rels;
+    }
+
     // só as relações de referência singular (não-coleção): campo <x>Id
     public static List<RelationshipInfo> collectSingle(Class cls, List<Association> associations) {
         List<RelationshipInfo> rels = new ArrayList<>();

@@ -2,6 +2,7 @@ package generator.CLI_JPA;
 
 import generator.GeneratorUtils;
 import generator.OperationGenerator;
+import generator.RelationshipInfo;
 import model.*;
 import model.Class;
 import model.Enumeration;
@@ -29,9 +30,11 @@ import java.util.stream.Collectors;
  * lim:
  *  - operações custom não validam invariantes (só as suas pré/pós OCL);
  *  - input: boolean sem retry; short/byte/char/BigDecimal não suportados (lançam na geração);
- *  - info de relação recalculada em run()/generateRelationshipMethods/generateRelationShipPrints
- *    (risco de divergência — TODO refactor);
  *  - operação custom ignora o valor de retorno.
+ *
+ * run(), generateRelationshipMethods e generateRelationShipPrints derivam TODOS de
+ * RelationshipInfo.collectForMenus() — o switch do run() chama os métodos por NOME, por isso as
+ * três derivações têm de concordar (antes eram três cálculos separados e já divergiam).
  */
 /**
  * Gera os menus CLI
@@ -191,45 +194,19 @@ public class CLIMenuGenerator {
         options.add(new String[]{"Update", "update"});
         options.add(new String[]{"Delete", "delete"});
 
-        // adicionar das relações
-        for (Association assoc : associations) {
-            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
-                String other = assoc.getTargetClass();
-                // nome do campo com base nas roles, evita problemas de 2 ou mais assoc entr
-                // associações para a mesma classe, a ke  da opção tem de bater certo com o metodo
-                // evitar problemas   case 6: addAuthors(); mas o metodo é addAuthor
-                String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
-                String cap = GeneratorUtils.capitalizeFirst(fieldName);
+        // O nome do metodo aqui tem de bater certo com o que lá é definido (o switch chama por NOME),
+        for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
+            String fieldName = rel.field();
+            String cap = GeneratorUtils.capitalizeFirst(fieldName);
 
-                // Map só na ponta que TEM o qualifier (aqui é source) — na outra ponta é
-                // uma referência normal e leva Assign/Remove
-                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity())
-                        || assoc.isMapEnd(true)) {
-                    // OneToMany, ManyToMany ou Map: Add e Remove
-                    options.add(new String[]{"Add " + fieldName, "add" + cap});
-                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
-                }
-                else {
-                    // ManyToOne: Assign e Remove
-                    options.add(new String[]{"Assign " + fieldName, "assign" + cap});
-                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
-                }
-            }
-            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
-                String other = assoc.getSourceClass();
-                String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
-                String cap = GeneratorUtils.capitalizeFirst(fieldName);
-
-                // aqui é atarget -> o Map é daqui se o qualifier NÃO está na source
-                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity())
-                        || assoc.isMapEnd(false)) {
-                    options.add(new String[]{"Add " + fieldName, "add" + cap});
-                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
-                }
-                else {
-                    options.add(new String[]{"Assign " + fieldName, "assign" + cap});
-                    options.add(new String[]{"Remove " + fieldName, "remove" + cap});
-                }
+            if (rel.isCollection()) {
+                // OneToMany, ManyToMany ou Map: Add e Remove
+                options.add(new String[]{"Add " + fieldName, "add" + cap});
+                options.add(new String[]{"Remove " + fieldName, "remove" + cap});
+            } else {
+                // ManyToOne: Assign e Remove
+                options.add(new String[]{"Assign " + fieldName, "assign" + cap});
+                options.add(new String[]{"Remove " + fieldName, "remove" + cap});
             }
         }
 
@@ -356,30 +333,14 @@ public class CLIMenuGenerator {
      * mete os prints das relações
      */
     private void generateRelationShipPrints(PrintWriter w, Class cls, List<Association> associations, String indent) {
-        for (Association assoc : associations) {
-            String other = null;
-            String role = null;
-            String mult = null;
-            boolean isSource = false;
-            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
-                other = assoc.getTargetClass();
-                role = assoc.getTargetRole();
-                mult = assoc.getTargetMultiplicity();
-                isSource = true;
-            } else if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
-                other = assoc.getSourceClass();
-                role = assoc.getSourceRole();
-                mult = assoc.getSourceMultiplicity();
-            }
-            if (other == null) continue;
-
-            String fieldName = GeneratorUtils.makeAttributeName(other, role, mult);
+        for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
+            String fieldName = rel.field();
             String cap = GeneratorUtils.capitalizeFirst(fieldName);
             String getter = "entity.get" + cap + "()";
 
             // .values() só se o campo desta ponta for mesmo um Map; senão imprime a referência
-            if (assoc.isMapEnd(isSource)) {
-                w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ".values());");
+            if (rel.assoc.isMapEnd(rel.isSource)) {
+                w.println(indent + "System.out.println(\"  " + fieldName + ": \" + new ArrayList<>(" + getter + ".values()));");
             } else {
                 w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ");");
             }
@@ -474,34 +435,15 @@ public class CLIMenuGenerator {
      * Itera sobre as associações da classe e gera os métodos apropriados.
      */
     private void generateRelationshipMethods(PrintWriter w, Class cls, List<Association> associations) {
-        for (Association assoc : associations) {
-            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()) {
-                String other = assoc.getTargetClass();
-                String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getTargetRole(), assoc.getTargetMultiplicity());
+        for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
+            String fieldName = rel.field();
 
-                if (GeneratorUtils.checkMultiplicity(assoc.getTargetMultiplicity())
-                        || assoc.isMapEnd(true)) {
-                    generateAddMethod(w, cls.getName(), other, fieldName, assoc, true);
-                    generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, true);
-                }
-                else {
-                    generateAssignMethod(w, cls.getName(), other, fieldName, assoc, true);
-                    generateRemoveAssignMethod(w, cls.getName(), other, fieldName, assoc, true);
-                }
-            }
-            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable()) {
-                String other = assoc.getSourceClass();
-                String fieldName = GeneratorUtils.makeAttributeName(other, assoc.getSourceRole(), assoc.getSourceMultiplicity());
-
-                if (GeneratorUtils.checkMultiplicity(assoc.getSourceMultiplicity())
-                        || assoc.isMapEnd(false)) {
-                    generateAddMethod(w, cls.getName(), other, fieldName, assoc, false);
-                    generateRemoveFromListMethod(w, cls.getName(), other, fieldName, assoc, false);
-                }
-                else {
-                    generateAssignMethod(w, cls.getName(), other, fieldName, assoc, false);
-                    generateRemoveAssignMethod(w, cls.getName(), other, fieldName, assoc, false);
-                }
+            if (rel.isCollection()) {
+                generateAddMethod(w, cls.getName(), rel.otherClass, fieldName, rel.assoc, rel.isSource);
+                generateRemoveFromListMethod(w, cls.getName(), rel.otherClass, fieldName, rel.assoc, rel.isSource);
+            } else {
+                generateAssignMethod(w, cls.getName(), rel.otherClass, fieldName, rel.assoc, rel.isSource);
+                generateRemoveAssignMethod(w, cls.getName(), rel.otherClass, fieldName, rel.assoc, rel.isSource);
             }
         }
     }
