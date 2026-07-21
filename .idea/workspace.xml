@@ -6,16 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/CLI_JPA/CLIEntityGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/GeneratorUtils.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/JpaEntityWriter.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/JpaEntityWriter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/RelationshipInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/RelationshipInfo.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringControllerGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEndpointList.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEndpointList.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringEntityGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringFrontendGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringFrontendGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

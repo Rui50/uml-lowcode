@@ -124,7 +124,7 @@ public class ToolService {
         List<RelationFieldDTO> relations = RelationshipInfo.collect(c, associations).stream()
                 .filter(rel -> rel.thisClass().equals(c.getName()))
                 .map(rel -> new RelationFieldDTO(rel.field(), rel.isCollection(), rel.otherClass,
-                        !rel.isCollection() && isMandatory(rel.multiplicity)))
+                        !rel.isCollection() && isMandatory(rel.otherMultiplicity)))
                 .toList();
 
         return new ClassDTO(c.getId(), c.getName(), parent, attrs, ops, c.isAbstract(), realizations, endpoints, relations);

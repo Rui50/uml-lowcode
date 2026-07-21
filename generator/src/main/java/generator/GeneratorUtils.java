@@ -146,8 +146,17 @@ public class GeneratorUtils {
         StringBuilder sb = new StringBuilder("@Column(name = \"").append(atr.getName()).append("\"");
         if (atr.isUnique()) sb.append(", unique = true");
         if (atr.getPrecision() != null) sb.append(", precision = ").append(atr.getPrecision());
-        if (atr.getScale() != null) sb.append(", scale = ").append(atr.getScale());
+        // scale só existe em vírgula FIXA (BigDecimal/NUMERIC). Em float/double o Hibernate rebenta no
+        // arranque ("scale has no meaning for SQL floating point types"), por isso ignora-se aqui —
+        // o painel avisa disso no tooltip. precision em double é legal (vira float(p)).
+        if (atr.getScale() != null && isFixedPoint(atr.getType())) {
+            sb.append(", scale = ").append(atr.getScale());
+        }
         return sb.append(")").toString();
+    }
+
+    private static boolean isFixedPoint(String type) {
+        return "BigDecimal".equals(type) || "BigInteger".equals(type);
     }
 
     /**

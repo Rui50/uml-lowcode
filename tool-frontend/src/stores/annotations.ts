@@ -296,7 +296,6 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    const isNew = !(name in all)   // 1º load deste modelo (
     const data = all[name] || {}
     invariantsByClass.value = data.invariantsByClass || {}
     initByAttribute.value = data.initByAttribute || {}
@@ -314,8 +313,6 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     responseOverrideByClass.value = data.responseOverrideByClass || {}
     columnByAttribute.value = data.columnByAttribute || {}
     orderByCollection.value = data.orderByCollection || {}
-
-    if (isNew) prefillMandatoryRelations()
   }
 
   function saveForModel(name: string | null) {

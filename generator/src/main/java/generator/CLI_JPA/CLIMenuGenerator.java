@@ -258,10 +258,12 @@ public class CLIMenuGenerator {
                 .filter(a -> !a.hasDerive() && !a.hasInit())
                 .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                 .toList());
-        // atributos próprios da classe
+        // atributos próprios da classe. Mesmo filtro do id que os herdados: uma chave NATURAL
+        // (isIdAssigned) é atribuída pelo cliente, logo tem de ser pedida no create — só um id
+        // auto-gerado é que se exclui. Sem isto o id ficava null e o insert rebentava.
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
-                .filter(a -> !a.getName().equals(idName))
+                .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                 .toList());
 
         // ler cada atributo

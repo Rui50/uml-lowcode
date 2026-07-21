@@ -424,7 +424,7 @@ function close() {
                   <th>Attribute</th>
                   <th class="c">Unique</th>
                   <th class="c">Precision</th>
-                  <th class="c">Scale</th>
+                  <th class="c" title="Só se aplica a BigDecimal (vírgula fixa). Em double/float é ignorado — o Hibernate não aceita scale nesses tipos.">Scale ⓘ</th>
                 </tr>
               </thead>
               <tbody>
