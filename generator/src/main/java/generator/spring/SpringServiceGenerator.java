@@ -301,8 +301,8 @@ public class SpringServiceGenerator {
     // Gera os métodos de relação para UMA perspetiva (lado) da associação.
     private boolean generateRelationMethodsForSide(PrintWriter writer, Class cls, RelationshipInfo rel,
                                                    boolean hasRelationships) {
-        boolean thisMultiple = rel.thisMultiple();
-        boolean otherMultiple = rel.otherMultiple();
+        boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
+        boolean isCollection = rel.isCollection();                 // eu tenho muitos deles
         String otherClass = rel.otherClass;
         String fieldName = rel.field();
         // estes 3 alimentam os métodos a jusante (ainda recebem os params crus)
@@ -312,13 +312,13 @@ public class SpringServiceGenerator {
         String declarer = rel.thisClass();
 
         // ManyToOne: esta classe tem o FK (lado owner) -> assignX / removeX
-        if (thisMultiple && !otherMultiple) {
+        if (inverseIsCollection && !isCollection) {
             if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
             generateAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
             generateRemoveAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
         }
         // ManyToMany: addX / removeX no lado DONO (@JoinTable), decidido por isOwningSide
-        else if (thisMultiple && otherMultiple && rel.isOwner()) {
+        else if (inverseIsCollection && isCollection && rel.isOwner()) {
             if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
             generateManyToManyAddMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
             generateManyToManyRemoveMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
@@ -777,7 +777,7 @@ public class SpringServiceGenerator {
             // dados do MEU lado — preciso para o campo inverso (caso 3)
             String thisRole = rel.thisRole();
             String thisMul  = rel.thisMul();
-            boolean thisMultiple = rel.thisMultiple();
+            boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
 
             // mesma razão do assign: numa auto-associação a var do outro lado seria igual à do
             // owner ('saved'/'employee'), por isso vem do nome do campo ("manager"). Repo da classe.
@@ -852,7 +852,7 @@ public class SpringServiceGenerator {
                 writer.println("                " + addToSaved);
                 if (!ownerSide) {
                     // lado INVERSO logo a FK está no outro -> ligar a back-reference e gravar o outro
-                    if (!thisMultiple) {
+                    if (!inverseIsCollection) {
                         // O:M inverso: o outro tem referência singular
                         writer.println("                " + otherVar + ".set" + capInv + "(" + entityVar + ");");
                     } else if (assoc.hasQualifier() && !thisIsMapEnd) {

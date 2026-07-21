@@ -175,8 +175,9 @@ public class GeneratorUtils {
         // bidirecional: decide-se pela forma do campo DESTE lado e do campo no lado INVERSO
         String thisFieldMul    = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
         String inverseFieldMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-        boolean fieldIsCollection   = checkMultiplicity(thisFieldMul);
-        boolean inverseIsCollection = checkMultiplicity(inverseFieldMul);
+        // a ponta que tem o Map conta sempre como coleçã
+        boolean fieldIsCollection   = checkMultiplicity(thisFieldMul)    || assoc.isMapEnd(isSource);
+        boolean inverseIsCollection = checkMultiplicity(inverseFieldMul) || assoc.isMapEnd(!isSource);
 
         // M:N qualifier: dona é a ponta do QUALIFIER — é lá que está o Map e é lá que a coleção se
         // gere (add/remove por chave). Senão o @JoinTable caía numa ponta e o Map na outra.

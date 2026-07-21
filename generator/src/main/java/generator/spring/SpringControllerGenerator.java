@@ -268,20 +268,20 @@ public class SpringControllerGenerator {
     // Devolve o estado atualizado de hasRelationships
     private boolean generateRelationEndpointsForSide(PrintWriter writer, String className, String serviceName,
                                                      RelationshipInfo rel, boolean hasRelationships) {
-        boolean thisMultiple = rel.thisMultiple();
-        boolean otherMultiple = rel.otherMultiple();
+        boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
+        boolean isCollection = rel.isCollection();                 // eu tenho muitos deles
         String otherClass = rel.otherClass;
         // nome do campo baseado no role (igual ao service/entidade); sem role usa o nome da classe
         String fieldName = rel.field();
 
         // ManyToOne: PUT /{id}/{other}/{otherId} e DELETE /{id}/{other}
-        if (thisMultiple && !otherMultiple) {
+        if (inverseIsCollection && !isCollection) {
             if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
             generateAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
             generateRemoveAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
         }
         // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others} — no lado DONO (isOwningSide)
-        else if (thisMultiple && otherMultiple && rel.isOwner()) {
+        else if (inverseIsCollection && isCollection && rel.isOwner()) {
             if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
             generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
             generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);

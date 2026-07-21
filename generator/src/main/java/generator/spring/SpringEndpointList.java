@@ -78,12 +78,12 @@ public class SpringEndpointList {
         String otherVar = GeneratorUtils.lowercaseFirst(rel.otherClass);
 
         // ManyToOne que gera  PUT /{id}/{other}/{otherId} + DELETE /{id}/{other}
-        if (rel.thisMultiple() && !rel.otherMultiple()) {
+        if (rel.inverseIsCollection() && !rel.isCollection()) {
             endpoints.add(new Endpoint("PUT",    base + "/{id}/" + otherPath + "/{" + otherVar + "Id}", TYPE.ASSOCIATION, "Assign " + rel.otherClass, null));
             endpoints.add(new Endpoint("DELETE", base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Unassign " + rel.otherClass, null));
         }
         // ManyToMany lado dono que gera POST + DELETE /{id}/{others}
-        else if (rel.thisMultiple() && rel.otherMultiple() && rel.isOwner()) {
+        else if (rel.inverseIsCollection() && rel.isCollection() && rel.isOwner()) {
             endpoints.add(new Endpoint("POST",   base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Add " + plural(rel.otherClass), null));
             endpoints.add(new Endpoint("DELETE", base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Remove " + rel.otherClass, null));
         }

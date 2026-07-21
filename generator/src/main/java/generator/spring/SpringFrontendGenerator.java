@@ -152,7 +152,7 @@ public class SpringFrontendGenerator {
         RelationshipInfo rel = new RelationshipInfo(otherClass, role, otherMul, assoc, isSource);
 
         // M:N do lado dono, ou coleção com endpoint (O:M unidir / Map)
-        boolean manyToMany = rel.thisMultiple() && rel.otherMultiple() && rel.isOwner();
+        boolean manyToMany = rel.inverseIsCollection() && rel.isCollection() && rel.isOwner();
         if (!manyToMany && !rel.hasCollectionEndpoint()) return;
         rels.add(rel);
     }

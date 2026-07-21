@@ -176,8 +176,9 @@ public final class JpaEntityWriter {
                                         boolean isSource,
                                         boolean isBidirectional) {
 
-        // tem qualifier, é OneToMany
-        if (assoc.hasQualifier()) {
+        // tem qualifier NESTA ponta, é OneToMany.
+        // Map como coleção, nunca no ramo 1:1)
+        if (assoc.isMapEnd(isSource)) {
             if (isBidirectional) {
                 writer.println("    @OneToMany(mappedBy = \"" +
                         GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");

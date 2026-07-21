@@ -13,32 +13,27 @@ import java.util.List;
  * métodos abaixo. Partilhado pelos geradores para falarem o mesmo vocabulário.
  */
 public class RelationshipInfo {
-    public final String otherClass;      // a outra ponta
-    public final String role;            // role do lado da outra ponta
-    public final String multiplicity;    // multiplicidade do lado da outra ponta
+    public final String otherClass;          // a outra ponta
+    public final String role;                // role do lado da outra ponta
+    public final String otherMultiplicity;   // multiplicidade da OUTRA ponta
     public final Association assoc;
-    public final boolean isSource;       // a classe é o lado SOURCE desta associação?
+    public final boolean isSource;           // a classe é o lado SOURCE desta associação?
 
-    public RelationshipInfo(String otherClass, String role, String multiplicity, Association assoc, boolean isSource) {
+    public RelationshipInfo(String otherClass, String role, String otherMultiplicity, Association assoc, boolean isSource) {
         this.otherClass = otherClass;
         this.role = role;
-        this.multiplicity = multiplicity;
+        this.otherMultiplicity = otherMultiplicity;
         this.assoc = assoc;
         this.isSource = isSource;
     }
 
     // nome do campo (baseado no role; sem role usa a classe) — igual em entidade/DTO/service
     public String field() {
-        return GeneratorUtils.makeAttributeName(otherClass, role, multiplicity);
+        return GeneratorUtils.makeAttributeName(otherClass, role, otherMultiplicity);
     }
 
-    // coleção OU Map. O qualifier só torna coleção a ponta que é DONA do Map (isMapEnd),
     public boolean isCollection() {
-        // return otherMultiple() || assoc.hasQualifier();
-        return otherMultiple() || (assoc.isMapEnd(isSource));
-    }
-    public boolean otherMultiple() {
-        return GeneratorUtils.checkMultiplicity(multiplicity);
+        return GeneratorUtils.checkMultiplicity(otherMultiplicity) || assoc.isMapEnd(isSource);
     }
 
     // lado da PRÓPRIA classe (a que declara a associação — ela própria ou um pai abstrato)
@@ -51,8 +46,9 @@ public class RelationshipInfo {
     public String thisMul() {
         return isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
     }
-    public boolean thisMultiple() {
-        return GeneratorUtils.checkMultiplicity(thisMul());
+    // a MINHA ponta diz "muitos" -> o campo do OUTRO lado é uma coleção (espelho do isCollection)
+    public boolean inverseIsCollection() {
+        return GeneratorUtils.checkMultiplicity(thisMul()) || assoc.isMapEnd(!isSource);
     }
 
     // este lado é o DONO da relação vs inverso (mappedBy)
@@ -67,7 +63,7 @@ public class RelationshipInfo {
     // OU um OneToMany unidirecional (o lado * de uma relação não-bidirecional)
     public boolean hasCollectionEndpoint() {
         boolean qualifierHere = assoc.isMapEnd(isSource);
-        return qualifierHere || (!thisMultiple() && otherMultiple() && !isBidirectional());
+        return qualifierHere || (!inverseIsCollection() && isCollection() && !isBidirectional());
     }
 
     /**

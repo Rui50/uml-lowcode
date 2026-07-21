@@ -394,12 +394,13 @@ public class CLIEntityGenerator {
         String thisMultiplicity  = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
         String otherMultiplicity = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
 
-        boolean thisMultiple = GeneratorUtils.checkMultiplicity(thisMultiplicity);
-        boolean otherMultiple = GeneratorUtils.checkMultiplicity(otherMultiplicity);
+        // ponta com o Map conta como coleção
+        boolean isCollection = GeneratorUtils.checkMultiplicity(thisMultiplicity) || assoc.isMapEnd(isSource);          // o MEU campo é coleção
+        boolean inverseIsCollection = GeneratorUtils.checkMultiplicity(otherMultiplicity) || assoc.isMapEnd(!isSource); // o do outro lado
         boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
-        // @OrderBy da coleção (persistence tab) — só em campos de coleção (thisMultiple)
-        if (thisMultiple) {
+        // @OrderBy da coleção (persistence tab) — só em campos de coleção
+        if (isCollection) {
             Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElse(null);
             String orderBy = (self != null) ? self.getCollectionOrder().get(fieldName) : null;
             if (orderBy != null) writer.println("    @OrderBy(\"" + orderBy + "\")");
@@ -407,15 +408,15 @@ public class CLIEntityGenerator {
 
         // writers de relação partilhados com o Spring (JpaEntityWriter): o que sai é JPA puro
         // Many to Many
-        if (thisMultiple && otherMultiple) {
+        if (isCollection && inverseIsCollection) {
             JpaEntityWriter.generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
         }
         // One to many
-        else if (thisMultiple) {
+        else if (isCollection) {
             JpaEntityWriter.generateOneToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
         }
         // Many to one
-        else if (otherMultiple) {
+        else if (inverseIsCollection) {
             JpaEntityWriter.generateManyToOne(writer, otherClass, fieldName, assoc);
         }
         // One to one
