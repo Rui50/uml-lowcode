@@ -726,11 +726,18 @@ public class SpringServiceGenerator {
         writer.println("    public " + SpringDTOGenerator.responseDTOName(cls, "Create") + " create(" + className + "CreateDTO dto) {");
         writer.println("        " + className + " " + varName + " = dto.toEntity();");
         writer.println();
-        generateValidation(writer, cls.getName(), varName);
+        // save no MEIO: a FK desta linha tem de ir antes do INSERT, o resto precisa do id que ele atribui
+        linkOwnedSingles(writer, cls, associations, varName, true, false);
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println();
-        // liga as relações do DTO; se mexeu na própria entidade (FK/coleção própria), grava de novo
-        if (generateApplyRelations(writer, cls, associations, "saved", true, true)) {
+        boolean inverseModified     = linkInverseSingles(writer, cls, associations, "saved", true, false);
+        boolean collectionsModified = linkCollections(writer, cls, associations, "saved");
+        // validar só aqui, já com tudo ligado: uma invariante sobre coleções não teria o que ver
+        // antes disto. Se rebentar, o @Transactional faz rollback do INSERT acima.
+        generateValidation(writer, cls.getName(), "saved");
+        // 2º save só se mexemos na PRÓPRIA entidade: M:N de que é dono (Product.suppliers).
+        // Order.lines não conta — a FK está no OrderLine e é ele que se grava, não deste lado.
+        if (inverseModified || collectionsModified) {
             writer.println("        saved = " + repoName + ".save(saved);");
         }
         writer.println("        return " + SpringDTOGenerator.responseDTOName(cls, "Create") + ".fromEntity(saved);");
@@ -739,145 +746,157 @@ public class SpringServiceGenerator {
     }
 
     /**
-     * Liga as relações de uma entidade a partir dos ids do DTO. Partilhado por create() e update():
-     * entityVar é "saved" no create e "existing" no update. includeCollections distingue os dois:
-     * no create ligam-se single refs + coleções; no update só single refs (as coleções são geridas
-     * pelos endpoints dedicados add/remove).
-     *
-     *   - singular lado dono (M:O / O:O dono): entityVar.set<Field>(other); id null -> set(null).
-     *   - singular lado inverso (O:O mappedBy): a FK está no outro -> grava-se lá; id null limpa-a.
-     *   - coleção (só create): add/put no lado dono; no lado inverso grava-se o outro (que tem a FK).
-     *
-     * Devolve selfModified = mexeu na própria entidade. Não grava aqui de propósito: o caller faz
-     * o save final (create: repo.save; update: já tem saveAndFlush), para não duplicar o save.
+     * Emite o código que liga um singular de que este lado é dono (@ManyToOne, ou @OneToOne com
+     * o @JoinColumn deste lado): a FK é coluna desta linha (Order.customer -> order.customer_id),
+     * logo basta um set na própria entidade — e antes do INSERT, porque um @NotNull na relação
+     * torna a coluna NOT NULL.
      */
-    private boolean generateApplyRelations(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean includeCollections, boolean clearSingleOnNull) {
-        // entityVar é a entidade a ligar ("saved" no create, "existing" no update)
-        // selfModified é quando mexemos diretamente em entityVar (caso 1 ou 2) -> o chamador grava
-        // anyLinked é quando ligámos alguma relação -> re-validar o estado final antes de gravar
+    private boolean linkOwnedSingles(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean clearSingleOnNull, boolean forUpdate) {
         boolean selfModified = false;
-        boolean anyLinked     = false;
 
         for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
-            // 'saved' é instância de cls (subclasse), mas o campo é herdado de declarer.
-            Association assoc  = rel.assoc;
-            boolean isSource   = rel.isSource;
-            String declarer    = rel.thisClass();
+            if (rel.isCollection() || !GeneratorUtils.isOwningSide(rel.assoc, rel.isSource)) continue;
+            if (forUpdate ? cls.isHiddenInUpdate(rel.field()) : cls.isHiddenInCreate(rel.field())) continue;
 
-            String otherClass  = rel.otherClass;
-            // nome do campo = o mesmo que o CreateDTO/entidade usam, por isso get<Field>Id()/Ids() existem
-            String capField    = GeneratorUtils.capitalizeFirst(rel.field());
-            boolean collection = rel.isCollection();
-            // coleções só são ligadas no create; em update são geridas pelos endpoints add/remove dedicados
-            if (collection && !includeCollections) continue;
-            // relação escondida do DTO que este metodo le (create->CreateDTO, update->UpdateDTO):
-            // o campo get<Field>Id()/Ids() não existe, logo não se liga aqui
-            if (includeCollections ? cls.isHiddenInCreate(rel.field()) : cls.isHiddenInUpdate(rel.field())) continue;
+            String otherClass = rel.otherClass;
+            String capField   = GeneratorUtils.capitalizeFirst(rel.field());
+            // numa auto-associação a var do outro lado seria igual à do owner ('saved'), por isso
+            // vem do nome do campo ("manager")
+            String otherVar   = GeneratorUtils.lowercaseFirst(capField);
+            String otherRepo  = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";   // repo já injetado
 
-            // dados do MEU lado — preciso para o campo inverso (caso 3)
-            String thisRole = rel.thisRole();
-            String thisMul  = rel.thisMul();
-            boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
-
-            // mesma razão do assign: numa auto-associação a var do outro lado seria igual à do
-            // owner ('saved'/'employee'), por isso vem do nome do campo ("manager"). Repo da classe.
-            String otherVar  = GeneratorUtils.lowercaseFirst(capField);
-            String otherRepo = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";   // repo já injetado (entidade associada)
-            anyLinked = true;
-
-            // caso 1 referência singular (ManyToOne — esta tem a FK; ou OneToOne)
-            if (!collection) {
-                boolean ownerSide = GeneratorUtils.isOwningSide(assoc, isSource);
-                writer.println("        if (dto.get" + capField + "Id() != null) {");
-                writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capField + "Id())");
-                writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capField + "Id()));");
-                writer.println("            " + entityVar + ".set" + capField + "(" + otherVar + ");");   // sincroniza este lado (resposta)
-                if (ownerSide) {
-                    if (clearSingleOnNull) {
-                        // clear-on-null: create é no-op (campo já null); PUT replace limpa a relação
-                        writer.println("        } else {");
-                        writer.println("            " + entityVar + ".set" + capField + "(null);");
-                        writer.println("        }");
-                    } else {
-                        // update (PATCH): id null/omitido NÃO mexe na relação; limpar é via DELETE /{id}/{role}
-                        writer.println("        }");
-                    }
-                    selfModified = true;   // a FK pode ter mudado -> re-gravar entityVar
-                } else {
-                    // OneToOne lado inverso (mappedBy): a FK está no outro -> escreve-se lá e grava-se o outro
-                    String capInv = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer, thisRole, thisMul));
-                    writer.println("            " + otherVar + ".set" + capInv + "(" + entityVar + ");");
-                    generateValidationTab(writer, otherClass, otherVar, "            ");   // gravamos o outro -> validá-lo
-                    writer.println("            " + otherRepo + ".save(" + otherVar + ");");
-                    if (clearSingleOnNull) {
-                        // clear-on-null: create é no-op; PUT replace desliga a relação inversa
-                        writer.println("        } else {");
-                        writer.println("            if (" + entityVar + ".get" + capField + "() != null) {");
-                        writer.println("                " + entityVar + ".get" + capField + "().set" + capInv + "(null);");
-                        generateValidationTab(writer, otherClass, entityVar + ".get" + capField + "()", "                ");   // desligamos o antigo -> validá-lo
-                        writer.println("                " + otherRepo + ".save(" + entityVar + ".get" + capField + "());");
-                        writer.println("            }");
-                        writer.println("            " + entityVar + ".set" + capField + "(null);");
-                        writer.println("        }");
-                    } else {
-                        // update (PATCH): id null/omitido NÃO mexe na relação; limpar é via DELETE /{id}/{role}
-                        writer.println("        }");
-                    }
-                }
-            }
-            // casos2/3 é quando é coleção
-            else {
-                // dono da coleção segundo a NAVEGABILIDADE (mesma decisão da entidade);
-                // se não somos donos, a FK está no outro -> lado inverso
-                boolean ownerSide = GeneratorUtils.isOwningSide(assoc, isSource);
-                // nome do campo desta classe NO OUTRO lado (back-reference) usado no inverso e no
-                // dono M:N bidirecional (para sincronizar/desligar a outra ponta)
-                String capInv = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer, thisRole, thisMul));
-
-                boolean thisIsMapEnd = assoc.isMapEnd(isSource);
-
-                // como adicionar 'other' à coleção deste lado: put se for Map qualificado, senão add
-                String addToSaved;
-                if (thisIsMapEnd) {
-                    String qGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
-                    addToSaved = entityVar + ".get" + capField + "().put(" + otherVar + "." + qGetter + "(), " + otherVar + ");";
-                } else {
-                    addToSaved = entityVar + ".get" + capField + "().add(" + otherVar + ");";
-                }
-
-                // só no create: a coleção começa vazia, por isso é só adicionar (sem limpar).
-                writer.println("        if (dto.get" + capField + "Ids() != null) {");
-                writer.println("            for (" + otherClass + " " + otherVar + " : " + otherRepo + ".findAllById(dto.get" + capField + "Ids())) {");
-                // adiciona à coleção deste lado (persiste se formos donos, senão é só para a resposta)
-                writer.println("                " + addToSaved);
-                if (!ownerSide) {
-                    // lado INVERSO logo a FK está no outro -> ligar a back-reference e gravar o outro
-                    if (!inverseIsCollection) {
-                        // O:M inverso: o outro tem referência singular
-                        writer.println("                " + otherVar + ".set" + capInv + "(" + entityVar + ");");
-                    } else if (assoc.hasQualifier() && !thisIsMapEnd) {
-                        // M:N inverso e o Map está do lado do OUTRO -> a back-reference é put por chave
-                        String qInv = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
-                        writer.println("                " + otherVar + ".get" + capInv + "().put(" +
-                                entityVar + "." + qInv + "(), " + entityVar + ");");
-                    } else {
-                        // M:N inverso: o outro tem coleção (List) desta classe
-                        writer.println("                " + otherVar + ".get" + capInv + "().add(" + entityVar + ");");
-                    }
-                    generateValidationTab(writer, otherClass, otherVar, "                ");   // gravamos o outro -> validá-lo
-                    writer.println("                " + otherRepo + ".save(" + otherVar + ");");
-                }
-                writer.println("            }");
+            writer.println("        if (dto.get" + capField + "Id() != null) {");
+            writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capField + "Id())");
+            writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capField + "Id()));");
+            writer.println("            " + entityVar + ".set" + capField + "(" + otherVar + ");");
+            if (clearSingleOnNull) {
+                // gera o "} else { set(null); }": id omitido limpa a relação. No create não faz
+                // nada (o campo já vem null do toEntity); quem precisa disto é o PUT replace.
+                writer.println("        } else {");
+                writer.println("            " + entityVar + ".set" + capField + "(null);");
                 writer.println("        }");
-                if (ownerSide) selfModified = true;   // só gravamos 'saved' quando somos donos da coleção
+            } else {
+                // update (PATCH): id null/omitido NÃO mexe na relação; limpar é via DELETE /{id}/{role}
+                writer.println("        }");
+            }
+            selfModified = true;   // a FK pode ter mudado -> re-gravar entityVar
+        }
+
+        return selfModified;
+    }
+
+    /**
+     * Emite o código que liga um singular do lado INVERSO (@OneToOne mappedBy): a FK está na linha
+     * do OUTRO (Invoice.order — o invoice_id está do lado do Order), por isso além do set deste
+     * lado (só para a resposta sair completa) escreve a referencia no outro e grava-o.
+     *
+     */
+    private boolean linkInverseSingles(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean clearSingleOnNull, boolean forUpdate) {
+        for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
+            if (rel.isCollection() || GeneratorUtils.isOwningSide(rel.assoc, rel.isSource)) continue;
+            if (forUpdate ? cls.isHiddenInUpdate(rel.field()) : cls.isHiddenInCreate(rel.field())) continue;
+
+            String otherClass = rel.otherClass;
+            String capField   = GeneratorUtils.capitalizeFirst(rel.field());
+            String otherVar   = GeneratorUtils.lowercaseFirst(capField);
+            String otherRepo  = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
+            // nome do campo desta classe NO OUTRO lado (back-reference)
+            String capInv     = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(rel.thisClass(), rel.thisRole(), rel.thisMul()));
+
+            writer.println("        if (dto.get" + capField + "Id() != null) {");
+            writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capField + "Id())");
+            writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capField + "Id()));");
+            writer.println("            " + entityVar + ".set" + capField + "(" + otherVar + ");");   // sincroniza este lado (resposta)
+            writer.println("            " + otherVar + ".set" + capInv + "(" + entityVar + ");");
+            generateValidationTab(writer, otherClass, otherVar, "            ");   // gravamos o outro -> validá-lo
+            writer.println("            " + otherRepo + ".save(" + otherVar + ");");
+            if (clearSingleOnNull) {
+                // gera o "} else { ... }": id omitido desliga a relação nos dois lados.
+                // No create não faz nada; quem precisa disto é o PUT replace.
+                writer.println("        } else {");
+                writer.println("            if (" + entityVar + ".get" + capField + "() != null) {");
+                writer.println("                " + entityVar + ".get" + capField + "().set" + capInv + "(null);");
+                generateValidationTab(writer, otherClass, entityVar + ".get" + capField + "()", "                ");   // desligamos o antigo -> validá-lo
+                writer.println("                " + otherRepo + ".save(" + entityVar + ".get" + capField + "());");
+                writer.println("            }");
+                writer.println("            " + entityVar + ".set" + capField + "(null);");
+                writer.println("        }");
+            } else {
+                // update (PATCH): id null/omitido NÃO mexe na relação; limpar é via DELETE /{id}/{role}
+                writer.println("        }");
             }
         }
 
-        // validar outra vez o estado final (já com as relações), invariantes que dependem de coleções
-        // não eram vistas na validação inicial (corre antes de ligar). reaproveita a var 'errors'.
-        if (anyLinked) {
-            generateValidation(writer, cls.getName(), entityVar);
+        return false;   // só mexemos no OUTRO -> o caller não precisa de re-gravar por nossa causa
+    }
+
+    /**
+     * Emite o código que liga as coleções — 1:N (FK no outro) ou M:N (tabela de junção). Se somos
+     * donos, add/put na nossa coleção chega; se não, liga a reference e grava o outro. Só
+     * depois do save: numa M:N o Hibernate rejeita à pré-flush uma referência ainda transiente
+     * (TransientPropertyValueException). Só é chamado no create (no update as coleções são os
+     * endpoints add/remove), e aí a coleção começa vazia, por isso só se adiciona, nunca se limpa
+     * .
+     ** mexemos na própria entidade (só quando somos donos da coleção)
+     */
+    private boolean linkCollections(PrintWriter writer, Class cls, List<Association> associations, String entityVar) {
+        boolean selfModified = false;
+
+        for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
+            if (!rel.isCollection()) continue;
+            if (cls.isHiddenInCreate(rel.field())) continue;   // coleções só se ligam no create
+
+            Association assoc = rel.assoc;
+            boolean isSource  = rel.isSource;
+            String otherClass = rel.otherClass;
+            String capField   = GeneratorUtils.capitalizeFirst(rel.field());
+            String otherVar   = GeneratorUtils.lowercaseFirst(capField);
+            String otherRepo  = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
+            // dono da coleção segundo a NAVEGABILIDADE (mesma decisão da entidade);
+            // se não somos donos, a FK está no outro -> lado inverso
+            boolean ownerSide = GeneratorUtils.isOwningSide(assoc, isSource);
+            // nome do campo desta classe NO OUTRO lado (back-reference) usado no inverso e no
+            // dono M:N bidirecional (para sincronizar/desligar a outra ponta)
+            String capInv     = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(rel.thisClass(), rel.thisRole(), rel.thisMul()));
+            boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
+            boolean thisIsMapEnd = assoc.isMapEnd(isSource);
+
+            // como adicionar 'other' à coleção deste lado: put se for Map qualificado, senão add
+            String addToSaved;
+            if (thisIsMapEnd) {
+                String qGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
+                addToSaved = entityVar + ".get" + capField + "().put(" + otherVar + "." + qGetter + "(), " + otherVar + ");";
+            } else {
+                addToSaved = entityVar + ".get" + capField + "().add(" + otherVar + ");";
+            }
+
+            // só no create: a coleção começa vazia, por isso é só adicionar (sem limpar).
+            writer.println("        if (dto.get" + capField + "Ids() != null) {");
+            writer.println("            for (" + otherClass + " " + otherVar + " : " + otherRepo + ".findAllById(dto.get" + capField + "Ids())) {");
+            // adiciona à coleção deste lado (persiste se formos donos, senão é só para a resposta)
+            writer.println("                " + addToSaved);
+            if (!ownerSide) {
+                // lado INVERSO logo a FK está no outro -> ligar a back-reference e gravar o outro
+                if (!inverseIsCollection) {
+                    // O:M inverso: o outro tem referência singular
+                    writer.println("                " + otherVar + ".set" + capInv + "(" + entityVar + ");");
+                } else if (assoc.hasQualifier() && !thisIsMapEnd) {
+                    // M:N inverso e o Map está do lado do OUTRO -> a back-reference é put por chave
+                    String qInv = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
+                    writer.println("                " + otherVar + ".get" + capInv + "().put(" +
+                            entityVar + "." + qInv + "(), " + entityVar + ");");
+                } else {
+                    // M:N inverso: o outro tem coleção (List) desta classe
+                    writer.println("                " + otherVar + ".get" + capInv + "().add(" + entityVar + ");");
+                }
+                generateValidationTab(writer, otherClass, otherVar, "                ");   // gravamos o outro -> validá-lo
+                writer.println("                " + otherRepo + ".save(" + otherVar + ");");
+            }
+            writer.println("            }");
+            writer.println("        }");
+            if (ownerSide) selfModified = true;   // só gravamos 'saved' quando somos donos da coleção
         }
+
         return selfModified;
     }
 
@@ -923,10 +942,13 @@ public class SpringServiceGenerator {
             writer.println();
         }
 
-        generateValidation(writer, cls.getName(), "existing");
+        // aqui não há nada a partir: a entidade já existe e já tem id, os dois tipos de singular
+        // saem de seguida. Coleções não se tocam, são os endpoints dedicados add/remove.
+        linkOwnedSingles(writer, cls, associations, "existing", fullReplace, true);
+        linkInverseSingles(writer, cls, associations, "existing", fullReplace, true);
 
-        // liga só single refs por id; coleções não se tocam aqui (geridas pelos endpoints dedicados add/remove)
-        generateApplyRelations(writer, cls, associations, "existing", false, fullReplace);
+        // validar depois de ligar, para as invariantes verem o estado final e não o intermédio
+        generateValidation(writer, cls.getName(), "existing");
 
         // saveAndFlush: força o flush para o @LastModifiedDate (@PreUpdate) ser aplicado
         // antes de mapear para DTO senão o updatedAt na resposta ficaria desatualizado
