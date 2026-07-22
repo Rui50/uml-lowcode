@@ -68,6 +68,16 @@ public class CLIMenuGenerator {
         return GeneratorUtils.idType(classMap.get(className));
     }
 
+    // converte o texto lido para o tipo do id da classe (o create lê como String p/ aceitar vazio=null)
+    private String parseIdExpr(String className, String var) {
+        switch (idTypeOf(className)) {
+            case "String":  return var;
+            case "UUID":    return "java.util.UUID.fromString(" + var + ")";
+            case "Integer": return "Integer.valueOf(" + var + ")";
+            default:        return "Long.valueOf(" + var + ")";
+        }
+    }
+
     // metodo do InputUtils a usar
     private String idReaderOf(String className) {
         switch (idTypeOf(className)) {
@@ -145,7 +155,7 @@ public class CLIMenuGenerator {
             generateRunMethod(w, cls, associations);
 
             // CRUD
-            if (!cls.isAbstract()) generateCreateMethod(w, cls);
+            if (!cls.isAbstract()) generateCreateMethod(w, cls, associations);
             generateViewAllMethod(w, cls, associations);
             generateViewByIdMethod(w, cls, associations);
             generateUpdateMethod(w, cls);
@@ -245,7 +255,7 @@ public class CLIMenuGenerator {
      * nao le atributos derivados
      * valida invariantes
      */
-    private void generateCreateMethod(PrintWriter w, Class cls) {
+    private void generateCreateMethod(PrintWriter w, Class cls, List<Association> associations) {
         w.println("    private void create() {");
 
         // recolher atributos do pai + próprios (mesma ordem que o construtor)
@@ -272,11 +282,49 @@ public class CLIMenuGenerator {
         }
         w.println();
 
+        // chave NATURAL: o id vem do utilizador, por isso o save() cai sempre no merge() e um id
+        // repetido fazia UPDATE  em vez de create.
+        if (cls.isIdAssigned() && idName != null) {
+            w.println("        if (" + GeneratorUtils.repoVariable(cls.getName()) + ".findById(" + idName + ") != null) {");
+            w.println("            System.out.println(\"" + cls.getName() + " with id '\" + " + idName + " + \"' already exists.\");");
+            w.println("            return;");
+            w.println("        }");
+            w.println();
+        }
+
+        // relações SINGLE de que esta classe é DONA: pede-se o id no create (enter = null), para uma
+        // relação obrigatória (invariante self.x <> null) poder ser satisfeita — senão o validate()
+        // corria antes de haver forma de a preencher e a entidade nunca podia ser criada.
+        // Só o lado DONO: é o que grava ao guardar esta entidade. Um single no lado INVERSO (só existe
+        // num 1:1 bidirecional) fica para o assignX
+        List<RelationshipInfo> singleOwned = RelationshipInfo.collectForMenus(cls, associations).stream()
+                .filter(r -> !r.isCollection() && r.isOwner())
+                .toList();
+        for (RelationshipInfo rel : singleOwned) {
+            String other = rel.otherClass;
+            String field = rel.field();
+            String in = field + "IdIn";
+            w.println("        System.out.print(\"" + other + " ID para " + field + " (enter = nenhum): \");");
+            w.println("        String " + in + " = scanner.nextLine().trim();");
+            w.println("        " + other + " " + field + " = null;");
+            w.println("        if (!" + in + ".isEmpty()) {");
+            w.println("            try {");
+            w.println("                " + field + " = " + GeneratorUtils.repoVariable(other)
+                    + ".findById(" + parseIdExpr(other, in) + ");");
+            w.println("            } catch (RuntimeException ex) { System.out.println(\"Invalid id.\"); return; }");
+            w.println("            if (" + field + " == null) { System.out.println(\"" + other + " not found.\"); return; }");
+            w.println("        }");
+            w.println();
+        }
+
         // criar entidade no-arg + setters
         w.println("        " + cls.getName() + " entity = new " + cls.getName() + "();");
         for (Attribute attr : allAttrs) {
             String cap = GeneratorUtils.capitalizeFirst(attr.getName());
             w.println("        entity.set" + cap + "(" + attr.getName() + ");");
+        }
+        for (RelationshipInfo rel : singleOwned) {
+            w.println("        entity.set" + GeneratorUtils.capitalizeFirst(rel.field()) + "(" + rel.field() + ");");
         }
 
         // validation
