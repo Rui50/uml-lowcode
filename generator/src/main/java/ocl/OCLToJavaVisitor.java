@@ -29,8 +29,10 @@ import java.util.Map;
  *
  * LIMITAÇÕES (traduz, mas com cuidado):
  *  - sum() assume coleção de Integer (não double/float)
- *  - '=' numérico entre wrappers diferentes dá SEMPRE false (Objects.equals: Long vs Integer,
- *    Double vs Integer...). Afeta floor()/round() e ex. "double = int". Usar >=, <=, >, <.
+ *  - '=' numérico com literal (ex. "balance = 0") sai como ==, que é o correcto. Entre duas
+ *    expressões numéricas de wrappers diferentes (Long vs Integer) continua Objects.equals e dá
+ *    sempre false — não é gerável a partir de entidades, cujos campos são primitivos. O literal
+ *    também tem de estar solto: "(0)" ou "1 + 1" não são reconhecidos e caem no Objects.equals.
  *  - misturar operadores lógicos diferentes (ex: 'a and b xor c') pode agrupar mal
  *  - '/' traduz para '/' do Java: divisão inteira se ambos os operandos forem int
  *    (OCL define '/' como divisão real: 21/2 = 10.5)
@@ -182,17 +184,48 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             return "(" + visit(ctx.expression()) + ")";
         }
 
+        // representacao "self.owner.matches('x')" (regra basicExpression '(' expressionList? ')'):
+        //   ctx  = self.owner.matches('x')
+        //    |- basicExpression = self.owner.matches <- 'left'
+        //    |    |- basicExpression = self.owner    <- left.basicExpression()  (receptor)
+        //    |    '- ID = matches                    <- left.ID()               (método)
+        //    |- '('
+        //    |- expressionList = 'x'                 <- ctx.expressionList()    (args)
+        //    '- ')'
+        //
+        // self.owner.matches('x'): chamada de metodo com argumentos.
+        //  A gramática agarra o nome do metodo (matches) ao 'left' (self.owner.matches) e deixa ctx.ID() null.
+        // Separamos o receptor do metodo, senão 'matches' seria traduzido como getMatches().
+        // Os args vêm de ctx.expressionList() (nó de fora), não de 'left'.
+        if (ctx.ID() == null && ctx.basicExpression() != null && ctx.getChildCount() > 1 && ctx.getChild(1).getText().equals("(")) {
+            // 'left' é tudo menos os (args): em self.owner.matches('x') é o nó self.owner.matches
+            OCLParser.BasicExpressionContext left = ctx.basicExpression();
+            // esse nó tem de ser um acesso a nome (basicExpression '.' ID) para haver metodo a chamar:
+            //   left.basicExpression() = self.owner  (o receptor)   left.ID() = matches  (o metodo)
+            // se não tiver as duas partes não é uma chamada de metodo
+            if (left.ID() != null && left.basicExpression() != null) {
+                String recv = visit(left.basicExpression());   // self.owner -> this.getOwner()
+                String args = ctx.expressionList() != null ? visit(ctx.expressionList()) : "";
+                String op   = left.ID().getText();             // "matches"
+                // self.X(...) -> operação da própria classe, passa igual; sobre um valor -> só as
+                // que sabemos mapear (javaValueOp), o resto falha.
+                String name;
+                if ("this".equals(recv)) {
+                    name = op;
+                } else {
+                    name = javaValueOp(op);
+                }
+                return recv + "." + name + "(" + args + ")";
+            }
+        }
+
         // accesso a propriedade ou chamada de metod
-        // self.alunos, self.getName(), self.doSomething(x, y), self.alunos[0]
+        // self.alunos, self.getName(), self.alunos[0]
         // ctx.basicExpression() é o lado esquerdo (self")
         // ctx.ID() é o nome da propriedade/metodo ("alunos", "getName")
         if (ctx.ID() != null && ctx.basicExpression() != null) {
             String base = visit(ctx.basicExpression()); // lado esquerdo recursivamente
 
-            // chamada de metodos com argumentos como self.getAge("arg)
-            if (ctx.expressionList() != null) {
-                return base + "." + ctx.ID().getText() + "(" + visit(ctx.expressionList()) + ")";
-            }
             // chamada de metodo sem argumentos como self.getId()
             // Verificamos se o último filho é ")"
             if (ctx.getChildCount() > 2 && ctx.getChild(ctx.getChildCount() - 1).getText().equals(")")) {
@@ -304,17 +337,18 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             String op = ctx.getChild(2 * i - 1).getText();
             String right = visit(ctx.additiveExpression(i));
 
-            // = and <> usam Objects.equals para nao haver problemas com null ou strings etc
-            if (op.equals("=")) {
+            // = e <> usam Objects.equals (seguro para null, strings e enums), EXCEPTO quando um
+            // dos lados é literal numérico, dava "box" Double vs Integer e dava sempre false.
+            if (op.equals("=") || op.equals("<>") || op.equals("/=")) {
                 String left = sb.toString();
+                boolean negate = !op.equals("=");
                 sb.setLength(0);
-                sb.append("java.util.Objects.equals(").append(left).append(", ").append(right).append(")");
-                continue;
-            }
-            if (op.equals("<>") || op.equals("/=")) {
-                String left = sb.toString();
-                sb.setLength(0);
-                sb.append("!java.util.Objects.equals(").append(left).append(", ").append(right).append(")");
+                if (isNumericLiteral(left) || isNumericLiteral(right)) {
+                    sb.append(left).append(negate ? " != " : " == ").append(right);
+                } else {
+                    if (negate) sb.append("!");
+                    sb.append("java.util.Objects.equals(").append(left).append(", ").append(right).append(")");
+                }
                 continue;
             }
 
@@ -328,6 +362,26 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             sb.append(right);
         }
         return sb.toString();
+    }
+
+    // Operação OCL sobre um VALOR (String, número) -> nome equivalente em Java. Fora desta lista
+    // falhamos já, em vez de emitir Java que só rebenta ao compilar o projeto gerado — mesma
+    // política do visitPostfixTranslate.
+    private static String javaValueOp(String oclOp) {
+        switch (oclOp) {
+            case "matches":     return "matches";
+            case "concat":      return "concat";
+            case "toUpperCase": return "toUpperCase";
+            case "toLowerCase": return "toLowerCase";
+            default:
+                throw new IllegalArgumentException("Operação OCL não suportada: " + oclOp + "()");
+        }
+    }
+
+    // literal numérico: 0, -3, 2.5, 1e6, 10L ... Se um dos lados for um destes, a comparação é
+    // numérica e tem de sair como ==/!=; o Objects.equals boxaria tipos diferentes.
+    private static boolean isNumericLiteral(String s) {
+        return s != null && s.trim().matches("-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?[fFdDlL]?");
     }
 
     // Regra: additiveExpression : multiplicativeExpression (('+' | '-') multiplicativeExpression)*

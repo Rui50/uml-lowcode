@@ -32,7 +32,7 @@ public class OCLToJavaTest {
         check("self.premium implies self.desconto > 0", "!(this.getPremium()) || (this.getDesconto() > 0)");
         check("not self.ativo", "!this.getAtivo()");
         check("self.preco * 2 + 1", "this.getPreco() * 2 + 1");
-        check("self.x mod 2 = 0", "java.util.Objects.equals(this.getX() % 2, 0)");
+        check("self.x mod 2 = 0", "this.getX() % 2 == 0");
         // operadores lógicos desta sessão
         check("self.ativo xor self.suspenso", "this.getAtivo() ^ this.getSuspenso()");
         check("self.premium => self.desconto > 0", "!(this.getPremium()) || (this.getDesconto() > 0)");
@@ -87,7 +87,7 @@ public class OCLToJavaTest {
         check("self.preco->abs() >= 1", "Math.abs(this.getPreco()) >= 1");
         check("self.preco->floor() >= 1", "(long) Math.floor(this.getPreco()) >= 1");
         check("self.itens->count(self.alvo) = 1",
-                "java.util.Objects.equals(java.util.Collections.frequency(this.getItens(), this.getAlvo()), 1)");
+                "java.util.Collections.frequency(this.getItens(), this.getAlvo()) == 1");
     }
 
     @Test

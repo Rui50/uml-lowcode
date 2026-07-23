@@ -363,6 +363,17 @@ public class SequenceDiagramParser {
                 }
                 message.setAssignExpression(expr);
             } else {
+                // declaração: "text : String" -> String text;  (sem '=', logo sem valor)
+                int colon = findColonOutsideGenerics(signaturePart);
+                if (colon != -1) {
+                    String varName = signaturePart.substring(0, colon).trim();
+                    String type    = signaturePart.substring(colon + 1).trim();
+                    if (!varName.isEmpty() && !type.isEmpty()) {
+                        message.setAssignVariable(varName);
+                        message.setReturnType(type);   // assignExpression fica null -> declaração sem valor
+                        return;
+                    }
+                }
                 // nome simples sem argumentos
                 message.setName(signaturePart.trim());
             }

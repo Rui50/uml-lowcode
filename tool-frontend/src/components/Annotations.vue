@@ -186,8 +186,8 @@ function close() {
               <h4>Invariants</h4>
               <div style="display: flex; gap: 6px;">
                 <Button label="Fill required" icon="pi pi-check-square" size="small" severity="secondary"
-                        v-tooltip.top="'Cria invariantes de não-nulo para as relações single obrigatórias (mult. 1) de todo o modelo'"
-                        @click="annotations.prefillMandatoryRelations()" />
+                        v-tooltip.top="'Cria invariantes de não-nulo para as relações single obrigatórias (mult. 1) desta classe'"
+                        @click="annotations.prefillMandatoryRelations(classKey!)" />
                 <Button label="Add" icon="pi pi-plus" size="small" @click="annotations.addInvariant(classKey!)" />
               </div>
             </header>

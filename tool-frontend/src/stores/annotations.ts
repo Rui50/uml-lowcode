@@ -114,22 +114,22 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     }
   }
 
-  // pré-preenche uma invariante "<> null" por relação single obrigatória (mult "1") do modelo.
-  // Só no 1º load de um modelo (bucket novo) — não ressuscita as que o user apagou no re-upload.
-  function prefillMandatoryRelations() {
-    for (const cls of modelStore.model?.classes ?? []) {
-      for (const rel of cls.relations) {
-        if (rel.collection || !rel.mandatory) continue
-        const invs = (invariantsByClass.value[cls.id] ??= [])
-        const expr = `self.${rel.name} <> null`
-        if (invs.some(i => i.expression.replace(/\s/g, '') === expr.replace(/\s/g, ''))) continue
-        invs.push({
-          id: crypto.randomUUID(),
-          name: `${rel.name}Required`,
-          expression: expr,
-          message: `Relação '${rel.name}' é obrigatória (multiplicidade 1)`,
-        })
-      }
+  // pré-preenche uma invariante "<> null" por relação single obrigatória (mult "1") da classe.
+  // Recebe o id: o botão vive no painel de uma classe, logo só mexe nessa.
+  function prefillMandatoryRelations(classId: string) {
+    const cls = modelStore.model?.classes.find(c => c.id === classId)
+    if (!cls) return
+    for (const rel of cls.relations) {
+      if (rel.collection || !rel.mandatory) continue
+      const invs = (invariantsByClass.value[cls.id] ??= [])
+      const expr = `self.${rel.name} <> null`
+      if (invs.some(i => i.expression.replace(/\s/g, '') === expr.replace(/\s/g, ''))) continue
+      invs.push({
+        id: crypto.randomUUID(),
+        name: `${rel.name}Required`,
+        expression: expr,
+        message: `Relação '${rel.name}' é obrigatória (multiplicidade 1)`,
+      })
     }
   }
 

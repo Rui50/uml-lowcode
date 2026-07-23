@@ -327,6 +327,15 @@ public class OperationGenerator {
             return;
         }
 
+        // declaração: "text : String" -> "String text;" (assignVariable + returnType, sem valor).
+        // name==null distingue de "x = foo() : Type", que é chamada (essa tem name).
+        if (msg.getAssignVariable() != null && msg.getAssignExpression() == null
+                && msg.getName() == null
+                && msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
+            writer.println(indent + msg.getReturnType() + " " + msg.getAssignVariable() + ";");
+            return;
+        }
+
         // atribuição simples (quando nao tem chamadas a metodos): "x = expr" ou "x = expr : Type"
         // se ": Type" presente -> declara (Type x = expr); ausente -> reatribui (x = expr)
         if (msg.isPlainAssignment()) {

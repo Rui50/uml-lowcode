@@ -169,6 +169,15 @@ public class SequenceBodyGenerator {
             return;
         }
 
+        // declaração: "text : String" -> "String text;" (assignVariable + returnType, sem valor).
+        // name==null distingue de "x = foo() : Type", que é chamada (essa tem name).
+        if (msg.getAssignVariable() != null && msg.getAssignExpression() == null
+                && msg.getName() == null
+                && msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
+            writer.println(indent + msg.getReturnType() + " " + msg.getAssignVariable() + ";");
+            return;
+        }
+
         // atribuição simples (sem chamada): "x = expr" ou "x = expr : Type"
         // ": Type" presente -> declara; ausente -> reatribui
         if (msg.isPlainAssignment()) {

@@ -6,7 +6,14 @@
   <component name="ChangeListManager">
     <list default="true" id="651c9fb2-5652-435b-bb5b-372f6f7e8fd8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SpringServiceGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/OperationGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/OperationGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SequenceBodyGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/generator/spring/SequenceBodyGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/ocl/OCLToJavaVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/ocl/OCLToJavaVisitor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/main/java/parser/SequenceDiagramParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/main/java/parser/SequenceDiagramParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generator/src/test/java/OCLToJavaTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/generator/src/test/java/OCLToJavaTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/components/Annotations.vue" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/components/Annotations.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tool-frontend/src/stores/annotations.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
