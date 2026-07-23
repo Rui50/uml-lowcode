@@ -61,6 +61,9 @@ public class GeneratorUtils {
 
     // atributos de todos os ancestrai por ordem raiz-primeiro, para herança a N
     // níveis. addAll(0,..) = prepend, p/ o avô ficar à frente do pai (ordem do super(...))
+    // atributos herdados de TODA a cadeia de pais, não só do pai directo. Os targets CLI
+    // apegas pegavam no 1 nível: o super(...) saía sem os atributos do "avô"  e os
+    // menus nunca os pediam (dados em falta silenciosos). para corrigir percorre ambos
     public static List<Attribute> ancestorAttributes(Class cls) {
         List<Attribute> attrs = new ArrayList<>();
         for (Class p = cls.getParentClass(); p != null; p = p.getParentClass())

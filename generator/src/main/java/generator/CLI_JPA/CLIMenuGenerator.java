@@ -420,7 +420,7 @@ public class CLIMenuGenerator {
         String idAttrName = cls.getRoot().getIdAttributeName();
 
         List<Attribute> allAttrs = new ArrayList<>();
-        // atributos herdados de TODA a cadeia de pais (raiz-primeiro), não só do pai directo (nota #30)
+        // atributos herdados de TODA a cadeia de pais (raiz-primeiro), não só do pai directo atraves da ancestorAttributes
         allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
                 .filter(a -> !a.hasDerive())
                 .filter(a -> !a.getName().equals(idAttrName))
@@ -563,7 +563,9 @@ public class CLIMenuGenerator {
         w.println("        try {");
         w.println("            " + GeneratorUtils.repoVariable(ownerClass) + ".save(owner);");
         w.println("            em.getTransaction().commit();");
-        if (!bidir) w.println("            em.refresh(other);");   // bidir: já sincronizado em memória
+        // só o lado DONO é que grava, o inverso em memória fica stale até reload -> em.refresh(other).
+        // (no bidir sincronizámos o inverso à mão acima, logo dispensa o refresh)
+        if (!bidir) w.println("            em.refresh(other);");
         w.println("            System.out.println(\"Assigned " + otherClass + " to " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
@@ -647,7 +649,12 @@ public class CLIMenuGenerator {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
-            // qualifier/Map: inverso complexo -> valida só o dono (limitação documentada)
+            if (bidir) {   // sincroniza o inverso do other para o poder validar — igual ao ramo isOwner
+                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+                boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
+                w.println(invColl ? "        other.get" + invCap + "().add(owner);" : "        other.set" + invCap + "(owner);");
+                otherValClass = otherClass; otherValVar = "other"; synced = true;
+            }
         } else if (isOwner) {
             w.println("        owner.get" + capitalized + "().add(other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
@@ -717,7 +724,12 @@ public class CLIMenuGenerator {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
-            // qualifier/Map: inverso complexo -> valida só o dono (limitação documentada)
+            if (bidir) {   // desliga o inverso do other para o poder validar — igual ao ramo isOwner
+                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+                boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
+                w.println(invColl ? "        other.get" + invCap + "().remove(owner);" : "        other.set" + invCap + "(null);");
+                otherValClass = otherClass; otherValVar = "other"; synced = true;
+            }
         } else if (isOwner) {
             w.println("        owner.get" + capitalized + "().remove(other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;

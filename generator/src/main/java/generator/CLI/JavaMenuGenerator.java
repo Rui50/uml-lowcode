@@ -351,7 +351,7 @@ public class JavaMenuGenerator {
 
         // para cada atributo (pai + próprios) ler novo valor ou manter atual
         List<Attribute> allAttrs = new ArrayList<>();
-        // atributos herdados de TODA a cadeia de pais (raiz-primeiro), não só do pai directo (nota #30)
+        // atributos herdados de TODA a cadeia de pais (raiz-primeiro), não só do pai directo — ancestorAttributes
         allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
                 .filter(a -> !a.hasDerive())
                 .toList());

@@ -113,9 +113,11 @@ import java.util.Map;
  *   - Lifelines do owner devem ser tipadas (turma:Turma)
  *   - Mensagens «create» SEM argumentos (new Type()); pôr os valores com mensagens setter a seguir
  *
- *
- *   TODO
- *   - POST CONDS REVERTER NO CLI/PLAIN
+ * atomicidade de pos conds (por-alvo)
+ *   Uma pós-condição que falha faz throw em TODOS os alvos. Desfazer os efeitos já aplicados pelo
+ *   corpo com @transaction: só Spring e CLI-JPA (com BD) o fazem — o throw dá rollback.
+ *   Plain e cli NÃO persistem, logo não há o que reverter: o objeto em memória pode ficar
+ *   meio-alterado, mas como nunca foi gravado, "rollback" não se aplica — é estado do caller.
  */
 
 public class OperationGenerator {
@@ -244,6 +246,9 @@ public class OperationGenerator {
     // return (+ guards de reply/void). selfVar = como o OCL referencia o self: "this" no entity (o corpo
     // corre na entidade) ou a var self carregada do repo no service Spring — getJavaExpression(selfVar)
     // troca o alvo ("this.getX()" -> "member.getX()").
+    // NOTA: só o FIM (este metodo) é partilhado entity/Spring. A CABEÇA (entry-find, corpo, load-self do
+    // Spring) fica duplicada de propósito — o corpo diverge mesmo (generateElements vs SequenceBodyGenerator)
+    // e o Spring carrega self de um id; não é candidata a fatorizar.
     public static void generateReturnAndPostconditions(PrintWriter writer, Operation op, String returnType,
                                                        String returnExpr, String selfVar) {
         boolean needsResult = op.getPostconditions().stream()

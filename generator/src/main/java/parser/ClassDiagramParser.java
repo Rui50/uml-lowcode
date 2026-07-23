@@ -510,7 +510,8 @@ public class ClassDiagramParser {
         }
     }
 
-    // clone por classe (id ifaceOpId@Classe) para não partilhar o objeto entre classes que a realizam
+    // clone por classe (id ifaceOpId@Classe): não partilha o objeto entre classes que a realizam, e o id
+    // fica estável -> as anotações da frontend (com chaves por id) sobrevivem a re-uploads sem colisão
     private static Operation cloneOperation(Operation src, Class cls) {
         Operation copy = new Operation(src.getId() + "@" + cls.getName(),
                 src.getName(), src.getReturnType(), src.getVisibility());
