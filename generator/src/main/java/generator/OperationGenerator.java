@@ -378,14 +378,18 @@ public class OperationGenerator {
             MessageArgument arg = args.get(0);
             String ownerType = msg.getTarget().getType();
 
-            // lookup direto por attrName
-            Association assoc;
+            // lookup direto por attrName — só com PREFIXO DE CAMPO ("alunos.add(a)").
+            // Sem prefixo ("add(a)") já não se infere: cai no fallback e sai chamada literal this.add(a).
+            // antes inferia-se a associação pelo TIPO do argumento, o que sequestrava um método de negócio
+            // chamado add/remove — gerava acesso à coleção em vez da chamada, e compilava (falha silenciosa).
+            Association assoc = null;
             if (attrName != null) {
                 assoc = findAssocByField(associations, cls, ownerType, attrName);
-            } else {
-                assoc = findAssoc(associations, cls, ownerType, arg.getType());
-                if (assoc != null) attrName = fieldNameFor(assoc, cls, ownerType);
             }
+            // } else {
+            //     assoc = findAssoc(associations, cls, ownerType, arg.getType());
+            //     if (assoc != null) attrName = fieldNameFor(assoc, cls, ownerType);
+            // }
 
             if (assoc != null) {
                 String base = receiver + "." + attrName;
