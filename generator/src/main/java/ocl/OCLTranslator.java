@@ -46,8 +46,6 @@ public class OCLTranslator {
     private String translateArrowNotation(String ocl) {
         String result = ocl;
 
-        // Consume optional whitespace before the arrow so `alunos -> size()`
-        // becomes `alunos.size()` instead of `alunos .size()`.
         result = result.replaceAll("\\s*-\\s*>\\s*size\\s*\\(\\s*\\)", ".size()");
 
         // ->isEmpty() or -> isEmpty() -> .isEmpty()
@@ -69,14 +67,13 @@ public class OCLTranslator {
     private String translateBooleanOperators(String ocl) {
         String result = ocl;
 
-        // 'and' -> '&&' (word boundaries to avoid matching 'sand', 'band', etc)
+        // 'and' -> '&&'
         result = result.replaceAll("\\band\\b", "&&");
 
         // 'or' -> '||'
         result = result.replaceAll("\\bor\\b", "||");
 
-        // 'not' -> '!' (but only as standalone, not in notEmpty which is already handled)
-        // For now, simple replacement (Phase 2 will handle more complex cases)
+        // 'not' -> '!'
         result = result.replaceAll("\\bnot\\b", "!");
 
         return result;
@@ -86,7 +83,7 @@ public class OCLTranslator {
      * Translate OCL comparison operators to Java
      * <p>
      * <> -> !=
-     * = -> == (context-aware: only in comparisons, not assignments)
+     * = -> == (only in comparisons, not assignments)
      */
     private String translateComparisonOperators(String ocl) {
         String result = ocl;
@@ -100,12 +97,6 @@ public class OCLTranslator {
         return result;
     }
 
-    /**
-     * @param invariantName name of the invariant
-     * @param oclExpression original OCL expression
-     * @param customMessage optional custom error message
-     * @return Java code block as String
-     */
     public String generateValidationCode(String invariantName, String oclExpression, String customMessage) {
         String javaExpression = translateToJava(oclExpression);
 

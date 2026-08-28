@@ -15,6 +15,7 @@ import model.sequence.*;
 public class SequenceDiagramParser {
     private Model model;
     private MetaModel metaModel;
+    //  messageId -> num vp
     private Map<String, String> messageNumbers;
 
     public SequenceDiagramParser(Model model, MetaModel metaModel, String xmiFile) throws java.io.IOException {
@@ -44,19 +45,19 @@ public class SequenceDiagramParser {
     }
 
     /**
-     * Constroi um objeto Interaction.
-     * Faz:
-     * 1 - parse das lifelines (para depois associar às mensagens)
-     * 2 - parse das mensagens (criamos os objetos Message e criamos 2 maps,
-     *   um de messageId -> Message e outro de messageId -> sendEvent, para depois construir a hierarquia dos fragments
-     * 3 - construir a hierarquia de fragments
+     * faz um objeto Interaction que basicamente é o diagrama.
+     * 1 - faz parse das lifelines (para depois associar às mensagens)
+     * 2 - depos parse das mensagens (criamos os objetos Message e criamos 2 maps,
+     *   um de messageId -> Message e outro de
+     *   messageId -> sendEvent, para depois construir a hierarquia dos fragments
+     * 3 - construir a a interaction em si
      */
     private Interaction parseInteraction(ModelElement element) {
         Interaction interaction = new Interaction();
         interaction.setId(element.getXMIID());
         interaction.setName(element.getName());
 
-        // lifelines
+        // obter as lifelines e o seu parsing
         Collection<?> lifelines = element.getSetAttribute("lifelines");
         if (lifelines != null) {
             for (Object o : lifelines) {
@@ -70,17 +71,17 @@ public class SequenceDiagramParser {
 
         buildFromMessages(element, interaction, messagesById, sendEventsByMessageId);
 
-        // context = "dono" do diagrama: o tipo do alvo da mensagem de entrada (actor -> lifeline).
-        // distingue diagramas com o mesmo nome (ex: versão entity vs service)
-        interaction.setContextClass(resolveContextClass(interaction));
+        // "dono" do diagrama o tipo do alvo da mensagem de entrada (actor -> lifeline).
+        // distingue diagramas com o mesmo nome, mais para displayt na frontend
+        interaction.setContextClass(firstLifeline(interaction));
         return interaction;
     }
 
     /**
-     * O "dono" do diagrama ou seja o tipo do alvo da mensagem de entrada (actor -> lifeline),
+     * o "dono" do diagrama ou seja o tipo do alvo da mensagem de entrada (actor -> lifeline),
      * ou seja a lifeline que o actor chama. como "fallback" a primeira lifeline com tipo.
      */
-    private String resolveContextClass(Interaction interaction) {
+    private String firstLifeline(Interaction interaction) {
         for (Object el : interaction.getElements()) {
             if (el instanceof Message m
                     && (m.getSource() == null || m.getSource().getType() == null)
@@ -96,13 +97,13 @@ public class SequenceDiagramParser {
 
 
     /**
-     * Constroi a arvore de elementos (Messages e Fragments) do Interaction a partir das mensagens.
-     * Usa a ordem do VP number para garantir que ordem "visual" é a certa
+     * Constroi a estrutura de elementos (Messages e Fragments) do Interaction a partir das mensagens
+     * temos de usar a ordem do VP number para garantir que ordem "visual" é a certa
      *
-     * Usa mapas auxiliares:
+     *  mapas helpers:
      * - messageId -> Message (para obter o Message a partir do id da mensagem)
      * - messageId -> sendEvent (para obter o sendEvent associado a cada mensagem)
-     * - operandId -> Operand (para obter o Operand a partir do id do fragmento combinado)
+     * - operandId -> Operand (para obter o Operand a partir do id do operand)
      * - fragmentId -> Fragment (para obter o Fragment a partir do id do fragmento
      *
      * Para cada mensagem ele pega no sendEvent e ve quem é owner, isso indica o "container" da mensagem
@@ -110,6 +111,7 @@ public class SequenceDiagramParser {
      *
      * Com o container da mensagem, ele chama getOrCreateContainerElements que é recursiva e sobe a arvore de fragments até chegar à raiz (interação)
      */
+
     private void buildFromMessages(ModelElement interactionElement, Interaction interaction,
                                    Map<String, Message> messagesById,
                                    Map<String, ModelElement> sendEventsByMessageId) {
@@ -131,20 +133,21 @@ public class SequenceDiagramParser {
                         + "' não tem número de sequência — não é possível determinar a ordem.");
             }
             // o número tem de ser do tipo "1" ou "1.2.3"
+            /*
             if (!vp.matches("\\d+(\\.\\d+)*")) {
                 throw new IllegalArgumentException(
                         "Diagrama de sequência '" + interaction.getName() + "': a mensagem '"
                         + (m.getRawName() != null ? m.getRawName() : m.getName())
                         + "' tem um número de sequência inválido ('" + vp + "') — esperado algo como 1 ou 1.2.");
-            }
+            }*/
         }
 
         // ordenar por VP number para garantir que a ordem visual é a correta
         sorted.sort((a, b) -> compareWithTheDot(a.getVpNumber(), b.getVpNumber()));
 
-        // percorre as mensagems por ordem e coloca cada uma no seu "container"
+        // percorre as mensagems por ordem e colocar cada uma no seu "container"
         for (Message msg : sorted) {
-            // entry message (actor -> lifeline): anexar direto à raiz
+            // entry message (actor -> lifeline) metemos direto à raiz
             if (msg.getSource() == null || msg.getSource().getType() == null) {
                 interaction.getElements().add(msg);
                 continue;
@@ -156,12 +159,12 @@ public class SequenceDiagramParser {
             // o "container" da mensagem é o owner do seu sendEvent
             ModelElement container = sendEvent.getOwner();
 
-            // containerChildren = referência à lista de filhos do container na árvore (não uma cópia):
+            // containerElements = referência à lista de filhos do container onde se vai meter esta mensagem
             //   raiz               -> interaction.getElements()
             //   dentro de fragment -> operand.getElements()
-            // por isso add() insere a mensagem logo no sítio certo.
-            List<Object> containerChildren = getOrCreateContainerElements(container, interaction, rootId, operands, fragments);
-            containerChildren.add(msg);
+            List<Object> containerElements = getOrCreateContainerElements(container, interaction, rootId, operands, fragments);
+            // inserir a mensagem no fim da lista de elementos deste cont
+            containerElements.add(msg);
         }
     }
 
@@ -170,7 +173,7 @@ public class SequenceDiagramParser {
     /**
      * Dado um container, devolve a lista de elementos onde deve inserir
      *
-     * Existem 3 casos
+     * 3 casos
      * 1 - o container é a própria interação (root) -> devolve interaction.getElements()
      *
      * 2 - o container é um operand já criado -> devolve operand.getElements()
@@ -190,7 +193,7 @@ public class SequenceDiagramParser {
         if (id.equals(rootId)) return interaction.getElements();
 
         Operand op = operands.get(id);
-        // operand já construído por uma mensagem anterior -> reutiliza, não reconstrói
+        // operand já construído por uma mensagem anterior
         if (op != null) return op.getElements();
 
         // criar o operand
@@ -207,16 +210,21 @@ public class SequenceDiagramParser {
         // se o fragment ainda não exist cria-o e liga o PRÓPRIO fragment ao dono
         // dele recursivamente
         // sobe a cadeia de pais até à raiz ou a um nó já criado.
+
+        // operandos pertencem a CombinedFragments (os pais)
         ModelElement combFragelem = container.getOwner();
         Fragment frag = fragments.get(combFragelem.getXMIID());
         if (frag == null) {
+            // nao existe entao tem de ser criado
             frag = new Fragment();
             frag.setId(combFragelem.getXMIID());
             frag.setOperator(combFragelem.getPlainAttribute("operator"));
             fragments.put(combFragelem.getXMIID(), frag);
+            // liga o fragmento ao seu pai, cria recursivamente se precisar
             List<Object> parentList = getOrCreateContainerElements(combFragelem.getOwner(), interaction, rootId, operands, fragments);
             parentList.add(frag);
         }
+        // por fim, liga este operando ao fragmento
         frag.getOperands().add(op);
         return op.getElements();
 
@@ -225,6 +233,8 @@ public class SequenceDiagramParser {
 
     private Map<String, Message> parseMessages(ModelElement element, Interaction interaction,
                                                Map<String, ModelElement> sendEventsByMessageId) {
+
+        // mapa messageId -> Message
         Map<String, Message> messagesById = new HashMap<>();
         Collection<?> messages = element.getSetAttribute("messages");
         if (messages == null) return messagesById;
@@ -250,7 +260,7 @@ public class SequenceDiagramParser {
 
         ModelElement represents = (ModelElement) element.getRefAttribute("represents");
         if (represents != null) {
-            // represents é um ownedAttribute — o nome é o nome da variável ("u")
+            // represents é um ownedAttribute e o nome é o nome da variável ("u")
             String varName = represents.getName();
             lifeline.setRepresents(varName);
 
@@ -260,7 +270,7 @@ public class SequenceDiagramParser {
                 lifeline.setType(vpType);
             }
         }
-        // fallback mas n deve sequer funcionar
+        // fallback se nao conseguir a meter a dar com vp
         else {
             // tipo
             String name = lifeline.getName();
@@ -292,6 +302,7 @@ public class SequenceDiagramParser {
         message.setId(element.getXMIID());
         message.setVpNumber(messageNumbers.get(element.getXMIID()));
 
+        // nome tem tudo (func(arg1 : type1) : returntype)
         String rawName = element.getName();
         message.setRawName(rawName);
 
@@ -331,6 +342,7 @@ public class SequenceDiagramParser {
      *   getTurma()
      *   setTurma(novaTurma: Turma)
      *   get(users: ArrayList<User>) : User
+     *   var = resto
      */
     private void parseMessageSignature(Message message, String rawName) {
         if (rawName == null || rawName.isEmpty()) {
@@ -343,29 +355,39 @@ public class SequenceDiagramParser {
         int equalsIndex = rawName.indexOf('=');
         int parenOpen = rawName.indexOf('(');
 
+        // 1
+        // primeiro separa a atribuição se houver var = ...
         // o '=' tem de vir antes do '(' para ser assignment (senão pode ser parte de um argumento)
         if (equalsIndex != -1 && (parenOpen == -1 || equalsIndex < parenOpen)) {
+            // var de atribuição
             message.setAssignVariable(rawName.substring(0, equalsIndex).trim());
+            // resto da assinatura (method(args) : returnType)
             signaturePart = rawName.substring(equalsIndex + 1).trim();
             parenOpen = signaturePart.indexOf('(');
         }
 
-        // sem parenteses
+        // 2
+        // sem parenteses entao não é chamada, é atribuiçãp
         if (parenOpen == -1) {
             if (message.getAssignVariable() != null) {
-                // atribuição simples: "x = expr" ou "x = expr : Type" (ou seja nao seja uma chamada a um metodo)
+                //  "x = expr" ou "x = expr : Type"
                 String expr = signaturePart.trim();
-                int colon = findColonOutsideGenerics(expr);
+                // encontra onde está o :
+                int colon = findTypeSeparator(expr);
+                // tem tipo
                 if (colon != -1) {
+                    // pega no tipo
                     String type = expr.substring(colon + 1).trim();
-                    if (!type.isEmpty()) message.setReturnType(type);   // : tipo -> declarar com este tipo
+                    if (!type.isEmpty()) message.setReturnType(type);
                     expr = expr.substring(0, colon).trim();
                 }
+                // é so um assign
                 message.setAssignExpression(expr);
             } else {
-                // declaração: "text : String" -> String text;  (sem '=', logo sem valor)
-                int colon = findColonOutsideGenerics(signaturePart);
+                // sem assign variable é so instaciar uma var
+                int colon = findTypeSeparator(signaturePart);
                 if (colon != -1) {
+                    // var name ta antes do colon, tipo de pois
                     String varName = signaturePart.substring(0, colon).trim();
                     String type    = signaturePart.substring(colon + 1).trim();
                     if (!varName.isEmpty() && !type.isEmpty()) {
@@ -380,10 +402,13 @@ public class SequenceDiagramParser {
             return;
         }
 
+        // 3
+        // se chegar aqui é porque é chamada de um metodo
+
         // nome do metodo é tudo antes do '('
         message.setName(signaturePart.substring(0, parenOpen).trim());
 
-        int parenClose = signaturePart.lastIndexOf(')');
+        int parenClose = signaturePart.lastIndexOf(')'); // nao foi fechado ent ignora
         if (parenClose == -1 || parenClose <= parenOpen) {
             return;
         }
@@ -464,7 +489,7 @@ public class SequenceDiagramParser {
         MessageArgument arg = new MessageArgument();
 
         // procurar ':' que não esteja dentro de <>
-        int colonIndex = findColonOutsideGenerics(argString);
+        int colonIndex = findTypeSeparator(argString);
 
         if (colonIndex != -1) {
             // name: Type
@@ -478,9 +503,9 @@ public class SequenceDiagramParser {
         return arg;
     }
     /**
-     * Divide uma string por , mas ignora as vírgulas dentro de < > (listas/maps)
+     * divide a string por , mas ignora as vírgulas dentro de < > (maps)
      * e dentro de ( ) — um argumento "criaAluno(nome, numero)" é UM argumento,
-     * senão a heurística de coleções (size()==1) não dispara e gera acesso a campo private
+     * senão a heurística de coleções (size()==1) não funcionava e gera acesso a campo private
      */
     private List<String> splitArguments(String input) {
         List<String> parts = new ArrayList<>();
@@ -502,16 +527,16 @@ public class SequenceDiagramParser {
     }
 
     /**
-     * Encontra o primeiro ':' que não esteja dentro de < > nem de ( )
+     * find o primeiro ':' que não esteja dentro de < > nem de ( )
      * (evita confundir com generics como List<User> ou com um ':' dentro de uma chamada aninhada)
      */
-    private int findColonOutsideGenerics(String input) {
+    private int findTypeSeparator(String input) {
         int depth = 0;
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
-            if (c == '<' || c == '(') depth++;
-            else if (c == '>' || c == ')') depth--;
-            else if (c == ':' && depth == 0) return i;
+            if (c == '<' || c == '(') depth++; // ta num generic ou parênteses
+            else if (c == '>' || c == ')') depth--; // saiu
+            else if (c == ':' && depth == 0) return i; // // ':'
         }
         return -1;
     }
@@ -525,7 +550,7 @@ public class SequenceDiagramParser {
         return null;
     }
     
-
+    // comprar tendo em conta os numeros do vp que sao 1 1.1 1.1.1 1.2...
     private int compareWithTheDot(String a, String b) {
         String[] ap = a.split("\\.");
         String[] bp = b.split("\\.");
@@ -535,5 +560,68 @@ public class SequenceDiagramParser {
             if (d != 0) return d;
         }
         return ap.length - bp.length;
+    }
+
+    // Alternativa ITERATIVA (while) à recursão, opção futura — não está ligada; o parser usa a recursiva.
+    // Aqui a mensagem já é inserida: buildFromMessages iteraria as mensagens (por ordem do número) e,
+    // para cada uma, chamaria isto, que cria os operandos/fragmentos em falta até à raiz e coloca a
+    // mensagem no seu operando (o mais fundo). O fragmento "pendente" é o que falta ligar ao nível de cima.
+    private void placeMessageIterative(Message msg, ModelElement container, Interaction interaction,
+                                          String rootId, Map<String, Operand> operands, Map<String, Fragment> fragments) {
+        // raiz -> insere direto na interação
+        if (container.getXMIID().equals(rootId)) { interaction.getElements().add(msg); return; }
+        // operando já construído -> insere e sai
+        Operand already = operands.get(container.getXMIID());
+        if (already != null) { already.getElements().add(msg); return; }
+
+        ModelElement current = container;   // vai subindo (é sempre um operando ou a raiz)
+        Operand deepest = null;             // o operando do container inicial (onde a mensagem vai)
+        Fragment pending = null;            // fragmento à espera de ser ligado ao nível de cima
+
+        while (true) {
+            String id = current.getXMIID();
+
+            // chegámos à raiz: o fragmento pendente liga-se diretamente à interação
+            if (id.equals(rootId)) {
+                if (pending != null) interaction.getElements().add(pending);
+                break;
+            }
+            // encontrámos um operando já criado por uma mensagem anterior: liga o pendente e para
+            Operand op = operands.get(id);
+            if (op != null) {
+                if (pending != null) op.getElements().add(pending);
+                break;
+            }
+
+            // criar o operando deste nível
+            op = new Operand();
+            op.setId(id);
+            ModelElement guard = (ModelElement) current.getRefAttribute("guard");
+            if (guard != null) op.setGuard(guard.getPlainAttribute("value"));
+            operands.put(id, op);
+            if (deepest == null) deepest = op;           // o 1º criado = o da mensagem
+
+            // ligar o fragmento do nível de baixo dentro deste operando
+            if (pending != null) op.getElements().add(pending);
+
+            // fragmento pai deste operando
+            ModelElement fragElem = current.getOwner();
+            Fragment frag = fragments.get(fragElem.getXMIID());
+            if (frag != null) {
+                // fragmento já existe (logo já está ligado acima): só encaixa o operando e para
+                frag.getOperands().add(op);
+                break;
+            }
+            frag = new Fragment();
+            frag.setId(fragElem.getXMIID());
+            frag.setOperator(fragElem.getPlainAttribute("operator"));
+            fragments.put(fragElem.getXMIID(), frag);
+            frag.getOperands().add(op);
+
+            pending = frag;                 // fica pendente para o nível de cima
+            current = fragElem.getOwner();  // sobe: dono do fragmento = operando pai ou raiz
+        }
+        // a mensagem vai sempre para o operando mais fundo (o container direto dela)
+        deepest.getElements().add(msg);
     }
 }

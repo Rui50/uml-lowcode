@@ -25,7 +25,7 @@ public class Operation {
 
     private List<Postcondition> postconditions = new ArrayList<>();
 
-    // operação é um job @Scheduled (Spring) sem endpoint REST, sem parâmetros/caller
+    // operação é um job @Scheduled (Spring) sem endpoint REST
     private boolean isJob = false;
     private String cron;                    // expressão cron do job
 

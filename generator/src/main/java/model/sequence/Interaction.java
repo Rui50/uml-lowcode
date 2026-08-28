@@ -57,6 +57,7 @@ public class Interaction {
 
     /**
      * Devolve apenas as Messages root-level
+     * so msm para encontrar a primeira msg
      */
     public List<Message> getMessages() {
         List<Message> msgs = new ArrayList<>();

@@ -1,9 +1,9 @@
 package model;
 
-import model.Class;
 import java.util.List;
 import model.sequence.Interaction;
 
+// modelo inteiro para mandar para a frontend etc
 public class ParsedModel {
     private List<Class> classes;
     private List<Association> associations;

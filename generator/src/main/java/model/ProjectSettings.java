@@ -5,10 +5,10 @@ public class ProjectSettings {
     private String applicationName;
     private String databaseType;   // "H2" | "POSTGRESQL" | "MYSQL"
     private Integer serverPort;
-    private Boolean openApi;        // incluir OpenAPI/Swagger (null = default = true)
-    private Boolean dockerfile;     // gerar Dockerfile (null = default = false)
-    private Boolean timestamps;     // adicionar createdAt/updatedAt nas entidades (Spring; null = default = false)
-    private Boolean demoFrontend;   // gerar uma ui demo HTML+JS em resources/static (Spring; null = default = false)
+    private Boolean openApi;        // incluir OpenAPI/Swagger
+    private Boolean dockerfile;     // gerar Dockerfile
+    private Boolean timestamps;     // adicionar createdAt/updatedAt nas entidades
+    private Boolean demoFrontend;   // gerar uma ui demo HTML+JS em resources/static
 
     public Boolean getDemoFrontend() { return demoFrontend; }
     public void setDemoFrontend(Boolean demoFrontend) { this.demoFrontend = demoFrontend; }

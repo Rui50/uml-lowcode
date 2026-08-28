@@ -14,12 +14,11 @@ import java.util.Set;
 
 /**
  * Representa uma classe UML.
- *
  * Identificador JPA (id) — sempre auto-gerado:
  *  - idAttributeName == null  -> id por defeito: @Id @GeneratedValue Long id
  *  - idAttributeName != null  -> @Id @GeneratedValue no atributo escolhido
  *  - idAttributeType          -> tipo Java do id (default Long)
- *  A anotação vive na RAIZ da hierarquia; uma classe filha resolve o id via getRoot().
+ *  A anotação vive na RAIZ da hierarquia uma classe filha pega no o id com getRoot().
  */
 public class Class {
 
@@ -39,40 +38,39 @@ public class Class {
 
     ///  ANOTACAO
 
-    // estratégia de herança JPA, definida na superclass "SINGLE_TABLE" (default) | "JOINED"
+    // estratégia de herança JPA definida na superclass "SINGLE_TABLE" (é o default) | "JOINED"
     private String inheritanceStrategy = "SINGLE_TABLE";
 
-    // nome da tabela JPA (override do utilizador); null/vazio = derivado (nome da classe em minúsculas)
+    // nome da tabela JPA (override do utilizador) nao preenchido usa nome da classe em minúsculas)
     private String tableName;
 
-    // gerar o controller REST para esta classe? (Spring) — default true
+    // gerar o controller REST para esta classe? (Spring)
     private boolean generateController = true;
 
-    // transformar invariantes OCL simples em anotações de Validation em spring — default true
+    // transformar invariantes OCL simples em anotações de Validation em spring
     private boolean beanValidation = true;
 
     // identificador JPA (sempre auto-gerado)
-    // idAttributeName == null -> id sintético (@Id @GeneratedValue Long id) [default]
-    // caso contrário          -> usa esse atributo como @Id @GeneratedValue
-    private String idAttributeName;          // null = id sintético
+    // nao indicado entao usa id auto (@Id @GeneratedValue Long id) cpmmo default
+    // caso contrário usa esse atributo como @Id @GeneratedValue
+    private String idAttributeName;          // null = id autogerado
     private String idAttributeType = "Long"; // tipo Java do id (default Long)
 
     private List<Invariant> invariants;
 
-    // atributos escondidos de cada DTO (Create/Update/Response) desta classe.
-    // é herdado: esconder é sobre o ATRIBUTO, e o atributo é herdado -> isHiddenIn* une pela cadeia
-    // Na CLASSE e não no Attribute: instâncias de atributos herdados são partilhadas com o pai,
+    // atributos escondidos em cada DTO (Create/Update/Response).
     private Set<String> hiddenInCreate = new HashSet<>();
     private Set<String> hiddenInUpdate = new HashSet<>();
     private Set<String> hiddenInResponse = new HashSet<>();
-    private Map<String, String> collectionOrder = new HashMap<>();   // field da coleção -> "attr ASC|DESC" (@OrderBy)
+    private Map<String, String> collectionOrder = new HashMap<>();   // field da coleção  "attr ASC|DESC" (@OrderBy)
 
-    // Override do response POR ENDPOINT (endpointType: List | Get | Create | Update): esse endpoint
+    // override por ENDPOINT (endpointType: List | Get | Create | Update) esse endpoint
     // devolve um ResponseDTO próprio, com campos escondidos independentes do default da classe
     private Map<String, ResponseOverride> responseOverrides = new HashMap<>();
 
 
-    public Class(String name, String visibility) {
+    public Class(String id, String name, String visibility) {
+        this.id = id;
         this.name = name;
         this.visibility = visibility;
         this.attributes = new ArrayList<>();
@@ -153,7 +151,6 @@ public class Class {
     }
 
     public void setTableName(String tableName) {
-        // só guarda um override real; vazio/branco mantém o nome derivado
         this.tableName = (tableName != null && !tableName.isBlank()) ? tableName.trim() : null;
     }
 
@@ -187,15 +184,11 @@ public class Class {
 
     public void setIdAttributeType(String idAttributeType) {
         if (idAttributeType == null || idAttributeType.isBlank()) return;
-        // ids têm de ser tipos de referência (generics em JpaRepository<>, List<>, etc.
-        // não aceita primitivos
+        // int/long -> Integer/Long (o id vai para os generics de JpaRepository<T, ID>)
         this.idAttributeType = fixIdType(idAttributeType);
     }
 
-    // realizations são por classe e não são herdadas.
-    // Se uma interface for realizada por uma classe abstrata, as subclasses
-    // concretas não a herdam (getRealizations() devolve só as próprias).
-    // Para suportar, é preciso percorrer a cadeia de pais, tipo isOrInheritsFrom/super.validate().
+    // realizations são por classe e não são herdadas (o extends/super.validate já trata a herança)
     public List<Interface> getRealizations() {
         return realizations;
     }
@@ -219,7 +212,7 @@ public class Class {
     public Set<String> getHiddenInResponse() { return hiddenInResponse; }
     public Map<String, String> getCollectionOrder() { return collectionOrder; }
 
-    // escondido se ESTA classe ou qualquer antepassado o esconder (união pela cadeia de pais)
+    // escondido se esta classe ou qualquer pai esconder
     public boolean isHiddenInCreate(String attrName) {
         for (Class c = this; c != null; c = c.getParentClass())
             if (c.hiddenInCreate.contains(attrName)) return true;
@@ -236,19 +229,19 @@ public class Class {
         return false;
     }
 
-    // mapa keyed pelo endpointType (List|Get|Create|Update)
+    // endpointType (List|Get|Create|Update) -> responseoverridse
     public Map<String, ResponseOverride> getResponseOverrides() { return responseOverrides; }
 
     public boolean hasResponseOverride(String endpointType) { return responseOverrides.containsKey(endpointType); }
 
-    // não herda (endpoint-level, ver responseOverrides); só o mapa desta classe
+    // só os overrides desta classe (não herda dos pais).
     public Set<String> responseOverrideHidden(String endpointType) {
         ResponseOverride o = responseOverrides.get(endpointType);
-        if (o == null) return Set.of();   // sem override -> nada escondido
+        if (o == null) return Set.of(); // nao ta a esconder nada para este endpoint
         return o.getHidden();
     }
 
-    // nome custom do DTO do override (vazio = usar o auto <Class><EndpointType>ResponseDTO)
+    // nome custom do DTO do override (nao preenchido usa <Class><EndpointType>ResponseDTO)
     public String responseOverrideName(String endpointType) {
         ResponseOverride o = responseOverrides.get(endpointType);
         if (o == null) return "";
@@ -287,15 +280,13 @@ public class Class {
         return getRoot().getInheritanceStrategy();
     }
 
-    // id "atribuído" pelo cliente (chave natural String): sem @GeneratedValue e
-    // incluído no CreateDTO. Os restantes (Long/Integer/UUID) são gerados pelo servidor.
+    // id "atribuído" pelo cliente (chave natural String) sem @GeneratedValue e incluído no CreateDTO
+    // os outros tipos (Long/Integer/UUID) são gerados pelo servidor.
     public boolean isIdAssigned() {
         return "String".equals(getRoot().getIdAttributeType());
     }
 
-    // Atributos próprios + herdados, MAIS-DERIVADO primeiro (own, depois pai, depois avô).
-    // NB: GeneratorUtils.ancestorAttributes(cls) é diferente — só os ANCESTRAIS e RAIZ-primeiro
-    // (para a ordem dos args do super(...) no CLI). Escolher conforme o caso.
+    // próprios + herdados
     public List<Attribute> getAllAttributes() {
         List<Attribute> allAttributes = new ArrayList<>(attributes);
         if (parentClass != null) {

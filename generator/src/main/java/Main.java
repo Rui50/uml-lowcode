@@ -159,7 +159,7 @@ public class Main {
     private static String translateOcl(String expr) {
         OCLLexer lexer = new OCLLexer(CharStreams.fromString(expr));
         OCLParser p = new OCLParser(new CommonTokenStream(lexer));
-        return new OCLToJavaVisitor().visit(p.standaloneExpression());
+        return new OCLToJavaVisitor().visit(p.mainOclExpression());
     }
 
     private static void printElements(java.util.List<Object> elements, int depth) {

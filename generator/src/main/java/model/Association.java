@@ -124,9 +124,8 @@ public class Association extends Relationship {
         return hasQualifier() && isSource == qualifierOnSource;
     }
 
-    // as chaves de um Map têm de ser tipos de referência; o VP exporta os
-    // primitivos em minúsculas ( "string", "int"), por isso normalizamos
-    // para o tipo Java correspondente
+    // a chave de um Map tem de ser Integer/String/... e não int/string.
+    // o VP da os tipos em minúsculas ("int","string") ent temos de converter
     private static String toJavaKeyType(String t) {
         if (t == null) return null;
         switch (t.trim().toLowerCase()) {
@@ -139,7 +138,7 @@ public class Association extends Relationship {
             case "char": case "character": return "Character";
             case "double":                 return "Double";
             case "float":                  return "Float";
-            default:                       return t;   // tipo de referência definido pelo utilizador (classe/enum)
+            default:                       return t;  // definido pelo utilizador (classe/enum)
         }
     }
 

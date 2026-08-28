@@ -109,12 +109,12 @@ other part of SDMetrics.
 	<attribute name="aggregation">The aggregation kind of the property: shared, composite, or none (default).</attribute>
 	<attribute name="qualifiers" type="ref" multiplicity="many">The qualifier attributes of the property.</attribute>
     <!-- para a multiplicidade -->
-    <attribute name="lowervalue" type="ref">Lower value of multiplicity.</attribute>
-    <attribute name="uppervalue" type="ref">Upper value of multiplicity.</attribute>
+    <attribute name="lowervalue" type="ref">Lower value da multiplicidade.</attribute>
+    <attribute name="uppervalue" type="ref">Upper value da multiplicidade.</attribute>
     <!-- para navegabilidade -->
-    <attribute name="isnavigable">Indicates if this association end is navigable.</attribute>
+    <attribute name="isnavigable">Se é navegavel.</attribute>
     <!-- tipo da lifeline (VP extension) -->
-    <attribute name="vptype">Type name from Visual Paradigm extension (for lifeline represents).</attribute>
+    <attribute name="vptype">Tipo da lifeline.</attribute>
 
 </modelelement>
 
@@ -213,8 +213,8 @@ other part of SDMetrics.
 
 <modelelement name="interactionoperand">
   <attribute name="fragments" type="ref" multiplicity="many">The message occurrence specifications and combined fragments of the interaction operand.</attribute>
-    <!-- add guard para os loops etc -->
-  <attribute name="guard" type="ref">The guard condition expression of this operand.</attribute>
+    <!-- guard para loops etc -->
+  <attribute name="guard" type="ref">Condição "guard" do operando.</attribute>
 </modelelement>
 
 
@@ -346,8 +346,8 @@ other part of SDMetrics.
 <modelelement name="literalboolean"/>
 <!--<modelelement name="literalinteger"/> -->
 <modelelement name="literalreal"/>
-<!-- estas duas estao a colidir com as novas adicionadas para a multiplicidade
 
+<!-- estas duas estao a colidir com as novas adicionadas para a multiplicidade
 <modelelement name="literalstring"/>
 <modelelement name="literalunlimitednatural"/>
 -->
@@ -381,7 +381,7 @@ other part of SDMetrics.
 <modelelement name="stereotype" />
 <modelelement name="comment">
   <attribute name="body">The comment text.</attribute>
-  <!-- para saber as classes anotadas-->
+  <!-- para saber as classes anotadas nos testes iniciais-->
   <attribute name="annotatedelement" type="ref" multiplicity="many">Elements annotated by this comment.</attribute>
 
 </modelelement>

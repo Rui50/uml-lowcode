@@ -14,8 +14,8 @@
 <template>
   <main class="page">
     <header class="masthead">
-      <span class="kicker">UML&nbsp;->&nbsp;Code</span>
-      <h1 class="title">UML-LowCode</h1>
+      <!--<span class="kicker">UML&nbsp;->&nbsp;Code</span>-->
+      <!--<h1 class="title">UML-LowCode</h1>-->
       <p class="lede">Upload a UML model to begin.</p>
       <p class="accepts">
         accepts <strong>Visual&nbsp;Paradigm</strong> <code>XMI</code> exports

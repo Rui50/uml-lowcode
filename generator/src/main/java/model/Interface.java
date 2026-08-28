@@ -7,7 +7,7 @@ import java.util.List;
 
 /**
  *  Interface UML.
- *  apenas operations — sem atributos, sem herança de classes.
+ *  apenas operations  sem atributos  sem herança de classes.
  */
 public class Interface {
     private String id; // xmi:id
@@ -16,7 +16,8 @@ public class Interface {
     private List<Operation> operations;
     private List<Invariant> invariants = new ArrayList<>();
 
-    public Interface(String name, String visibility) {
+    public Interface(String id, String name, String visibility) {
+        this.id = id;
         this.name = name;
         this.visibility = visibility;
         this.operations = new ArrayList<>();

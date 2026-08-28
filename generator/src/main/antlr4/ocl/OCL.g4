@@ -12,13 +12,13 @@
 *
 * SPDX-License-Identifier: EPL-2.0
 *
-* Modified: added standaloneExpression rule for parsing bare OCL expressions
+* added mainOclExpression rule for parsing just the main part of the OCL expressions
 * *****************************/
 
 grammar OCL;
 
 // Entry point for bare expressions (e.g., from UML annotations)
-standaloneExpression
+mainOclExpression
     : expression EOF
     ;
 

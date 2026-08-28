@@ -3,7 +3,9 @@ package ocl;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -14,9 +16,10 @@ import java.util.Map;
  *
  * assume sempre sempre listas ou sets na tradução, se for maps o ValidationGenerator da fix a isso
  *
- * OCL NÃO SUPORTADO
- * Estas lançam IllegalArgumentException ("Operação OCL não suportada") no fim de
- * visitPostfixTranslate — o erro chega à frontend via AnnotationService.
+ * OCL NÃO SUPORTADO lançam IllegalArgumentException ("Operação OCL não suportada")
+ *
+ * no fim de visitPostfixTranslate e o erro chega à frontend pelo AnnotationService.
+ *
  *  - tipos: oclIsKindOf, oclIsTypeOf, oclAsType, oclType, oclAsSet,
  *           oclIsUndefined, oclIsInvalid, oclIsNew
  *  - coleções: union, intersection, symmetricDifference, excludesAll, prepend,
@@ -24,24 +27,17 @@ import java.util.Map;
  *
  * (não dá para suportar no validate() de uma entidade):
  *  - allInstances()  — todas as instâncias
- *  - @pre / oclIsNew / oclIsInvalid — semântica de pós-condição (estado antes/depois)
- *  - closure         — fecho transitivo (precisa de ponto-fixo)
+ *  - @pre / oclIsNew / oclIsInvalid — pós-condição (estado antes/depois)
  *
- * LIMITAÇÕES (traduz, mas com cuidado):
- *  - sum() assume coleção de Integer (não double/float)
- *  - '=' numérico com literal (ex. "balance = 0") sai como ==, que é o correcto. Entre duas
- *    expressões numéricas de wrappers diferentes (Long vs Integer) continua Objects.equals e dá
- *    sempre false — não é gerável a partir de entidades, cujos campos são primitivos. O literal
- *    também tem de estar solto: "(0)" ou "1 + 1" não são reconhecidos e caem no Objects.equals.
- *  - misturar operadores lógicos diferentes (ex: 'a and b xor c') pode agrupar mal
- *  - '/' traduz para '/' do Java: divisão inteira se ambos os operandos forem int
- *    (OCL define '/' como divisão real: 21/2 = 10.5)
+ * problemas (traduz, mas com problemas):
+ *  - sum() assume lista de Integer (não double/float)
+ *  - só fica == com um número literal de um lado (como "x = 0")  senão faz Objects.equals
  */
 public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
-    // bindings de 'let' ativas: nome -> expressão Java já traduzida. Substituição inline
-    // (let é puro em OCL): cada uso de x emite a tradução do seu valor. Ver visitBasicExpression.
+    // mapa de 'let': nome -> tradução Java do valor. usado para substituir vez que o nome é usado.
     private final Map<String, String> letScope = new HashMap<>();
+
 
     public static String toJava(String oclExpression) {
         if (oclExpression == null || oclExpression.trim().isEmpty()) {
@@ -51,12 +47,12 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         OCLLexer lexer = new OCLLexer(CharStreams.fromString(oclExpression));
         OCLParser parser = new OCLParser(new CommonTokenStream(lexer));
 
-        // por defeito, num erro de sintaxe o ANTLR apenas imprime o erro e tenta
-        // "recuperar", continua a construir uma árvore incompleta/inválida. Essa árvore
+        // por defeito  o ANTLR, ao ter um erro de sintaxe imprime o erro e continua com uma árvore invalida que
         // depois rebenta no visitor com um NullPointerException  (HTTP 500).
 
-        //  para evitar isso, substituímos os listeners por defeito por um que lança exceção
+        // para evitar isso, substituímos o listener de erro por um que lança exceção
         // logo no primeiro erro de sintaxe, com uma mensagem clara e antes de a árvore ser visitada
+        //https://www.antlr.org/api/Java/org/antlr/v4/runtime/BaseErrorListener.html
         org.antlr.v4.runtime.BaseErrorListener throwing = new org.antlr.v4.runtime.BaseErrorListener() {
             @Override
             public void syntaxError(org.antlr.v4.runtime.Recognizer<?, ?> r, Object sym,
@@ -75,18 +71,20 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         parser.removeErrorListeners();
         parser.addErrorListener(throwing);
 
-        return new OCLToJavaVisitor().visit(parser.standaloneExpression());
+        return new OCLToJavaVisitor().visit(parser.mainOclExpression());
     }
 
-    // standalone adicionado ao .g4 original, para ignorar a parte do "context X inv Y:"
+    // mainOclExpression adicionado ao .g4 original, para ignorar a parte do "context X inv Y:"
     // context nao vai ser necessário porque ja vai estar associado a classe
-    // standaloneExpression : expression EOF
+    // mainOclExpression : expression EOF
     @Override
-    public String visitStandaloneExpression(OCLParser.StandaloneExpressionContext ctx) {
+    public String visitMainOclExpression(OCLParser.MainOclExpressionContext ctx) {
         return visit(ctx.expression());
     }
 
-    // expression : logicalExpression | conditionalExpression | letExpression
+    /*
+        expression : logicalExpression | conditionalExpression | letExpression
+    */
     // Uma expressão pode ser uma de tres coisas, verificamos qual é e visitamos
     @Override
     public String visitExpression(OCLParser.ExpressionContext ctx) {
@@ -96,52 +94,46 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         return ctx.getText();
     }
 
-    // Regra: letExpression : 'let' letBinding (',' letBinding)* 'in' expression
-    // 'let' nomeia sub-expressões para reuso/legibilidade. Não há variável local em Java
-    // (traduzimos para UMA expressão), por isso fazemos substituição inline: cada uso do
-    // nome no corpo emite a tradução do seu valor (ver visitBasicExpression).
-    //
-    // ex:  let x = self.preco, y = self.stock in x > y   ->   (this.preco) > (this.stock)
-    //      preenche letScope { x -> "(this.preco)", y -> "(this.stock)" } e depois traduz "x > y"
+    /*
+        letExpression : 'let' letBinding (',' letBinding)* 'in' expression
+    */
+    // let basicamente dá nome a uma xpressão, so substitumos o nome (let x) pela expressão, sem vars
+    //  let x = self.preco, y = self.stock in x > y   ->   (this.preco) > (this.stock)
     @Override
     public String visitLetExpression(OCLParser.LetExpressionContext ctx) {
-        // repor o scope no fim: nomes novos saem, nomes que já existiam voltam ao valor antigo
-        java.util.List<String> added = new java.util.ArrayList<>();
-        java.util.Map<String, String> replaced = new java.util.HashMap<>();
-
+        // regista cada binding no letScope e limpa-os quando o let acaba
+        List<String> names = new ArrayList<>();
         for (OCLParser.LetBindingContext b : ctx.letBinding()) {
-            String name  = b.ID().getText();                  // ex: "x"
-            String value = "(" + visit(b.expression()) + ")"; // ex: "(this.preco)"  (bindings anteriores já ativas)
-            if (letScope.containsKey(name)) replaced.put(name, letScope.get(name)); // já existia -> guardar o antigo
-            else added.add(name);                                                   // novo -> marcar p/ remover
+            String name  = b.ID().getText(); // id do binding = x
+            String value = "(" + visit(b.expression()) + ")"; // expressão do binding = (this.preco)
             letScope.put(name, value);
+            names.add(name);
         }
 
-        String body = visit(ctx.expression());        // a expressão depois do 'in'
+        String body = visit(ctx.expression());   // o corpo (depois do 'in') ja ve os bindings
 
-        // repor o scope ao estado anterior a este let
-        for (String n : added) letScope.remove(n);    // os novos -> apagar
-        letScope.putAll(replaced);                    // os tapados -> repor o valor antigo
+        for (String n : names) letScope.remove(n);   // limpar no fim do let
         return body;
     }
 
-    // Regra:
-    // basicExpression
-    //    : NULL_LITERAL              -> null
-    //    | BOOLEAN_LITERAL           -> true / false
-    //    | basicExpression '.' ID    -> acesso a propriedade (self.alunos)
-    //    | basicExpression '(' expressionList? ')'  -> chamada de metodo (self.getName())
-    //    | basicExpression '[' expression ']'       -> acesso por índice (self.alunos[0])
-    //    | INT                       -> número inteiro (30)
-    //    | FLOAT_LITERAL             -> número decimal (1.5)
-    //    | STRING1_LITERAL           -> string com aspas duplas ("hello")
-    //    | STRING2_LITERAL           -> string com aspas simples ('hello')
-    //    | ENUMERATION_LITERAL       -> enumeração (Color::Red)
-    //    | ID                        -> identificador simples (alunos, x)
-    //    | '(' expression ')'        -> expressão entre parênteses
-    //
-    // ctx.XXXX() retorna o token se esta alternativa foi a que deu match, ou null se não foi.
-    // se a expressão é "30", ctx.INT() retorna o token "30", e ctx.ID() retorna null.
+    /*
+     basicExpression
+        : NULL_LITERAL              -> null
+        | BOOLEAN_LITERAL           -> true / false
+        | basicExpression '.' ID    -> acesso a propriedade (self.alunos)
+        | basicExpression '(' expressionList? ')'  -> chamada de metodo (self.getName())
+        | basicExpression '[' expression ']'       -> acesso por índice (self.alunos[0])
+        | INT                       -> número inteiro (30)
+        | FLOAT_LITERAL             -> número decimal (1.5)
+        | STRING1_LITERAL           -> string com aspas duplas ("hello")
+        | STRING2_LITERAL           -> string com aspas simples ('hello')
+        | ENUMERATION_LITERAL       -> enumeração (Color::Red)
+        | ID                        -> id simples (alunos, x)
+        | '(' expression ')'        -> expressão entre parênteses
+    */
+
+    // ctx.XXXX() da o content se esta alternativa foi a que deu match, ou null se não foi.
+    // se a expressão é "30", ctx.INT() retorna "30", e ctx.ID() retorna null.
     @Override
     public String visitBasicExpression(OCLParser.BasicExpressionContext ctx) {
 
@@ -168,13 +160,13 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         if (ctx.STRING1_LITERAL() != null) {
             return ctx.STRING1_LITERAL().getText();
         }
-        // string com aspas simples — OCL usa '', Java usa ""
+        // string com aspas simples OCL usa '', Java usa ""
         if (ctx.STRING2_LITERAL() != null) {
             String s = ctx.STRING2_LITERAL().getText();
             return "\"" + s.substring(1, s.length() - 1) + "\"";
         }
 
-        // enum literal: EstadoAluno::ATIVO -> EstadoAluno.ATIVO
+        // enum literal EstadoAluno::ATIVO -> EstadoAluno.ATIVO
         if (ctx.ENUMERATION_LITERAL() != null) {
             return ctx.ENUMERATION_LITERAL().getText().replace("::", ".");
         }
@@ -184,31 +176,24 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             return "(" + visit(ctx.expression()) + ")";
         }
 
-        // representacao "self.owner.matches('x')" (regra basicExpression '(' expressionList? ')'):
-        //   ctx  = self.owner.matches('x')
-        //    |- basicExpression = self.owner.matches <- 'left'
-        //    |    |- basicExpression = self.owner    <- left.basicExpression()  (receptor)
-        //    |    '- ID = matches                    <- left.ID()               (método)
-        //    |- '('
-        //    |- expressionList = 'x'                 <- ctx.expressionList()    (args)
-        //    '- ')'
-        //
-        // self.owner.matches('x'): chamada de metodo com argumentos.
-        //  A gramática agarra o nome do metodo (matches) ao 'left' (self.owner.matches) e deixa ctx.ID() null.
-        // Separamos o receptor do metodo, senão 'matches' seria traduzido como getMatches().
-        // Os args vêm de ctx.expressionList() (nó de fora), não de 'left'.
+        // basicExpression '(' expressionList? ')'
+
+        // chamada de metodo com argumentos do tipo self.owner.matches("x")
+        // a gramatica mete o nome do metodo (matches) no no da esqueda, e ctx.ID() null
         if (ctx.ID() == null && ctx.basicExpression() != null && ctx.getChildCount() > 1 && ctx.getChild(1).getText().equals("(")) {
-            // 'left' é tudo menos os (args): em self.owner.matches('x') é o nó self.owner.matches
+            // 'left' é tudo menos os (args) em self.owner.matches('x') é self.owner.matches
             OCLParser.BasicExpressionContext left = ctx.basicExpression();
-            // esse nó tem de ser um acesso a nome (basicExpression '.' ID) para haver metodo a chamar:
-            //   left.basicExpression() = self.owner  (o receptor)   left.ID() = matches  (o metodo)
-            // se não tiver as duas partes não é uma chamada de metodo
+
+            // left tem de ter as duas partes basicExpression é o objeto que se ta a mexer, left.ID() é o metodo
             if (left.ID() != null && left.basicExpression() != null) {
                 String recv = visit(left.basicExpression());   // self.owner -> this.getOwner()
+                // pode ou nao ter argumentos
                 String args = ctx.expressionList() != null ? visit(ctx.expressionList()) : "";
-                String op   = left.ID().getText();             // "matches"
-                // self.X(...) -> operação da própria classe, passa igual; sobre um valor -> só as
-                // que sabemos mapear (javaValueOp), o resto falha.
+                // o nome do metodo
+                String op   = left.ID().getText(); // "matches"
+
+                // metodo da propria classe passa normal
+                // se for um metodo de Java tem de ser traduzido para o equivalente
                 String name;
                 if ("this".equals(recv)) {
                     name = op;
@@ -219,28 +204,22 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             }
         }
 
-        // accesso a propriedade ou chamada de metod
-        // self.alunos, self.getName(), self.alunos[0]
-        // ctx.basicExpression() é o lado esquerdo (self")
-        // ctx.ID() é o nome da propriedade/metodo ("alunos", "getName")
+        // basicExpression '.' ID  ->  acesso a propriedade em OCL tipo self.alunos
+        // ctx.basicExpression() = o lado esquerdo (self) e  ctx.ID() = o nome (alunos)
         if (ctx.ID() != null && ctx.basicExpression() != null) {
-            String base = visit(ctx.basicExpression()); // lado esquerdo recursivamente
+            String base = visit(ctx.basicExpression()); // traduz o lado esquerdo
 
-            // chamada de metodo sem argumentos como self.getId()
-            // Verificamos se o último filho é ")"
+            /* nem chega aqui
             if (ctx.getChildCount() > 2 && ctx.getChild(ctx.getChildCount() - 1).getText().equals(")")) {
                 return base + "." + ctx.ID().getText() + "()";
             }
             // acesso por índice: self.alunos[0] -> this.alunos.get(0)
             if (ctx.expression() != null) {
                 return base + ".get(" + visit(ctx.expression()) + ")";
-            }
+            }*/
 
-            // accesso a propriedade -> SEMPRE getter (this.getX() e a.getX()).
-            // this.getX() (em vez de this.x) faz um invariante de SUBCLASSE que refere
-            // atributo herdado compilar (o campo é private no pai, mas o getter é herdado)
-            // e unifica com o acesso a outros objetos numa só forma. Cobre também os
-            // derivados (sem campo, só getter) -> deixou de ser preciso o fixDerivedAccess.
+            // propriedade -> getter (this.getX()), não o campo
+            // (campo herdado é private e getter herda-se e cobre também os derivados)
             String prop = ctx.ID().getText();
             String getter = "get" + prop.substring(0, 1).toUpperCase() + prop.substring(1);
             return base + "." + getter + "()";
@@ -249,16 +228,18 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         if (ctx.ID() != null) {
             String name = ctx.ID().getText();
             if (letScope.containsKey(name)) {
-                return letScope.get(name);   // é variável de let -> devolve a tradução, ex "(this.preco)"
+                return letScope.get(name);   // é variável de let -> devolve a tradução,
             } else {
-                return name;                 // não é -> devolve o próprio nome, ex "a"
+                return name;                 // não é -> devolve o próprio nome
             }
         }
 
         return ctx.getText();
     }
 
-    // regra: expressionList : (expression ',')* expression
+    /*
+        expressionList : (expression ',')* expression
+    */
     // lista de expressões separadas por vírgulas ( em argumentos )
     // vamos a cada expressão e juntamos com ", "
     @Override
@@ -271,15 +252,14 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         return sb.toString();
     }
 
-    // regra: logicalExpression : equalityExpression (('and' | 'or' | 'implies' ...) equalityExpression)*
-    // : self.x > 0 and self.y > 0  ->  this.x > 0 && this.y > 0
-    //
-    // TODO: misturar operadores diferentes (ex: 'a and b xor c') pode agrupar mal,
-    // porque a tradução não mete parênteses e a precedência do Java difere da do OCL.
-    // Fix: juntar por precedência OCL (and > or > xor > implies) com parênteses.
+    /*
+        logicalExpression
+            : equalityExpression (('and' | '&' | 'or' | 'xor' | '=>' | 'implies') equalityExpression)* ;
+     */
+    // self.x > 0 and self.y > 0  ->  this.x > 0 && this.y > 0
     @Override
     public String visitLogicalExpression(OCLParser.LogicalExpressionContext ctx) {
-        // se so tem uma equalityExpression, visita  diretamente
+        // se so tem uma equalityExpression, visita  diretamente (tipo self.x > 0)
         if (ctx.equalityExpression().size() == 1) {
             return visit(ctx.equalityExpression(0));
         }
@@ -290,7 +270,8 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
         for (int i = 1; i < ctx.equalityExpression().size(); i++) {
             // O operador está entre as equalityExpressions
-            // pos : 0=expr, 1=op, 2=expr, 3=op, 4=expr...
+            //  0=expr, 1=op, 2=expr, 3=op, 4=expr ...
+            // ent impar = operador, par = equalityExpression
             String op = ctx.getChild(2 * i - 1).getText();
             String right = visit(ctx.equalityExpression(i));
             switch (op) {
@@ -306,7 +287,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
                     sb.append(" ^ ").append(right);
                     break;
                 case "implies":
-                case "=>":          // '=>' é só notação alternativa de 'implies'
+                case "=>":          // '=>' é só alternativa de 'implies'
                     // a implies b -> !(a) || (b)
                     String left = sb.toString();
                     sb.setLength(0);
@@ -320,9 +301,11 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         return sb.toString();
     }
 
-    // Regra: equalityExpression : additiveExpression (('=' | '<>' | '<' | '>' | '<=' | '>=')additiveExpression)*
-    // como self.capacity > 100 -> this.capacity > 100
-    // self.nome <> ''     ->  !this.nome.equals("")
+    /*
+        equalityExpression : additiveExpression (('=' | '<' | '>' | '>=' | '<=' | '/=' | '<>' | ':' | '/:' | '<:') additiveExpression)*
+    */
+    // self.capacity > 100  ->  this.getCapacity() > 100
+    // self.nome <> ''  ->  !java.util.Objects.equals(this.getNome(), "")
 
     @Override
     public String visitEqualityExpression(OCLParser.EqualityExpressionContext ctx) {
@@ -337,13 +320,14 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             String op = ctx.getChild(2 * i - 1).getText();
             String right = visit(ctx.additiveExpression(i));
 
-            // = e <> usam Objects.equals (seguro para null, strings e enums), EXCEPTO quando um
-            // dos lados é literal numérico, dava "box" Double vs Integer e dava sempre false.
+            // = e <> passam para Objects.equals (seguro para null, strings e enums),
+            // exceto quando é um número (0, 2.5) usa ==/!=
+            // senão o Objects.equals comparava Double com Integer e dava sempre false.
             if (op.equals("=") || op.equals("<>") || op.equals("/=")) {
                 String left = sb.toString();
                 boolean negate = !op.equals("=");
                 sb.setLength(0);
-                if (isNumericLiteral(left) || isNumericLiteral(right)) {
+                if (isNumber(left) || isNumber(right)) {
                     sb.append(left).append(negate ? " != " : " == ").append(right);
                 } else {
                     if (negate) sb.append("!");
@@ -364,9 +348,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         return sb.toString();
     }
 
-    // Operação OCL sobre um VALOR (String, número) -> nome equivalente em Java. Fora desta lista
-    // falhamos já, em vez de emitir Java que só rebenta ao compilar o projeto gerado — mesma
-    // política do visitPostfixTranslate.
+    // fora da lista, lança já em vez de gerar Java que só rebenta ao compilar
     private static String javaValueOp(String oclOp) {
         switch (oclOp) {
             case "matches":     return "matches";
@@ -378,13 +360,14 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         }
     }
 
-    // literal numérico: 0, -3, 2.5, 1e6, 10L ... Se um dos lados for um destes, a comparação é
-    // numérica e tem de sair como ==/!=; o Objects.equals boxaria tipos diferentes.
-    private static boolean isNumericLiteral(String s) {
+    // true se a string é só um número (0, -3, 2.5, 10L) -> a comparação usa ==/!=
+    private static boolean isNumber(String s) {
         return s != null && s.trim().matches("-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?[fFdDlL]?");
     }
 
-    // Regra: additiveExpression : multiplicativeExpression (('+' | '-') multiplicativeExpression)*
+    /*
+        additiveExpression : multiplicativeExpression (('+' | '-' | '..' | '|->') multiplicativeExpression)*
+     */
     @Override
     public String visitAdditiveExpression(OCLParser.AdditiveExpressionContext ctx) {
         if (ctx.multiplicativeExpression().size() == 1) {
@@ -392,18 +375,25 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         }
 
         StringBuilder sb = new StringBuilder();
+
         sb.append(visit(ctx.multiplicativeExpression(0)));
 
+        // a cada volta acrescenta "operador + expressão seguinte"
         for (int i = 1; i < ctx.multiplicativeExpression().size(); i++) {
+            // expr, op, expr ,op
             String op = ctx.getChild(2 * i - 1).getText();
+
+            // aqui é os + - entao adiciona direto
             sb.append(" " + op + " ");
             sb.append(visit(ctx.multiplicativeExpression(i)));
         }
         return sb.toString();
     }
 
-    // Regra: multiplicativeExpression : unaryExpression (('*' | '/' | 'mod' | 'div') unaryExpression)*
-    // como self.price * 1.2 -> this.price * 1.2
+    /*
+        multiplicativeExpression : unaryExpression (('*' | '/' | 'mod' | 'div') unaryExpression)*
+     */
+    // como self.price * 1.2 -> this.getPrice() * 1.2
     @Override
     public String visitMultiplicativeExpression(OCLParser.MultiplicativeExpressionContext ctx) {
         if (ctx.unaryExpression().size() == 1) {
@@ -423,8 +413,10 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         return sb.toString();
     }
 
-    // Regra: unaryExpression : ('not' | '-' | '+') unaryExpression | navigationExpression
-    // como not self.active -> !this.active
+    /*
+        unaryExpression : ('not' | '-' | '+' | '?' | '!') unaryExpression | navigationExpression
+    */
+    // como not self.active  ->  !this.getActive()
     @Override
     public String visitUnaryExpression(OCLParser.UnaryExpressionContext ctx) {
         if (ctx.navigationExpression() != null) {
@@ -436,14 +428,16 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         return op + visit(ctx.unaryExpression());
     }
 
-    // Regra: navigationExpression : primaryFactor (postfixSuffix)*
+    /*
+        navigationExpression : primaryFactor (postfixSuffix)*
+     */
     // constroi expressao da esquerda para a direita, aplicando cada sufixo sobre o resultado anterior
-    // self.alunos->size() é o primaryFactor(self.alunos) + postfixSuffix(->size())
+    // self.alunos->size()  o primaryFactor(self.alunos) + postfixSuffix(->size())
     @Override
     public String visitNavigationExpression(OCLParser.NavigationExpressionContext ctx) {
         String result = visit(ctx.primaryFactor());
 
-        // aplica cada sufixo (->size(), .nome, etc.) por ordem
+        // aplica cada sufixo (->size(), ->select(...), ->isEmpty(), etc.) por ordem
         for (OCLParser.PostfixSuffixContext suffix : ctx.postfixSuffix()) {
             result = visitPostfixTranslate(result, suffix);
         }
@@ -451,7 +445,9 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
     }
 
 
-    // Regra: primaryFactor : setExpression | basicExpression
+    /*
+        primaryFactor : setExpression | basicExpression
+     */
     @Override
     public String visitPrimaryFactor(OCLParser.PrimaryFactorContext ctx) {
         if (ctx.basicExpression() != null) return visit(ctx.basicExpression());
@@ -460,7 +456,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
     }
 
 
-    // metodo auxiliar para processar sufixos com a base já calculada
+    // metodo auxiliar para processar sufixos com o lado esquerdo já traduzido para Java
     // base="this.alunos", suffix="->size()" -> "this.alunos.size()"
     private String visitPostfixTranslate(String base, OCLParser.PostfixSuffixContext ctx) {
         String text = ctx.getText();
@@ -470,7 +466,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         if (text.equals("->isEmpty()")) return base + ".isEmpty()";
         if (text.equals("->notEmpty()")) return "!" + base + ".isEmpty()";
 
-        // .size() -> .size() (também existe como dot operation)
+        // .size() -> .size()
         if (text.equals(".size()")) return base + ".size()";
 
         // ->includes(x) -> .contains(x)
@@ -522,13 +518,11 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             return base + ".containsAll(" + visit(ctx.expression(0)) + ")";
         }
 
-        // ->sum() -> .stream().mapToInt(Integer::intValue).sum()
-        // LIMITAÇÃO: assume coleção de inteiros. Somas de double/float não são suportadas
-        // (Integer::intValue não compila sobre Double). Suportar tipos numéricos variados
-        // exigiria informação de tipo que o visitor não tem a este nível.
+        // ->sum() assume coleção de Integer; Double/Float não dá (o visitor não sabe o tipo aqui)
+        // se quisermos suportar precisamos de pegar em informação do tipo aqui (o que para ja nao fazemos simplesmente)
         if (text.equals("->sum()")) return base + ".stream().mapToInt(Integer::intValue).sum()";
 
-        // ->max() -> .stream().max(...).orElse(null) ; ->min() análogo
+        // ->max() -> .stream().max(...).orElse(null)
         if (text.equals("->max()"))
             return base + ".stream().max(java.util.Comparator.naturalOrder()).orElse(null)";
         if (text.equals("->min()"))
@@ -539,7 +533,6 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             return "java.util.Collections.frequency(" + base + ", " + visit(ctx.expression(0)) + ")";
 
         // operações numéricas  (base é um número)
-        // LIMITAÇÃO: floor()/round() devolvem 'long'. Com COMPARAÇÕES (>=, <=, >, <)
         if (text.equals("->abs()"))   return "Math.abs(" + base + ")";
         if (text.equals("->floor()")) return "(long) Math.floor(" + base + ")";
         if (text.equals("->round()")) return "Math.round(" + base + ")";
@@ -554,17 +547,6 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         if (text.startsWith("->equalsIgnoreCase("))
             return base + ".equalsIgnoreCase(" + visit(ctx.expression(0)) + ")";
 
-        // .propriedade -> .propriedade (apenas '.' + ID)
-        // ('.metodo(args)' tem >2 filhos -> não entra aqui, cai no throw final.)
-
-        // .propriedade sem getter, se fosse um acesso normal nao chegava aqui, a cbase eexpression apanha
-        // este ramo é quando a base nao é base expression, mas sim
-        //  setExpression (Set{...}.x) ou de uma op de coleção (->select(...).x, ->asSequence().x).
-        // Aí a base é uma coleção/stream, que não tem getX(),
-        if (ctx.getChild(0).getText().equals(".") && ctx.getChildCount() == 2 && ctx.ID().size() > 0) {
-            return base + "." + ctx.ID(0).getText();
-        }
-
         // ->first() -> .get(0)
         //if (text.equals("->first()")) return base + ".get(0)";
 
@@ -572,8 +554,9 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         // ->first().nome -> .stream().findFirst().orElse(null).getNome()
         if (text.startsWith("->first()")) {
             String result = base + ".stream().findFirst().orElse(null)";
+            // há um ".propriedade" a seguir ao first()?
             if (!ctx.ID().isEmpty()) {
-                String prop = ctx.ID(0).getText();
+                String prop = ctx.ID(0).getText(); // o nome da propriedade, "nome"
                 String getter = "get" + prop.substring(0, 1).toUpperCase() + prop.substring(1);
                 result = result + "." + getter + "()";
             }
@@ -595,8 +578,6 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             return result;
         }
 
-        // ->any() -> .stream().findAny().orElse(null)
-        //if (text.equals("->any()")) return base + ".stream().findAny().orElse(null)";
         // ->any() -> .stream().findAny().orElse(null)
         if (text.startsWith("->any()")) {
             String result = base + ".stream().findAny().orElse(null)";
@@ -633,7 +614,9 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         throw new IllegalArgumentException("Operação OCL não suportada: " + text);
     }
 
-    // Regra: conditionalExpression : 'if' expression 'then' expression 'else' expression 'endif'
+    /*
+        conditionalExpression : 'if' expression 'then' expression 'else' expression 'endif'
+     */
     // -> ((cond) ? (then) : (else))
     @Override
     public String visitConditionalExpression(OCLParser.ConditionalExpressionContext ctx) {
@@ -643,8 +626,11 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         return "((" + condition + ") ? (" + thenPart + ") : (" + elsePart + "))";
     }
 
-    // Regra: setExpression : 'Set{' expressionList? '}' | 'Sequence{' ... | etc
-    // -> new HashSet<>() / new ArrayList<>() / new HashMap<>() (with optional Arrays.asList for non-empty)
+    /*
+        setExpression : 'Set{' expressionList? '}' | 'Sequence{' ... | etc
+     */
+    // vazio  -> new HashSet<>()  (ou ArrayList/LinkedHashSet dependendo do tipo)
+    // se tem itens -> new HashSet<>(java.util.Arrays.asList(itens))
     @Override
     public String visitSetExpression(OCLParser.SetExpressionContext ctx) {
         String first = ctx.getChild(0).getText();

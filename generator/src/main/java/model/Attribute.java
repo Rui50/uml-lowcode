@@ -8,16 +8,16 @@ public class Attribute {
     private String type;
     private String visibility;
 
-    private String initExpression; // expressão ocl para inicialização do atributo
+    private String initExpression; // expressão ocl para inits
     private String javaInitExpression; // expressão java
 
     private String deriveExpression;
     private String javaDeriveExpression;
 
-    // persistence tab (opt-in | false/null = não definido -> não emitido)
+    // configs opcional da tab Persistence
     private boolean unique;      // @Column(unique = true)
-    private Integer precision;   // decimais: total de dígitos
-    private Integer scale;       // decimais: casas decimais
+    private Integer precision;   // decimais total de dígitos
+    private Integer scale;       // decimais casas decimais
 
     public Attribute() {
         this.name = "";
@@ -92,7 +92,6 @@ public class Attribute {
     public Integer getScale() { return scale; }
     public void setScale(Integer scale) { this.scale = scale; }
 
-    // tem config de coluna (persistence tab) para além do nome-default?
     public boolean hasColumnConfig() {
         return unique || precision != null || scale != null;
     }

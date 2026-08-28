@@ -46,7 +46,7 @@ public class ClassDiagramParser {
 
     // getSetAttribute(...) devolve um Set nao deterministico e gera coisas diferentes de cada vez
     // para resolver ordenar pelo comparador do SDMetrics (runningID = ordem do documento XMI)
-    // torna a geração determinística e mantém a ordem com que as coisas foram desenhadas.
+    // torna a geração determinística.
     private static List<ModelElement> ordered(Collection<?> set) {
         List<ModelElement> list = new ArrayList<>();
         if (set != null) for (Object o : set) list.add((ModelElement) o);
@@ -54,7 +54,9 @@ public class ClassDiagramParser {
         return list;
     }
 
-    // extrair todos as classes do modelo
+    /**
+     * extrai as classes do modelo UML
+     */
     public List<Class> parseClasses() {
         List<Class> classes = new ArrayList<>();
 
@@ -66,25 +68,26 @@ public class ClassDiagramParser {
             classes.add(cl);
         }
         return classes;
-    }
+    }// parsing de todas as infos de uma classe
 
-    // parsing de todas as infos de uma classe
+    /**
+     * fazer o parsing de todas as infos de uma classe
+     */
     private Class parseClass(ModelElement element) {
-        // nome e visibilidade da classe, assumir public
+        // nome e visibilidade da classe, assumir public se não tiver
         String className = element.getName();
         String visibility = element.getPlainAttribute("visibility");
         visibility = visibility != null ? visibility : "public";
 
-        Class cl = new Class(
-                className,
-                visibility
-        );
+        // criar a classe
+        String classId = element.getXMIID();
+        Class cl = new Class(classId, className, visibility);
 
         // determinar se é uma classe abstrata
         String abstractAttr = element.getPlainAttribute("abstract");
         cl.setAbstract("true".equalsIgnoreCase(abstractAttr));
 
-        // attr da classe
+        // todos os atributos da classe
         for (ModelElement attributeElement : ordered(element.getSetAttribute("ownedattributes"))) {
             // as associações também aparecem como atributos
             // tirar porque são tratados depois independentemente
@@ -98,16 +101,16 @@ public class ClassDiagramParser {
             cl.addAttribute(attribute);
         }
 
-        // operações da classe
+        // todas as operações da classe
         for (ModelElement operationElement : ordered(element.getSetAttribute("ownedoperations"))) {
             Operation operation = parseOperation(operationElement);
             cl.addOperation(operation);
         }
 
-        String classId = element.getXMIID();
-        cl.setId(classId);   // xmi:id
         List<Invariant> invariants = invariantsCache.get(classId);
 
+
+        // daqui para baixo era quando as anotações eram feitas nos comments do modelo
         if (invariants != null) {
             for (Invariant invariant : invariants) {
                 cl.addInvariant(invariant);
@@ -178,12 +181,13 @@ public class ClassDiagramParser {
     public List<Interface> parseInterfaces() {
         List<Interface> interfaces = new ArrayList<>();
 
+        // obtem todos os elementos do tipo interface
         List<ModelElement> interfaceElements = model.getAcceptedElements(metaModel.getType("interface"));
 
+        // cada uma nome, public, id, operations
         for (ModelElement element : interfaceElements) {
             String name = element.getName();
-            Interface iface = new Interface(name, "public");
-            iface.setId(element.getXMIID());   // xmi:id — chavear anotações (nota #32)
+            Interface iface = new Interface(element.getXMIID(), name, "public");
 
             // operations dessa interface
             for (ModelElement operationElement : ordered(element.getSetAttribute("ownedoperations"))) {
@@ -232,7 +236,7 @@ public class ClassDiagramParser {
         String abstractAttr = element.getPlainAttribute("abstract");
         operation.setAbstract("true".equalsIgnoreCase(abstractAttr));
 
-        // tipos de return e parâmetros (ordem do documento)
+        // tipos de return e parâmetros
         for (ModelElement paramElement : ordered(element.getSetAttribute("ownedparameters"))) {
             // direction do parâmetro (in, out, return)
             String direction = paramElement.getPlainAttribute("kind");
@@ -311,11 +315,12 @@ public class ClassDiagramParser {
             // obter os dois lados da associação
             Collection<?> memberEnds = associationElement.getSetAttribute("memberends");
 
+            // so pode ter associações com 2 lados
             if (memberEnds != null && memberEnds.size() == 2) {
                 // meter os dois lados numa lista, considerar a origim como o primeiro e o destino como o segundo se for necessário
                 List<ModelElement> ends = ordered(memberEnds);
 
-                // origem - assume sempre como sendo o get(0) da assoc
+                // origem assume sempre como sendo o get(0) da assoc
                 ModelElement sourceEnd = ends.get(0);
                 ModelElement sourceType = (ModelElement) sourceEnd.getRefAttribute("propertytype");
 
@@ -380,12 +385,12 @@ public class ClassDiagramParser {
                         association.setQualifierName(sourceQualifier.name);
                         association.setQualifierType(sourceQualifier.type);
                         association.setQualifierOnSource(true);
-                        System.out.println("Association " + association.getSourceClass() + " -> " + association.getTargetClass() + " has qualifier: " + sourceQualifier + " (onSource=true)");
+                        //System.out.println("Association " + association.getSourceClass() + " -> " + association.getTargetClass() + " has qualifier: " + sourceQualifier + " (onSource=true)");
                     } else if (targetQualifier != null) {
                         association.setQualifierName(targetQualifier.name);
                         association.setQualifierType(targetQualifier.type);
                         association.setQualifierOnSource(false);
-                        System.out.println("Association " + association.getSourceClass() + " -> " + association.getTargetClass() + " has qualifier: " + targetQualifier + " (onSource=false)");
+                        //System.out.println("Association " + association.getSourceClass() + " -> " + association.getTargetClass() + " has qualifier: " + targetQualifier + " (onSource=false)");
                     }
 
                     associations.add(association);
@@ -400,11 +405,13 @@ public class ClassDiagramParser {
     public List<Enumeration> parseEnumerations() {
         List<Enumeration> enumerations = new ArrayList<>();
 
+        // pegas nas enumerations do modelo
         List<ModelElement> enumElements = model.getAcceptedElements(metaModel.getType("enumeration"));
 
         for (ModelElement enumElement : enumElements) {
             Enumeration enumeration = new Enumeration(enumElement.getName());
 
+            // adiciona os enums
             for (ModelElement literalElement : ordered(enumElement.getSetAttribute("ownedliterals"))) {
                 enumeration.addLiteral(literalElement.getName());
             }
@@ -416,14 +423,13 @@ public class ClassDiagramParser {
     }
 
     /**
-     * Funções relacionadas a herança
+     * herança entre classes cada generalization tem um parent e um child.
      */
     public List<Generalization> parseGeneralizations() {
         List<Generalization> generalizations = new ArrayList<>();
 
         // obtem as associações de herança do modelo
         List<ModelElement> generalizationElements = model.getAcceptedElements(metaModel.getType("generalization"));
-
 
         for (ModelElement generalizationElement : generalizationElements) {
             // classe que herda
@@ -439,7 +445,7 @@ public class ClassDiagramParser {
                 Generalization generalization = new Generalization(childClassName, parentClassName);
                 generalizations.add(generalization);
 
-                System.out.println("Generalization found: " + childClassName + " -> " + parentClassName);
+                //System.out.println("Generalization found: " + childClassName + " -> " + parentClassName);
             }
             else {
                 System.out.println("Generalization element with missing references: " + generalizationElement.getName());
@@ -454,18 +460,18 @@ public class ClassDiagramParser {
      * VP exporta como <packagedElement xmi:type="uml:Realization">, com
      *  client  = a classe que implementa
      *  supplier = a interface realizada
-     * Só conta se o supplier for de facto uma interface (não outra classe).
      */
     public void fillRealizations(List<Class> classes, List<Interface> interfaces) {
         List<ModelElement> realizationElements = model.getAcceptedElements(metaModel.getType("realization"));
+
 
         for (ModelElement rel : realizationElements) {
             Collection<?> clients = rel.getSetAttribute("client");
             Collection<?> suppliers = rel.getSetAttribute("supplier");
             if (clients == null || suppliers == null) continue;
 
-            for (Object cObj : clients) {
-                ModelElement clientElem = (ModelElement) cObj;
+            for (Object client : clients) {
+                ModelElement clientElem = (ModelElement) client;
                 Class cl = GeneratorUtils.findClassByName(classes, clientElem.getName());
                 if (cl == null) continue;
 
@@ -510,8 +516,9 @@ public class ClassDiagramParser {
         }
     }
 
-    // clone por classe (id ifaceOpId@Classe): não partilha o objeto entre classes que a realizam, e o id
-    // fica estável -> as anotações da frontend (com chaves por id) sobrevivem a re-uploads sem colisão
+    // clone por classe (id ifaceOpId@Classe) para não partilhar o objeto entre classes que a realizam,
+    // para terem ids diferentes e as anotações da frontend (com chaves por id) sobrevivem a re-uploads sem colisão
+    // senao nao podiamos ter 2 implementações diferentes em 2 classes diferentes
     private static Operation cloneOperation(Operation src, Class cls) {
         Operation copy = new Operation(src.getId() + "@" + cls.getName(),
                 src.getName(), src.getReturnType(), src.getVisibility());

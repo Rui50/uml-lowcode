@@ -33,7 +33,7 @@ public class Postcondition {
         if (javaExpression == null || selfVar == null || selfVar.equals("this")) {
             return javaExpression;
         }
-        // a tradução OCL já usa getters (this.getX()); só trocar o alvo do self
+        // a tradução OCL já usa getters (this.getX()) só trocar o alvo do self
         return javaExpression.replace("this.", selfVar + ".");
     }
 

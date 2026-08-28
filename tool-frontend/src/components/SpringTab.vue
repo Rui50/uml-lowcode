@@ -242,7 +242,7 @@ watch(classKey, (id) => {
         <tr v-for="row in fieldRows" :key="row.name">
           <td class="attr-label">{{ row.name }}<span v-if="row.isRelation" class="enum-hint">({{ row.collection ? 'coleção' : 'ref' }})</span><span v-if="row.inherited" class="enum-hint">(herdado)</span><span v-if="row.hasInit" class="enum-hint">(init)</span><span v-else-if="row.hasDerive" class="enum-hint">(derive)</span></td>
           <td v-for="role in DTO_ROLES" :key="role">
-            <span v-if="row.locked[role]" class="lock" v-tooltip.top="'fixed by init/derive or hidden by parent'">🔒</span>
+            <span v-if="row.locked[role]" class="lock" v-tooltip.top="'fixed by init/derive, collection (not in update), or hidden by parent'">🔒</span>
             <Checkbox v-else
               :binary="true"
               :modelValue="!annotations.isDTOHidden(classKey!, role, row.name)"

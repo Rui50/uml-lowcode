@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 public class VpParser {
 
-    // Qualifiers são MAPs basicamente
+    // Qualifiers são os MAPs
     public static class Qualifier {
         String name;
         String type;
@@ -41,12 +41,14 @@ public class VpParser {
         Map<String, Qualifier> qualifiers = new HashMap<>();
 
         // extrai todos packagedElements que tenham name type e id
+        // <packagedElement ... name="numero" type="Integer_id" ... xmi:id="7mrpMTmGAqACRwgl" ...>
         Pattern elementPattern = Pattern.compile(
                 "<packagedElement[^>]+name=\"([^\"]+)\"[^>]+type=\"([^\"]+)\"[^>]+xmi:id=\"([^\"]+)\"");
 
         //  XMI ID -> Qualifier
         Map<String, Qualifier> elementsById = new HashMap<>();
 
+        // começa entao por criar todos os possiveis qualifiers
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -65,33 +67,35 @@ public class VpParser {
         }
 
         Pattern modelRefPattern = Pattern.compile("<modelRef value=\"([^\"]+)\"/>");
-        // ponta da associação: <ownedEnd> (não-navegável) OU <ownedAttribute> (navegável) — o qualifier
-        // pode estar em qualquer uma, sem o ownedAttribute, um qualifier navegável perdia o Map
+        // se não-navegável aparece como <ownedEnd> (pertence à associação).
+        // se a ponta é navegável aparece como <ownedAttribute> (pertence à classe)
+        // aparece nos dois mas so um tem info
         Pattern ownedEndPattern = Pattern.compile("<(?:ownedEnd|ownedAttribute)[^>]+xmi:id=\"([^\"]+)\"");
 
+        // agora percorre as pontas desses qualifiers
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String line;
             String currentOwnedEndId = null;
             boolean hasQualifier = false;
             while ((line = reader.readLine()) != null) {
-                // Detetar ownedEnd
+                // Detetar owned
                 var ownedEndMatcher = ownedEndPattern.matcher(line);
                 if (ownedEndMatcher.find()) {
                     currentOwnedEndId = ownedEndMatcher.group(1);
                 }
 
-                // detetar qualifier (nao quer dizer que tenha)
+                // detetar qualifier (nao quer dizer que tenha) porque existem qualifiers que estão so vazios
                 if (line.contains("<qualifier>")) {
                     hasQualifier = true;
                 }
 
-                // detetar modelRef dentro de qualifier
+                // dentro do <qualifier> de uma ponta: o <modelRef> aponta para o atributo chave
                 if (hasQualifier && currentOwnedEndId != null) {
                     Matcher modelRefMatcher = modelRefPattern.matcher(line);
                     if (modelRefMatcher.find()) {
                         String refId = modelRefMatcher.group(1);
 
-                        // resolver ref
+                        // ve o id e procura nas chaves obtidas em cima se existir é um qualifier real
                         Qualifier qualifier = elementsById.get(refId);
                         if (qualifier != null) {
                             qualifiers.put(currentOwnedEndId, qualifier);
@@ -114,7 +118,6 @@ public class VpParser {
     }
 
     private static String fixTypeName(String typeId) {
-
         if (typeId != null && typeId.endsWith("_id")) {
             return typeId.substring(0, typeId.length() - 3);
         }
@@ -124,7 +127,7 @@ public class VpParser {
 
 
     /**
-     * Extrai o numero de visualização do VP (<number xmi:value="1.1.2"/>) de cada mensagem.
+     * extrai o numero de visualização do VP (<number xmi:value="1.1.2"/>) de cada mensagem.
      * SDMetrics nao consegue extrair direito porque ha varios xmi:value irmaos dentro de <xmi:Extension>.
      */
     public static Map<String, String> extractMessageNumbers(String filePath) throws IOException {

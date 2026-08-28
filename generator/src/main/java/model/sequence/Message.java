@@ -5,16 +5,16 @@ import java.util.List;
 
 public class Message {
     private String id;
-    private String name;                    // getTurma, setTurma (just the method name)
-    private String rawName;                 // full original: "getTurma(a: Aluno) : Turma"
+    private String name;                    // getTurma, setTurma (nome do metood)
+    private String rawName;                 // full  "getTurma(a: Aluno) : Turma"
     private String messageSort;             // synchCall, asynchCall, reply
     private String returnType;              // return type if specified ("User")
     private String assignVariable;          // variable name for assignment ( "turma" in "turma = findById(id) : Turma")
-    private String assignExpression;        // "u" in "var = u"; null for method call messages
+    private String assignExpression;        // "u" in "var = u" ou null
     private Lifeline source;
     private Lifeline target;
     private List<MessageArgument> arguments;
-    private int sequenceNumber;             // Order
+    private int sequenceNumber;             // ordem das msgs
     private String vpNumber;
 
 

@@ -10,7 +10,6 @@ import com.sdmetrics.model.XMIReader;
 import com.sdmetrics.model.XMITransformations;
 import com.sdmetrics.util.XMLParser;
 
-import generator.GeneratorUtils;
 import model.*;
 
 import model.Class;
@@ -20,14 +19,16 @@ import model.sequence.Interaction;
 import parser.VpParser.Qualifier;
 
 public class XMIParser {
+    // coisas do sdmetrics
     private Model model;
     private MetaModel metaModel;
 
+    // qualifiers do VP tem o seu proprio parsing (fora do sdmetrics)
     private Map<String, Qualifier> qualifiers;
 
     // elementId da classe -> lista de invariantes
     private Map<String, List<Invariant>> invariantsCache = new HashMap<>();
-    // lista de [attrName, expression]
+    // lista de [atributo, expression]
     private Map<String, List<String[]>> initsCache = new HashMap<>();
     // pre cond
     private Map<String, List<String[]>> preconditionsCache = new HashMap<>();
@@ -71,6 +72,7 @@ public class XMIParser {
         System.out.println("Model loaded successfully!");
 
         System.out.println();
+
         qualifiers = VpParser.parseQualifiers(xmiFile);
 
         // this was for testing, ocl came from notes in vp xmi
@@ -89,31 +91,6 @@ public class XMIParser {
 
         cdp.fillGeneralizations(classes, generalizations);
         cdp.fillRealizations(classes, interfaces);
-
-        // debug
-        System.out.println("Interfaces extracted: " + interfaces.size());
-        if (interfaces.isEmpty()) {
-            System.out.println("No interfaces found");
-        } else {
-            for (Interface i : interfaces) {
-                System.out.println(i);
-                for (Operation op : i.getOperations()) {
-                    System.out.println("  " + op);
-                }
-            }
-        }
-
-        System.out.println("Realizations:");
-        boolean anyRealization = false;
-        for (Class c : classes) {
-            if (!c.getRealizations().isEmpty()) {
-                anyRealization = true;
-                for (Interface i : c.getRealizations()) {
-                    System.out.println("  " + c.getName() + " realizes " + i.getName());
-                }
-            }
-        }
-        if (!anyRealization) System.out.println("  none");
 
         // sequence diagrams
         SequenceDiagramParser sdp = new SequenceDiagramParser(model, metaModel, xmiFile);
