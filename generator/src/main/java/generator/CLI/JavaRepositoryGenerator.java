@@ -8,14 +8,9 @@ import java.io.PrintWriter;
 import java.util.List;
 
 /**
- * Gera os repositórios do CLI plain (EM MEMÓRIA, sem BD).
- * Raiz: dona do Map<Long,T> (store da família); subclasses: vista instanceof sobre o repo da raiz
- * (mirror do SINGLE_TABLE). Sem transações; ids sempre Long.
- */
-/**
- * Para ja gera repositorio em memoria por classe
- * Cada repositório usa um Map<Long, T> com auto-incremento de id,
- * e expõe save / findById / findAll / deleteById / existsById.
+ * gera os repositórios em mem do CLI (sem BD), um por classe.
+ * A classe raiz tem o Map<Long,T> , subclasses reutilizam o da raiz
+ * cada repo tem save/findById/findAll/deleteById/existsById.
  */
 public class JavaRepositoryGenerator {
     private String baseOutputPath;
@@ -40,15 +35,14 @@ public class JavaRepositoryGenerator {
     private void generateRepository(Class cls, String repoDir) throws IOException {
         String filename = repoDir + "/" + cls.getName() + "Repository.java";
         try (PrintWriter w = new PrintWriter(filename)) {
-            if (cls.getParentClass() == null) generateRootRepository(w, cls);   // dono do Map (store da família)
+            if (cls.getParentClass() == null) generateRootRepository(w, cls);   // dono do Map (store da hierarquia)
             else                              generateChildRepository(w, cls);  // vista sobre o repo da raiz
         }
         System.out.println("Generated: " + cls.getName() + "Repository.java");
     }
 
     // usado por classes normais (sem pai)
-    // repo RAIZ: dono do Map<Long, Raiz>
-    // store partilhado familia se tiver (mirror do SINGLE_TABLE)
+    // store partilhado familia se tiver (tipo SINGLE_TABLE)
     private void generateRootRepository(PrintWriter w, Class cls) {
         String type = cls.getName();
         w.println("package repository;");
@@ -89,8 +83,6 @@ public class JavaRepositoryGenerator {
     }
 
     // usado só por subclasses
-    // repo filho sem Map próprio — vista sobre o rep da RAIZ para
-    // que rootRepository.findAll() veja também os subtipos
     private void generateChildRepository(PrintWriter w, Class cls) {
         String type = cls.getName();
         String root = cls.getRoot().getName();

@@ -18,10 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Gera as entidades do CLI plain (Java simples, sem JPA).
- * Por classe: campo Long id (só na raiz), atributos, relações (List/Map/ref), construtores
- * (no-arg com inits + completo quando há params), getters/setters, getters derivados, toString,
- * validate() (se invariantes) e operações (secção // Operations via OperationGenerator.generateOperations).
+ * gera as entidades para o CLI (Java simples nao tem JPA)
  */
 public class JavaEntityGenerator {
     private String baseOutputPath;
@@ -32,7 +29,7 @@ public class JavaEntityGenerator {
      * Para ja
      *  - todas as classes sem pai recebem um campo Long id
      *  - atributos com init OCL são inicializados no construtor
-     *  - gera construtor no-arg (com inits) + construtor completo quando há atributos-parâmetro (super via pai)
+     *  - gera construtores
      *  - gera toString()
      */
     public JavaEntityGenerator(String baseOutputPath, List<Interaction> interactions) {
@@ -93,7 +90,7 @@ public class JavaEntityGenerator {
             writer.println();
             writer.println("public enum " + enumeration.getName() + " {");
 
-            // cada elemento do ENUM
+            // cada elemento do enum
             List<String> literals = enumeration.getLiterals();
             for (int i = 0; i < literals.size(); i++) {
                 String separator = (i < literals.size() - 1) ? "," : ";";
@@ -121,7 +118,7 @@ public class JavaEntityGenerator {
             writer.println("import java.time.*;");   // atributos de data (LocalDate, etc.)
             writer.println();
 
-            // class declaration (se abstract, se extends, se implements)
+            // class declaration
             writer.print("public " + (cls.isAbstract() ? "abstract " : "") + "class " + cls.getName());
             if (cls.getParentClass() != null) {
                 writer.print(" extends " + cls.getParentClass().getName());
@@ -137,7 +134,7 @@ public class JavaEntityGenerator {
             writer.println(" {");
             writer.println();
 
-            // id (only if no parent)
+            // id
             if (cls.getParentClass() == null) {
                 writer.println("    private Long id;");
                 writer.println();
@@ -149,7 +146,7 @@ public class JavaEntityGenerator {
             // relationships
             generateRelationshipAttributes(writer, cls, associations);
 
-            // construtores (no-arg + completo)
+            // construtores (no arg e completo)
             generateConstructor(writer, cls);
 
             // getters/setters for attributes
@@ -192,37 +189,36 @@ public class JavaEntityGenerator {
 
     // gera os campos para as relações navegáveis
     private void generateRelationshipAttributes(PrintWriter writer, Class cls, List<Association> associations) {
-        List<String> generatedFields = new ArrayList<>();
+        // so para prevenir no caso de nao haver roles para nao duplicar atributos com o mesmo nome de classe
+        List<String> generatedAttributes = new ArrayList<>();
 
         for (Association assoc : associations) {
             // source side
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
-                String fieldName = GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
+                String attributeName = GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
-                if (!generatedFields.contains(fieldName)) {
-                    generateRelationshipField(writer, assoc.getTargetClass(), fieldName, assoc.getTargetMultiplicity(), assoc, true);
-                    generatedFields.add(fieldName);
+                if (!generatedAttributes.contains(attributeName)) {
+                    generateRelationshipAttribute(writer, assoc.getTargetClass(), attributeName, assoc.getTargetMultiplicity(), assoc, true);
+                    generatedAttributes.add(attributeName);
                 }
             }
             // target side
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String fieldName = GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
+                String attributeName = GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
-                if (!generatedFields.contains(fieldName)) {
-                    generateRelationshipField(writer, assoc.getSourceClass(), fieldName, assoc.getSourceMultiplicity(), assoc, false);
-                    generatedFields.add(fieldName);
+                if (!generatedAttributes.contains(attributeName)) {
+                    generateRelationshipAttribute(writer, assoc.getSourceClass(), attributeName, assoc.getSourceMultiplicity(), assoc, false);
+                    generatedAttributes.add(attributeName);
                 }
             }
         }
     }
 
     private void generateConstructor(PrintWriter writer, Class cls) {
-        // herdados vs próprios.
-        // atributos dos pais (não os próprios)
-        // (A->B->C: sem isto o super(...) de C ficava sem os atributos de A)
+        // atributos herdados de pais (para o super(...))
         List<Attribute> parentAttrs = GeneratorUtils.ancestorAttributes(cls);
 
-        // filter aos derives e inits: só os que são parâmetros do construtor (this.x = x recebido)
+        // filter aos derives e inits só os que são parâmetros do construtor (this.x = x recebido)
         List<Attribute> paramParentAttrs = parentAttrs.stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit()).toList();
 
@@ -230,7 +226,7 @@ public class JavaEntityGenerator {
         List<Attribute> ownAttrs = cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive()).toList();
 
-        // or normais
+        // sem inits
         List<Attribute> paramAttrs = ownAttrs.stream()
                 .filter(a -> !a.hasInit()).toList();
 
@@ -240,7 +236,7 @@ public class JavaEntityGenerator {
 
         boolean noParams = paramParentAttrs.isEmpty() && paramAttrs.isEmpty();
 
-        // construtor no-arg existe sempre. Leva os inits para que new X() + setters também os aplique
+        // construtor no arg existe sempre, mas tem os inits
         writer.println("    public " + cls.getName() + "() {");
         for (Attribute attr : initAttrs) {
             writer.println("        this." + attr.getName() + " = " + attr.getJavaInitExpression() + ";");
@@ -248,17 +244,19 @@ public class JavaEntityGenerator {
         writer.println("    }");
         writer.println();
 
-        // sem parâmetros, o no-arg é o único construtor
+        // sem parâmetros, o no arg é o único construtor
         if (noParams) return;
 
-        // construtor completo: assinatura = params do pai primeiro (mesma ordem do super), depois os próprios
+        // construtor completo se tiver params
         writer.print("    public " + cls.getName() + "(");
         boolean first = true;
+        // atributos herdados
         for (Attribute attr : paramParentAttrs) {
             if (!first) writer.print(", ");
             writer.print(attr.getType() + " " + attr.getName());
             first = false;
         }
+        // atributos próprios
         for (Attribute attr : paramAttrs) {
             if (!first) writer.print(", ");
             writer.print(attr.getType() + " " + attr.getName());
@@ -276,12 +274,12 @@ public class JavaEntityGenerator {
             writer.println(");");
         }
 
-        // corpo: atribui os params próprios (this.x = x recebido)
+        // atribui os params próprios (this.x = x recebido)
         for (Attribute attr : paramAttrs) {
             writer.println("        this." + attr.getName() + " = " + attr.getName() + ";");
         }
 
-        // inits OCL — também aqui, para o construtor completo os aplicar (não só o no-arg)
+        // inits OCL
         for (Attribute attr : initAttrs) {
             writer.println("        this." + attr.getName() + " = " + attr.getJavaInitExpression() + ";");
         }
@@ -318,25 +316,25 @@ public class JavaEntityGenerator {
 
     private void generateRelationshipGettersSetters(PrintWriter writer, Class cls, List<Association>
             associations) {
-        List<String> generatedFields = new ArrayList<>();
+        List<String> generatedAttributes = new ArrayList<>();
 
         for (Association assoc : associations) {
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
-                String fieldName = GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
+                String attributeName = GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
 
-                if (!generatedFields.contains(fieldName)) {
+                if (!generatedAttributes.contains(attributeName)) {
                     String type = getRelationshipType(assoc.getTargetClass(), assoc.getTargetMultiplicity(), assoc, true);
-                    generateGetterSetter(writer, type, fieldName);
-                    generatedFields.add(fieldName);
+                    generateGetterSetter(writer, type, attributeName);
+                    generatedAttributes.add(attributeName);
                 }
             }
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String fieldName = GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
+                String attributeName = GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
 
-                if (!generatedFields.contains(fieldName)) {
+                if (!generatedAttributes.contains(attributeName)) {
                     String type = getRelationshipType(assoc.getSourceClass(), assoc.getSourceMultiplicity(), assoc, false);
-                    generateGetterSetter(writer, type, fieldName);
-                    generatedFields.add(fieldName);
+                    generateGetterSetter(writer, type, attributeName);
+                    generatedAttributes.add(attributeName);
                 }
             }
         }
@@ -351,7 +349,6 @@ public class JavaEntityGenerator {
         writer.println();
         writer.print("            \"id=\" + getId()");
 
-        // getAllAttributes: inclui os herdados. Sempre via getter — o campo herdado é private no pai
         for (Attribute attr : cls.getAllAttributes()) {
             writer.println(" +");
             String capitalized = GeneratorUtils.capitalizeFirst(attr.getName());
@@ -369,21 +366,20 @@ public class JavaEntityGenerator {
         writer.println();
     }
 
-    // gera com base se é map list ou normal
-    // isSource = a classe que estamos a gerar está na ponta SOURCE desta associação
-    private void generateRelationshipField(PrintWriter writer, String otherClass, String fieldName, String multiplicity, Association assoc, boolean isSource) {
-        // só a ponta que TEM o qualifier vira Map; a outra é referência normal
+    // gera o campo para uma relação que pode ser Map (com qualifier), List ou referência simples
+    private void generateRelationshipAttribute(PrintWriter writer, String otherClass, String attributeName, String multiplicity, Association assoc, boolean isSource) {
+        // so a ponta que tem o qualifier é Map, a outra é referência normal
         if (assoc.isMapEnd(isSource)) {
             String qualifierType = assoc.getQualifierType();
-            writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " + fieldName + " = new HashMap<>();");
+            writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " + attributeName + " = new HashMap<>();");
         } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
-            writer.println("    private List<" + otherClass + "> " + fieldName + " = new ArrayList<>();");
+            writer.println("    private List<" + otherClass + "> " + attributeName + " = new ArrayList<>();");
         } else {
-            writer.println("    private " + otherClass + " " + fieldName + ";");
+            writer.println("    private " + otherClass + " " + attributeName + ";");
         }
     }
 
-    // se é map ou list — tem de bater certo com generateRelationshipField (mesmo guard)
+    // tipo da relação (Map/List/ref) para os gets sets
     private String getRelationshipType(String otherClass, String multiplicity, Association assoc, boolean isSource) {
         if (assoc.isMapEnd(isSource)) {
             return "Map<" + assoc.getQualifierType() + ", " + otherClass + ">";

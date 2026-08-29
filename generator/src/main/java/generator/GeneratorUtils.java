@@ -28,9 +28,8 @@ public class GeneratorUtils {
     }
 
     /**
-     * operações "efetivas" de uma classe: próprias + herdadas, com o override a
-     * "ganhar". getAllOperations devolve as próprias primeiro, por isso a primeira
-     * ocorrência de cada nome é a mais derivada (o override).
+     * operações "efetivas" de uma classe próprias + herdadas,
+     * com o override a "ganhar" no caso de dar override a uma do pai
      */
     public static List<Operation> effectiveOperations(Class cls) {
         Map<String, Operation> byName = new LinkedHashMap<>();
@@ -41,16 +40,12 @@ public class GeneratorUtils {
     }
 
     /**
-     * Classe que realmente declara a operação (sobe na hierarquia até a encontrar);
-     * para uma op herdada por StudentMember, devolve Member.
+     * Classe que declara a operação
+     * ex é uma op herdada por StudentMember -> devolve Member
      *
-     * Necessário porque uma operação de uma superclasse abstrata  (Member.redeemPoints Staffmember.redeempoints)
-     * é gerada nos serviços/controllers das subclasses concretas (StudentMember, StaffMember),
-     * mas o seu diagrama de sequência foi desenhado em termos da classe que a declara —
-     * MemberService, memberId, lifeline ': Member'. Devolver este "owner" deixa a geração
-     * ler o diagrama nesses termos enquanto emite para a classe concreta. Sem isto, procurava
-     * StudentMemberService / studentMemberId e não encontrava a mensagem de entrada, o
-     * parâmetro de self, nem a lifeline do service — e rebentava.
+     * O código de uma op herdada é emitido na subclasse (StudentMember), mas o
+     * diagrama de sequência dessa op foi desenhado no pai (Member) e refere-se a ela
+     * (lifeline :Member, MemberService...)
      */
     public static Class declaringClassOf(Class cls, Operation op) {
         for (Class c = cls; c != null; c = c.getParentClass()) {
@@ -59,22 +54,17 @@ public class GeneratorUtils {
         return cls;
     }
 
-    // atributos de todos os ancestrai por ordem raiz-primeiro, para herança a N
-    // níveis. addAll(0,..) = prepend, p/ o avô ficar à frente do pai (ordem do super(...))
-    // atributos herdados de TODA a cadeia de pais, não só do pai directo. Os targets CLI
-    // apegas pegavam no 1 nível: o super(...) saía sem os atributos do "avô"  e os
-    // menus nunca os pediam (dados em falta silenciosos). para corrigir percorre ambos
     public static List<Attribute> ancestorAttributes(Class cls) {
         List<Attribute> attrs = new ArrayList<>();
-        for (Class p = cls.getParentClass(); p != null; p = p.getParentClass())
-            attrs.addAll(0, p.getAttributes());   // prepend -> raiz-primeiro
+        for (Class p = cls.getParentClass(); p != null; p = p.getParentClass()) {
+            attrs.addAll(0, p.getAttributes());   // insere à frente, para o mais antigo ficar primeir
+        }
         return attrs;
     }
 
     /**
-     * devolve o tipo de referência (wrapper) de um primitivo; necessário quando
-     * o campo tem de poder ser null (ex.: campo de CreateDTO com valor por defeito).
-     * tipos que já são de referência ficam inalterados.
+     * troca int/long/boolean/... pela versão que aceita null (Integer/Long/Boolean)
+     * usado quando o campo tem de poder ser null (como nos campos de CreateDTO não preenchido)
      */
     public static String fixType(String type) {
         if (type == null) return null;
@@ -102,15 +92,18 @@ public class GeneratorUtils {
         return type.replaceAll("\\b([A-Za-z_$][\\w$]*\\.)+([A-Za-z_$][\\w$]*)\\b", "$2");
     }
 
-    // expressão de return é última reply-message para o ator (lifeline sem tipo)
+    // expressão de return é ultima reply-message para o ator (lifeline sem tipo)
     public static String findReplyToActor(List<Object> elements) {
         String last = null;
         for (Object el : elements) {
-            if (el instanceof Message m
-                    && "reply".equals(m.getMessageSort())
-                    && m.getTarget() != null
+            if (el instanceof Message m && "reply".equals(m.getMessageSort()) && m.getTarget() != null
                     && m.getTarget().getType() == null) {
-                String expr = m.getRawName() != null ? m.getRawName() : m.getName();
+                String expr;
+                if (m.getRawName() != null) {
+                    expr = m.getRawName();
+                } else {
+                    expr = m.getName();
+                }
                 if (expr != null && !expr.isBlank()) last = expr.trim();
             } else if (el instanceof Fragment f) {
                 for (Operand op : f.getOperands()) {
@@ -143,15 +136,12 @@ public class GeneratorUtils {
         return checkMultiplicity(multiplicity) ? base + "s" : base;
     }
 
-    // @Column(...) a partir da config da persistence tab
-    // (default = nome do atributo), unique/precision/scale só quando definidos
+    // gera o @Column: sempre com o name (nome do atributo) unique/precision/scale só se definidos
     public static String columnAnnotation(Attribute atr) {
         StringBuilder sb = new StringBuilder("@Column(name = \"").append(atr.getName()).append("\"");
         if (atr.isUnique()) sb.append(", unique = true");
         if (atr.getPrecision() != null) sb.append(", precision = ").append(atr.getPrecision());
-        // scale só existe em vírgula FIXA (BigDecimal/NUMERIC). Em float/double o Hibernate rebenta no
-        // arranque ("scale has no meaning for SQL floating point types"), por isso ignora-se aqui —
-        // o painel avisa disso no tooltip. precision em double é legal (vira float(p)).
+        // scale só se aplica a BigDecimal/BigInteger; em float/double o Hibernate rebenta no arranque
         if (atr.getScale() != null && isFixedPoint(atr.getType())) {
             sb.append(", scale = ").append(atr.getScale());
         }
@@ -163,47 +153,44 @@ public class GeneratorUtils {
     }
 
     /**
-     * Em JPA bidirecional só UM lado pode ser o dono (é ele que tem a FK/join table); o
-     * outro leva mappedBy. Esta função diz se ESTE lado é o dono.
+     * no JPA bidirecional só um lado pode ser dono (o que tem a FK/join table) e o outro leva mappedBy
+     * esta func diz se este lado é o dono, oque decide é a navegabilidade e a forma da relação.
      *
-     * A entidade de "className" é o DONO desta relação
-     * Quem decide é a NAVEGABILIDADE, não o source/target da associação.
-     *
-     * Regra: unidirecional -> o lado navegável é sempre dono
-     * bidirecional depende da forma:
-     *   M:N e O:O -> o target é dono;
-     *   O:M (coleção) -> inverso (mappedBy);
-     *   M:O (singular) -> dono da FK.
+     * unidirecional      -> o lado navegável é sempre o dono
+     * bidirecional M:N e 1:1 -> o target é o dono
+     * bidirecional 1:N (coleção) -> não é dono (leva mappedBy)
+     * bidirecional N:1 (singular) -> é dono (tem a FK)
      */
-    // isSource = este campo é o lado SOURCE da associação. Passa-se o lado em vez de o inferir
-    // pela classe porque numa auto-associação as duas pontas têm a mesma classe.
+    // numa auto associação os dois lados tem a mesma classe, por isso o lado
+    // tem de vir como argumento porque a classe sozinha não os distingue
     public static boolean isOwningSide(Association assoc, boolean isSource) {
+
+        // verificar se este lado é navegável
         boolean navigableFromHere = isSource ? assoc.isTargetNavigable() : assoc.isSourceNavigable();
         if (!navigableFromHere) return false;   // nem sequer tem campo
 
+        // se o outro lado nao for navegável e este é, é unidirecional -> este lado é dono
         boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
-        if (!isBidirectional) return true;      // unidirecional: o lado navegável é o dono
+        if (!isBidirectional) return true;      // unidirecional o lado navegável é o dono
 
-        // bidirecional: decide-se pela forma do campo DESTE lado e do campo no lado INVERSO
+        // bidirecional decide-se pela forma (multiplicidade) do campo deste lado vs o do lado inverso
         String thisFieldMul    = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
         String inverseFieldMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-        // a ponta que tem o Map conta sempre como coleçã
+
+        // um lado é "coleção" se a multiplicidade for * OU se for a ponta do Map (qualifier)
         boolean fieldIsCollection   = checkMultiplicity(thisFieldMul)    || assoc.isMapEnd(isSource);
         boolean inverseIsCollection = checkMultiplicity(inverseFieldMul) || assoc.isMapEnd(!isSource);
 
-        // M:N qualifier: dona é a ponta do QUALIFIER — é lá que está o Map e é lá que a coleção se
-        // gere (add/remove por chave). Senão o @JoinTable caía numa ponta e o Map na outra.
+        // em M:N qualifier o dono é a ponta do QUALIFIER
         if (fieldIsCollection && inverseIsCollection && assoc.hasQualifier()) {
             return assoc.isMapEnd(isSource);
         }
-        if ( fieldIsCollection &&  inverseIsCollection) return !isSource;  // M:N -> target é dono
-        if ( fieldIsCollection && !inverseIsCollection) return false;      // O:M -> mappedBy (inverso)
-        if (!fieldIsCollection &&  inverseIsCollection) return true;       // M:O -> dono da FK
-        return !isSource;                                                  // O:O -> target é dono
+        if ( fieldIsCollection &&  inverseIsCollection) return !isSource;   // M:N -> target é dono
+        if ( fieldIsCollection && !inverseIsCollection) return false;   // 1:N -> este é o lado "um" fica mappedBy
+        if (!fieldIsCollection &&  inverseIsCollection) return true;    // N:1 -> este é o lado "muitos" tem a FK
+        return !isSource;   // 1:1 -> target é dono
     }
 
-    // Decidem o lado por igualdade de nome (não cobrem associações herdadas — ver menus).
-    // esta classe consegue navegar para o outro lado nesta associação?
     public static boolean isNavigableTo(String className, Association a) {
         return a.getSourceClass().equals(className) ? a.isTargetNavigable() : a.isSourceNavigable();
     }
@@ -213,7 +200,6 @@ public class GeneratorUtils {
         return a.getSourceClass().equals(className) ? a.getTargetClass() : a.getSourceClass();
     }
 
-    // o campo desta classe para esta associação (combina o outro lado + makeAttributeName)
     public static String fieldNameOf(String className, Association a) {
         boolean s = a.getSourceClass().equals(className);
         return makeAttributeName(s ? a.getTargetClass() : a.getSourceClass(),
@@ -228,16 +214,10 @@ public class GeneratorUtils {
     }
 
     /**
-     * Nome da classe que DECLARA esta associação (a que a "possui" na hierarquia)
-     *   - o próprio nome da class se participa diretamente
-     *   - o nome do pai ABSTRATO se herda a associação dele;
-     *   - null se não participa OU só a herda de um pai normal.
+     * Nome da classe que declar" esta associação na hierarquia:
+     *   - o próprio nome, nome do pai, ou null se nao participa (ou só herda de pai que ja tem service)
      *
-     * Versão "com nome" do isOrInheritsFrom (diz se classe participa e sob que nome).
-     * Só é preciso em Spring por duas razões
-     * - o sync do lado inverso é POR NOME
-     * do campo, derivado do declarante ("Member"), não da subclasse;
-     * - o "gate" do abstrato — um pai normal já tem service próprio (polimórfico), logo null.
+     * para Spring porque o sync do lado inverso usa o nome do campo, e esse campo é derivado pela classe que declara a assoc
      */
     public static String assocDeclaringClass(Class cls, Association a) {
         if (cls.isOrInheritsFrom(a.getSourceClass()) && a.isTargetNavigable())
@@ -247,9 +227,8 @@ public class GeneratorUtils {
         return null;
     }
 
-    // Sobe a cadeia de pais a partir da classe até encontrar a classe "endName"
-    // (o lado da associação em que a classe "participa") e devolve o seu nome se for o
-    // próprio cls ou uma classe abstrata, caso contrário (pai normal) null.
+    // "endName" (o lado da associação) é na propria cls ou um dos pais?
+    // devolv se for o próprio/pai abstrato
     private static String ownOrAbstract(Class cls, String endName) {
         for (Class c = cls; c != null; c = c.getParentClass()) {
             if (c.getName().equals(endName))
@@ -283,9 +262,8 @@ public class GeneratorUtils {
         for (Class c : classes) entityNames.add(c.getName());
 
         Set<String> entitiesToImport = new HashSet<>();
-        for (Operation op : effectiveOperations(cls)) {   // inclui herdadas: os seus tipos também são usados nos métodos/stubs gerados
-            // a classe que declara a op (owner) é o tipo do 'self' carregado no service
-            // de uma op herdada (ex: Member member = ...), logo tem de ser importada
+        for (Operation op : effectiveOperations(cls)) {
+            // a classe que declara a operacao
             Class owner = declaringClassOf(cls, op);
             if (!owner.getName().equals(cls.getName())) {
                 entitiesToImport.add(owner.getName());
@@ -306,10 +284,10 @@ public class GeneratorUtils {
 
     // entidades referenciadas em assocs navegaveis
     public static List<String> getModelsToImportFromAssociations(Class cls, List<Association> associations) {
+        // entidades a importar por causa das associações incluindo as herdadas de um pai abstrato
         Set<String> entitiesToImport = new HashSet<>();
+
         for (Association assoc : associations) {
-            // inclui associações herdadas de pai abstrato (assocDeclaringClass): em
-            // Spring materializam-se na subclasse, que precisa de importar o outro lado
             String declarer = assocDeclaringClass(cls, assoc);
             if (declarer == null) continue;
             String relatedClass = otherClassOf(declarer, assoc);
@@ -330,10 +308,10 @@ public class GeneratorUtils {
      */
     public static String fixMapAccess(String java, Class cls, List<Association> associations) {
         if (java == null) return null;
-        if (cls == null) return java;   // interfaces have no associations/map fields
+        if (cls == null) return java;   // interfaces
         List<String> mapFields = getMapFieldNames(cls, associations);
         for (String field : mapFields) {
-            // o acesso à coleção já vem como getter (this.getAlunos()); um campo-Map precisa
+            // o acesso à coleção já vem como getter (this.getAlunos()) um campo que seja Map precisa
             // de .values() antes do .stream()
             String access = "this.get" + capitalizeFirst(field) + "()";
             java = java.replace(access + ".stream()", access + ".values().stream()");
@@ -347,7 +325,7 @@ public class GeneratorUtils {
     public static List<String> getMapFieldNames(Class cls, List<Association> associations) {
         List<String> mapFields = new ArrayList<>();
         for (Association assoc : associations) {
-            // o Map fica só na ponta DONA do qualifier (isMapEnd), não nas duas
+            // o Map fica só na ponta que é owner do qualifier (isMapEnd), não nas duas
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable() && assoc.isMapEnd(true)) {
                 String role = assoc.getTargetRole();
                 if (role != null && !role.trim().isEmpty()) {
@@ -371,9 +349,8 @@ public class GeneratorUtils {
     }
 
     /**
-     * Constrói a assinatura Java de uma operation
-     * para interfaces
-     * Exemplo: "void inscrever(Turma t)"
+     * constroi a assinatura Java de uma operation para interfaces
+     * "void inscrever(Turma t)"
      */
     public static String buildSignature(Operation op) {
         StringBuilder sb = new StringBuilder();
@@ -389,15 +366,13 @@ public class GeneratorUtils {
     }
 
     /**
-     * Repositórios que um menu/serviço de uma classe precisa: os das classes
-     * relacionadas navegáveis + os tipos-domínio usados como parâmetros das
-     * operações com diagrama de sequência.
+     * repos que o menu/serviço de uma classe precisa que sao os das classes relacionadas
+     * navegáveis, e os das entidades usadas como argumento das operações com diagrama.
      */
     public static Set<String> getNeededRepositories(Class cls, List<Association> associations, List<Class> allClasses) {
         Set<String> related = new LinkedHashSet<>();
         for (Association assoc : associations) {
-            // exclui a própria classe (o seu repo é declarado à parte) — senão uma
-            // auto-associação injeta o mesmo repo duas vezes (ex: employeeRepository)
+            // exclui a própria classe senao numa auto-associação era injetado duas vezes
             if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable()
                     && !assoc.getTargetClass().equals(cls.getName())) {
                 related.add(assoc.getTargetClass());
@@ -407,10 +382,8 @@ public class GeneratorUtils {
                 related.add(assoc.getSourceClass());
             }
         }
-        // effectiveOperations (não só as próprias): os menus geram também as ops herdadas de pai
-        // abstrato, cujos parâmetros-entidade precisam do repo declarado. Usa os args do ENTRY MESSAGE
-        // (o que generateCustomOperationMethods realmente lê p/ emitir findById), não os params do
-        // class diagram — senão um arg-entidade do entry que não está na assinatura fica sem repo.
+        // effectiveOperations inclui as ops herdadas de pai abstrato (também geradas nos menus)
+        // Usa os args do entry message (o que gera o findById), não os params da assinatura
         for (Operation op : effectiveOperations(cls)) {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
@@ -418,7 +391,7 @@ public class GeneratorUtils {
             if (entry == null) continue;
             for (MessageArgument arg : entry.getArguments()) {
                 String type = arg.getType();
-                // só incluir se for uma classe-domínio (corresponde a uma das classes conhecidas)
+                // so incluir se o tipo for uma classe
                 for (Class other : allClasses) {
                     if (other.getName().equals(type) && !type.equals(cls.getName())) {
                         related.add(type);
@@ -429,7 +402,6 @@ public class GeneratorUtils {
         return related;
     }
 
-    // apaga recursivamente um diretório e o seu conteúdo (usado para limpar o output antes de gerar)
     public static void deleteDirectory(File directory) {
         File[] files = directory.listFiles();
         if (files != null) {
@@ -445,9 +417,8 @@ public class GeneratorUtils {
     }
 
     /**
-     * fix mensagens de erro que é texto livre do utilizador
+     * fix mensagens de erro do utilizador
      * aspas, \ e \n partiam a compilação.
-     * ordem - o backslash primeiro, senão re-escapava os escapes seguintes.
      */
     public static String fixErrorMessage(String s) {
         if (s == null) return "";
@@ -457,31 +428,39 @@ public class GeneratorUtils {
                 .replace("\n", "\\n");
     }
 
-    // nome da variável de repositório de uma classe (ex: Aluno -> alunoRepository)
+    // nome da variável de repositório de uma classe (Aluno -> alunoRepository)
     public static String repoVariable(String className) {
         return lowercaseFirst(className) + "Repository";
     }
 
-    // nome da tabela JPA: override do utilizador (painel Persistence), senão o nome da classe em minúsculas
+    // nome da tabela JPA que foi overrided do utilizador (painel Persistence), senão o nome da classe em minúsculas
     public static String tableName(Class cls) {
         String t = cls.getTableName();
         return (t != null && !t.isBlank()) ? t : cls.getName().toLowerCase();
     }
 
-    // id de uma classe — resolvido pela raiz (subclasses partilham o id do pai)
-    // cls null (nome desconhecido) da defaults no tipo Long, campo "id".
+    // tipo de id de uma classe
     public static String idType(Class cls) {
-        return (cls != null) ? cls.getRoot().getIdAttributeType() : "Long";
+        if (cls != null) {
+            return cls.getRoot().getIdAttributeType();
+        } else {
+            return "Long";
+        }
     }
+
+    // nome da var do id da classe
     public static String idFieldName(Class cls) {
-        return (cls != null && cls.getRoot().getIdAttributeName() != null)
-                ? cls.getRoot().getIdAttributeName() : "id";
+        if (cls != null && cls.getRoot().getIdAttributeName() != null) {
+            return cls.getRoot().getIdAttributeName();
+        } else {
+            return "id";
+        }
     }
     public static String idGetter(Class cls) {
         return "get" + capitalizeFirst(idFieldName(cls));
     }
 
-    // saber se a classe é pai de outra (tem subclasses), para gerar @Inheritance / SuperBuilder
+    // saber se a classe é pai de outra (tem subclasses), para gerar @Inheritance
     public static boolean isParent(Class cls, List<Class> allClasses) {
         for (Class c : allClasses) {
             if (c.getParentClass() != null && c.getParentClass().getName().equals(cls.getName())) {
@@ -492,9 +471,7 @@ public class GeneratorUtils {
     }
 
     /**
-     * Devolve o nome do atributo do OUTRO lado de uma associação bidirecional
-     * (usado em @JsonIgnoreProperties e no mappedBy). side = "source"/"target"
-     * indica de que lado estamos a olhar.
+     * devolve o nome do atributo do outro lado de uma associação, para o mappedBy e o @JsonIgnoreProperties.
      */
     public static String getOtherSideAttributeName(Association assoc, String side) {
         if (side.equals("source")) {

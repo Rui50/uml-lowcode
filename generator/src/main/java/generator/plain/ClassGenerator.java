@@ -16,15 +16,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /*
-* Gera uma class java por UML Classe do modelo
-* Por classe, em ordem:
+* Gera uma classe java por cada UML Classe do modelo
+* para cada classe classe:
 *  - atributos base
 *  - atributos de associação e inicilização no construtor
 *  - getters e setters para atributos base
 *  - métodos de associação (add/remove para multiplicidade *, set para 1)
 *  - operações (com base em interações, se existirem)
 *
-*  - OCL Part
+*  - OCL
 *  - invariants: metodo validate + mensagens de erro
 *  - derived: getter com expressão java equivalente
 *  - init: atribuição no construtor
@@ -44,7 +44,6 @@ public class ClassGenerator {
     }
 
     // diretoria onde os ficheiros são escritos: <output>/<package como caminho>
-    // para que a declaração package corresponda à estrutura de pastas (necessário para serem importáveis)
     private String packageDir() {
         String dir = outputDirectory + "/" + basePackage.replace('.', '/');
         new File(dir).mkdirs();
@@ -53,7 +52,7 @@ public class ClassGenerator {
 
     public void generateClasses(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
         this.validationGenerator = new ValidationGenerator();
-        // Gerar as "classes enum"
+        // gerar as "classes enum"
         for (Enumeration enumeration : enumerations) {
             generateEnum(enumeration);
         }
@@ -63,7 +62,7 @@ public class ClassGenerator {
     }
 
     /**
-     * Gera um ficheiro Java por interface UML (só assinaturas).
+     * gera as interfaces UML.
      */
     public void generateInterfaces(List<Interface> interfaces) throws IOException {
         if (interfaces == null || interfaces.isEmpty()) return;
@@ -114,15 +113,17 @@ public class ClassGenerator {
 
             // imports
             writer.println("import java.util.*;");
-            writer.println("import java.time.*;");   // atributos de data (LocalDate, etc.)
+            writer.println("import java.time.*;");   // para atributos de data (LocalDate, etc.)
             writer.println();
 
-            // class
+            // class declaration and if abstract
             writer.print("public " + (cls.isAbstract() ? "abstract " : "") + "class " + cls.getName());
 
+            // if has parents
             if (cls.getParentClass() != null){
                 writer.print(" extends " + cls.getParentClass().getName());
             }
+            // if has interface
             if (!cls.getRealizations().isEmpty()) {
                 writer.print(" implements ");
                 for (int i = 0; i < cls.getRealizations().size(); i++) {
@@ -167,12 +168,11 @@ public class ClassGenerator {
     }
 
     /*
-    * Gera os atributos base da classe,
+    * gera os atributos base da classe,
     * ignora os derivados, sao criados depois
      */
     private void generateAttributes(PrintWriter writer, Class cls){
         writer.println("    // Attributes");
-
         for (Attribute attribute : cls.getAttributes()){
             if (attribute.hasDerive()) continue;
             writer.println("    " + attribute.getVisibility() + " " + attribute.getType() + " " + attribute.getName() + ";");
@@ -180,27 +180,28 @@ public class ClassGenerator {
     }
 
     /**
-     * Gera as associações (navegaveis) da classe
-     * Verifica para cada associação a classe target/source e multiplicaideda para decidir o atributo
-     * Verifica tambem por qualifiers (maps)
+     * gera as associações (navegaveis) da classe
+     * verifica para cada associação a classe target/source e multiplicaideda para decidir o atributo
+     * ou o caso de ser um mapa
      */
     private void generateAssociations(PrintWriter writer, Class cls, List<Association> associations){
+        // so para prevenir no caso de nao haver roles para nao duplicar atributos com o mesmo nome de classe
         List<String> generatedAttributes = new ArrayList<>();
 
         writer.println("    // Associations");
 
         for (Association association : associations){
 
-            // where class is source and navigable
+            // class é source e nav
             if (association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()){
                 String targetClass = association.getTargetClass();
                 String multiplicity = association.getTargetMultiplicity();
                 String roleName = association.getTargetRole();
-                // get the attribute name based on the target class and multiplicity
+                // attribute name com base na target class e multiplicity
                 String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
 
                 if (!generatedAttributes.contains(attributeName)){
-                    // maps só na ponta que TEM o qualifier
+                    // maps só na ponta que tem o qualifier
                     if (association.isMapEnd(true)){
                         String keyType = association.getQualifierType();
                         writer.println("   " + "private Map<" + keyType + ", " + targetClass + "> " + attributeName + ";");
@@ -214,7 +215,7 @@ public class ClassGenerator {
                 }
             }
 
-            // where class is target and navigable
+            // class é target e nav
             if (association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()){
                 String sourceClass = association.getSourceClass();
                 String multiplicity = association.getSourceMultiplicity();
@@ -222,7 +223,7 @@ public class ClassGenerator {
                 String attributeName = GeneratorUtils.makeAttributeName(sourceClass, roleName, multiplicity);
 
                 if (!generatedAttributes.contains(attributeName)){
-                    // o Map é deste se o qualifier NÃO está na source
+                    // o Map é deste se o qualifier não está na source
                     if (association.isMapEnd(false)){
                         String keyType = association.getQualifierType();
                         writer.println("   " + "private Map<" + keyType + ", " + sourceClass + "> " + attributeName + ";");
@@ -243,7 +244,7 @@ public class ClassGenerator {
      */
     private void generateConstructors(PrintWriter writer, Class cls, List<Association> associations){
         writer.println("    // Constructor");
-        // only the default for now at least
+
         writer.println("    public " + cls.getName() + "() {");
 
         if (cls.getParentClass() != null){
@@ -251,7 +252,7 @@ public class ClassGenerator {
         }
 
         for (Association association : associations) {
-            // where class is source and nav
+            //  class é source e  nav
             if (association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()) {
                 String multiplicity = association.getTargetMultiplicity();
                 String targetClass = association.getTargetClass();
@@ -265,7 +266,7 @@ public class ClassGenerator {
                 }
             }
 
-            // where class is target and nav
+            // class é  target e nav
             if (association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()) {
                 String multiplicity = association.getSourceMultiplicity();
                 String sourceClass = association.getSourceClass();
@@ -280,9 +281,8 @@ public class ClassGenerator {
             }
         }
 
-        // attribute inits (OCL)
+        // attribute inits do ocl
         for (Attribute attribute : cls.getAttributes()) {
-            if (attribute.hasDerive()) continue;
             if (attribute.hasInit()) {
                 writer.println("        this." + attribute.getName() + " = " + attribute.getJavaInitExpression() + ";");
             }
@@ -292,8 +292,8 @@ public class ClassGenerator {
     }
 
     /*
-    * Gera getters e setters para os atributos da classe
-    * Para atributos derivados, gera apenas o getter com a expressão java equivalente
+    * gera getters e setters para os atributos da classe
+    * para atributos derivados, gera apenas o getter
      */
     private void generateGettersSetters(PrintWriter writer, Class cls){
         writer.print("    // Getters and Setters");
@@ -308,7 +308,7 @@ public class ClassGenerator {
                 writer.println("    public " + type + " get" + capitalizedName + "() {");
                 writer.println("        return " + attribute.getJavaDeriveExpression() + ";");
                 writer.println("    }");
-                continue; // no setter for derived attributes
+                continue; //nao tem setter
             }
 
             // get
@@ -326,8 +326,7 @@ public class ClassGenerator {
     }
 
     /**
-     *
-     * Gera os métodos de associação (add/remove/get) com base na multiplicidade e qualifiers
+     * gera os metodos das associação (add/remove/get) com base na multiplicidade e qualifiers
      * Para multiplicidade *, gera add/remove/getAll
      * Para multiplicidade 1, gera get/set
      * Para qualifiers, gera put/get/remove por chave e getAll
@@ -335,29 +334,29 @@ public class ClassGenerator {
     private void generateAssociationMethods(PrintWriter writer, Class cls, List<Association> associations) {
         for (Association association: associations) {
 
-            // where class is the source
+            // class é a source
             if (association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()) {
                 String targetClass = association.getTargetClass();
                 String multiplicity = association.getTargetMultiplicity();
                 String roleName = association.getTargetRole();
                 String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
 
-                // para maps — só na ponta que TEM o qualifier (aqui somos a source)
+                // para maps só na ponta que tem o qualifier (aqui é a source)
                 if (association.isMapEnd(true)){
                     String keyType = association.getQualifierType();
                     generateMapAssociationMethods(writer, targetClass, attributeName, keyType);
                 }
-                // for lists
+                // lists
                 else if(GeneratorUtils.checkMultiplicity(multiplicity)) {
                     generateListAssociationMethods(writer, targetClass, attributeName);
                 }
-                // for single associations
+                // single associations
                 else {
                     generateSingleAssociationMethods(writer, targetClass, attributeName);
                 }
             }
 
-            // where class is the target
+            // class é o target
             if (association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()) {
                 String sourceClass = association.getSourceClass();
                 String multiplicity = association.getSourceMultiplicity();
@@ -382,7 +381,7 @@ public class ClassGenerator {
     * put / get / remove / getAll
      */
     private void generateMapAssociationMethods(PrintWriter writer, String targetClass, String attributeName, String keyType){
-        // nome dos métodos baseado no role (attributeName), desambigua quando tem mais do que uma  assoc para a mesma classe
+        // nome dos métodos baseado no role (attributeName)
         String cap = GeneratorUtils.capitalizeFirst(attributeName);
         // put method
         writer.println();
@@ -452,10 +451,4 @@ public class ClassGenerator {
         wrriter.println("        this." + attributeName + " = " + attributeName + ";");
         wrriter.println("    }");
     }
-
-    /**
-     * Gera os métodos das operações da classe. Três casos por operação:
-     * abstrata -> só a assinatura; com diagrama de sequência -> corpo real (OperationGenerator);
-     * sem diagrama -> stub que lança UnsupportedOperationException.
-     */
 }

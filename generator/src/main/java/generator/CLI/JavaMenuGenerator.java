@@ -18,34 +18,18 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Gera os menus CLI (plain, interativos, sobre repositórios EM MEMÓRIA — sem BD).
- * Por entidade concreta: CRUD + opções de associação (add/remove | assign/remove) + operações custom
- * (ligadas a uma Interaction) + MainMenu que cria os repos (partilhados) e delega para os sub-menus.
+ * gera os menus cli.
+ * para cada entidade cria CRUD + opções de associação (add/remove | assign/remove) + operações custom
+ * MainMenu que cria os repos e delega para os sub-menus.
  *
- * Notas:
- *  - sem persistência real: repos são Map em memória; ids sempre Long;
- *  - MainMenu cria UMA instância de cada repo e partilha-a (senão os dados fragmentavam).
+ * nota:
+ *  - sem persistência, repos são Map em mem, ids sempre Long
+ *  - MainMenu cria uma instância de cada repo e partilha-a, senao cada menu teria o seu map e dados nao partilhavam.
+ *  - os saves sao redundantes porque os objetos ja sao passados
  *
- * Lim
- *  - SEM transações: se uma op falha a meio, as mudanças à entidade não são revertidas (fica parcial);
- *  - input: boolean sem retry; short/byte/char/BigDecimal não suportados (lançam na geração);
- *  - operação custom não valida invariantes e ignora o valor de retorno.
- *
- * run(), generateRelationshipMethods e generateRelationShipPrints derivam TODOS de
- * RelationshipInfo.collectForMenus() — o switch do run() chama os métodos por NOME, por isso as
- * três derivações têm de concordar (antes eram três cálculos separados e já divergiam).
- */
-/**
- * Gera os menus CLI
- *
- * para cada classe gera um menu com:
- *  - CRUD
- *  - opções de associação (add/remove ou assign/remove)
- *  - opções para operações custom (ligadas a uma Interaction)
- *
- * depois dar fix: esta versão é em memória, sem transações. Se uma operação falhar uma
- * pós-condição a meio, as alterações já feitas à entidade não são revertidas (a entidade
- * fica parcialmente modificada). "ja ta fix no clijpa".
+ * limitações:
+ *  - sem transações logo se uma op falha a meio, as mudanças à entidade não são revertidas
+ *  - operação custom não valida invariantes
  */
 public class JavaMenuGenerator {
 
@@ -59,7 +43,7 @@ public class JavaMenuGenerator {
     }
 
     /**
-     * entrada: gera todos os menus (um por entidade + MainMenu)
+     * gera todos os menus (um por entidade + MainMenu)
      */
     public void generateMenus(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
         enumNames.clear();
@@ -79,8 +63,6 @@ public class JavaMenuGenerator {
             generateEntityMenu(cls, classes, associations, menusPath);
         }
 
-        // passa a lista completa, os repositórios (campos) incluem abstratas, porque outros
-        // menus dependem delas (tipo o memberRepository)
         generateMainMenu(classes, associations, menusPath);
         System.out.println("Java menu generation completed.");
     }
@@ -108,7 +90,7 @@ public class JavaMenuGenerator {
             w.println("public class " + className + " {");
             w.println();
 
-            // fields
+            // attributes
             w.println("    private Scanner scanner;");
             w.println("    private " + cls.getName() + "Repository " + GeneratorUtils.repoVariable(cls.getName()) + ";");
             for (String related : neededRepos) {
@@ -119,7 +101,7 @@ public class JavaMenuGenerator {
             // constructor
             generateMenuConstructor(w, cls, neededRepos);
 
-            // run(): loop principal do menu com switch
+            // run() loop principal do menu com switch
             generateRunMethod(w, cls, associations);
 
             // CRUD
@@ -140,8 +122,7 @@ public class JavaMenuGenerator {
     }
 
     /**
-     * Gera construtor do menu
-     * Recebe Scanner e os repositórios necessários
+     * gera construtor do menu
      */
     private void generateMenuConstructor(PrintWriter w, Class cls, Set<String> neededRepos) {
         w.print("    public " + cls.getName() + "Menu(Scanner scanner, ");
@@ -161,7 +142,7 @@ public class JavaMenuGenerator {
     }
 
     /**
-     * Gera metodo run() (loop do menu)
+     * gera metodo run() (loop do menu)
      * crud (create, view all , view by id, update, delete)
      * depois as de associação
      *   - Multiplicidade * (OneToMany/ManyToMany): Add + Remove
@@ -169,7 +150,7 @@ public class JavaMenuGenerator {
      */
     private void generateRunMethod(PrintWriter w, Class cls, List<Association> associations) {
         // menu options
-        // [0] = label para o menu, [1] = nome do método a chamar
+        // [0] = label para o menu, [1] = nome do metodo a chamar
         List<String[]> options = new ArrayList<>();
         if (!cls.isAbstract()) options.add(new String[]{"Create", "create"});
         options.add(new String[]{"View All", "viewAll"});
@@ -178,14 +159,13 @@ public class JavaMenuGenerator {
         options.add(new String[]{"Delete", "delete"});
 
         // adicionar das relações
-        // O nome do metodo aqui tem de bater certo com o que lá é definido (o switch chama por NOME),
         for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
             String fieldName = rel.field();
             String cap = GeneratorUtils.capitalizeFirst(fieldName);
 
             if (rel.isCollection()) {
                 // OneToMany, ManyToMany ou Map: Add e Remove
-                options.add(new String[]{"Add " + fieldName, "add" + cap});
+                options.add(new String[]{"Add " + fieldName, "add" + cap}); //  { "Add turmas , "addTurmas" }
                 options.add(new String[]{"Remove " + fieldName, "remove" + cap});
             } else {
                 // ManyToOne: Assign e Remove
@@ -194,8 +174,7 @@ public class JavaMenuGenerator {
             }
         }
 
-        // inclui ops herdadas de pai abstrato (senão a subclasse concreta
-        // não as oferecia no menu
+        // inclui ops herdadas de pai abstrato (senao a subclasse nao as tinha no menu)
         for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction != null) {
@@ -237,7 +216,7 @@ public class JavaMenuGenerator {
         // recolher atributos do pai + próprios
         List<Attribute> allAttrs = new ArrayList<>();
 
-        // atributos herdados de TODA a cadeia de pais (raiz-primeiro)
+        // atributos herdados
         allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
                 .toList());
@@ -351,7 +330,7 @@ public class JavaMenuGenerator {
 
         // para cada atributo (pai + próprios) ler novo valor ou manter atual
         List<Attribute> allAttrs = new ArrayList<>();
-        // atributos herdados de TODA a cadeia de pais (raiz-primeiro), não só do pai directo — ancestorAttributes
+        // atributos herdados
         allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
                 .filter(a -> !a.hasDerive())
                 .toList());
@@ -452,7 +431,7 @@ public class JavaMenuGenerator {
     }
 
     // add (OneToMany/ManyToMany/Map): list.add(other) ou map.put(key, other)
-    // isSource = a classe do menu está na ponta SOURCE desta associação
+    // isSource = a classe do menu está na ponta source desta associação
     private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc, boolean isSource) {
         String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
         w.println("    private void add" + capitalized + "() {");
@@ -511,7 +490,7 @@ public class JavaMenuGenerator {
     /**
      * opções para operações custom
      * pede owner por ID, lê cada parâmetro
-     * invoca owner.op(args) e grava.
+     * chama owner.op(args)
      */
     private void generateCustomOperationMethods(PrintWriter w, Class cls, List<Class> allClasses) {
         Set<String> classNames = new HashSet<>();
@@ -544,7 +523,7 @@ public class JavaMenuGenerator {
                     w.println("        " + pType + " " + pName + " = " + GeneratorUtils.repoVariable(pType) + ".findById(" + pName + "Id);");
                     w.println("        if (" + pName + " == null) { System.out.println(\"" + pType + " not found.\"); return; }");
                 } else {
-                    // primitivo: input direto
+                    // simples: input direto
                     Attribute tmp = new Attribute();
                     tmp.setName(pName);
                     tmp.setType(pType);
@@ -553,11 +532,11 @@ public class JavaMenuGenerator {
                 w.println();
             }
 
-            // try/catch para que uma pré/pós-condição violada (IllegalStateException)
+            // try/catch para que uma pré/pós condição apanhada (IllegalStateException)
             // mostra o erro e volta ao menu, em vez de rebentar a app
             w.println("        try {");
-            // retorno da op: capturado no tipo real (via entry/op, como o OperationGenerator) e mostrado
-            // se não-void. Só owner é persistido — um return-entidade NÃO é guardado
+            // guarda o retorno numa variável (com o tipo de retorno da op) e mostra-o se não for void.
+            // grava só o owner
             String call = "owner." + op.getName() + "(" + String.join(", ", argNames) + ")";
             String rt = (entry.getReturnType() != null && !entry.getReturnType().isBlank())
                     ? entry.getReturnType() : (op.getReturnType() != null ? op.getReturnType() : "void");
@@ -594,9 +573,8 @@ public class JavaMenuGenerator {
             w.println();
             w.println("    private Scanner scanner = new Scanner(System.in);");
 
-            // um campo-repo por classe (inclui abstratas — outros menus precisam delas). pais primeiro:
-            // o repo filho inicializa-se com o campo do repo do pai, que tem de já estar declarado acima.
-            // Cada filho aponta só para a raiz (getRoot)
+            // um campo de repo por classe
+            // raízes primeiro porque cada repo filho se inicializa com o repo da raiz
             List<Class> repoOrder = new ArrayList<>();
             for (Class c : classes) if (c.getParentClass() == null) repoOrder.add(c);   // raízes (donos do store)
             for (Class c : classes) if (c.getParentClass() != null) repoOrder.add(c);   // filhos (vistas sobre a raiz)
@@ -677,7 +655,7 @@ public class JavaMenuGenerator {
                 break;
             case "boolean":
             case "Boolean":
-                // parseBoolean: tudo o que não for "true" assume-se false (sem validação nem retry)
+                // parseBoolean: tudo o que não for "true" assume-se false
                 w.println("        System.out.print(\"" + name + " (true/false): \");");
                 w.println("        boolean " + name + " = Boolean.parseBoolean(scanner.nextLine());");
                 break;
@@ -706,7 +684,7 @@ public class JavaMenuGenerator {
     }
 
     /**
-     * Gera código para atualizar um atributo .
+     * gera código para atualizar um atributo
      * mostra o valor atual, se user clicar enter mantém o valor, senão atualiza
      */
     private void generateUpdateAttribute(PrintWriter w, Attribute attr) {
@@ -771,7 +749,7 @@ public class JavaMenuGenerator {
                     w.println("            catch (IllegalArgumentException ex) { System.out.println(\"Invalid value. Try again.\"); }");
                     w.println("        }");
                 } else if (isTimeType(attr.getType())) {
-                    // enter mantém; valor inválido mantém com aviso
+                    // enter mantém, valor inválido mantém com aviso
                     String type = attr.getType();
                     w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() + \"] (ex: " + timeHint(type) + "): \");");
                     w.println("        String " + name + "Str = scanner.nextLine();");
@@ -780,7 +758,7 @@ public class JavaMenuGenerator {
                     w.println("            catch (Exception ex) { System.out.println(\"Invalid value, keeping current.\"); }");
                     w.println("        }");
                 } else {
-                    // antes gerava entity.setX(String) para tipos não suportados -> não compilava
+                    // antes gerava entity.setX(String) para tipos não suportados e dava problema
                     throw new IllegalArgumentException("Atributo '" + name + "' do tipo '" + attr.getType()
                             + "': tipo não suportado no target CLI.");
                 }

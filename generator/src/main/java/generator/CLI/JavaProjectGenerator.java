@@ -13,11 +13,8 @@ import java.io.PrintWriter;
 import java.util.List;
 
 /**
- * Gera a ESTRUTURA do projeto CLI plain: fontes .java cruas sob src/ (sem pom/Maven — compila com javac),
- * Main (default package) + InputUtils, e delega para os geradores de entity/repository/menu.
- */
-/**
- * gera a estrutura do projeto CLI.
+ * Gera a estrutura do projeto CLI plain:
+ * Main e InputUtils e geradores de entity/repository/menu.
  */
 public class JavaProjectGenerator {
     private String outputDirectory;
@@ -66,7 +63,7 @@ public class JavaProjectGenerator {
     }
 
     /**
-     * Gera main.java, so cria um MainMenu e chama run()
+     * gera main.java, so cria um MainMenu e chama run()
      */
     private void generateMainClass() throws IOException {
         String filename = outputDirectory + "/src/Main.java";
