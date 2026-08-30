@@ -17,35 +17,15 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Gera os menus CLI-JPA interativos com EntityManager/JPA.
- * cada entidade "concreta" tem CRUD + opções de associação (add/remove | assign/remove) + operações custom
- * (ligadas a uma Interaction) + MainMenu que delega para os sub-menus.
+ * gera os menus com (EntityManager/JPA).
  *
  * Notas:
- *  - toda a mutação é transacional (begin/commit, rollback + em.clear() no erro);
- *  - validação de invariantes ANTES do save; relações bidirecionais validam os dois lados
- *    (inverso sincronizado em memória);
- *  - relações persistem pelo lado DONO (isOwningSide); id resolvido pela raiz.
+ *  - toda as mudanças são transacionais (begin, commit, rollback,  em.clear() no erro);
+ *  - invariantes validadas antes do save
+ *  - relações bidirecionais validam os dois lados
  *
- * lim:
+ * Limitações:
  *  - operações custom não validam invariantes (só as suas pré/pós OCL);
- *  - input: boolean sem retry; short/byte/char/BigDecimal não suportados (lançam na geração);
- *  - operação custom ignora o valor de retorno.
- *
- * run(), generateRelationshipMethods e generateRelationShipPrints derivam TODOS de
- * RelationshipInfo.collectForMenus() — o switch do run() chama os métodos por NOME, por isso as
- * três derivações têm de concordar (antes eram três cálculos separados e já divergiam).
- */
-/**
- * Gera os menus CLI
- *
- * para cada classe gera um menu com:
- *  - CRUD
- *  - opções de associação (add/remove ou assign/remove)
- *  - opções para operações custom (ligadas a uma Interaction)
- *
- * id: usar id da classe raiz no caso de ser herança;
- * create e update excluem sempre o atributo-id (auto-gerado / PK).
  */
 public class CLIMenuGenerator {
 
@@ -139,7 +119,7 @@ public class CLIMenuGenerator {
             w.println("public class " + className + " {");
             w.println();
 
-            // fields
+            // attributes
             w.println("    private Scanner scanner;");
             w.println("    private EntityManager em;");
             w.println("    private " + cls.getName() + "Repository " + GeneratorUtils.repoVariable(cls.getName()) + ";");
@@ -172,8 +152,7 @@ public class CLIMenuGenerator {
     }
 
     /**
-     * Gera construtor do menu
-     * Recebe Scanner e os repositórios necessários
+     * gera construtor do menu
      */
     private void generateMenuConstructor(PrintWriter w, Class cls, Set<String> neededRepos) {
         w.println("    public " + cls.getName() + "Menu(Scanner scanner, EntityManager em) {");
@@ -188,7 +167,7 @@ public class CLIMenuGenerator {
     }
 
     /**
-     * Gera metodo run() (loop do menu)
+     * gera metodo run()
      * crud (create, view all , view by id, update, delete)
      * depois as de associação
      *   - Multiplicidade * (OneToMany/ManyToMany): Add + Remove
@@ -196,7 +175,7 @@ public class CLIMenuGenerator {
      */
     private void generateRunMethod(PrintWriter w, Class cls, List<Association> associations) {
         // menu options
-        // [0] = label para o menu, [1] = nome do método a chamar
+        // [0] = label para o menu, [1] = nome do metodo a chamar
         List<String[]> options = new ArrayList<>();
         if (!cls.isAbstract()) options.add(new String[]{"Create", "create"});
         options.add(new String[]{"View All", "viewAll"});
@@ -204,7 +183,6 @@ public class CLIMenuGenerator {
         options.add(new String[]{"Update", "update"});
         options.add(new String[]{"Delete", "delete"});
 
-        // O nome do metodo aqui tem de bater certo com o que lá é definido (o switch chama por NOME),
         for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
             String fieldName = rel.field();
             String cap = GeneratorUtils.capitalizeFirst(fieldName);
@@ -258,19 +236,18 @@ public class CLIMenuGenerator {
     private void generateCreateMethod(PrintWriter w, Class cls, List<Association> associations) {
         w.println("    private void create() {");
 
-        // recolher atributos do pai + próprios (mesma ordem que o construtor)
-        // excluir o atributo-id
+        // obter atributos do pai + próprios (mesma ordem que o construtor)
+        // excluir o atributo id
         String idName = cls.getRoot().getIdAttributeName();
 
         List<Attribute> allAttrs = new ArrayList<>();
-        // atributos herdados de todos os pais (raiz-primeiro), não só do pai directo
+
         allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
                 .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                 .toList());
-        // atributos próprios da classe. Mesmo filtro do id que os herdados: uma chave NATURAL
-        // (isIdAssigned) é atribuída pelo cliente, logo tem de ser pedida no create — só um id
-        // auto-gerado é que se exclui. Sem isto o id ficava null e o insert rebentava.
+        // atributos próprios da classe,  ma chave strijng
+        // (isIdAssigned) é atribuída pelo cliente, logo tem de ser pedida no create
         allAttrs.addAll(cls.getAttributes().stream()
                 .filter(a -> !a.hasDerive() && !a.hasInit())
                 .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
@@ -282,8 +259,8 @@ public class CLIMenuGenerator {
         }
         w.println();
 
-        // chave NATURAL: o id vem do utilizador, por isso o save() cai sempre no merge() e um id
-        // repetido fazia UPDATE  em vez de create.
+        // chave string (id vem do utilizador), como o id não é null, o save() faz merge(), que faria update
+        // se o id já existir, por isso verifica-se primeiro se existe, para não sobrescrever.
         if (cls.isIdAssigned() && idName != null) {
             w.println("        if (" + GeneratorUtils.repoVariable(cls.getName()) + ".findById(" + idName + ") != null) {");
             w.println("            System.out.println(\"" + cls.getName() + " with id '\" + " + idName + " + \"' already exists.\");");
@@ -292,11 +269,9 @@ public class CLIMenuGenerator {
             w.println();
         }
 
-        // relações SINGLE de que esta classe é DONA: pede-se o id no create (enter = null), para uma
-        // relação obrigatória (invariante self.x <> null) poder ser satisfeita — senão o validate()
-        // corria antes de haver forma de a preencher e a entidade nunca podia ser criada.
-        // Só o lado DONO: é o que grava ao guardar esta entidade. Um single no lado INVERSO (só existe
-        // num 1:1 bidirecional) fica para o assignX
+        // Se uma relação é obrigatória (self.x <> null), tem de se poder preencher no create, senão a entidade
+        // nunca passa na validação. Por isso pede-se aqui o id do outro objeto (enter = vazio para as opcionais).
+        // so as que esta classe grava (o lado dono), o resto fica para o assignX.
         List<RelationshipInfo> singleOwned = RelationshipInfo.collectForMenus(cls, associations).stream()
                 .filter(r -> !r.isCollection() && r.isOwner())
                 .toList();
@@ -317,7 +292,7 @@ public class CLIMenuGenerator {
             w.println();
         }
 
-        // criar entidade no-arg + setters
+        // criar entidade com no arg + setters
         w.println("        " + cls.getName() + " entity = new " + cls.getName() + "();");
         for (Attribute attr : allAttrs) {
             String cap = GeneratorUtils.capitalizeFirst(attr.getName());
@@ -416,11 +391,11 @@ public class CLIMenuGenerator {
         w.println();
 
         // para cada atributo (pai + próprios) ler novo valor ou manter atual
-        // PK não muda em update; excluir sempre o atributo-id (se houver)
+        // id não muda em update
         String idAttrName = cls.getRoot().getIdAttributeName();
 
         List<Attribute> allAttrs = new ArrayList<>();
-        // atributos herdados de TODA a cadeia de pais (raiz-primeiro), não só do pai directo atraves da ancestorAttributes
+
         allAttrs.addAll(GeneratorUtils.ancestorAttributes(cls).stream()
                 .filter(a -> !a.hasDerive())
                 .filter(a -> !a.getName().equals(idAttrName))
@@ -503,11 +478,8 @@ public class CLIMenuGenerator {
         return c != null && c.hasAnyInvariants();
     }
 
-    // Valida 'ownerVar' e, se dado, 'otherVar' (o outro lado de uma relação bidirecional, já
-    // sincronizado em memória) — só os lados que têm invariantes — ANTES do save, cada um por si.
-    // Se algum falhar: InputUtils.printErrors imprime, em.clear() desfaz as mudanças em memória
-    // (como o catch) e return. otherVar == null -> valida só um lado. otherNullable -> o outro pode
-    // ser null em runtime (ex.: dono anterior numa reatribuição) -> guarda com != null.
+    // Valida 'ownerVar' e 'otherVar' (se dado) antes do save, so os que têm invariantes. Se falhar,
+    // imprime os erros, remove em memória (em.clear) e return. otherNullable -> valida o outro só se != null.
     private void generateValidation(PrintWriter w, String ownerClass, String ownerVar,
                                 String otherClass, String otherVar, boolean otherNullable) {
         boolean ownerHas = hasInvariants(ownerClass);
@@ -541,13 +513,12 @@ public class CLIMenuGenerator {
         w.println("        owner.set" + capitalized + "(other);");
 
         if (bidir) {
-            // sincroniza o inverso EM MEMÓRIA para poder validar o outro lado (ex.: capacidade da Turma).
-            // substitui o em.refresh(other) pós-commit: a coleção fica logo correta em memória.
+            // sincroniza o inverso em mem para poder validar o outro lado
+            // substitui o em.refresh(other) depois do commit, a coleção fica logo correta em memória.
             String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
             boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
-            // inv Map -> sync por CHAVE.
-            // Basta hasQualifier(): esta ponta é SINGULAR,
-            // logo se há qualifier ele só pode estar no inverso
+
+            // aqui esta ponta é single (é o metodo assign), por isso o qualifier, se existir, está no inverso (Map) -> put por chave
             if (assoc.hasQualifier()) {
                 String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
                 w.println("        other.get" + invCap + "().put(owner.get" + qualCap + "(), owner);");
@@ -563,8 +534,8 @@ public class CLIMenuGenerator {
         w.println("        try {");
         w.println("            " + GeneratorUtils.repoVariable(ownerClass) + ".save(owner);");
         w.println("            em.getTransaction().commit();");
-        // só o lado DONO é que grava, o inverso em memória fica stale até reload -> em.refresh(other).
-        // (no bidir sincronizámos o inverso à mão acima, logo dispensa o refresh)
+        // só o owner é gravado, por isso o 'other' em memória pode ficar desatualizado -> em.refresh(other).
+        // no bidir o inverso já foi atualizado acima, logo não precisa
         if (!bidir) w.println("            em.refresh(other);");
         w.println("            System.out.println(\"Assigned " + otherClass + " to " + ownerClass + ".\");");
         w.println("        } catch (RuntimeException ex) {");
@@ -589,10 +560,19 @@ public class CLIMenuGenerator {
         w.println("        entity.set" + capitalized + "(null);");
 
         if (bidir) {
-            // desliga o inverso EM MEMÓRIA para poder validar o lado ANTIGO (ex.: cardinalidade mínima).
-            String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
-            boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
-            // inverso Map -> remove pela CHAVE
+            // remove o entity do inverso ('previous') em memória, para validar o lado antig
+            String invSide;
+            String invMult;
+            if (isSource) {
+                invSide = "target";
+                invMult = assoc.getSourceMultiplicity();
+            } else {
+                invSide = "source";
+                invMult = assoc.getTargetMultiplicity();
+            }
+            String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, invSide));
+            boolean invColl = GeneratorUtils.checkMultiplicity(invMult);
+            // inverso Map -> remove pela chave
             w.println("        if (previous != null) {");
             if (assoc.hasQualifier()) {
                 String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
@@ -610,7 +590,7 @@ public class CLIMenuGenerator {
         w.println("        try {");
         w.println("            " + GeneratorUtils.repoVariable(ownerClass) + ".save(entity);");
         w.println("            em.getTransaction().commit();");
-        if (!bidir) w.println("            if (previous != null) em.refresh(previous);");   // bidir: já sincronizado em memória
+        if (!bidir) w.println("            if (previous != null) em.refresh(previous);");   // bidir ent já sincronizado em memória
         w.println("            System.out.println(\"" + otherClass + " removed from \" + entity);");
         w.println("        } catch (RuntimeException ex) {");
         w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
@@ -634,10 +614,10 @@ public class CLIMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
-        // uma relação só é persistida se for escrita pelo lado DONO.
-        // Se o campo é o lado inverso (que tem mappedBy), gravar owner.getCampo().add(other) não escreve nada
-        // temos de escrever o campo dono em 'other' e gravaresse  'other'.
-        // (qualifier/Map sempre owner.)
+        // uma relação só é persistida se for escrita pelo lado owner
+        // se o campo é o lado inverso (que tem mappedBy), gravar owner.getCampo().add(other) não escreve nada
+        // temos de escrever o campo dono no 'other' e gravar o 'other'.
+        // qualifier/Map é sempre owner
         boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
         boolean bidir = assoc.isSourceNavigable() && assoc.isTargetNavigable();
         String saveVar, saveRepo, refreshVar, saveClass;
@@ -649,7 +629,7 @@ public class CLIMenuGenerator {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
-            if (bidir) {   // sincroniza o inverso do other para o poder validar — igual ao ramo isOwner
+            if (bidir) {   // sincroniza o inverso do other para o poder validar, igual ao ramo isOwner
                 String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
                 boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
                 w.println(invColl ? "        other.get" + invCap + "().add(owner);" : "        other.set" + invCap + "(owner);");
@@ -658,18 +638,18 @@ public class CLIMenuGenerator {
         } else if (isOwner) {
             w.println("        owner.get" + capitalized + "().add(other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
-            if (bidir) {   // sincroniza o inverso do ELEMENTO (other) p/ o poder validar
+            if (bidir) {   // sincroniza o inverso do (other) para o poder validar
                 String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
                 boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
                 w.println(invColl ? "        other.get" + invCap + "().add(owner);" : "        other.set" + invCap + "(owner);");
                 otherValClass = otherClass; otherValVar = "other"; synced = true;
             }
         } else {
-            // lado inverso escrevemos pelo lado DONO na var other
+            // lado inverso escrevemos pelo lado dono na var other
             String ownerCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
             boolean ownerIsCollection = GeneratorUtils.checkMultiplicity(
                     isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
-            // o lado DONO pode ser um Map (M:N com qualifier: dono = ponta do qualifier) -> put por chave
+            // o lado dono pode ser um Map (M:N com qualifier dono = ponta do qualifier) -> put por chave
             boolean ownerIsMapEnd = assoc.isMapEnd(!isSource);   // !isSource = a ponta oposta
             if (ownerIsMapEnd) {
                 String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
@@ -680,7 +660,7 @@ public class CLIMenuGenerator {
                         : "        other.set" + ownerCap + "(owner);   // lado DONO: é o que persiste");
             }
             saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner"; saveClass = otherClass;
-            // sincroniza a coleção do owner (inverso, sempre bidirecional aqui) p/ o poder validar
+            // sincroniza a coleção do owner (inverso, sempre bidirecional aqui) para o  o poder validar
             w.println("        owner.get" + capitalized + "().add(other);");
             otherValClass = ownerClass; otherValVar = "owner"; synced = true;
         }
@@ -713,7 +693,7 @@ public class CLIMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
-        // mesmo coisa do add a remoção só persiste pelo lado DONO
+        // mesmo coisa do add a remoção só persiste pelo lado dono
         boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
         boolean bidir = assoc.isSourceNavigable() && assoc.isTargetNavigable();
         String saveVar, saveRepo, refreshVar, saveClass;
@@ -724,7 +704,7 @@ public class CLIMenuGenerator {
             String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
-            if (bidir) {   // desliga o inverso do other para o poder validar — igual ao ramo isOwner
+            if (bidir) {   // remove o owner do inverso (em other), para o poder validar
                 String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
                 boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
                 w.println(invColl ? "        other.get" + invCap + "().remove(owner);" : "        other.set" + invCap + "(null);");
@@ -733,19 +713,19 @@ public class CLIMenuGenerator {
         } else if (isOwner) {
             w.println("        owner.get" + capitalized + "().remove(other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
-            if (bidir) {   // desliga o inverso do ELEMENTO (other) p/ o poder validar
+            if (bidir) {   // remove o owner do inverso (em other)
                 String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
                 boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
                 w.println(invColl ? "        other.get" + invCap + "().remove(owner);" : "        other.set" + invCap + "(null);");
                 otherValClass = otherClass; otherValVar = "other"; synced = true;
             }
         } else {
-            // lado inverso ent remover pelo lado DONO (em "other")
+            // lado inverso tem de remover pelo lado dono (em "other")
             String ownerCap = GeneratorUtils.capitalizeFirst(
                     GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
             boolean ownerIsCollection = GeneratorUtils.checkMultiplicity(
                     isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
-            // o lado DONO pode ser um Map (M:N qualifier) -> remove pela CHAVE
+            // o lado dono pode ser um Map (M:N qualifier) -> remove pela CHAVE
             boolean ownerIsMapEnd = assoc.isMapEnd(!isSource);   // !isSource = a ponta oposta
             if (ownerIsMapEnd) {
                 String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
@@ -756,7 +736,7 @@ public class CLIMenuGenerator {
                         : "        other.set" + ownerCap + "(null);   // lado DONO: é o que persiste");
             }
             saveVar = "other"; saveRepo = GeneratorUtils.repoVariable(otherClass); refreshVar = "owner"; saveClass = otherClass;
-            // desliga a coleção do owner (inverso, sempre bidirecional aqui) p/ o poder validar
+            // remove o other da coleção do owner (inverso, sempre bidirecional aqui), para o poder validar
             w.println("        owner.get" + capitalized + "().remove(other);");
             otherValClass = ownerClass; otherValVar = "owner"; synced = true;
         }
@@ -781,7 +761,7 @@ public class CLIMenuGenerator {
      * pede owner por ID, lê cada parâmetro
      * invoca owner.op(args) e grava.
      *
-     * Limitação: não valida invariantes (validate()) aqui — a op só corre as suas pré/pós-condições
+     *  não valida invariantes (validate()) aqui, a op só corre as suas pré/pós-condições
      * OCL. Só o CRUD gerado valida. A rever quando se rever o OperationGenerator.
      */
     private void generateCustomOperationMethods(PrintWriter w, Class cls, List<Class> allClasses) {
@@ -827,7 +807,7 @@ public class CLIMenuGenerator {
             w.println("        em.getTransaction().begin();");
             w.println("        try {");
             // retorno da operação usado com base na entry message e mostrado
-            // se não for void. Só owner é persistido — um return-entidade NÃO é guardado
+            // se não for void. Só owner é persistido, um return entidade não é guardado
             String call = "owner." + op.getName() + "(" + String.join(", ", argNames) + ")";
             String rt = (entry.getReturnType() != null && !entry.getReturnType().isBlank())
                     ? entry.getReturnType() : (op.getReturnType() != null ? op.getReturnType() : "void");
@@ -915,7 +895,7 @@ public class CLIMenuGenerator {
                 break;
             case "float":
             case "Float":
-                w.println("        float " + name + " = (float) InputUtils.readDouble(scanner, \"" + name + ": \");");
+                w.println("        float " + name + " = InputUtils.readFloat(scanner, \"" + name + ": \");");
                 break;
             case "double":
             case "Double":
@@ -923,7 +903,6 @@ public class CLIMenuGenerator {
                 break;
             case "boolean":
             case "Boolean":
-                // parseBoolean: tudo o que não for "true" assume-se false (sem validação nem retry)
                 w.println("        System.out.print(\"" + name + " (true/false): \");");
                 w.println("        boolean " + name + " = Boolean.parseBoolean(scanner.nextLine());");
                 break;
@@ -952,7 +931,7 @@ public class CLIMenuGenerator {
     }
 
     /**
-     * Gera código para atualizar um atributo .
+     * gera código para atualizar um atributo .
      * mostra o valor atual, se user clicar enter mantém o valor, senão atualiza
      */
     private void generateUpdateAttribute(PrintWriter w, Attribute attr) {
@@ -1017,7 +996,7 @@ public class CLIMenuGenerator {
                     w.println("            catch (IllegalArgumentException ex) { System.out.println(\"Invalid value. Try again.\"); }");
                     w.println("        }");
                 } else if (isTimeType(attr.getType())) {
-                    // enter mantém; valor inválido mantém com aviso
+                    // enter mantém, valor inválido mantém com aviso
                     String type = attr.getType();
                     w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() + \"] (ex: " + timeHint(type) + "): \");");
                     w.println("        String " + name + "Str = scanner.nextLine();");

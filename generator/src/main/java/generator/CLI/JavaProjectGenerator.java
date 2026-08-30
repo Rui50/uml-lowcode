@@ -128,6 +128,17 @@ public class JavaProjectGenerator {
             w.println("        scanner.nextLine();");
             w.println("        return value;");
             w.println("    }");
+            w.println();
+            w.println("    public static float readFloat(Scanner scanner, String prompt) {");
+            w.println("        System.out.print(prompt);");
+            w.println("        while (!scanner.hasNextFloat()) {");
+            w.println("            System.out.print(\"Invalid. \" + prompt);");
+            w.println("            scanner.next();");
+            w.println("        }");
+            w.println("        float value = scanner.nextFloat();");
+            w.println("        scanner.nextLine();");
+            w.println("        return value;");
+            w.println("    }");
             w.println("}");
         }
 

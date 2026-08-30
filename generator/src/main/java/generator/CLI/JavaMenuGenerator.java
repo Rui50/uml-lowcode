@@ -647,7 +647,7 @@ public class JavaMenuGenerator {
                 break;
             case "float":
             case "Float":
-                w.println("        float " + name + " = (float) InputUtils.readDouble(scanner, \"" + name + ": \");");
+                w.println("        float " + name + " = InputUtils.readFloat(scanner, \"" + name + ": \");");
                 break;
             case "double":
             case "Double":

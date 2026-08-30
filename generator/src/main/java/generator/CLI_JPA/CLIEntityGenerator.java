@@ -17,29 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Gera as entidades JPA (CLI-JPA).
- * Para cada classe @Entity/@Table, id (@Id/@GeneratedValue), atributos (@Column/@Enumerated/init inline),
- * relações (@OneToMany/@ManyToOne/@ManyToMany/@MapKey, dono via isOwningSide), getters derivados,
- * getters/setters, toString, validate() (se invariantes) e operações.
- *
- * Notas de design:
- *  - herança: SINGLE_TABLE (discriminador "dtype") ou JOINED; só a raiz leva @Table/@Inheritance;
- *  - id resolvido pela raiz (idAttributeName/idAttributeType, default Long); só no-arg constructor (JPA);
- *  - associação qualificada -> Map<qualifier, outro> (@MapKey); o lado singular nunca é Map.
- *
- */
-/**
- * Gera as entidades JPA
- * - por classe: anotações base de entity table etc, id
- * - atributos: tipo, coluna, enumeração, init
- * - relações: @OneToMany, @ManyToOne, @ManyToMany,
- * - getters derivados
- * - validate() se invs
- *
- * - Herança: por agora só SINGLE_TABLE, depois podemos configurar para JOINED
- *
- * id: raiz com idAttributeName == null gera o id por defeito (@Id @GeneratedValue Long id);
- * caso contrário @Id @GeneratedValue vão para o atributo escolhido. Ver model.Class.
+ * Gera as entidades JPA (CLI-JPA): @Entity, id, atributos, relações, getters/setters, toString, validate, operações.
  */
 public class CLIEntityGenerator {
     private String baseOutputPath;
@@ -165,25 +143,22 @@ public class CLIEntityGenerator {
     }
 
     /**
-     *  anotações base
+     *  anotações base da classe
      */
     private void generateClassBaseAnnotations(PrintWriter writer, Class cls, List<Class> allClasses) {
         // estratégia de herança
         String strategy = cls.getRootInheritanceStrategy();
 
-        // @Entity
         writer.println("@Entity");
 
         if (strategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
             // para herança single table, só a classe pai tem @Table
-            // os outros têm @DiscriminatorValue
 
-            // filho em SINGLE_TABLE: partilha a tabela do pai, por isso não leva @Table.
-            // só recebe @DiscriminatorValue, gerado mais abaixo.
+            // filho em SINGLE_TABLE partilha a tabela do pai, por isso não leva @Table.
+            // so fica com @DiscriminatorValue
             return;
         } else {
-            // nome derivado (minúsculas) ou override do painel Persistence (GeneratorUtils.tableName).
-            // o override permite contornar nomes que colidem com palavras reservadas (ex: USER)
+            // nome derivado ou override do painel Persistence
             writer.println("@Table(name = \"" + GeneratorUtils.tableName(cls) + "\")");
         }
 
@@ -210,15 +185,14 @@ public class CLIEntityGenerator {
     private void generateBaseStuff(PrintWriter writer, Class cls, List<Association> associations) {
         String className = cls.getName();
 
-        // no-arg constructor (preciso pelo JPA)
+        // no arg constructor (preciso pelo JPA)
         writer.println();
         writer.println("    public " + className + "() {}");
 
-        // getters and setters for non-derived attributes;
-        // se o atributo é o @Id, usar o tipo igual ao campo (que foi alterado ou nao)
-        // a wrapper (Integer), senão entity.getX() == null não compila
+        // getters/setters dos atributos
+        // o @Id usa Integer/Long (não int/long)  senão getX() == null dava erro
         for (Attribute attr : cls.getAttributes()) {
-            if (attr.hasDerive()) continue;     // derived has its own getter already
+            if (attr.hasDerive()) continue;
             String name = attr.getName();
             String type = name.equals(cls.getIdAttributeName())
                     ? cls.getRoot().getIdAttributeType()
@@ -229,37 +203,35 @@ public class CLIEntityGenerator {
             writer.println("    public void set" + cap + "(" + type + " " + name + ") { this." + name + " = " + name + "; }");
         }
 
-        // id getter/setter só na "raiz" e só para oo id sintético (no custom id o getter
-        // do atributo escolhido já é emitido no loop dos atributos)
+        // getid e set id so na raiz, se o id for custom o getter/setter ja vem do loop dos atributos
         if (cls.getParentClass() == null && cls.getIdAttributeName() == null) {
-            String idType = cls.getRoot().getIdAttributeType();   // Long (default) ou UUID
+            String idType = cls.getRoot().getIdAttributeType();
             writer.println();
             writer.println("    public " + idType + " getId() { return id; }");
             writer.println("    public void setId(" + idType + " id) { this.id = id; }");
         }
 
         // getters and setters for relationship fields
-        List<String> emittedRelations = new ArrayList<>();
+        List<String> generatedRelations = new ArrayList<>();
         for (Association assoc : associations) {
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
                 String otherClass = assoc.getTargetClass();
                 String otherRole = assoc.getTargetRole();
                 String thisMult = assoc.getSourceMultiplicity();
                 String otherMult = assoc.getTargetMultiplicity();
-                generateRelationshipGetterSetter(writer, otherClass, otherRole, thisMult, otherMult, assoc, true, emittedRelations);
+                generateRelationshipGetterSetter(writer, otherClass, otherRole, thisMult, otherMult, assoc, true, generatedRelations);
             }
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
                 String otherClass = assoc.getSourceClass();
                 String otherRole = assoc.getSourceRole();
                 String thisMult = assoc.getTargetMultiplicity();
                 String otherMult = assoc.getSourceMultiplicity();
-                generateRelationshipGetterSetter(writer, otherClass, otherRole, thisMult, otherMult, assoc, false, emittedRelations);
+                generateRelationshipGetterSetter(writer, otherClass, otherRole, thisMult, otherMult, assoc, false, generatedRelations);
             }
         }
 
 
-        // toString doesnt include relationships for now, avoids infinite cycle
-        // se há id custom, o atributo-id já vem do loop senão prefixa com "id=" + getId()
+        // o toString não inclui as relações para evita loops infinitis
         writer.println();
         writer.println("    @Override");
         writer.println("    public String toString() {");
@@ -270,7 +242,6 @@ public class CLIEntityGenerator {
             sb.append(" + \"id=\" + getId()");
             first = false;
         }
-        // getAllAttributes: inclui herdados. Via getter — o campo herdado é private no pai
         for (Attribute attr : cls.getAllAttributes()) {
             if (attr.hasDerive()) continue;
             String sep = first ? "" : ", ";
@@ -282,7 +253,7 @@ public class CLIEntityGenerator {
         writer.println("    }");
     }
 
-    // isSource = a classe que estamos a gerar está na ponta SOURCE desta associação
+    // isSource -> a classe que estamos a gerar está na ponta source da assoc ou nao
     private void generateRelationshipGetterSetter(PrintWriter writer,
                                           String otherClass,
                                           String otherRole,
@@ -290,13 +261,14 @@ public class CLIEntityGenerator {
                                           String otherMult,
                                           Association assoc,
                                           boolean isSource,
-                                          List<String> emitted) {
+                                          List<String> generated) {
+        // nome do atributo a gerar
         String fieldName = GeneratorUtils.makeAttributeName(otherClass, otherRole, otherMult);
-        if (emitted.contains(fieldName)) return;
-        emitted.add(fieldName);
+        if (generated.contains(fieldName)) return;
+        generated.add(fieldName);
 
         String type = otherClass;
-        // só a ponta que TEM o qualifier vira Map a outra é referência normal.
+
         if (assoc.isMapEnd(isSource)) {
             type = "Map<" + assoc.getQualifierType() + ", " + otherClass + ">";
         }
@@ -314,16 +286,16 @@ public class CLIEntityGenerator {
     private void generateAttributes(PrintWriter writer, Class cls) {
         writer.println("    // attributes");
         for (Attribute atr : cls.getAttributes()){
-            // skip derived
+
             if (atr.hasDerive()) continue;
 
-            // atributo escolhido como @Id idAttributeName só é definido na raiz
-            // tipo do campo é "fixed" (Integer em vez de int) — JPA não aceita primitivos no @Id
+            // atributo escolhido como @Id só é definido na raiz.
+            // o @Id usa Integer/Long (não int/long) senão getX() == null da erro
             boolean isId = atr.getName().equals(cls.getIdAttributeName());
             String fieldType = isId ? cls.getRoot().getIdAttributeType() : atr.getType();
             if (isId) {
                 writer.println("    @Id");
-                // chave natural (String) é atribuída pelo cliente -> sem @GeneratedValue
+                // chave se for string é atribuída pelo cliente -> sem @GeneratedValue
                 if (!cls.isIdAssigned()) {
                     writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
                 }
@@ -358,7 +330,8 @@ public class CLIEntityGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(targetClass, targetRole, targetMultiplicity);
 
                 if(!generatedRelations.contains(fieldName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, fieldName, targetMultiplicity, association, true, allClasses);
+                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, fieldName,
+                            targetMultiplicity, association, true, allClasses);
                     generatedRelations.add(fieldName);
                 }
             }
@@ -371,7 +344,8 @@ public class CLIEntityGenerator {
                 String fieldName = GeneratorUtils.makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
 
                 if(!generatedRelations.contains(fieldName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, fieldName, sourceMultiplicity, association, false, allClasses);
+                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, fieldName,
+                            sourceMultiplicity, association, false, allClasses);
                     generatedRelations.add(fieldName);
                 }
             }
@@ -380,7 +354,7 @@ public class CLIEntityGenerator {
 
 
     /**
-     * Gerar as anotações de relacionamento (@OneToMany, @ManyToOne, @ManyToMany)
+     * gera as anotações de relacionamento (@OneToMany, @ManyToOne, @ManyToMany)
      * com base na multiplicidade e navegabilidade da associação.
      */
     private void generateRelationshipBaseAnnotations(PrintWriter writer, String thisClass,
@@ -389,24 +363,23 @@ public class CLIEntityGenerator {
                                                      boolean isSource, List<Class> allClasses){
         writer.println("    // relationship: " + thisClass + " -> " + otherClass);
 
-        // thisMultiplicity = multiplicidade do CAMPO desta classe (quantos do outro lado);
+        // thisMultiplicity = multiplicidade do atributo desta classe
         // otherMultiplicity = quantos desta classe é que o outro lado vê
         String thisMultiplicity  = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
         String otherMultiplicity = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
 
         // ponta com o Map conta como coleção
-        boolean isCollection = GeneratorUtils.checkMultiplicity(thisMultiplicity) || assoc.isMapEnd(isSource);          // o MEU campo é coleção
+        boolean isCollection = GeneratorUtils.checkMultiplicity(thisMultiplicity) || assoc.isMapEnd(isSource);          // o atributo deste lado é coleção
         boolean inverseIsCollection = GeneratorUtils.checkMultiplicity(otherMultiplicity) || assoc.isMapEnd(!isSource); // o do outro lado
         boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
-        // @OrderBy da coleção (persistence tab) — só em campos de coleção
+        // @OrderBy da coleção
         if (isCollection) {
             Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElse(null);
             String orderBy = (self != null) ? self.getCollectionOrder().get(fieldName) : null;
             if (orderBy != null) writer.println("    @OrderBy(\"" + orderBy + "\")");
         }
 
-        // writers de relação partilhados com o Spring (JpaEntityWriter): o que sai é JPA puro
         // Many to Many
         if (isCollection && inverseIsCollection) {
             JpaEntityWriter.generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
@@ -430,12 +403,6 @@ public class CLIEntityGenerator {
     /**
      * gera os ficheiros para interface UML
      *
-     */
-    /**
-     * Emite as operações da classe.
-     * Se tiverem sequence diagram, gera o corpo via OperationGenerator.
-     * Caso contrário, gera stub que lança UnsupportedOperationException.
-     * Necessário para satisfazer contratos de interfaces e para o menu poder chamar owner.<op>().
      */
     public void generateInterfaces(List<Interface> interfaces) throws IOException {
         if (interfaces == null || interfaces.isEmpty()) return;

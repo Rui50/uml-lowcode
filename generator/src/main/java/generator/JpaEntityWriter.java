@@ -7,30 +7,22 @@ import model.Class;
 import java.io.PrintWriter;
 
 /**
- * Pedaços de entidade JPA que são IGUAIS no Spring e no CLI-JPA — os dois targets usam Jakarta
- * Persistence, por isso @Id/@ManyToOne/@OneToMany/@ManyToMany/@OneToOne/@MapKey saem iguais nos dois.
- * Estavam duplicados byte-a-byte em SpringEntityGenerator e CLIEntityGenerator, e isso já custou
- * caro: o bug do @ManyToOne sobre um Map e, mais tarde, o @MapKey nas duas pontas de uma M:N
- * qualificada tiveram de ser corrigidos DUAS vezes, uma em cada cópia.
+ * Anotações JPA de entidade iguais no Spring e no CLI-JPA porque os dois usam Jakarta Persistence,
+ * por isso @Id/@ManyToOne/@OneToMany/@ManyToMany/@OneToOne/@MapKey saem iguais
  *
- * O que fica FORA daqui (por ser específico de cada target):
- *  - generateRelationshipBaseAnnotations: escolhe a forma, junta o @JsonIgnoreProperties (Jackson) e a
- *    Bean Validation das relações (@NotNull/@NotEmpty do OCL) — tudo só do Spring (o CLI-JPA não tem);
- *  - generateAttributes: no Spring recebe as anotações de Bean Validation dos atributos;
- *  - generateEntity: acessores (Lombok vs à mão) e os extras do Spring.
- *
- * Ou seja, as anotações que dependem do target saem SEMPRE em cada gerador, ANTES
- * de chamar estes writers; o que sai aqui é só o @annotation JPA + o campo, igual nos dois.
+ * Fica de fora o que depende do target (Bean Validation do OCL, @JsonIgnoreProperties do
+ * Jackson,  Lombok)  isso sai em cada gerador antes de chamar estes writers.
  */
+
 public final class JpaEntityWriter {
 
     private JpaEntityWriter() { }
 
-    // id basico (Long auto-gerado) — só qnd não se define um id custom;
+    // id basico, só qnd não se define um id custom
     // se houver id custom, o @Id é colocado no atributo escolhido em generateAttributes
     public static void generateId(PrintWriter writer, Class cls) {
         if (cls.getIdAttributeName() != null) return;
-        // id sintético: Long (default) ou UUID gerado
+        // id auto gerado Long (default) ou UUID gerado
         String idType = cls.getRoot().getIdAttributeType();
         writer.println("    @Id");
         if ("UUID".equals(idType)) {
@@ -57,7 +49,7 @@ public final class JpaEntityWriter {
     /**
      * @ManyToMany: bidirecional: dono tem @JoinTable, inverso tem mappedBy
      * unidirecional: @JoinTable
-     * Com qualifier NESTA ponta: @MapKey e Map<qualifier, otherClass>
+     * Com qualifier nesta ponta: @MapKey e Map<qualifier, otherClass>
      */
     public static void generateManyToMany(PrintWriter writer,
                                           String thisClass,
@@ -67,7 +59,7 @@ public final class JpaEntityWriter {
                                           boolean isSource,
                                           boolean isBidirectional) {
 
-        // numa auto-associação as duas colunas seriam iguais ("employee_id") entao usa-se o campo na inversa
+        // numa auto associação as duas colunas seriam iguais ("employee_id") entao usa-se o campo na inversa
         String invJoinCol = (thisClass.equals(otherClass) ? fieldName.toLowerCase() : otherClass.toLowerCase()) + "_id";
 
         if (isBidirectional) {
@@ -90,12 +82,11 @@ public final class JpaEntityWriter {
             writer.println("    @JoinTable(");
             writer.println("        name = \"" + thisClass.toLowerCase() + "_" + fieldName.toLowerCase() + "\",");
             writer.println("        joinColumns = @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\"),");
-            writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + otherClass.toLowerCase() + "_id\")");
+            writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + invJoinCol + "\")");
             writer.println("    )");
         }
 
-        // numa M:N as DUAS pontas são coleções, por isso é preciso saber qual TEM o qualifier — só
-        // essa vira Map. A chave é um atributo dos VALORES, não faz sentido na outra ponta.
+        // numa M:N as duas pontas são coleções, por isso é preciso saber qual tem o qualifier
         if (assoc.isMapEnd(isSource)) {
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
@@ -135,7 +126,7 @@ public final class JpaEntityWriter {
             writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
         }
 
-        if (assoc.hasQualifier()) {
+        if (assoc.isMapEnd(isSource)) {
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
@@ -148,19 +139,18 @@ public final class JpaEntityWriter {
 
     /**
      * @ManyToOne com @JoinColumn
-     * o lado singular nunca é Map (ver comentário dentro)
+     * o lado singular nunca é Map
      */
     public static void generateManyToOne(PrintWriter writer,
                                          String otherClass,
                                          String fieldName,
                                          Association assoc) {
 
-        // lado singular (inverso de um Map qualificado): é sempre uma referência única, nunca um Map.
-        // por isso ignora-se o qualifier aqui (senão saía @ManyToOne sobre um Map -> JPA inválido).
+        // Ponta sing = referência única. O Map pertence só ao lado da coleção
+        // aqui ignora-se, senão saía @ManyToOne sobre um Map (inválido).
         writer.println("    @ManyToOne");
         writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
         writer.println("    private " + otherClass + " " + fieldName + ";");
-
     }
 
     /**
@@ -176,8 +166,8 @@ public final class JpaEntityWriter {
                                         boolean isSource,
                                         boolean isBidirectional) {
 
-        // tem qualifier NESTA ponta, é OneToMany.
-        // Map como coleção, nunca no ramo 1:1)
+        // tem qualifier meste ponta, é OneToMany.
+        // Map como coleção, nunca no ramo 1:1
         if (assoc.isMapEnd(isSource)) {
             if (isBidirectional) {
                 writer.println("    @OneToMany(mappedBy = \"" +
@@ -192,7 +182,7 @@ public final class JpaEntityWriter {
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
                     fieldName + " = new HashMap<>();");
         } else {
-            // Sem qualifier: OneToOne normal
+            // sem qualifier OneToOne normal
             if (isBidirectional) {
                 // decide se o campo gerado é @OneToOne (dono) ou mappedBy (inverso)
                 boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);

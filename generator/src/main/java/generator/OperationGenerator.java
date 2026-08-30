@@ -19,113 +19,60 @@ import java.util.Map;
  * OperationGenerator
  * ==========
  *
- * VISÃO GERAL
- *   Uma operação (ex.: Turma.inscrever(a: Aluno)) não tem corpo no diagrama de classes — só assinatura.
- *   Para gerar um corpo, o utilizador desenha um DIAGRAMA DE SEQUÊNCIA para a operação, e este gerador
- *   transcreve-o para Java. É o único sítio onde o COMPORTAMENTO UML (não só a estrutura) vira código;
- *   é partilhado por plain/CLI/CLI-JPA (e alimenta o Spring via SequenceBodyGenerator).
- *   Modelo mental: o corpo do metodo = as mensagens que o DONO da operação envia, por ordem.
  *
- * REGRAS PARA DESENHAR O DIAGRAMA (contrato assumido; a maioria é validada com erro claro)
- *   - Um actor (lifeline sem tipo) chama a operação; essa 1ª mensagem é a "entry message".
+ * REGRAS PARA DESENHAR O DIAGRAMA
+ *   - Um actor (lifeline sem tipo) chama a operação, essa 1ª mensagem é a "entry message".
  *   - O nome da entry message === nome da operação.
- *   - Todos os argumentos e o return são tipados explicitamente (a: Aluno; ... : boolean).
+ *   - Todos os argumentos e o return tem os seus tipos explicitamente (a: Aluno; ... : boolean).
  *   - O nome de uma lifeline === o parâmetro/variável que representa (para chamadas cross-lifeline).
- *   - As lifelines do dono são tipadas (turma: Turma).
+ *   - As lifelines do dono tem o tipo (turma: Turma).
  *   - Uma reply para o actor dá o valor de retorno; sem reply => void.
- *   - Mensagens «create» sem argumentos; pôr os valores com setters a seguir.
+ *   - Mensagens «create» sem argumentos, pôr os valores com setters a seguir.
  *
- * PASSO A PASSO — generateOperation
- *   1. Encontra a entry message (primeira mensagem, actor->dono); se não há -> erro.
- *   2. Valida que o nome da entry === nome da operação.
- *   3. Resolve o tipo de retorno (entry -> class diagram -> void).
- *   4. Emite a assinatura a partir dos ARGUMENTOS DA ENTRY (não do class diagram); cada arg tem de ter tipo.
- *   5. Precondições OCL -> if (!(expr)) throw IllegalStateException(msg).
- *   6. Snapshots @pre (para pós-condições que referem x@pre) declarados ANTES do corpo.
+ * passo a passo
+ *   1. encontra a entry message (primeira mensagem, actor->dono)
+ *   2. valida que o nome da entry === nome da operação
+ *   3. ve o tipo do return (entry -> class diagram -> void)
+ *   4. gera a assinatura a partir dos argumentos da entry (não do class diagram), cada arg tem de ter tipo
+ *   5. preconds OCL -> if (!(expr)) throw IllegalStateException(msg).
+ *   6. snaptchots @pre (para pós condições que referem x@pre) declarados antes do corpo.
  *   7. Corpo -> generateElements.
- *   8. Expressão de retorno -> findReplyToActor (última reply para o actor); non-void sem reply -> erro.
- *   9. Alias "result" (se uma pós-condição o referir) declarado DEPOIS do corpo.
- *   10. Pós-condições OCL -> mesma forma if (!(...)) throw.
+ *   8. expressao de retorno -> findReplyToActor (última reply para o actor), nonvoid sem reply -> erro.
+ *   9. "result" (se uma pós-condição o referir) declarado depois do corpo.
+ *   10. pos condições OCL -> mesma forma if (!(...)) throw.
  *   11. return result / return <expr>.
  *
- * generateElements — O FILTRO DE POSSE (decisão central)
- *   Só emite uma Message se a sua source for o DONO (entry.getTarget()) e não for reply. Fragments recorrem.
- *   Consequência: o corpo é só as chamadas DIRETAS do dono. Se o dono chama a.foo() e a chama b.bar(),
- *   a mensagem b.bar() (source = a) é IGNORADA. Transcrição UM NÍVEL DE PROFUNDIDADE, por design — os
- *   callees têm as suas próprias operações/diagramas.
+ * generateElements
+ *   Só emite uma Message se a sua source for o DONO (entry.getTarget()) e não for reply
  *
- * generateMessage — os cinco casos (por ordem de prioridade)
+ * generateMessage — os cinco casos
  *   1. «create» -> Type var = new Type(args);
- *   2. atribuição simples (isPlainAssignment, ex.: points = points - amount) -> [Type] x = expr;
- *   3. receiver: "this" se o target é o próprio dono, senão o nome da lifeline (= nome de um parâmetro).
- *   4. heurística add/remove: <campo>.add(x)/.remove(x) (ou add/remove com 1 arg cujo tipo casa numa
- *      associação) -> acesso à coleção (qualifier/Map: put/remove por chave; senão add/remove).
- *   5. fallback: chamada literal receiver.name(args), com atribuição se houver assign var.
+ *   2. declaração x : Tipo (sem valor) -> Tipo x;
+ *   3. atribuição simples (isPlainAssignment, points = points - amount) -> [Type] x = expr;
+ *   4. campo Map (associação qualificada): add/remove viram put/remove
+ *      <campo>.add(x)    -> <campo>.put(x.getChave(), x)
+ *      <campo>.remove(x) -> <campo>.remove(x.getChave())
+ *   5. numa mensagem normal, ou seja cahmar um metodo, se for self cal mete o this, senao o nome da lifeline
  *
- * generateFragment — estruturas de controlo (pelo guard do operando)
- *   - loop com guard "for (Tipo v : coll)" -> for-each Java; "while (cond)" -> while; outro -> erro.
- *     Coleções Map levam .values() (adaptCollectionAccess).
- *   - opt -> if (guard) { }.
- *   - alt -> if / else if / else pelos guards dos operandos (o 1º tem de ter guard; "else" -> else final).
- *   Fragments aninhados recorrem via generateElements com indent+1.
+ * generateFragment
+ *    Coleções Map levam .values() (adaptCollectionAccess).
  *
- * CAMADA OCL
- *   Pré/pós-condições -> if (!(javaExpr)) throw IllegalStateException(msg). @pre precisa de um snapshot
- *   ANTES do corpo; "result" precisa de um alias DEPOIS do corpo (por isso um vai acima e o outro abaixo).
+ * parte do ocl
+ *   pre e pos condições -> if (!(javaExpr)) throw IllegalStateException(msg), @pre precisa de um snapshot
+ *   antes do corpo, o "result" precisa de um alias depois do corpo (por isso um vai acima e o outro abaixo).
  *
- * HELPERS
+ *  uma pós-condição que falha faz throw. no Spring/CLI-JPA (com BD) o throw dá rollback
+ *   por causa da anot @transaction
+ *
+ *
  *   - findEntryMessage/firstMessage — primeira mensagem, descendo em fragments.
  *   - participates — ownerType é (ou herda de) a classe desta ponta da associação (subclasse reconhece
  *     associação do pai).
- *   - findAssoc/findAssocByField/fieldNameFor — resolvem a que associação um add/remove se refere e o campo.
+ *   - findAssoc/findAssocByField/fieldNameFor — a que associação um add/remove se refere e o campo.
  *   - adaptCollectionAccess — acrescenta .values() ao iterar uma associação Map (qualificada).
  */
-/**
- * Pega numa interação (diagrama de sequência) ligada a uma operação de uma classe
- * e gera o corpo do metodo correspondente.
- *
- * processo:
- *   1. generateOperation — cria metodo, emite preconditions, @pre snapshots,
- *      corpo (via generateElements), result alias, postconditions, return
- *   2. generateElements — itera mensagens e fragmentos, só processa mensagens enviadas pelo DONO da
- *      operação (UM nível de profundidade, por design): o que os callees fazem em resposta NÃO é
- *      inlined — pertence às operações deles. (Por isso um fragmento sem ação do dono sai vazio.)
- *   3. generateMessage — gera código para uma mensagem (heurística + fallback)
- *   4. generateFragment — gera código para loop / alt / opt (recursivo)
- *
- * Heurísticas:
- *   - target == entry.target -> "this", senão usa o nome da lifeline
- *   - <attr>.add(x) ou <attr>.remove(x) -> put/remove para Map (com qualifier),
- *     senão add/remove para coleção simples
- *   - loops sobre Map -> adaptados para iterar .values()
- *   - reply para o actor -> return statement, sem reply -> sem return (void)
- *
- * OCL:
- *   - preconditions e postconditions são emitidas como if (!(...)) throw IllegalStateException
- *   - @pre nas postconditions -> snapshot do estado declarado antes do corpo
- *   - "result" nas postconditions -> alias declarado depois do corpo, antes das checks
- *
- * Convenções ao utilizador fazer o diagrama:
- *   - Tipos explícitos em todos os argumentos e returns (a: Aluno, não apenas a)
- *   - Actor (lifeline sem tipo) chama a operação ( a nao ser que seja job )
- *   - Nome da mensagem do actor === nome da operação
- *   - Nome da lifeline === nome do parâmetro (para cross-lifeline calls)
- *   - Lifelines do owner devem ser tipadas (turma:Turma)
- *   - Mensagens «create» SEM argumentos (new Type()); pôr os valores com mensagens setter a seguir
- *
- * atomicidade de pos conds (por-alvo)
- *   Uma pós-condição que falha faz throw em TODOS os alvos. Desfazer os efeitos já aplicados pelo
- *   corpo com @transaction: só Spring e CLI-JPA (com BD) o fazem — o throw dá rollback.
- *   Plain e cli NÃO persistem, logo não há o que reverter: o objeto em memória pode ficar
- *   meio-alterado, mas como nunca foi gravado, "rollback" não se aplica — é estado do caller.
- */
-
 public class OperationGenerator {
 
-    // Emite a secção "// Operations" de uma entidade: por cada operação decide entre 3 formas —
-    // abstrata (só assinatura abstract), com diagrama de sequência (corpo real via generateOperation)
-    // ou sem diagrama (assinatura + stub UnsupportedOperationException). Partilhado pelos entity
-    // generators dos 3 targets entity-based (plain, CLI, CLI-JPA) — o Spring gera as ops no service.
     public static void generateOperations(PrintWriter writer, Class cls, List<Association> associations) {
         if (cls.getOperations().isEmpty()) {
             return;
@@ -134,7 +81,7 @@ public class OperationGenerator {
         writer.println("    // Operations");
 
         for (Operation op : cls.getOperations()) {
-            // op abstrata só a assinatura abstract (a subclasse concreta implementa)
+            // op abstrata só a assinatura abstract
             if (op.isAbstract()) {
                 String absReturn = GeneratorUtils.removePackageNames(op.getReturnType());
                 writer.print("    " + op.getVisibility() + " abstract " + absReturn + " " + op.getName() + "(");
@@ -152,7 +99,7 @@ public class OperationGenerator {
             if (interaction != null) {
                 generateOperation(writer, cls, op, interaction, associations);
             } else {
-                // sem diagrama assinatura + stub que lança UnsupportedOperationException
+                // sem diagrama assinatura + nada dentro so que lança UnsupportedOperationException
                 String visibility = op.getVisibility();
                 String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
                 String name = op.getName();
@@ -174,7 +121,7 @@ public class OperationGenerator {
         }
     }
 
-    // gera a operação PIM, assinatura, precondições e corpo
+    // gera a operação, assinatura, precondições e corpo
     public static void generateOperation(PrintWriter writer, Class cls, Operation operation,
                                          Interaction interaction, List<Association> associations) {
         Message entry = findEntryMessage(interaction);
@@ -193,9 +140,14 @@ public class OperationGenerator {
         }
 
         // tipo de retorno da mensagem de entrada se especificado | senão da operação (diagrama de classes) | senão void
-        String returnType = (entry.getReturnType() != null && !entry.getReturnType().isBlank())
-                ? entry.getReturnType()
-                : (operation.getReturnType() != null ? operation.getReturnType() : "void");
+        String returnType;
+        if (entry.getReturnType() != null && !entry.getReturnType().isBlank()) {
+            returnType = entry.getReturnType();
+        } else if (operation.getReturnType() != null) {
+            returnType = operation.getReturnType();
+        } else {
+            returnType = "void";
+        }
 
         // assinatura a partir da mensagem de entrada o tipo de cada argumento é obrigatório
         writer.println();
@@ -218,7 +170,7 @@ public class OperationGenerator {
             writer.println("        }");
         }
 
-        // @pre snapshots - capturar o estado antes de executar
+        // @pre snapshots para capturar o estado antes de executar
         // dedup por varName: várias postconditions na mesma op podem mencionar o mesmo @pre
         Map<String, PreSnapshot> snapshots = new LinkedHashMap<>();
         for (Postcondition post : operation.getPostconditions()) {
@@ -233,22 +185,19 @@ public class OperationGenerator {
 
         generateElements(writer, interaction.getElements(), entry, cls, associations, 2);
 
-        // a expressão de return vem da reply-message para o actor; sem reply, não é feito return.
-        // fim da op (result/pós-condições/return) é partilhado com o Spring — selfVar="this" aqui
-        // porque o corpo corre na própria entidade (this-based)
+        // a expressão de return vem da reply message para o actor | sem reply, não é feito return
         String returnExpr = GeneratorUtils.findReplyToActor(interaction.getElements());
         generateReturnAndPostconditions(writer, operation, returnType, returnExpr, "this");
 
         writer.println("    }");
     }
 
-    // Fim de uma op com corpo - declara 'result' (se uma pós-condição o referir), pós-condições OCL e
-    // return (+ guards de reply/void). selfVar = como o OCL referencia o self: "this" no entity (o corpo
-    // corre na entidade) ou a var self carregada do repo no service Spring — getJavaExpression(selfVar)
-    // troca o alvo ("this.getX()" -> "member.getX()").
-    // NOTA: só o FIM (este metodo) é partilhado entity/Spring. A CABEÇA (entry-find, corpo, load-self do
-    // Spring) fica duplicada de propósito — o corpo diverge mesmo (generateElements vs SequenceBodyGenerator)
-    // e o Spring carrega self de um id; não é candidata a fatorizar.
+    // Fim de uma op com contedo, escreve o 'result' (se uma pós-condição o usar), as pós-condições OCL e o return.
+    //
+    // selfVar = como o OCL escreve o "self":
+    //   - entity -> "this"  (o corpo corre na própria entidade)
+    //   - Spring -> a var carregada do repo (e "member")
+    //   getJavaExpression(selfVar) troca o alvo:  "this.getX()" -> "member.getX()"
     public static void generateReturnAndPostconditions(PrintWriter writer, Operation op, String returnType,
                                                        String returnExpr, String selfVar) {
         boolean needsResult = op.getPostconditions().stream()
@@ -285,7 +234,7 @@ public class OperationGenerator {
         }
     }
 
-    // Itera as messages e fragments, delegando para generateMessage / generateFragment
+    // Itera as messages e fragments, usa generateMessage / generateFragment
     // so emite mensages enviadas pelo dono do metodo o resto ignora, o resto seria outro diagrama
     private static void generateElements(PrintWriter writer, List<Object> elements,
                                          Message entry, Class cls, List<Association> associations, int indent) {
@@ -304,17 +253,16 @@ public class OperationGenerator {
     }
 
     /**
-     * Gera o codiog da mensagem
-     * - target igual ao entry -> "this"
-     *   nome da lifeline se tiver, ou comentário se não tiver
-     * - add / remove com 1 argumento e ascociação correspondente -> acesso à coleção (add/remove ou put/remove para map)
-     * - caso geral: receiver.name(args) com assign se tiver variável de atribuição e tipo de retorno
+     * Gera o código de uma mensagem
+     * - target igual ao entry -> "this", senão o nome da lifeline (erro se não tiver nome)
+     * - campo Map (<campo>.add/remove) -> put/remove pela chave do qualifier
+     * - caso geral: receiver.name(args), com assign se tiver variável de atribuição
      */
     private static void generateMessage(PrintWriter writer, Message msg, Message entry,
                                         Class cls, List<Association> associations, String indent) {
+        ////////// Create message
+
         // mensagem «create»: gera "Type var = new Type(args)".
-        // Antes de isPlainAssignment porque "loan =" parece atribuição
-        // Só compila se Type tiver construtor público com esses args (em Spring só no-arg) — nota #9 no Main.
         if ("createMessage".equals(msg.getMessageSort())) {
             String type = msg.getTarget().getType();
             String var = msg.getAssignVariable() != null ? msg.getAssignVariable()
@@ -332,8 +280,9 @@ public class OperationGenerator {
             return;
         }
 
-        // declaração: "text : String" -> "String text;" (assignVariable + returnType, sem valor).
-        // name==null distingue de "x = foo() : Type", que é chamada (essa tem name).
+        ////////// Declarações ou atribuições de vars
+
+        // declaração: "text : String" -> "String text;"
         if (msg.getAssignVariable() != null && msg.getAssignExpression() == null
                 && msg.getName() == null
                 && msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
@@ -342,13 +291,15 @@ public class OperationGenerator {
         }
 
         // atribuição simples (quando nao tem chamadas a metodos): "x = expr" ou "x = expr : Type"
-        // se ": Type" presente -> declara (Type x = expr); ausente -> reatribui (x = expr)
+        // se tem ": Type"  declara (Type x = expr) senao -> reatribui (x = expr)
         if (msg.isPlainAssignment()) {
             String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
                     ? msg.getReturnType() + " " : "";
             writer.println(indent + declType + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
             return;
         }
+
+        ///////////// calls
 
         String receiver;
         if (msg.getTarget().getId().equals(entry.getTarget().getId())) {
@@ -361,7 +312,7 @@ public class OperationGenerator {
                         + "' não tem nome — o nome tem de ser igual ao parâmetro/variável que está a ser chamado.");
             }
         }
-        // heurística: <xx>.add(x) / <xx>.remove(x) ou addX/removeX -> acesso a coleção
+
         String name = msg.getName();
         List<MessageArgument> args = msg.getArguments();
 
@@ -378,24 +329,18 @@ public class OperationGenerator {
             MessageArgument arg = args.get(0);
             String ownerType = msg.getTarget().getType();
 
-            // lookup direto por attrName — só com PREFIXO DE CAMPO ("alunos.add(a)").
-            // Sem prefixo ("add(a)") já não se infere: cai no fallback e sai chamada literal this.add(a).
-            // antes inferia-se a associação pelo TIPO do argumento, o que sequestrava um método de negócio
-            // chamado add/remove — gerava acesso à coleção em vez da chamada, e compilava (falha silenciosa).
+            // se a mensagem for "alunos.add(a)", procura a associação com esse campo (alunos).
+            // se for só "add(a)", sem campo à frente, trata como uma chamada normal (fallback).
             Association assoc = null;
             if (attrName != null) {
                 assoc = findAssocByField(associations, cls, ownerType, attrName);
             }
-            // } else {
-            //     assoc = findAssoc(associations, cls, ownerType, arg.getType());
-            //     if (assoc != null) attrName = fieldNameFor(assoc, cls, ownerType);
-            // }
 
             if (assoc != null) {
                 String base = receiver + "." + attrName;
                 String code;
                 if (assoc.hasQualifier()) {
-                    // MAP com PUT(key, value) ou REMOVE(key) — key via getter do qualifier
+                    // map com PUT(key, value) ou remove(key)
                     String q = assoc.getQualifierName();
                     String getter = "get" + Character.toUpperCase(q.charAt(0)) + q.substring(1) + "()";
                     code = "add".equals(op)
@@ -422,7 +367,7 @@ public class OperationGenerator {
         call.append(")");
 
         if (msg.getAssignVariable() != null) {
-            // se ": Type" presente -> declara; ausente -> reatribui a variável porque já tem de ser existente
+            // se ": Type" presente -> declara, se ausente -> reatribui a variável porque já tem de ser existente
             String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
                     ? msg.getReturnType() + " " : "";
             writer.println(indent + declType + msg.getAssignVariable() + " = " + call + ";");
@@ -432,12 +377,8 @@ public class OperationGenerator {
     }
 
     /**
-     * VERSÃO ALTERNATIVA (mais literal) de generateMessage — NÃO ligada ainda.
-     * Igual à original, mas a heurística add/remove reduz-se ao ADAPTADOR DE MAP: só um campo
-     * QUALIFICADO (<campo>.add/.remove) vira put/remove por chave. Listas planas e chamadas normais
-     * caem no fallback (transcrição literal); um "add(x)" SEM campo passa a ser chamada a método.
-     * Muda o contrato de modelação: diagramas com "add(x)" por match de tipo (ex.: add(aluno : Aluno))
-     * partiriam — teriam de passar a "alunos.add(a)". Ver nota no Main. Decidir com orientador.
+     * So dif no add/remove
+     * um campo Map qualificado (<campo>.add/remove) vira put/remove, tudo o resto é literal.
      */
     private static void generateMessage2(PrintWriter writer, Message msg, Message entry,
                                         Class cls, List<Association> associations, String indent) {
@@ -491,8 +432,8 @@ public class OperationGenerator {
             op = name.substring(sep + 1);
         }
 
-        // só o caso Map: <campo>.add(x)/.remove(x) sobre um campo QUALIFICADO -> put/remove por chave.
-        // listas planas e chamadas normais caem no fallback (transcrição literal).
+        // só o caso Map: <campo>.add(x)/.remove(x) sobre um campo map -> put/remove por chave.
+        // listas normais e chamadas normais caem no fallback (transcrição literal).
         if (args != null && args.size() == 1 && attrName != null
                 && ("add".equals(op) || "remove".equals(op))) {
             Association assoc = findAssocByField(associations, cls, msg.getTarget().getType(), attrName);
@@ -506,7 +447,6 @@ public class OperationGenerator {
                         : base + ".remove(" + arg.getName() + "." + getter + ");"));
                 return;
             }
-            // não-Map -> cai no fallback
         }
 
         // fallback: chamada literal receiver.name(args)
@@ -541,7 +481,7 @@ public class OperationGenerator {
         String indentStr = "    ".repeat(indent);
         String op = frag.getOperator();
 
-        // fragmento sem mensagens do dono -> bloco vazio (for/if {}); é modelação, não bug
+        // fragmento sem mensagens do dono -> bloco vazio (for/if {})
         if ("loop".equals(op)) {
             Operand operand = frag.getOperands().get(0);
             String guard = operand.getGuard() != null ? operand.getGuard().trim() : "";
@@ -620,10 +560,8 @@ public class OperationGenerator {
         return expr;
     }
 
-    // ownerType é (ou herda de) a classe desta ponta da associação?
-    // serve para uma subclasse reconhecer associações declaradas no pai.
-    // tenta match direto pelo nomem, senão, se ownerType for a classe em geração,
-    // usa isOrInheritsFrom para apanhar o caso herdado.
+    // ownerType é a classe desta ponta da associação?
+    // "herda de" para uma subclasse reconhecer associações declaradas no pai
     private static boolean participates(Class cls, String ownerType, String assocEndClass) {
         if (ownerType != null && ownerType.equals(assocEndClass)) return true;
         return cls != null && cls.getName().equals(ownerType) && cls.isOrInheritsFrom(assocEndClass);
@@ -641,14 +579,14 @@ public class OperationGenerator {
     }
 
     private static String fieldNameFor(Association a, Class cls, String ownerType) {
-        // lado a partir do owner: se owner é (ou herda) o source, o campo refere o target, e vice-versa
+        // lado a partir do owner, se owner é (ou herda) o source, o campo refere o target, e vice-versa
         if (participates(cls, ownerType, a.getSourceClass())) {
             return GeneratorUtils.makeAttributeName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
         }
         return GeneratorUtils.makeAttributeName(a.getSourceClass(), a.getSourceRole(), a.getSourceMultiplicity());
     }
 
-    // a mensagem do actor para lifeline: source pode ser null ou um Actor (type == null)
+    // a mensagem do actor para lifeline, source pode ser null ou um Actor (type == null)
     public static Message findEntryMessage(Interaction interaction) {
         if (interaction == null) return null;
         return firstMessage(interaction.getElements());
@@ -667,9 +605,7 @@ public class OperationGenerator {
         return null;
     }
 
-
     // procura associação cujo field name no lado do owner é attrName
-    // reutiliza fieldNameFor para a derivação role-ou-default
     private static Association findAssocByField(List<Association> assocs, Class cls, String ownerType, String attrName) {
         for (Association a : assocs) {
             if (!participates(cls, ownerType, a.getSourceClass()) && !participates(cls, ownerType, a.getTargetClass())) continue;

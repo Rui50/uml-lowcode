@@ -8,11 +8,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 /**
- * Gera a ESTRUTURA do projeto CLI-JPA (Maven, JPA/Hibernate + H2/Postgres/MySQL).
- * Layout, pom.xml, persistence.xml, config.properties, Main (cria o EntityManager e corre o MainMenu),
- * InputUtils e, se ativado, Dockerfile + docker-compose (BD em container p/ Postgres/MySQL).
+ * gera a ESTRUTURA do projeto CLI com JPA, usa Maven
+ * pom.xml, persistence.xml, config.properties, Main (cria o EntityManager e corre o MainMenu),
  *
- * Notas: um EntityManager para toda a sessão (single-thread); show_sql=false para não poluir o CLI.
+ * um EntityManager para toda a sessão (ou seja, single hread), setting show_sql=false para não encher o terminal.
  */
 public class CLIProjectGenerator {
     private final CLIProjectSettings settings;
@@ -57,7 +56,7 @@ public class CLIProjectGenerator {
         generateInputUtils();
         if (settings.isDockerfile()) {
             generateDockerfile();
-            // H2 é nao previsa mas Postgres/MySQL precisam de um container de BD -> docker-compose
+            // H2 não precisa de container mas Postgres/MySQL precisam -> docker-compose
             if (settings.getDatabaseType() != DatabaseType.H2) {
                 generateDockerCompose();
             }
@@ -67,7 +66,7 @@ public class CLIProjectGenerator {
         System.out.println("CLI-JPA project structure created in: " + outputDirectory);
     }
 
-    // app CLI interativa, sem jar executável (exec-maven-plugin) -> corre via 'mvn exec:java'.
+    // app terminal, nao tem jar executável, usa (exec-maven-plugin) que corre com 'mvn exec:java'.
     // correr com: docker run -it <image>
     private void generateDockerfile() throws IOException {
         try (PrintWriter w = new PrintWriter(new FileWriter(outputDirectory + "/Dockerfile"))) {
@@ -82,8 +81,8 @@ public class CLIProjectGenerator {
         System.out.println("Generated: Dockerfile");
     }
 
-    // docker-compose: app + container de BD (Postgres/MySQL). O 'db' bate certo com o host
-    // em config.properties e com as credenciais. App interativa -> docker compose run --rm app
+    // docker-compose tem app + container de BD (Postgres/MySQL)
+    // para correr -> docker compose run --rm app
     private void generateDockerCompose() throws IOException {
         String dbName = settings.getApplicationName();
         boolean postgres = settings.getDatabaseType() == DatabaseType.POSTGRESQL;
@@ -226,8 +225,8 @@ public class CLIProjectGenerator {
         String filename = outputDirectory + "/src/main/resources/config.properties";
         try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
             String dbName = settings.getApplicationName();
-            // com Docker, a BD corre noutro container -> host = nome do serviço "db" (docker-compose),
-            // não "localhost" (que apontaria para o próprio container da app)
+            // com Docker a BD esta num container -> host = "db" (nome do serviço no compose)
+            // "localhost" nao da porque apontaria para o próprio container da app.
             String dbHost = settings.isDockerfile() ? "db" : "localhost";
             switch (settings.getDatabaseType()) {
                 case H2 -> {
@@ -292,6 +291,17 @@ public class CLIProjectGenerator {
             w.println("            scanner.next();");
             w.println("        }");
             w.println("        double value = scanner.nextDouble();");
+            w.println("        scanner.nextLine();");
+            w.println("        return value;");
+            w.println("    }");
+            w.println();
+            w.println("    public static float readFloat(Scanner scanner, String prompt) {");
+            w.println("        System.out.print(prompt);");
+            w.println("        while (!scanner.hasNextFloat()) {");
+            w.println("            System.out.print(\"Invalid. \" + prompt);");
+            w.println("            scanner.next();");
+            w.println("        }");
+            w.println("        float value = scanner.nextFloat();");
             w.println("        scanner.nextLine();");
             w.println("        return value;");
             w.println("    }");
