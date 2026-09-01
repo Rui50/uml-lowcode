@@ -47,7 +47,7 @@ public class AnnotationService {
         applyResponseOverrides(classes, payload.getResponseOverrideByClass());
     }
 
-    // overrides do response por endpoint (endpointType -> {nome, escondidos}); não se herdam
+    // overrides do response por endpoint (endpointType -> {nome, escondidos})
     private void applyResponseOverrides(List<Class> classes, Map<String, Map<String, ResponseOverrideDTO>> map) {
         if (map == null) return;
         map.forEach((className, byEndpointType) -> {
@@ -61,8 +61,7 @@ public class AnnotationService {
         });
     }
 
-    // atributos escondidos por DTO (painel Spring). Guardados como sets de NOMES na classe
-    // (cobre atributos herdados; a consulta nos geradores faz união com os antepassados)
+    // atributos escondidos por DTO. Guardados como sets de NOMES na classe
     private void applyDtoHidden(List<Class> classes, Map<String, HiddenFieldsDTO> map) {
         if (map == null) return;
         map.forEach((className, hidden) -> {
@@ -74,7 +73,7 @@ public class AnnotationService {
         });
     }
 
-    // override do nome da tabela JPA, por classe (painel Persistence); vazio = nome derivado
+    // override do nome da tabela JPA, por classe (painel Persistence), vazio = nome derivado
     private void applyTableNames(List<Class> classes, Map<String, String> map) {
         if (map == null) return;
         map.forEach((className, tableName) -> {
@@ -115,7 +114,7 @@ public class AnnotationService {
         });
     }
 
-    // estratégia de herança JPA, anotada na superclasse
+    // estratégia de herança JPA, anotada na classe pai
     private void applyInheritanceStrategies(List<Class> classes, Map<String, String> map) {
         if (map == null) return;
         map.forEach((className, strategy) -> {
@@ -168,7 +167,7 @@ public class AnnotationService {
                         c.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message, c,
                                 associations));
                     } else {
-                        // interfaces have no attributes/associations of their own — pass empty list
+                        // interfaces have no attributes/associations of their own , passa lista vazia
                         iface.addInvariant(AnnotationParser.parseInvariant(name, dto.getExpression(), err_message,
                                 null, associations));
                     }
@@ -332,7 +331,7 @@ public class AnnotationService {
             for (Operation op : c.getOperations()) {
                 op.getPreconditions().clear();
                 op.getPostconditions().clear();
-                op.setSequenceDiagram(null);   // unlinka; applyOperationLinks re-liga os que vierem no payload (modelo é reutilizado -> senão fica link antigo)
+                op.setSequenceDiagram(null);
                 op.setJob(false);
                 op.setEndpointName(null);
                 op.setHttpMethod("POST");
@@ -352,6 +351,13 @@ public class AnnotationService {
             c.getHiddenInResponse().clear();
             c.getResponseOverrides().clear();
             c.getCollectionOrder().clear();
+
+            c.setInheritanceStrategy("SINGLE_TABLE");
+            c.setGenerateController(true);
+            c.setBeanValidation(true);
+            c.setIdAttributeName(null);
+            c.setIdAttributeType("Long");
+            c.setTableName(null);
         }
         for (Interface iface : interfaces) {
             iface.getInvariants().clear();

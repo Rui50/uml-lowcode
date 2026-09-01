@@ -25,7 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -73,6 +72,7 @@ public class ToolService {
         
     }
 
+    // TODO: mover os mappers model->DTO (toResponse/toClassDto/...) para uma camada de mappers dedicada
     private ParseResponse toResponse(ParsedModel model) {
         List<ClassDTO> classes = model.getClasses().stream()
                 .map(c -> toClassDto(c, model.getAssociations()))
@@ -100,10 +100,6 @@ public class ToolService {
 
         return new ParseResponse(classes, associations, interactions, enumerations, interfaces);    }
 
-    /**
-     * MOVER DEPOIS PARA MAPPERSW
-
-     */
     private ClassDTO toClassDto(Class c, List<Association> associations) {
         String parent = c.getParentClass() != null ? c.getParentClass().getName() : null;
         List<AttributeDTO> attrs = c.getAttributes().stream()
@@ -120,7 +116,7 @@ public class ToolService {
         // endpoints REST previstos para o target Spring (CRUD + relações)
         List<SpringEndpointList.Endpoint> endpoints = SpringEndpointList.getClassEndpoints(c, associations);
 
-        // relações próprias (declaradas nesta classe): filtra as herdadas (thisClass != c) da lista completa
+        // relações próprias (declaradas nesta classe)
         List<RelationFieldDTO> relations = RelationshipInfo.collect(c, associations).stream()
                 .filter(rel -> rel.thisClass().equals(c.getName()))
                 .map(rel -> new RelationFieldDTO(rel.field(), rel.isCollection(), rel.otherClass,
@@ -130,7 +126,7 @@ public class ToolService {
         return new ClassDTO(c.getId(), c.getName(), parent, attrs, ops, c.isAbstract(), realizations, endpoints, relations);
     }
 
-    // relação obrigatória = lower bound >= 1 (ex: "1", "1..*"); "0..1"/"*"/null -> false.
+    // relação obrigatória = lower bound >= 1 ( "1", "1..*"); "0..1"/"*"/null -> false.
     private static boolean isMandatory(String multiplicity) {
         if (multiplicity == null) return false;
         String lower = multiplicity.contains("..")
@@ -161,8 +157,8 @@ public class ToolService {
 
     private AssociationDTO toAssociationDto(Association a) {
         return new AssociationDTO(
-                a.getSourceClass(),         // from Relationship
-                a.getTargetClass(),         // from Relationship
+                a.getSourceClass(),
+                a.getTargetClass(),
                 a.getSourceMultiplicity(),
                 a.getTargetMultiplicity(),
                 a.getSourceRole(),
@@ -244,12 +240,4 @@ public class ToolService {
         }
         return baos.toByteArray();
     }
-
-    /*
-    private String formatOperation(Operation o) {
-        String params = o.getParameters().stream()
-                .map(p -> p.getName() + ": " + p.getType())
-                .collect(Collectors.joining(", "));
-        return o.getName() + "(" + params + "): " + o.getReturnType();
-    }*/
 }

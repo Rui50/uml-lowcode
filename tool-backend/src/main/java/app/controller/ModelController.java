@@ -46,8 +46,7 @@ public class ModelController {
                 .body(zip);
     }
 
-    // erros de cliente (OCL inválida/vazia, target desconhecido, modelo não carregado)
-    // devolvem 400 + mensagem, em vez de 500
+    // erros de cliente (OCL invalid/vazia, target desconhecido, modelo não carregado)
     @ExceptionHandler({ IllegalArgumentException.class, IllegalStateException.class })
     public ResponseEntity<String> handleBadRequest(RuntimeException e) {
         return ResponseEntity.badRequest().body(e.getMessage());
