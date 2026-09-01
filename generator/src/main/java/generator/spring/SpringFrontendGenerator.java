@@ -20,22 +20,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * UI simples (HTML + JS vanilla) servida pelo próprio Spring a partir de
- * src/main/resources/static/. Uma página CRUD por entidade concreta, cada uma a
- * falar com os endpoints REST já gerados (fetch /api/&lt;plural&gt;). Uma sidebar
- * (links normais, sem router) liga as páginas. Sem build nem npm: correr a app e
- * abrir localhost:8080/.
+ * UI simples (HTML + JS vanilla) servida pelo Spring a partir de resources/static/ que tem uma página CRUD
+ * por entidade, a falar com os endpoints REST gerados. Sidebar para as páginas
+ * (correr a app e abrir localhost:8080/).
  *
- * Relações single (ManyToOne) aparecem como &lt;select&gt; no formulário: o id
- * escolhido vai no campo &lt;campo&gt;Id do CreateDTO (o service liga a relação no
- * create, sem endpoint extra). Coleções (OneToMany/ManyToMany) têm uma secção
- * add/remove que chama os endpoints /api/&lt;plural&gt;/{id}/&lt;campo&gt;.
- *
- * O JS gerado é explícito (um campo por linha) para se ler como código à mão.
+ * Relações single (ManyToOne) -> <select> (o id vai no <campo>Id do CreateDTO);
+ * coleções -> secção add/remove que chama /api/<plural>/{id}/<campo>.
  */
+
 public class SpringFrontendGenerator {
     private final String outputDir;
-    // nome -> Class, para resolver o id (campo e tipo) da outra ponta das relações
+    // nome -> Class, para obter o id (campo e tipo) da outra ponta das relações
     private final Map<String, Class> classMap = new HashMap<>();
     // nome do enum -> literais, para gerar <select> nos atributos de tipo enum
     private final Map<String, List<String>> enumLiterals = new HashMap<>();
@@ -46,7 +41,7 @@ public class SpringFrontendGenerator {
 
     public void generateFrontend(List<Class> classes, List<Association> associations,
                                  List<Enumeration> enumerations) throws IOException {
-        System.out.println("Generating Spring UI (static)...");
+        System.out.println("Generating Spring UI ...");
         String staticDir = outputDir + "/src/main/resources/static";
         new File(staticDir).mkdirs();
 
@@ -55,7 +50,7 @@ public class SpringFrontendGenerator {
         enumLiterals.clear();
         for (Enumeration e : enumerations) enumLiterals.put(e.getName(), e.getLiterals());
 
-        // só geram página as classes com endpoint REST, concretas E com controller gerado
+        // só geram página com controller gerado
         List<Class> pages = classes.stream()
                 .filter(c -> !c.isAbstract() && c.isGenerateController())
                 .collect(Collectors.toList());
@@ -89,9 +84,6 @@ public class SpringFrontendGenerator {
         return "boolean".equals(type) || "Boolean".equals(type);
     }
 
-    // tipos java.time que serializam como string ISO compatível com os inputs HTML
-    // (LocalDate -> "2026-06-24", LocalDateTime -> "2026-06-24T15:30", LocalTime -> "15:30").
-    // Instant/Date ficam de fora (zona/formato não batem com os inputs) -> input de texto.
     private boolean isDate(String type) {
         return "LocalDate".equals(type) || "LocalDateTime".equals(type) || "LocalTime".equals(type);
     }
@@ -107,7 +99,7 @@ public class SpringFrontendGenerator {
         }
     }
 
-    // nome do campo de id no CreateDTO/ResponseDTO desta relação single (ex: "memberId")
+    // nome do campo de id no CreateDTO/ResponseDTO desta relação single
     private String idField(RelationshipInfo rel) {
         return rel.field() + "Id";
     }
@@ -116,18 +108,17 @@ public class SpringFrontendGenerator {
         Class c = classMap.get(className);
         return c != null && !c.isAbstract() && c.isGenerateController();
     }
-    // se id (Long/int) -> Number(); senão string (UUID/chave natural)
+    // se id (Long/int) -> Number(), senão string (UUID/id string)
     private boolean idNumeric(String className) {
         return isNumeric(GeneratorUtils.idType(classMap.get(className)));
     }
-    // nome do id na resposta json ("id" gerado, ou a chave natural)
+    // nome do id na resposta json ("id" gerado, ou id string)
     private String idJsonField(String className) {
         return GeneratorUtils.idFieldName(classMap.get(className));
     }
 
-    // relações de coleção desta classe COM endpoint add/remove (mesma condição que o
-    // SpringControllerGenerator: M:N do lado dono, ou O:M unidirecional/qualifier).
-    // Replica o two-pass de auto-associação bidirecional do controller.
+    // relações  coleção desta classe com endpoint add/remove (mesma condição do controller:
+    // M:N do lado dono, ou O:M unidir/qualifier)
     private List<RelationshipInfo> collectionRelationships(Class cls, List<Association> associations) {
         List<RelationshipInfo> rels = new ArrayList<>();
         for (Association assoc : associations) {
@@ -157,8 +148,8 @@ public class SpringFrontendGenerator {
         rels.add(rel);
     }
 
-    // operações custom desta classe COM endpoint (mesma condição que o controller:
-    // não-job e com diagrama de sequência ligado). Standalone não tem o link -> lista vazia.
+    // operações custom com endpoint (não job e com diagrama de sequência)
+    // Sem diagrama -> não gera endpoint -> fora da lista.
     private List<Operation> customOperations(Class cls) {
         List<Operation> ops = new ArrayList<>();
         for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
@@ -169,7 +160,6 @@ public class SpringFrontendGenerator {
     }
 
     // jobs desta classe tem endpoint de trigger no controller.
-    // mesma scope que o SpringControllerGenerator (cls.getOperations(), não herdadas).
     private List<Operation> jobOperations(Class cls) {
         List<Operation> jobs = new ArrayList<>();
         for (Operation op : cls.getOperations()) {
@@ -200,7 +190,7 @@ public class SpringFrontendGenerator {
                 ? op.getEndpointName() : op.getName();
     }
 
-    // sidebar partilhada por todas as páginas: links normais (sem router)
+    // sidebar partilhada por todas as páginas, links normais
     // current = entidade da página atual, para a marcar como ativa (null no index)
     private void writeSidebar(PrintWriter w, List<Class> pages, String current) {
         w.println("  <nav class=\"sidebar\">");
@@ -260,16 +250,15 @@ public class SpringFrontendGenerator {
         String idName = cls.getRoot().getIdAttributeName();
         boolean defaultId = idName == null;
 
-        // inputs do formulário (create) = atributos não-derivados, sem o id auto-gerado;
-        // escondido do Create E do Update -> o form nunca o pode enviar, nem se renderiza
+        // inputs do form = atributos não-derivados, sem o id auto-gerado, e sem os escondidos
+        // do Create E do Update
         List<Attribute> formFields = cls.getAllAttributes().stream()
                 .filter(a -> !a.hasDerive())
                 .filter(a -> !(cls.isHiddenInCreate(a.getName()) && cls.isHiddenInUpdate(a.getName())))
                 .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
                 .collect(Collectors.toList());
 
-        // colunas da tabela = id (se gerado) + atributos não-derivados visíveis na LISTA
-        // (a tabela mostra o findAll -> segue o override do endpointType "List" quando existir)
+        // colunas da tabela = id (se gerado) + atributos não derivados visíveis
         List<String> columns = new ArrayList<>();
         if (defaultId) columns.add("id");
         for (Attribute a : cls.getAllAttributes()) {
@@ -299,7 +288,7 @@ public class SpringFrontendGenerator {
             w.println("    <form onsubmit=\"save(event)\">");
             for (Attribute a : formFields) {
                 // bloqueado no modo criar quando não faz parte do CreateDTO: init (valor obrigado)
-                // ou escondido do Create; desbloqueia no modo editar se existir no UpdateDTO
+                // ou escondido do Create, desbloqueia no modo editar se existir no UpdateDTO
                 String locked = (a.getInitExpression() != null || cls.isHiddenInCreate(a.getName()))
                         ? " disabled title=\"not part of create\"" : "";
                 if (enumLiterals.containsKey(a.getType())) {
@@ -318,7 +307,7 @@ public class SpringFrontendGenerator {
                 if (hasApi(rel.otherClass)) {
                     w.println("      <label>" + field + " <select name=\"" + field + "\"></select></label>");
                 } else {
-                    // sem endpoint (alvo abstrato ou controller desligado): não há lista -> escreve-se o id
+                    // sem endpoint (alvo abstrato ou controller desligado), não é lista -> escreve-se o id
                     w.println("      <label>" + field + " <input name=\"" + field
                             + "\" type=\"" + (idNumeric(rel.otherClass) ? "number" : "text") + "\"></label>");
                 }
@@ -341,9 +330,7 @@ public class SpringFrontendGenerator {
             w.println("      <tbody></tbody>");
             w.println("    </table>");
 
-            // secção de coleções: cada coleção é um <form> que leva o endpoint em data-path
-            // (e data-numeric p/ coagir o id); addItem/removeItem leem esses atributos, por isso
-            // não há função por coleção. Escolhe-se o id do pai (esta entidade) e o filho a ligar.
+            // secção de coleções: cada coleção é um <form> add/remove (id do pai + filho a ligar)
             if (!colls.isEmpty()) {
                 w.println("    <h2>Relationships</h2>");
                 for (RelationshipInfo coll : colls) {
@@ -365,8 +352,7 @@ public class SpringFrontendGenerator {
                 }
             }
 
-            // secção de operações custom: um form por op (params como query string), botão = nome da op.
-            // runOp lê data-path/data-method, por isso não há função por operação.
+            // secção de operações custom: um form por op (params como query string), botão com nome da op.
             if (!ops.isEmpty()) {
                 w.println("    <h2>Operations</h2>");
                 w.println("    <p><small>Only operations with simple (query) parameters work here; operations taking a request body aren't supported by this demo UI.</small></p>");
@@ -396,7 +382,7 @@ public class SpringFrontendGenerator {
             }
             w.println("  </main>");
 
-            // ---- script (explícito, um campo por linha) ----
+            // script
             w.println("<script>");
             w.println("const API = '" + api + "';");
             w.println("let editId = null;   // null = a criar (POST); senão o id a editar (PATCH)");
@@ -418,8 +404,7 @@ public class SpringFrontendGenerator {
             for (RelationshipInfo coll : colls) {
                 w.println("      <td>${item." + coll.field() + "Ids ?? ''}</td>");
             }
-            // id da linha: "id" gerado, ou a chave natural (que não aparece como "id" no json).
-            // Entre aspas para funcionar com id numérico (Long) e string (UUID/chave natural).
+            // id do item (a propriedade json): "id" se gerado, senão a chave natural.
             String selfId = defaultId ? "id" : idName;
             w.println("      <td><button onclick=\"edit('${item." + selfId + "}')\">edit</button> <button onclick=\"remove('${item." + selfId + "}')\">delete</button></td>`;");
             w.println("    tbody.appendChild(row);");
@@ -427,8 +412,7 @@ public class SpringFrontendGenerator {
             w.println("}");
             w.println();
 
-            // selects das relações (só alvos concretos): preenchidos com a lista da outra entidade.
-            // single -> [name="<field>"]; coleção -> o child do form com aquele data-path
+            // selects das relações preenchidos com a lista da outra entidade.
             boolean hasSelect = rels.stream().anyMatch(r -> hasApi(r.otherClass))
                     || colls.stream().anyMatch(r -> hasApi(r.otherClass));
             if (hasSelect) {
@@ -470,13 +454,13 @@ public class SpringFrontendGenerator {
                 String field = a.getName();
                 String value = isNumeric(a.getType()) ? "Number(form." + field + ".value)"
                         : isBoolean(a.getType()) ? "form." + field + ".checked"
-                        // data vazia -> null (uma string vazia rebenta o parse de LocalDate/etc no backend)
+                        // data vazia -> null
                         : isDate(a.getType()) ? "form." + field + ".value || null"
                         : "form." + field + ".value";
                 w.println("    " + field + ": " + value + ",");
             }
             for (RelationshipInfo rel : rels) {
-                // select vazio -> null (não ligar); senão o id (Number para ids numéricos)
+                // select vazio -> null (não ligar)
                 String field = idField(rel);
                 String value = idNumeric(rel.otherClass)
                         ? "form." + field + ".value ? Number(form." + field + ".value) : null"
@@ -503,7 +487,7 @@ public class SpringFrontendGenerator {
             w.println("    alert(err && (err.detail || err.error) ? (err.detail || err.error) : 'Save failed: ' + res.status);");
             w.println("    return;");
             w.println("  }");
-            // relações single: o PATCH ignora null (não limpa); se o select ficou vazio na edição,
+            // relações single: o PATCH ignora null (não remove)
             // limpa a relação pelo endpoint dedicado DELETE /{id}/{role}
             if (!rels.isEmpty()) {
                 w.println("  if (editId !== null) {");
@@ -572,9 +556,9 @@ public class SpringFrontendGenerator {
             w.println("}");
             w.println();
 
-            // coleções: add/remove genéricos. O endpoint vem do data-path do form, o id do
-            // ADD (POST) manda [childId] no body; REMOVE (DELETE)
-            // manda os ids na query (?ids=), porque um body em DELETE pode ser ignorado.
+            // coleções add/remove — o endpoint vem do data-path do form.
+            //  - ADD (POST): manda [childId] no body;
+            //  - REMOVE (DELETE): manda os ids na query (?ids=), porque um body em DELETE pode ser ignorado.
             if (!colls.isEmpty()) {
                 w.println("async function addItem(event) {");
                 w.println("  event.preventDefault();");

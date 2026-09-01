@@ -13,24 +13,21 @@ import java.io.PrintWriter;
 import java.util.*;
 
 /**
- * gerar os dtos, por classe, dois:
- * - CreateDTO: para POST. atributos (sem id gerado, sem os com init — o init obriga o valor
- *   na criação) + ids de relação (single e coleção), toEntity()
- * - UpdateDTO: para PATCH. atributos (sem id) + só ids de relação SINGULARES, sem toEntity()
- * - ResponseDTO: para GET. id + atributos + relacionamento IDs
+ * gerar os dtos, por classe
+ * - CreateDTO: para POST, tem ids de relação (single e coleção)
+ * - UpdateDTO: para PATCH  só ids de relação SINGULARES
+ * - ResponseDTO: para GET, relacionamento IDs
  *
- * id: CreateDTO exclui sempre o atributo-id (a BD atribui-o);
- * ResponseDTO expõe 'id' por defeito só quando não há id custom; relações usam o tipo/getter do id relacionado. Ver model.Class.
  */
 public class SpringDTOGenerator {
     private String baseOutputPath;
     private String basePackage;
     private Set<String> enumNames = new HashSet<>();
 
-    // createdAt/updatedAt expostos no ResponseDTO
+    // createdAt/updatedAt no ResponseDTO
     private final boolean timestamps;
 
-    // nome -> Class, para resolver o tipo de id de outra classe nas relações
+    // nome -> Class, para obter o tipo de id de outra classe nas relações
     private final Map<String, Class> classMap = new HashMap<>();
 
     public SpringDTOGenerator(String baseOutputPath, String basePackage, boolean timestamps) {
@@ -62,32 +59,34 @@ public class SpringDTOGenerator {
         for (Class c : classes) classMap.put(c.getName(), c);
 
         for (Class cls : classes) {
-            // classes abstratas não podem ser instanciadas, logo não têm CreateDTO/UpdateDTO
+            // cada classe tem a sua subpasta: dto/<classe>/
+            String classDTODirectory = dtoDir + "/" + cls.getName().toLowerCase();
+            new File(classDTODirectory).mkdirs();
+
             if (!cls.isAbstract()) {
-                generateCreateDTO(cls, associations, dtoDir);
-                generateUpdateDTO(cls, associations, dtoDir);
+                generateCreateDTO(cls, associations, classDTODirectory);
+                generateUpdateDTO(cls, associations, classDTODirectory);
             }
-            generateResponseDTO(cls, associations, dtoDir);
+            generateResponseDTO(cls, associations, classDTODirectory);
         }
 
         System.out.println("DTO generation completed.");
     }
 
     /**
-     * CreateDTO: only the class's own attributes (no id, no relationships)
-     * Used for POST and PUT
+     * CreateDTO
      */
     private void generateCreateDTO(Class cls, List<Association> associations, String dtoDir) throws IOException {
         String className = cls.getName();
         String filename = dtoDir + "/" + className + "CreateDTO.java";
 
         try (PrintWriter w = new PrintWriter(new File(filename))) {
-            // relações navegáveis (mesmos campos de id que o ResponseDTO), menos as escondidas do Create
+            // relações navegáveis, menos as escondidas do Create
             List<RelationshipInfo> relationships = RelationshipInfo.collect(cls, associations).stream()
                     .filter(rel -> !cls.isHiddenInCreate(rel.field()))
                     .toList();
 
-            w.println("package " + basePackage + ".dto;");
+            w.println("package " + basePackage + ".dto." + cls.getName().toLowerCase() + ";");
             w.println();
             w.println("import lombok.*;");
             // java.util.* cobre List (ids de coleção) e UUID (chave natural ou id de relação)
@@ -99,10 +98,9 @@ public class SpringDTOGenerator {
             w.println("import " + basePackage + ".models." + className + ";");
 
             // id gerado pela BD -> fora do CreateDTO
-            // chave natural (String) é
-            // atribuída pelo cliente -> mantém-se no CreateDTO
-            // atributos com init -> fora: o init OBRIGA o valor na criação (semântica OCL);
-            // ficam editáveis depois via UpdateDTO/PATCH
+            // chave natural (String) é atribuída pelo cliente -> mantém-se no CreateDTO
+            // atributos com init -> fora: o init manda no valor na criação
+            // da para editar depois via UpdateDTO/PATCH
             String idName = cls.getRoot().getIdAttributeName();
             List<Attribute> allAttrs = cls.getAllAttributes().stream()
                     .filter(a -> !a.hasDerive())
@@ -129,12 +127,11 @@ public class SpringDTOGenerator {
             w.println("public class " + className + "CreateDTO {");
             w.println();
             for (Attribute attr : allAttrs) {
-                // tipo boxed (Integer/Boolean/...) omitido no POST chega a null e o toEntity() ignora-o, em vez
-                // de um primitivo chegar 0/false (valor inventado).
+                // (Integer, não int) porque um campo omitido no POST chega a null, não a 0.
                 w.println("    private " + GeneratorUtils.fixType(attr.getType()) + " " + attr.getName() + ";");
             }
 
-            // ids de relação (ligados no service, não no toEntity) — mesmo "emit" do ResponseDTO
+            // ids das relações ( authorId), a ligação real é feita no service não no toEntity()
             for (RelationshipInfo rel : relationships) {
                 generateRelationshipIdField(w, rel);
             }
@@ -144,12 +141,10 @@ public class SpringDTOGenerator {
             String varName = GeneratorUtils.lowercaseFirst(className);
             w.println("    public " + className + " toEntity() {");
             w.println("        " + className + " " + varName + " = new " + className + "();");
-            // atributos com init nem aparecem aqui: o valor inicial fica com o default da entidade
+            // atributos com init nem aparecem aqui, o valor inicial fica com o default da entidade
             for (Attribute attr : allAttrs) {
                 String cap = GeneratorUtils.capitalizeFirst(attr.getName());
-                // o campo do DTO é boxed (vem null se omitido) mas a entidade é PRIMITIVA. setX(this.getX())
-                // auto-tira o Integer para int -> NPE se null. O guard evita isso: omitido -> não mexe,
-                // fica o default da entidade em vez de um 0/false inventado.
+                // só copia se o cliente enviou o valor se veio null (omitido), deixa o default da entidade.
                 w.println("        if (this.get" + cap + "() != null) " + varName + ".set" + cap + "(this.get" + cap + "());");
             }
             w.println("        return " + varName + ";");
@@ -162,11 +157,8 @@ public class SpringDTOGenerator {
     }
 
     /**
-     * UpdateDTO: corpo do PATCH. Difere do CreateDTO em:
-     * - exclui SEMPRE o atributo-id (a PK não muda em update, mesmo quando é chave natural);
-     * - só ids de relação SINGULARES (coleções não se tocam no update — endpoints dedicados),
-     *   por isso o campo xIds nem existe no contrato em vez de ser silenciosamente ignorado;
-     * - sem toEntity(): o update mapeia campo-a-campo para a entidade já carregada.
+     * UpdateDTO
+     * - só ids de relação sings (coleções não se tocam no update só nos endpoints dedicados),
      */
     private void generateUpdateDTO(Class cls, List<Association> associations, String dtoDir) throws IOException {
         String className = cls.getName();
@@ -177,7 +169,7 @@ public class SpringDTOGenerator {
                     .filter(rel -> !cls.isHiddenInUpdate(rel.field()))
                     .toList();
 
-            w.println("package " + basePackage + ".dto;");
+            w.println("package " + basePackage + ".dto." + cls.getName().toLowerCase() + ";");
             w.println();
             w.println("import lombok.*;");
             w.println("import java.util.*;");
@@ -209,8 +201,7 @@ public class SpringDTOGenerator {
             w.println("public class " + className + "UpdateDTO {");
             w.println();
             for (Attribute attr : allAttrs) {
-                // sempre com tipo fixed (Integer/Boolean/...), num PATCH um campo omitido chega a null e o
-                // update ignora-o um primitivo chegaria 0/false, indistinguível de "omitido"
+                // (Integer, não int) porque um campo omitido no PATCH chega a null, não a 0.
                 w.println("    private " + GeneratorUtils.fixType(attr.getType()) + " " + attr.getName() + ";");
             }
 
@@ -226,20 +217,18 @@ public class SpringDTOGenerator {
 
     /**
      * ResponseDTO: id + attributes + relationship IDs
-     * Used for GET responses and return values.
      * Além do default da classe, emite um DTO próprio por endpoint com override de response
      * (<Class><List|Detail|Create|Update>ResponseDTO) — mesma estrutura, atributos do override.
      */
     private void generateResponseDTO(Class cls, List<Association> associations, String dtoDir) throws IOException {
-        // para o response DEFAULT primeiro, esconde os hiddenInResponse (com herança)
+        // para o response default primeiro, esconde os hiddenInResponse
         List<Attribute> defaultAttrs = cls.getAllAttributes().stream()
                 .filter(a -> !cls.isHiddenInResponse(a.getName())).toList();
         List<RelationshipInfo> defaultRels = RelationshipInfo.collect(cls, associations).stream()
                 .filter(r -> !cls.isHiddenInResponse(r.field())).toList();
         generateResponseDTOFile(cls, dtoDir, cls.getName() + "ResponseDTO", defaultAttrs, defaultRels);
 
-        // um DTO por override de endpoint (não herda). O nome via
-        // responseDTOName (custom se definido, senão auto) é o mesmo que o controller/service usam.
+        // um DTO por override de endpoint
         for (String endpointType : cls.getResponseOverrides().keySet()) {
             Set<String> hidden = cls.responseOverrideHidden(endpointType);
             List<Attribute> attrs = cls.getAllAttributes().stream()
@@ -252,7 +241,6 @@ public class SpringDTOGenerator {
     }
 
     // nome do response DTO que um endpoint usa: o do override do endpointType, senão o default da classe.
-    // o endpointType já vem capitalizado (List/Get/Create/Update) -> nome auto por concatenação direta
     static String responseDTOName(Class cls, String endpointType) {
         if (!cls.hasResponseOverride(endpointType)) return cls.getName() + "ResponseDTO";
         String custom = cls.responseOverrideName(endpointType);
@@ -265,7 +253,7 @@ public class SpringDTOGenerator {
         String filename = dtoDir + "/" + dtoName + ".java";
 
         try (PrintWriter w = new PrintWriter(new File(filename))) {
-            w.println("package " + basePackage + ".dto;");
+            w.println("package " + basePackage + ".dto." + cls.getName().toLowerCase() + ";");
             w.println();
             w.println("import lombok.*;");
             w.println("import java.util.*;");
@@ -283,7 +271,7 @@ public class SpringDTOGenerator {
                     extraImports.add(attr.getType());
                 }
             }
-            // entidades relacionadas para o fromEntity (.map(Other::getId)) — só as visíveis neste DTO
+            // entidades relacionadas para o fromEntity (.map(Other::getId)), só as visíveis neste DTO
             for (RelationshipInfo rel : relationships) {
                 extraImports.add(rel.otherClass);
             }
@@ -297,8 +285,7 @@ public class SpringDTOGenerator {
             w.println("@Getter");
             w.println("@Setter");
             w.println("@NoArgsConstructor");
-            // @AllArgsConstructor sobre 0 campos gera um no-arg -> colide com @NoArgsConstructor.
-            // ResponseDTO pode ficar sem campos (id custom + tudo escondido no response) -> guardar.
+            // @AllArgsConstructor só se houver campos, com 0 campos gera um no arg que colide com @NoArgsConstructor.
             boolean defaultId = cls.getRoot().getIdAttributeName() == null;
             if (defaultId || timestamps || !allAttrs.isEmpty() || !relationships.isEmpty()) {
                 w.println("@AllArgsConstructor");
@@ -334,7 +321,7 @@ public class SpringDTOGenerator {
                 }
             }
 
-            // fromEntity() static factory method
+            // fromEntity()
             w.println();
             String varName = GeneratorUtils.lowercaseFirst(className);
             w.println("    public static " + dtoName + " fromEntity(" + className + " " + varName + ") {");
@@ -381,7 +368,7 @@ public class SpringDTOGenerator {
         String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
 
         if (rel.isCollection()) {
-            // .values() só se ESTA ponta for o Map; numa M:N a outra ponta é coleção na mesma (List)
+            // .values() só se esta ponta for o Map
             if (rel.assoc.isMapEnd(rel.isSource)) {
                 w.println("        dto.set" + capitalizedField + "Ids(" + varName + ".get" + capitalizedField + "() != null");
                 w.println("            ? " + varName + ".get" + capitalizedField + "().values().stream().map(" + otherClass + "::" + idGetterOf(otherClass) + ").collect(Collectors.toList())");

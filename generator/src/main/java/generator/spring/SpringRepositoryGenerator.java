@@ -11,18 +11,13 @@ import java.io.PrintWriter;
 import java.util.List;
 
 /**
- * Gera os repositórios Spring Data JPA — uma interface @Repository por classe (models.<X> ->
- * repository.<X>Repository), a estender JpaRepository<Entity, IdType>. Sem implementação: o CRUD
- * (save/findById/findAll/deleteById/count/existsById) é fornecido em runtime pelo Spring Data.
- * São estes repos que os services injetam (@RequiredArgsConstructor) para toda a persistência.
+ * Gera os repositórios Spring com @Repository na classe  estender JpaRepository<Entity, IdType>.
+ * (save/findById/findAll/deleteById/count/existsById) é fornecido pelo Spring Data.
  *
- * Notas:
- *  - um repo POR classe, mesmo com herança — o split raiz/filho não existe aqui; a hierarquia é
- *    resolvida pelo JPA via discriminador (SINGLE_TABLE), logo findAll do pai traz também os filhos;
- *  - IdType = tipo do id da RAIZ da hierarquia (cls.getRoot().getIdAttributeType()), para bater com
- *    findById/deleteById; o import de java.util.UUID só é emitido quando esse tipo é UUID;
- *  - query methods derivados (findByX / existsByX para atributos String) estão escritos mas
- *    COMENTADOS/desligados por agora — só sai o CRUD base.
+ * - um repo por classe, mesmo com herança o JPA resolve a hierarquia pelo discriminador que ta na entidade,
+ * findAll do pai traz também os filhos;
+ * - IdType = tipo do id da raiz (cls.getRoot().getIdAttributeType()), import de UUID só quando é UUID;
+
  */
 // id: JpaRepository<Entity, T>, em que T = tipo do id (cls.getRoot().getIdAttributeType())
 public class SpringRepositoryGenerator {
@@ -38,9 +33,6 @@ public class SpringRepositoryGenerator {
      * Gera os repositórios para as classes de modelo.
      * */
     public void generateRepositories(List<Class> classes) throws IOException {
-        // Lógica para gerar os repositórios usando o Spring Data JPA
-        // Para cada classe de modelo, criar uma interface de repositório
-        // que estende JpaRepository ou CrudRepository
         System.out.println("Generating Spring Data JPA repositories...");
 
         String repositoryDir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/repository";
@@ -74,10 +66,9 @@ public class SpringRepositoryGenerator {
             // Interface
             writer.println("/**");
             writer.println(" * Repository for " + className + " entity");
-            writer.println(" * Spring Data JPA generates a base implementation automatically");
             writer.println(" */");
             writer.println("@Repository");
-            // tipo do id partir da raiz da hierarquia
+            // tipo do id
             writer.println("public interface " + className + "Repository extends JpaRepository<" +
                     className + ", " + cls.getRoot().getIdAttributeType() + "> {");
             writer.println();
@@ -92,7 +83,7 @@ public class SpringRepositoryGenerator {
     }
 
     private void generateQueryMethods(PrintWriter writer, Class cls) {
-        writer.println("    // Automatic CRUD methods provided by JpaRepository:");
+        writer.println("    //  methods by JpaRepository:");
         writer.println("    // - save(entity)");
         writer.println("    // - findById(id)");
         writer.println("    // - findAll()");

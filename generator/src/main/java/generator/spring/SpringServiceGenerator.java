@@ -15,18 +15,14 @@ import java.io.PrintWriter;
 import java.util.*;
 
 /**
- *  Gera um serviço por classe
+ * Gera um @Service por classe concreta, com:
+ *  - CRUD (findAll, findById, create, update/replace, deleteById);
+ *  - métodos de relação (assign/add/remove), que trabalham por ids;
+ *  - operações custom (dos diagramas de sequência).
  *
- *  cada service tem:
- *   - dependencias de outr repos
- *   - CRUD básico (findAll, findById, create, update, deleteById)
- *   - metodos das operações:
- *     Sao handled por ids, em bactch,
- *
- *   Invariantes OCL são validados antes de cada save
- *
- *   id: tipo raiz; idTypeOf(nome)/idGetterOf(nome) resolvem o id de OUTRA classe nas relações
+ * As invariantes OCL são validadas antes de cada save.
  */
+
 public class SpringServiceGenerator {
     private String baseOutputPath;
     private String basePackage;
@@ -39,9 +35,13 @@ public class SpringServiceGenerator {
     // associações do modelo, para traduzir add/remove em coleções nas operações
     private List<Association> associations = new ArrayList<>();
 
-    public SpringServiceGenerator(String baseOutputPath, String basePackage) {
+    // nome de DTO -> classe dona, para importar só as folders de DTO que cada service usa
+    private final Map<String, String> DTO_ToClass;
+
+    public SpringServiceGenerator(String baseOutputPath, String basePackage, Map<String, String> DTO_ToClass) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
+        this.DTO_ToClass = DTO_ToClass;
     }
 
     /**
@@ -59,7 +59,6 @@ public class SpringServiceGenerator {
         this.associations = associations;
 
         for (Class cls : classes){
-            // does not generate service for abstract classes (they are not instantiated)
             if (cls.isAbstract()) continue;
             generateService(cls, classes, associations, serviceDir, interactions, enumerations);
         }
@@ -122,13 +121,9 @@ public class SpringServiceGenerator {
         // importar a classe do modelo
         writer.println("import " + basePackage + ".models." + cls.getName() + ";");
         writer.println("import " + basePackage + ".repository." + cls.getName() + "Repository;");
-        writer.println("import " + basePackage + ".dto." + cls.getName() + "CreateDTO;");
-        writer.println("import " + basePackage + ".dto." + cls.getName() + "UpdateDTO;");
-        writer.println("import " + basePackage + ".dto." + cls.getName() + "ResponseDTO;");
-        // DTOs de override de response (um por endpoint com override)
-        cls.getResponseOverrides().keySet().stream().sorted().forEach(endpointType ->
-                writer.println("import " + basePackage + ".dto." + SpringDTOGenerator.responseDTOName(cls, endpointType) + ";"));
-        writer.println("import " + basePackage + ".dto.*;");   // params de ops custom podem ser DTOs de qualquer classe
+        // importa só folders dos DTO que esta classe usa (a própria + as referidas nas ops custom)
+        for (String dtoClass : SpringUtils.referencedDTOClasses(cls, classMap.keySet(), DTO_ToClass))
+            writer.println("import " + basePackage + ".dto." + dtoClass.toLowerCase() + ".*;");
         for (model.Interface iface : cls.getRealizations()) {
             writer.println("import " + basePackage + ".models." + iface.getName() + ";");
         }
@@ -161,7 +156,7 @@ public class SpringServiceGenerator {
             }
         }
 
-        // importar todas as enumerações — podem ser referenciadas no corpo de operações (diagramas de sequência)
+        // importar todas as enumerações
         if (enumerations != null && !enumerations.isEmpty()) {
             writer.println();
             for (model.Enumeration en : enumerations) {
@@ -170,9 +165,7 @@ public class SpringServiceGenerator {
         }
     }
 
-    // dependencias de repositórios: o próprio + os das entidades relacionadas.
-    // inclui associações herdadas de um pai ABSTRATO, cujos métodos de relação são
-    // emitidos neste service e por isso precisam do repo do outro lado.
+    // dependencias de repositórios inclue o próprio + os das entidades relacionadas
     private void generateDependencies(PrintWriter writer, Class cls, String className, List<Association> associations, List<Class> classes) {
         writer.println("    // Dependencies");
         writer.println("    private final " + className + "Repository " +
@@ -188,7 +181,7 @@ public class SpringServiceGenerator {
             }
         }
 
-        // repositórios referidos por lifelines nos diagramas mas que NÃO são associados
+        // repositórios referidos por lifelines nos diagramas mas que nao tem relaçao no diagrama
         for (String entity : diagramRepoEntities(cls)) {
             if (addedRepos.add(entity)) {
                 writer.println("    private final " + entity + "Repository " +
@@ -234,8 +227,9 @@ public class SpringServiceGenerator {
         writer.println("    }");
         writer.println();
 
-        // create() — skip for abstract classes
-        if (!cls.isAbstract()) generateCreateMethod(writer, className, cls, associations);
+        // create()
+        // if (!cls.isAbstract())
+        generateCreateMethod(writer, className, cls, associations);
 
         // update() (PATCH parcial) + replace() (PUT full replace)
         generateUpdateMethod(writer, className, cls, associations, false);
@@ -271,14 +265,12 @@ public class SpringServiceGenerator {
         boolean hasRelationships = false;
 
         for (Association assoc : associations) {
-            // classe da hierarquia de cls que DECLARA esta associação (ela ou pai abstrato);
-            // null => cls não participa, ou só a herda de um pai concreto (que já gera o seu service).
+            // classe que declara a associação,  null = não participa,
             String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
             if (declarer == null) continue;
 
-            // normalmente processa-se UMA perspetiva. mas numa auto-associação bidirecional a classe
-            // é os DOIS lados, por isso processam-se ambos (source e target) — senão o lado DONO de
-            // um M:N self (onde isOwningSide só é true de um lado) nunca seria gerado.
+            // auto-associação bidirecional: a classe é os dois lados, processa os dois roles.
+            // (o metodo de coleção só sai no lado dono)
             boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass())
                     && assoc.isSourceNavigable() && assoc.isTargetNavigable();
             if (selfBidirectional) {
@@ -298,14 +290,14 @@ public class SpringServiceGenerator {
         }
     }
 
-    // Gera os métodos de relação para UMA perspetiva (lado) da associação.
+    // Gera os métodos de relação para um lado da associação.
     private boolean generateRelationMethodsForSide(PrintWriter writer, Class cls, RelationshipInfo rel,
                                                    boolean hasRelationships) {
         boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
         boolean isCollection = rel.isCollection();                 // eu tenho muitos deles
         String otherClass = rel.otherClass;
         String fieldName = rel.field();
-        // estes 3 alimentam os métodos a jusante (ainda recebem os params crus)
+        // passam para os métodos chamados a seguir (que ainda recebem os params soltos)
         Association assoc = rel.assoc;
         boolean isBidirectional = rel.isBidirectional();
         boolean isSource = rel.isSource;
@@ -317,13 +309,13 @@ public class SpringServiceGenerator {
             generateAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
             generateRemoveAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
         }
-        // ManyToMany: addX / removeX no lado DONO (@JoinTable), decidido por isOwningSide
+        // ManyToMany: addX / removeX no lado DONO (@JoinTable)
         else if (inverseIsCollection && isCollection && rel.isOwner()) {
             if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
             generateManyToManyAddMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
             generateManyToManyRemoveMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
         }
-        // OneToMany unidirectional (ou Map qualificado, incl. bidirecional na ponta dona) -> addX / removeX
+        // OneToMany unidirectional (ou Map qualificado, inclui bidirecional na ponta owner) -> addX / removeX
         else if (rel.hasCollectionEndpoint()) {
             if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
             generateOneToManyUniAddMethod(writer, cls, otherClass, fieldName, assoc);
@@ -334,11 +326,10 @@ public class SpringServiceGenerator {
 
     /**
      * ManyToOne - assign: este lado tem o FK
-     * Ex: AlunoService.assignTurno(Long alunoId, Long turnoId)
+     *  AlunoService.assignTurno(Long alunoId, Long turnoId)
      * - Procura ambas entidades por ID
      * - Se bidirectional, sincroniza ambos os lados
-     * - declarer classe que declara a associação (a própria ou pai abstrato);
-     *                 define o nome do campo inverso (ver assocDeclaringClass)
+     * - declarer é a classe que declara a associação e define o nome do campo inverso
      */
     private void generateAssignMethod(PrintWriter writer, Class cls, String otherClass,
                                        String fieldName, Association assoc,
@@ -378,13 +369,13 @@ public class SpringServiceGenerator {
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
             String capitalizedOtherField = GeneratorUtils.capitalizeFirst(otherSideField);
 
-            // captura o dono ANTIGO (para o desligar E validar depois — perde este elemento)
+            // captura o dono anto (para o desligar e validar depois)
             writer.println("        // Remove from previous " + otherClass + " if exists");
             writer.println("        " + otherClass + " " + prevVar + " = " + varName + ".get" + capitalizedField + "();");
             writer.println("        if (" + prevVar + " != null) {");
-            // inverso Map (qualificado) -> remove/put por chave; senão List -> remove/add por valor
-            // basta hasQualifier(): ramo ManyToOne -> esta ponta é non mult,
-            // logo o qualifier só pode estar no inverso
+            // inverso Map  -> put/remove, senão List -> add/remove por valor.
+            // esta ponta é a "-para-um" (não é coleção), logo um qualifier só pode fazer Map no inverso
+            // por isso basta hasQualifier() para saber que o inverso é Map.
             if (assoc.hasQualifier()) {
                 String qKey = varName + ".get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName()) + "()";
                 writer.println("            " + prevVar + ".get" + capitalizedOtherField + "().remove(" + qKey + ");");
@@ -409,7 +400,7 @@ public class SpringServiceGenerator {
         generateValidation(writer, cls.getName(), varName);
         if (isBidirectional) {
             generateValidation(writer, otherClass, otherVar);   // novo outro lado (ganhou este "elem")
-            generateValidationIfPresent(writer, otherClass, prevVar);   // dono ANTIGO na reatribuição (perdeu-o)
+            generateValidationIfPresent(writer, otherClass, prevVar);   // dono antigo  (perdeu-o)
         }
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
@@ -442,7 +433,7 @@ public class SpringServiceGenerator {
                 " not found: \" + " + varName + "Id));");
         writer.println();
 
-        // var do outro lado ome do campo, não da classe
+        // var do outro lado = nome do campo, não da classe
         String otherVar = GeneratorUtils.lowercaseFirst(fieldName);
 
         if (isBidirectional) {
@@ -451,7 +442,7 @@ public class SpringServiceGenerator {
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
             String capitalizedOtherField = GeneratorUtils.capitalizeFirst(otherSideField);
 
-            // captura o outro lado (para o desligar E validar depois — a coleção dele mudou)
+            // captura o outro lado (para o remover evalidar depois porque a coleção dele mudou)
             writer.println("        // Remove from both sides");
             writer.println("        " + otherClass + " " + otherVar + " = " + varName + ".get" + capitalizedField + "();");
             writer.println("        if (" + otherVar + " != null) {");
@@ -493,12 +484,11 @@ public class SpringServiceGenerator {
         String otherRepoName = otherVar + "Repository";
         String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
         String otherPlural = otherVar + "s";
-        // Numa AUTO-associação otherClass == className, por isso a var do loop seria "employee",
-        // igual à do owner, por isso usa-se "other" só nesse caso, nas
-        // associações normais mantém-se o nome baseado na classe.
+
+        // auto associação (otherClass == className): a var do loop seria "employee", igual à do owner, por isso usa-se "other"
         String elementVar = className.equals(otherClass) ? "other" : otherVar;
-        // nome do campo do OUTRO lado que aponta de volta para esta classe (sincroniza os dois
-        // lados em memória). Usa o MEU role, o isSource diz qual é o meu lado.
+        // nome do campo do outro lado que aponta de volta para esta classe (para sincronizar em memória);
+        // usa o role deste lado e o isSource diz qual "este" lado.
         String inverseMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
         String inverseField = GeneratorUtils.makeAttributeName(declarer,
                 isSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
@@ -525,8 +515,8 @@ public class SpringServiceGenerator {
             writer.println("            " + varName + ".get" + capitalizedField + "().put(" +
                     elementVar + "." + qualifierGetter + "(), " + elementVar + ");");
             if (isBidirectional) {
-                // numa M:N qualificada só a ponta do qualifier (= esta, o dono) é Map; o inverso é
-                // List, por isso sincroniza-se com add e não com put
+                // o dono de uma M:N qualificada é sempre a ponta do Map
+                // o inverso é List -> sincroniza-se com add, não put.
                 writer.println("            " + elementVar + ".get" + inverseCap + "().add(" + varName + ");");
                 generateValidationTab(writer, otherClass, elementVar, "            ");   // valida o elemento (o inverso dele mudou)
             }
@@ -564,11 +554,11 @@ public class SpringServiceGenerator {
         String otherRepoName = otherVar + "Repository";
         String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
         String otherPlural = otherVar + "s";
-        // auto-associação: "other" p/ a var do loop não colidir com a do owner (mesma classe);
-        // associações normais ficam inalteradas. Ver generateManyToManyAddMethod para o porquê.
+
+        // auto-associação: "other" para a var do loop não colidir com a do owner
         String elementVar = className.equals(otherClass) ? "other" : otherVar;
-        // nome do campo do OUTRO lado que aponta de volta para esta classe (sincroniza os dois
-        // lados em memória). Usa o MEU role, o isSource diz qual é o meu lado.
+        // nome do campo do outro lado que aponta de volta para esta classe (para sincronizar em memória);
+        // usa o role deste lado
         String inverseMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
         String inverseField = GeneratorUtils.makeAttributeName(declarer,
                 isSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
@@ -726,17 +716,21 @@ public class SpringServiceGenerator {
         writer.println("    public " + SpringDTOGenerator.responseDTOName(cls, "Create") + " create(" + className + "CreateDTO dto) {");
         writer.println("        " + className + " " + varName + " = dto.toEntity();");
         writer.println();
-        // save no MEIO: a FK desta linha tem de ir antes do INSERT, o resto precisa do id que ele atribui
+
+        // tem dois saves:
+        //  1. relações singulares de que é owner (linkOwnedSingles)
+        //  2. save() = INSERT, que gera o id desta entidade;
+        //  3. ligações que referem esta entidade pelo id (inverse/coleções) «
+        //  4. 2º save só quando esta entidade é owner de coleção (M:N) porque aí a ligação só persiste ao gravr
+        //     Se a FK está no outro já se gravou lá -> nada a gravar outra vez aqui.
         linkOwnedSingles(writer, cls, associations, varName, true, false);
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println();
         boolean inverseModified     = linkInverseSingles(writer, cls, associations, "saved", true, false);
         boolean collectionsModified = linkCollections(writer, cls, associations, "saved");
-        // validar só aqui, já com tudo ligado: uma invariante sobre coleções não teria o que ver
-        // antes disto. Se rebentar, o @Transactional faz rollback do INSERT acima.
+
+        // valida com tudo ligado e se rebentar, o @Transactional faz rollback do INSERT
         generateValidation(writer, cls.getName(), "saved");
-        // 2º save só se mexemos na PRÓPRIA entidade: M:N de que é dono (Product.suppliers).
-        // Order.lines não conta — a FK está no OrderLine e é ele que se grava, não deste lado.
         if (inverseModified || collectionsModified) {
             writer.println("        saved = " + repoName + ".save(saved);");
         }
@@ -747,21 +741,24 @@ public class SpringServiceGenerator {
 
     /**
      * Emite o código que liga um singular de que este lado é dono (@ManyToOne, ou @OneToOne com
-     * o @JoinColumn deste lado): a FK é coluna desta linha (Order.customer -> order.customer_id),
-     * logo basta um set na própria entidade — e antes do INSERT, porque um @NotNull na relação
-     * torna a coluna NOT NULL.
+     * o @JoinColumn deste lado)
      */
     private boolean linkOwnedSingles(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean clearSingleOnNull, boolean forUpdate) {
         boolean selfModified = false;
 
         for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
             if (rel.isCollection() || !GeneratorUtils.isOwningSide(rel.assoc, rel.isSource)) continue;
-            if (forUpdate ? cls.isHiddenInUpdate(rel.field()) : cls.isHiddenInCreate(rel.field())) continue;
+            boolean hidden;
+            if (forUpdate) {
+                hidden = cls.isHiddenInUpdate(rel.field());
+            } else {
+                hidden = cls.isHiddenInCreate(rel.field());
+            }
+            if (hidden) continue;
 
             String otherClass = rel.otherClass;
             String capField   = GeneratorUtils.capitalizeFirst(rel.field());
-            // numa auto-associação a var do outro lado seria igual à do owner ('saved'), por isso
-            // vem do nome do campo ("manager")
+            // numa auto-associação a var do outro lado colidiria com a do owner ('saved'), por isso vem do campo
             String otherVar   = GeneratorUtils.lowercaseFirst(capField);
             String otherRepo  = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";   // repo já injetado
 
@@ -770,37 +767,40 @@ public class SpringServiceGenerator {
             writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capField + "Id()));");
             writer.println("            " + entityVar + ".set" + capField + "(" + otherVar + ");");
             if (clearSingleOnNull) {
-                // gera o "} else { set(null); }": id omitido limpa a relação. No create não faz
-                // nada (o campo já vem null do toEntity); quem precisa disto é o PUT replace.
+                // gera o "} else { set(null); }" para id omitido limpar a relação (só útil no PUT replace).
                 writer.println("        } else {");
                 writer.println("            " + entityVar + ".set" + capField + "(null);");
                 writer.println("        }");
             } else {
-                // update (PATCH): id null/omitido NÃO mexe na relação; limpar é via DELETE /{id}/{role}
+                // update (PATCH): id null/omitido nao mexe na relação, para remover é com o DELETE /{id}/{role}
                 writer.println("        }");
             }
-            selfModified = true;   // a FK pode ter mudado -> re-gravar entityVar
+            selfModified = true;
         }
 
         return selfModified;
     }
 
     /**
-     * Emite o código que liga um singular do lado INVERSO (@OneToOne mappedBy): a FK está na linha
-     * do OUTRO (Invoice.order — o invoice_id está do lado do Order), por isso além do set deste
-     * lado (só para a resposta sair completa) escreve a referencia no outro e grava-o.
-     *
+     * Liga um singular do lado INVERSO (@OneToOne mappedBy): a FK está na tabela do OUTRO, por isso
+     * escreve a referência no outro e grava-o. (Faz o set deste lado também, só para a resposta sair completa.)
      */
     private boolean linkInverseSingles(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean clearSingleOnNull, boolean forUpdate) {
         for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
             if (rel.isCollection() || GeneratorUtils.isOwningSide(rel.assoc, rel.isSource)) continue;
-            if (forUpdate ? cls.isHiddenInUpdate(rel.field()) : cls.isHiddenInCreate(rel.field())) continue;
+            boolean hidden;
+            if (forUpdate) {
+                hidden = cls.isHiddenInUpdate(rel.field());
+            } else {
+                hidden = cls.isHiddenInCreate(rel.field());
+            }
+            if (hidden) continue;
 
             String otherClass = rel.otherClass;
             String capField   = GeneratorUtils.capitalizeFirst(rel.field());
             String otherVar   = GeneratorUtils.lowercaseFirst(capField);
             String otherRepo  = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
-            // nome do campo desta classe NO OUTRO lado (back-reference)
+            // nome do campo desta classe no outro lado da assoc
             String capInv     = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(rel.thisClass(), rel.thisRole(), rel.thisMul()));
 
             writer.println("        if (dto.get" + capField + "Id() != null) {");
@@ -812,7 +812,7 @@ public class SpringServiceGenerator {
             writer.println("            " + otherRepo + ".save(" + otherVar + ");");
             if (clearSingleOnNull) {
                 // gera o "} else { ... }": id omitido desliga a relação nos dois lados.
-                // No create não faz nada; quem precisa disto é o PUT replace.
+                // quem usa é o PUT
                 writer.println("        } else {");
                 writer.println("            if (" + entityVar + ".get" + capField + "() != null) {");
                 writer.println("                " + entityVar + ".get" + capField + "().set" + capInv + "(null);");
@@ -822,23 +822,23 @@ public class SpringServiceGenerator {
                 writer.println("            " + entityVar + ".set" + capField + "(null);");
                 writer.println("        }");
             } else {
-                // update (PATCH): id null/omitido NÃO mexe na relação; limpar é via DELETE /{id}/{role}
+                // update (PATCH): id null/omitido nao mexe na relação, remover é com DELETE /{id}/{role}
                 writer.println("        }");
             }
         }
 
-        return false;   // só mexemos no OUTRO -> o caller não precisa de re-gravar por nossa causa
+        return false;   // só mexemos no OUTRO -> não precisa de dar save
     }
 
     /**
-     * Emite o código que liga as coleções — 1:N (FK no outro) ou M:N (tabela de junção). Se somos
-     * donos, add/put na nossa coleção chega; se não, liga a reference e grava o outro. Só
-     * depois do save: numa M:N o Hibernate rejeita à pré-flush uma referência ainda transiente
-     * (TransientPropertyValueException). Só é chamado no create (no update as coleções são os
-     * endpoints add/remove), e aí a coleção começa vazia, por isso só se adiciona, nunca se limpa
-     * .
-     ** mexemos na própria entidade (só quando somos donos da coleção)
+     * Liga as coleções de uma entidade nova (só é chamado no create).
+     *
+     *  - 1:N (FK no outro) ou M:N (tabela em conjunto);
+     *  - se somos donos: add/put na nossa coleção chega ou senão: liga a referência no outro e grava-o;
+     *  - corre DEPOIS do save porque numa M:N o Hibernate rejeitaria uma referência ainda transiente
+     *  - devolve true só quando somos donos da coleção
      */
+
     private boolean linkCollections(PrintWriter writer, Class cls, List<Association> associations, String entityVar) {
         boolean selfModified = false;
 
@@ -852,16 +852,15 @@ public class SpringServiceGenerator {
             String capField   = GeneratorUtils.capitalizeFirst(rel.field());
             String otherVar   = GeneratorUtils.lowercaseFirst(capField);
             String otherRepo  = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
-            // dono da coleção segundo a NAVEGABILIDADE (mesma decisão da entidade);
+
             // se não somos donos, a FK está no outro -> lado inverso
             boolean ownerSide = GeneratorUtils.isOwningSide(assoc, isSource);
-            // nome do campo desta classe NO OUTRO lado (back-reference) usado no inverso e no
-            // dono M:N bidirecional (para sincronizar/desligar a outra ponta)
+            // nome do campo desta classe no outro lado , para sincronizar a outra ponta
             String capInv     = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(rel.thisClass(), rel.thisRole(), rel.thisMul()));
             boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
             boolean thisIsMapEnd = assoc.isMapEnd(isSource);
 
-            // como adicionar 'other' à coleção deste lado: put se for Map qualificado, senão add
+            //  'other' na coleção deste lado: put(chave, other) se for Map, senão add(other)
             String addToSaved;
             if (thisIsMapEnd) {
                 String qGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
@@ -876,12 +875,12 @@ public class SpringServiceGenerator {
             // adiciona à coleção deste lado (persiste se formos donos, senão é só para a resposta)
             writer.println("                " + addToSaved);
             if (!ownerSide) {
-                // lado INVERSO logo a FK está no outro -> ligar a back-reference e gravar o outro
+                // lado inverso logo a FK está no outro -> ligar o campo inversoe gravar o outro
                 if (!inverseIsCollection) {
                     // O:M inverso: o outro tem referência singular
                     writer.println("                " + otherVar + ".set" + capInv + "(" + entityVar + ");");
                 } else if (assoc.hasQualifier() && !thisIsMapEnd) {
-                    // M:N inverso e o Map está do lado do OUTRO -> a back-reference é put por chave
+                    // M:N inverso e o Map está do lado do OUTRO -> o campo inverso é put por chave
                     String qInv = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
                     writer.println("                " + otherVar + ".get" + capInv + "().put(" +
                             entityVar + "." + qInv + "(), " + entityVar + ");");
@@ -918,8 +917,7 @@ public class SpringServiceGenerator {
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className + " not found: \" + id));");
         writer.println();
 
-        // update all attributes from DTO; o atributo-id (se houver) é excluído:
-        // a PK não muda em update, e para id auto-gerado o getter nem existe no CreateDTO
+        // update all attributes from DTO
         String idAttrName = cls.getRoot().getIdAttributeName();
         List<Attribute> allAttrs = cls.getAllAttributes().stream()
                 .filter(a -> !a.hasDerive())
@@ -942,12 +940,11 @@ public class SpringServiceGenerator {
             writer.println();
         }
 
-        // aqui não há nada a partir: a entidade já existe e já tem id, os dois tipos de singular
-        // saem de seguida. Coleções não se tocam, são os endpoints dedicados add/remove.
+        // entidade já existe e já tem id -> liga os singulares e grava uma vez (coleções têm endpoints próprios).
         linkOwnedSingles(writer, cls, associations, "existing", fullReplace, true);
         linkInverseSingles(writer, cls, associations, "existing", fullReplace, true);
 
-        // validar depois de ligar, para as invariantes verem o estado final e não o intermédio
+        // validar depois de ligar
         generateValidation(writer, cls.getName(), "existing");
 
         // saveAndFlush: força o flush para o @LastModifiedDate (@PreUpdate) ser aplicado
@@ -1012,7 +1009,7 @@ public class SpringServiceGenerator {
         }
 
         // a mensagem de entrada tem de corresponder à operação declarada (pelo nome)
-        if (entryMessage != null && entryMessage.getName() != null
+        if (entryMessage.getName() != null
                 && !entryMessage.getName().equals(operName)) {
             throw new IllegalArgumentException(
                     "Diagrama da operação '" + operName + "': a mensagem de entrada '"
@@ -1020,14 +1017,19 @@ public class SpringServiceGenerator {
         }
 
         // tipo de retorno: da mensagem de entrada se especificado | senão da operação | senão void
-        String returnType = (entryMessage != null && entryMessage.getReturnType() != null && !entryMessage.getReturnType().isBlank())
-                ? GeneratorUtils.removePackageNames(entryMessage.getReturnType())
-                : (op.getReturnType() != null ? GeneratorUtils.removePackageNames(op.getReturnType()) : "void");
+        String returnType;
+        if (entryMessage.getReturnType() != null && !entryMessage.getReturnType().isBlank()) {
+            returnType = GeneratorUtils.removePackageNames(entryMessage.getReturnType());
+        } else if (op.getReturnType() != null) {
+            returnType = GeneratorUtils.removePackageNames(op.getReturnType());
+        } else {
+            returnType = "void";
+        }
 
         // assinatura a partir da mensagem de entrada; o tipo de cada argumento é obrigatório
         writer.println();
         writer.print("    public " + returnType + " " + operName + "(");
-        if (entryMessage != null && !entryMessage.getArguments().isEmpty()) {
+        if (!entryMessage.getArguments().isEmpty()) {
             for (int i = 0; i < entryMessage.getArguments().size(); i++) {
                 if (i > 0) writer.print(", ");
                 MessageArgument arg = entryMessage.getArguments().get(i);
@@ -1045,28 +1047,28 @@ public class SpringServiceGenerator {
 
         String selfVar = GeneratorUtils.lowercaseFirst(ownerName);   // var/id seguem a classe do diagrama (ex: member, memberId)
         boolean hasConditions = !op.getPreconditions().isEmpty() || !op.getPostconditions().isEmpty();
-        // só carregamos self se alguma condição o referir (this.) ou houver snapshot @pre;
-        // uma condição só sobre parâmetros (ex: pre: d > 0) não precisa de self nem do <entityVar>Id
+        // carregamos self se: uma condição o referir (this.), houver snapshot @pre, ou a classe tiver
+        // invariantes (verificam-se no fim, DbC). Uma condição só sobre parâmetros (pre: d > 0) não precisa.
         boolean needsSelf =
-                op.getPreconditions().stream().anyMatch(p -> refsSelf(p.getJavaExpression()))
+                cls.hasAnyInvariants()
+                || op.getPreconditions().stream().anyMatch(p -> refsSelf(p.getJavaExpression()))
                 || op.getPostconditions().stream().anyMatch(p -> refsSelf(p.getJavaExpression())
                         || !p.getPreSnapshots().isEmpty());
 
         if (needsSelf) {
             // self é carregado a partir de um parâmetro com o nome convencional <entityVar>Id (ex: turmaId)
             String idParam = selfVar + "Id";
-            boolean hasIdParam = entryMessage != null && entryMessage.getArguments().stream()
+            boolean hasIdParam = entryMessage.getArguments().stream()
                     .anyMatch(a -> idParam.equals(a.getName()));
             if (!hasIdParam) {
-                throw new IllegalArgumentException("Operação '" + operName + "': condições que referem 'self' "
+                throw new IllegalArgumentException("Operação '" + operName + "': condições ou invariantes que referem 'self' "
                         + "precisam de um parâmetro '" + idParam + "' para o carregar.");
             }
-            // self é carregado pelo repositório da classe CONCRETA (a abstrata não tem repo),
-            // mas tipado como a classe dona do diagrama (ex: Member member = studentMemberRepository...)
+
             String repoName = GeneratorUtils.lowercaseFirst(className) + "Repository";
             writer.println("        " + ownerName + " " + selfVar + " = " + repoName + ".findById(" + idParam + ")");
             writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className + " not found\"));");
-            // pré-declara o self (carregado acima) para o SequenceBodyGenerator saltar o
+            // pré declara o self (carregado acima) para o SequenceBodyGenerator saltar o
             // "turma = findById(...)" do diagrama e não o declarar duas vezes;
             bodyGen.addPreDeclaredVar(selfVar);
         }
@@ -1093,8 +1095,11 @@ public class SpringServiceGenerator {
 
         bodyGen.generateMethodBodyFromInteraction(writer, owner, op, interaction);   // lifeline do service = a do diagrama (owner)
 
-        // fim da op (result/pós-condições/return) partilhado com o entity generator; selfVar é a var
-        // self carregada do repo (o service é id-based, não this-based). DTO fica no controller, não aqui.
+        // invariantes da classe têm de valer no fim de qualquer operação
+        if (cls.hasAnyInvariants()) {
+            writer.println("        " + selfVar + ".checkInvariants();");
+        }
+
         String returnExpr = GeneratorUtils.findReplyToActor(interaction.getElements());
         OperationGenerator.generateReturnAndPostconditions(writer, op, returnType, returnExpr, selfVar);
 
@@ -1144,23 +1149,23 @@ public class SpringServiceGenerator {
         return javaExpr != null && javaExpr.contains("this.");
     }
 
-    // Escreve <expr>.checkInvariants() (que lança -> 400 via GlobalExceptionHandler) se a classe
-    // 'className' tiver invariantes. Cada op valida TODA a entidade que persiste/muda, não só cls
-    // (ex.: o outro lado de uma relação bidirecional, ou uma entidade gravada no applyRelations).
+    // escreve o <expr>.checkInvariants() se 'className' tiver invariantes
     private void generateValidation(PrintWriter writer, String className, String expr) {
         Class c = classMap.get(className);
         if (c == null || !c.hasAnyInvariants()) return;
         writer.println("        " + expr + ".checkInvariants();");
     }
 
-    // idem, com indentação explícita — para os sítios aninhados (dentro de if/for no applyRelations)
+    //  mas com ident
     private void generateValidationTab(PrintWriter writer, String className, String expr, String ind) {
         Class c = classMap.get(className);
         if (c == null || !c.hasAnyInvariants()) return;
         writer.println(ind + expr + ".checkInvariants();");
     }
 
-    // idem, mas o alvo pode ser null (ex.: dono anterior numa reatribuição, removeX sem relação)
+    // igual, mas o alvo de validação pode ser null,
+    // por ex em assignTurno(alunoId, turnoId), o turno anterior (aluno.getTurno()) é null se o aluno
+    // ainda não tinha turno -> não há dono anterior para validar.
     private void generateValidationIfPresent(PrintWriter writer, String className, String var) {
         Class c = classMap.get(className);
         if (c == null || !c.hasAnyInvariants()) return;

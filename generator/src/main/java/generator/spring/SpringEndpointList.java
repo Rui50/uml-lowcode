@@ -51,7 +51,7 @@ public class SpringEndpointList {
 
         // now assoc endpoints
         for (Association assoc : associations) {
-            // quem gera os endpoints desta associação (própria/pai abstrato); null => ignora
+            // quem gera os endpoints desta associação, null ignora
             String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
             if (declarer == null) continue;
 

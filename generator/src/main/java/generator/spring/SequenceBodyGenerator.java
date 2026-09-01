@@ -13,69 +13,35 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+
 /*
- * SequenceBodyGenerator —  completa de como funciona
+ * SequenceBodyGenerato
  *
- * VISÃO GERAL
- *   Transcreve um DIAGRAMA DE SEQUÊNCIA para o CORPO de um método Java do SERVICE (operações custom)
- *   ou de um job. É o análogo Spring do OperationGenerator, mas ORIENTADO A SERVICE: o dono do método
- *   é a lifeline do ": XService", e as entidades/relações são acedidas via repositórios e ids, não via
- *   "this" numa entidade rica. A ASSINATURA + o scaffolding OCL (pré/pós, @pre, result, return, guards)
- *   NÃO estão aqui — vivem em SpringServiceGenerator.generateCustomOperation, que chama este para o corpo.
- *   Modelo mental: o corpo = as mensagens que a lifeline do SERVICE envia, por ordem.
+ * REGRAS DO DIAGRAMA
+ *   - lifeline "<Classe>Service" (o dono) obrigatória, sem ela -> erro
+ *   - lifelines "<Classe>Repository" -> os campos de repo injetados
+ *   - o self é carregado antes do corpo (por um param "<var>Id"), registado em preDeclaredVars
+ *   - findById(id) : Tipo -> Tipo var = repo.findById(id).orElseThrow(NotFoundException);
+ *   - tipos explícitos nos args/return.
  *
- * REGRAS PARA DESENHAR O DIAGRAMA (versão Spring)
- *   - Tem de existir uma lifeline do tipo "<Classe>Service" (o dono do método); sem ela -> erro.
- *   - Os repositórios aparecem como lifelines tipadas "<Classe>Repository" -> viram os campos injetados
- *     (turmaRepository, alunoRepository, ...); o SERVICE dispara chamadas a esses repos.
- *   - self (a entidade sobre a qual a op corre) é carregado ANTES do corpo pelo wrapper, a partir de um
- *     parâmetro "<var>Id" (ex: turmaId) -> registado em preDeclaredVars para o corpo não o redeclarar.
- *   - findById(id) : Tipo  -> Tipo var = repo.findById(id).orElseThrow(NotFoundException).
- *   - Tipos explícitos nos argumentos/return (mesma convenção do OperationGenerator).
+ * generateMessageCode — só as mensagens enviadas pelo service (replies ignoradas)
+ *   - create
+ *   - declaração (x : Tipo)
+ *   - atribuição simples (x = expr)
+ *   - <campo>.add/remove/get numa entidade -> getter (put/remove por chave se Map)
+ *   - self-message
+ *   - chamada com retorno (findById -> orElseThrow);
+ *   - chamada sem retorno
  *
- * PASSO A PASSO — generateMethodBodyFromInteraction
- *   1. Encontra a lifeline do "<Classe>Service" (dono); se não há -> erro.
- *   2. Mapeia lifelines: "<X>Repository" -> var "xRepository"; "<X>Service" -> "self".
- *   3. Percorre a árvore de elements (Messages + Fragments) com generateElements.
- *
- * generateMessageCode — O FILTRO DE POSSE + os casos (por ordem)
- *   Só processa mensagens cuja source é a lifeline do SERVICE (as outras são de outros participantes).
- *   Ignora replies (o return é tratado pelo wrapper). Casos:
- *     1. «create» -> Tipo var = new Tipo(args); (caveat: Spring só tem no-arg, ver nota #9 no Main).
- *     2. atribuição simples (isPlainAssignment) -> [Tipo] x = expr;
- *     3. heurística de coleção: <campo>.add/remove/get(x) sobre uma entidade carregada -> acesso via
- *        getter (Map qualificado: put/remove/get por chave; senão add/remove; get(k) vira atribuição).
- *     4. self-message (source==target) -> methodName(args); direto.
- *     5. chamada com retorno -> Tipo var = alvo.metodo(args); (findById -> .orElseThrow(NotFoundException)).
- *        pula se a var já está em preDeclaredVars (self já carregado pelo wrapper).
- *     6. chamada sem retorno -> alvo.metodo(args);
- *   'alvo' vem do lifelineVarMap (repo/self) ou, para entidades carregadas, do represents (turma vs
- *   destino) senão do tipo.
- *
- * generateFragmentCode — estruturas de controlo (pelo guard do operando)
- *   - loop: guard "for (...)" ou "while (...)" TRANSCRITO tal e qual (NÃO adapta Map->.values(),
- *     ao contrário do OperationGenerator — mais literal; o modelador escreve .values() se for Map).
- *   - opt: if (guard) { }; guard em falta -> ERRO (opt sem condição não faz sentido).
- *   - alt: if / else if / else pelos guards (o 1º tem de ter guard; "else" -> else final).
- *   Fragments aninhados recorrem via generateElements com indent+1.
- *
- * HELPERS
- *   - participates/findAssocByField/fieldNameFor — resolvem a que associação um <campo>.add/remove se
- *     refere e o nome do campo, com isOrInheritsFrom para reconhecer associações herdadas de um pai.
- * ============================================================================
- */
-/**
- * diagrama de sequência (com service, com lifelines
- * de repositórios) para o corpo de um metodo Java. Usado pelos services (operações custom)
- * e pelos jobs (@Scheduled).
+ * generateFragmentCode — loop (for/while transcrito tal e qual, sem adaptar Map->.values(),
+ *   ao contrário do OperationGenerator), opt, alt.
  */
 public class SequenceBodyGenerator {
 
     private final List<Association> associations;
-    // variáveis já declaradas fora do corpo ( pelo carregamento da entidade self) — não redeclarar
+    // variáveis já declaradas fora do corpo ( pelo carregamento da entidade self), não redeclarar
     private final Set<String> preDeclaredVars = new HashSet<>();
-    // classe do metodo em geração (owner do diagrama) usada para resolver associações
-    // herdadas — a lifeline pode ser uma subclasse e a associação estar declarada no pai
+    // classe do metodo em geração (owner do diagrama)
     private Class currentClass;
 
     public SequenceBodyGenerator(List<Association> associations) {
@@ -111,7 +77,7 @@ public class SequenceBodyGenerator {
         }
 
         // mapear lifeline ID -> nome da variável java para os repositories
-        // ex: TurmaRepository -> turmaRepository, AlunoRepository -> alunoRepository
+        // TurmaRepository -> turmaRepository, AlunoRepository -> alunoRepository
         Map<String, String> lifelineVarMap = new HashMap<>();
         for (Lifeline ll : interaction.getLifelines()) {
             if (ll.getType() != null && ll.getType().endsWith("Repository")) {
@@ -128,7 +94,6 @@ public class SequenceBodyGenerator {
     }
 
     // percorre a lista de elementos (mensagens ou fragmentos) e gera o código correspondente
-    // indent: nível de indentação (0, 1, 2...) — cada nível = 4 espaços
     private void generateElements(PrintWriter writer, List<Object> elements,
                                   Lifeline serviceLifeline, Map<String, String> lifelineVarMap, int indent) {
         String indentStr = "    ".repeat(indent);
@@ -141,7 +106,6 @@ public class SequenceBodyGenerator {
         }
     }
 
-    // gera codigo java para mensagens
     // ignora mensagens que nao fazem parte do service
     private void generateMessageCode(PrintWriter writer, Message msg, Lifeline serviceLifeline,
                                       Map<String, String> lifelineVarMap, String indent) {
@@ -152,8 +116,6 @@ public class SequenceBodyGenerator {
         if (serviceLifeline == null || !msg.getSource().getId().equals(serviceLifeline.getId())) return;
 
         // mensagem «create»: gera "Type var = new Type(args)".
-        // Antes de isPlainAssignment porque "loan =" parece atribuiçã
-        // Só compila se Type tiver construtor público com esses args (em Spring só no-arg) — nota #9 no Main.
         if ("createMessage".equals(msg.getMessageSort())) {
             String type = msg.getTarget().getType();
             String var = msg.getAssignVariable() != null ? msg.getAssignVariable()
@@ -170,7 +132,7 @@ public class SequenceBodyGenerator {
         }
 
         // declaração: "text : String" -> "String text;" (assignVariable + returnType, sem valor).
-        // name==null distingue de "x = foo() : Type", que é chamada (essa tem name).
+        // name==null distingue de "x = foo() : Type", que é chamada
         if (msg.getAssignVariable() != null && msg.getAssignExpression() == null
                 && msg.getName() == null
                 && msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
@@ -187,7 +149,7 @@ public class SequenceBodyGenerator {
             return;
         }
 
-        // var da lifeline alvo: repos/service vêm do map; entidades carregadas usam o nome
+        // var da lifeline alvo: repos/service vêm do map e entidades carregadas usam o nome
         // (represents) para distinguir duas da mesma classe (turma vs destino), senão o tipo
         String targetVar = lifelineVarMap.get(msg.getTarget().getId());
         if (targetVar == null) {
@@ -207,7 +169,7 @@ public class SequenceBodyGenerator {
         String methodName = msg.getName();
         boolean isSelfMessage = msg.getSource().getId().equals(msg.getTarget().getId());
 
-        // heurística para as coleções: <campo>.add/remove/get numa entidade carregada faz acesso com getter
+        // para as coleções: <campo>.add/remove/get numa entidade carregada acesso com getter
         if (methodName != null && msg.getArguments().size() == 1) {
             int sep = methodName.indexOf('.');
             if (sep > 0) {
@@ -282,7 +244,7 @@ public class SequenceBodyGenerator {
             Operand operand = frag.getOperands().get(0);
             String guard = operand.getGuard() != null ? operand.getGuard().trim() : "";
 
-            // o guard escreve o cabeçalho do loop: "for (...)" ou "while (...)" — transcrito tal e qual
+            // o guard  do loop: "for (...)" ou "while (...)"
             if (guard.startsWith("for") || guard.startsWith("while")) {
                 writer.println(indentStr + guard.substring(0, guard.indexOf('(')).trim()
                         + " (" + GeneratorUtils.extractParen(guard) + ") {");
@@ -326,10 +288,7 @@ public class SequenceBodyGenerator {
         }
     }
 
-    // ownerType é (ou herda de) a classe desta ponta da associação?
-    // serve para uma subclasse reconhecer associações declaradas no pai.
-    // tenta match direto pelo nomem, senão, se ownerType for a classe em geração,
-    // usa isOrInheritsFrom para apanhar o caso herdado.
+    // ownerType está numa ponta desta associação diretamente, ou por herança de um pai
     private boolean participates(String ownerType, String assocEndClass) {
         if (ownerType != null && ownerType.equals(assocEndClass)) return true;
         return currentClass != null && currentClass.getName().equals(ownerType)

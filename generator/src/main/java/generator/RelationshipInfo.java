@@ -7,10 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Uma relação navegável vista a partir de uma classe. Guarda a outra ponta (otherClass,
- * role, multiplicity), a associação, e de que lado desta associação está a classe (isSource).
- * Tudo o resto (nome do campo, lado próximo, dono/inverso, etc.) deriva-se daqui via os
- * métodos abaixo. Partilhado pelos geradores para falarem o mesmo vocabulário.
+ * Uma relação navegável vista a partir de uma classe
  */
 public class RelationshipInfo {
     public final String otherClass;          // a outra ponta
@@ -27,7 +24,7 @@ public class RelationshipInfo {
         this.isSource = isSource;
     }
 
-    // nome do campo (baseado no role; sem role usa a classe) — igual em entidade/DTO/service
+    // nome do campo (baseado no role, sem role usa a classe)
     public String field() {
         return GeneratorUtils.makeAttributeName(otherClass, role, otherMultiplicity);
     }
@@ -36,7 +33,7 @@ public class RelationshipInfo {
         return GeneratorUtils.checkMultiplicity(otherMultiplicity) || assoc.isMapEnd(isSource);
     }
 
-    // lado da PRÓPRIA classe (a que declara a associação — ela própria ou um pai abstrato)
+    // lado da propria classe
     public String thisClass() {
         return isSource ? assoc.getSourceClass() : assoc.getTargetClass();
     }
@@ -46,12 +43,12 @@ public class RelationshipInfo {
     public String thisMul() {
         return isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
     }
-    // a MINHA ponta diz "muitos" -> o campo do OUTRO lado é uma coleção (espelho do isCollection)
+    // esta ponta diz "muitos" -> o campo do outro lado é uma coleção
     public boolean inverseIsCollection() {
         return GeneratorUtils.checkMultiplicity(thisMul()) || assoc.isMapEnd(!isSource);
     }
 
-    // este lado é o DONO da relação vs inverso (mappedBy)
+    // true se este lado é o dono da relação (tem a FK/@JoinColumn), false = lado inverso (mappedBy)
     public boolean isOwner() {
         return GeneratorUtils.isOwningSide(assoc, isSource);
     }
@@ -59,16 +56,16 @@ public class RelationshipInfo {
         return assoc.isSourceNavigable() && assoc.isTargetNavigable();
     }
 
-    // esta ponta expõe endpoints de coleção (add/remove) owner d Map  ,
-    // OU um OneToMany unidirecional (o lado * de uma relação não-bidirecional)
+    // esta ponta expõe endpoints de coleção (add/remove) quando é o Map (qualificada),
+    // ou um OneToMany unidirecional (o lado * de uma relação não bidirecional)
     public boolean hasCollectionEndpoint() {
         boolean qualifierHere = assoc.isMapEnd(isSource);
         return qualifierHere || (!inverseIsCollection() && isCollection() && !isBidirectional());
     }
 
     /**
-     * Relações navegáveis de uma classe (inclui as herdadas de um pai abstrato, via
-     * assocDeclaringClass), uma por associação, vistas do lado da própria classe.
+     * Relações navegáveis de uma classe, uma por associação, vistas do lado da própria classe.
+     * incluii as herdadas de um pai abstrato
      */
     public static List<RelationshipInfo> collect(Class cls, List<Association> associations) {
         List<RelationshipInfo> rels = new ArrayList<>();
@@ -76,9 +73,8 @@ public class RelationshipInfo {
             String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
             if (declarer == null) continue;
 
-            // auto-associação bidirecional: a classe é os DOIS lados -> emite ambos os roles (como o
-            // controller/service já fazem). Senão só sairia um lado e os DTOs/ligação perdiam o outro
-            // (o "outro lado" normalmente vem da chamada da OUTRA classe, que aqui não existe).
+            // auto associação bidirecional: a classe é os dois lados, por isso emite os dois roles aqui.
+            // (numa associação normal o outro lado ia estar0 no collect() da outra classe, mas aqui é a mesma.)
             boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass())
                     && assoc.isSourceNavigable() && assoc.isTargetNavigable();
             if (selfBidirectional) {
@@ -97,11 +93,9 @@ public class RelationshipInfo {
     }
 
     /**
-     * Como collect(), mas TAMBÉM inclui relações herdadas de um pai CONCRETO.
-     * Os menus precisam disto: o menu de AlunoTE tem de deixar gerir as
-     * relações herdadas de Aluno. collect() exclui-as de propósito — a entidade/DTO herda o
-     * campo do pai, redeclará-lo duplicava-o (a diferença está no ownOrAbstract).
-     * Nas duas pontas de uma auto-associação entra uma vez por role (dois if, não else-if).
+     * Como collect(), mas inclui também as relações herdadas de um pai normal para os menus
+     * (o menu de AlunoTE gere as relações herdadas de Aluno). O collect() normal exclui porque a
+     * entidade/DTO já herda o campo do pai
      */
     public static List<RelationshipInfo> collectForMenus(Class cls, List<Association> associations) {
         List<RelationshipInfo> rels = new ArrayList<>();
@@ -118,7 +112,7 @@ public class RelationshipInfo {
         return rels;
     }
 
-    // só as relações de referência singular (não-coleção): campo <x>Id
+    // só as relações de referência sing <x>Id
     public static List<RelationshipInfo> collectSingle(Class cls, List<Association> associations) {
         List<RelationshipInfo> rels = new ArrayList<>();
         for (RelationshipInfo r : collect(cls, associations)) {

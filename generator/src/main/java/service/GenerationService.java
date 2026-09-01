@@ -158,9 +158,11 @@ public class GenerationService {
                 .generateDTOs(m.getClasses(), m.getAssociations(), m.getEnumerations());
         new SpringRepositoryGenerator(outputDir, basePackage)
                 .generateRepositories(m.getClasses());
-        new SpringServiceGenerator(outputDir, basePackage)
+        // mapa nome-de-DTO -> classe dona: cada service/controller importa só as folders de DTO que usa
+        java.util.Map<String, String> DTO_ToClass = SpringUtils.buildDTOOwnerMap(m.getClasses());
+        new SpringServiceGenerator(outputDir, basePackage, DTO_ToClass)
                 .generateServices(m.getClasses(), m.getAssociations(), /*m.getPsmInteractions()*/m.getAllInteractions(), m.getEnumerations());
-        new SpringControllerGenerator(outputDir, basePackage)
+        new SpringControllerGenerator(outputDir, basePackage, DTO_ToClass)
                 .generateControllers(m.getClasses(), m.getAssociations(), m.getAllInteractions());//m.getPsmInteractions());
         new SpringJobGenerator(outputDir, basePackage)
                 .generateJobs(m.getClasses(), m.getAssociations(), m.getEnumerations());

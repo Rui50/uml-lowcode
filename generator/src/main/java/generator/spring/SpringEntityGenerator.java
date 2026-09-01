@@ -27,13 +27,7 @@ import java.util.Set;
  * - relações: @OneToMany, @ManyToOne, @ManyToMany,
  * - getters derivados
  * - validate() se invs
- *
- * - Herança: por agora só SINGLE_TABLE, depois podemos configurar para JOINED
- *
- * Bidirecionalidade: se for bidirecional, gerar @JsonIgnoreProperties para evitar loop infinito na serialização JSON
- *
- * id: raiz com idAttributeName == null gera o id por defeito (@Id @GeneratedValue Long id);
- * caso contrário @Id @GeneratedValue vão para o atributo escolhido. Ver model.Class.
+ *se for bidirecional, gerar @JsonIgnoreProperties para evitar loop infinito na serialização JSON
  */
 public class SpringEntityGenerator {
     private String baseOutputPath;
@@ -82,7 +76,7 @@ public class SpringEntityGenerator {
 
     /**
      * Gera um ficheiro Java por interface UML.
-     * so assinatura — sem JPA.
+     * so assinatura 
      */
     public void generateInterfaces(List<Interface> interfaces) throws IOException {
         if (interfaces == null || interfaces.isEmpty()) return;
@@ -157,10 +151,10 @@ public class SpringEntityGenerator {
             if (cls.getParentClass() != null) {
                 writer.print(" extends " + cls.getParentClass().getName());
             } else if (timestamps) {
-                // a classe raiz carrega os timestamps filhas herdam por transitividade
+                // a classe raiz carrega os timestamps filhos herdam
                 writer.print(" extends Auditable");
             }
-            // nota: interfaces UML são realizadas pelo servic não pela entidade
+            //interfaces UML são realizadas pelo servic não pela entidade
             writer.println(" {");
             writer.println();
 
@@ -170,13 +164,12 @@ public class SpringEntityGenerator {
             }
 
             // invariantes OCL simples -> anotações  Validation. as mapeadas saem do validate().
-            // se desativado para a classe, fica tudo no validate() (Result vazio)
+            // se desativado para a classe, fica tudo no validate()
             OCLtoSpringAnnot.Result constraints;
             if (cls.isBeanValidation()) {
                 constraints = OCLtoSpringAnnot.map(cls, associations);
             } else {
-                // desativado para a classe: nada mapeado -> fica tudo no validate()
-                // cria vazio
+                // vazzio
                 constraints = new OCLtoSpringAnnot.Result();
             }
 
@@ -205,7 +198,7 @@ public class SpringEntityGenerator {
         // estratégia de herança
         String strategy = cls.getRootInheritanceStrategy();
 
-        // Lombok para nao termos que gerar construtores, getters e setters
+        // usar o lombok para nao termos que gerar construtores, getters e setters
         writer.println("@Getter");
         writer.println("@Setter");
         writer.println("@NoArgsConstructor");
@@ -213,11 +206,16 @@ public class SpringEntityGenerator {
         // @Entity
         writer.println("@Entity");
 
-        if (strategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
-            // para herança single table, só a classe pai tem @Table
-            // os têm @DiscriminatorValue
-            return;
-        } else {
+
+        // if (strategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
+        //     return;
+        // } else {
+        //     writer.println("@Table(name = \"" + GeneratorUtils.tableName(cls) + "\")");
+        // }
+
+        // filho SINGLE_TABLE partilha a tabela do pai -> sem @Table; os outros levam @Table
+        boolean singleTableChild = strategy.equals("SINGLE_TABLE") && cls.getParentClass() != null;
+        if (!singleTableChild) {
             // nome derivado (minúsculas) ou override do painel Persistence (GeneratorUtils.tableName)
             writer.println("@Table(name = \"" + GeneratorUtils.tableName(cls) + "\")");
         }
@@ -248,14 +246,14 @@ public class SpringEntityGenerator {
             // skip derived
             if (atr.hasDerive()) continue;
 
-            // atributo escolhido como @Id (sempre auto-gerado);
-            // tipo do campo é boxed (Integer em vez de int) — JPA não aceita primitivos no @Id
+            // atributo escolhido como @Id
+            // tipo do campo é  (Integer em vez de int) porque JPA não aceita primitivos no @Id
             boolean isId = atr.getName().equals(cls.getIdAttributeName());
             String fieldType = isId ? cls.getRoot().getIdAttributeType() : atr.getType();
             if (isId) {
                 writer.println("    @Id");
                 // chave natural (String) é atribuída pelo cliente -> sem @GeneratedValue;
-                // tipos gerados (integrais) mantêm o auto-incremento
+                // tipos gerados (ints) mantêm o auto-incremento
                 if (!cls.isIdAssigned()) {
                     writer.println("    @GeneratedValue(strategy = GenerationType.IDENTITY)");
                 }
@@ -326,13 +324,13 @@ public class SpringEntityGenerator {
                                                      Map<String, List<String>> annsByField){
         writer.println("    // relationship: " + thisClass + " -> " + otherClass);
 
-        // thisMultiplicity = multiplicidade do CAMPO desta classe (quantos do outro lado);
+        // thisMultiplicity = multiplicidade do atributo desta classe (quantos do outro lado);
         // otherMultiplicity = quantos desta classe é que o outro lado vê
         String thisMultiplicity  = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
         String otherMultiplicity = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
 
         // ponta com o Map conta como coleção
-        boolean isCollection = GeneratorUtils.checkMultiplicity(thisMultiplicity) || assoc.isMapEnd(isSource);          // o MEU campo é coleção
+        boolean isCollection = GeneratorUtils.checkMultiplicity(thisMultiplicity) || assoc.isMapEnd(isSource);          // o MEU atributo é coleção
         boolean inverseIsCollection = GeneratorUtils.checkMultiplicity(otherMultiplicity) || assoc.isMapEnd(!isSource); // o do outro lado
         boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
@@ -341,21 +339,18 @@ public class SpringEntityGenerator {
             writer.println("    @JsonIgnoreProperties(\"" + GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
         }
 
-        // Bean Validation vinda das invariantes OCL (ex: self.turno <> null -> @NotNull). É Spring-only,
-        // por isso sai aqui e não no JpaEntityWriter partilhado (o CLI-JPA não tem jakarta.validation)
+        // Bean Validation vinda das invariantes OCL (self.turno <> null -> @NotNull)
         for (String ann : annsByField.getOrDefault(fieldName, List.of())) {
             writer.println("    " + ann);
         }
 
-        // @OrderBy da coleção (persistence tab) — só em campos de coleção
+        // @OrderBy da coleção (persistence tab) só em campos de coleção
         if (isCollection) {
             Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElse(null);
             String orderBy = (self != null) ? self.getCollectionOrder().get(fieldName) : null;
             if (orderBy != null) writer.println("    @OrderBy(\"" + orderBy + "\")");
         }
 
-        // os writers de relação são partilhados com o CLI-JPA (JpaEntityWriter): o que sai é JPA
-        // puro, igual nos dois targets. O que é só do Spring (@JsonIgnoreProperties, @OrderBy) fica aqui.
         // Many to Many
         if (isCollection && inverseIsCollection) {
             JpaEntityWriter.generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);

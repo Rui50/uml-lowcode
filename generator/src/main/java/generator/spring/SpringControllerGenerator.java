@@ -17,36 +17,31 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Gera os @RestController (camada REST) — um por classe CONCRETA; classes abstratas não têm
- * controller. Cada controller é @RequestMapping("/api/<plural>") (nome em lowercase + "s"),
- * @RequiredArgsConstructor, delega no service e fala sempre por DTOs / ids (nunca entidades cruas).
+ * Gera os @RestController
  *
- * Endpoints por classe:
- *  - CRUD: GET /(list) e /{id}, POST / (create, salta em abstratas), PATCH /{id} (parcial),
- *    PUT /{id} (replace: campos não enviados -> null), DELETE /{id};
- *  - relação ManyToOne: PUT /{id}/{role}/{otherId} (assign) + DELETE /{id}/{role} (unassign);
- *  - relação coleção (ManyToMany do lado dono, ou OneToMany unidir/qualifier): POST + DELETE
- *    /{id}/{role} (add/remove, ids no body/na query);
- *  - operações custom (dos diagramas de sequência): método de op.getHttpMethod() (default POST),
- *    path endpointName|nome, params = args da mensagem de entrada (simples -> @RequestParam,
- *    DTO -> @RequestBody, tipo-entidade -> erro), retorno mapeado p/ ResponseDTO/List/valor;
- *  - jobs: trigger manual POST /api/<plural>/<op> -> <op>Job.run() (correm @Scheduled na cron).
+ * Endpoints:
+ *  - CRUD: GET (list e /{id}), POST (create), PATCH /{id}, PUT /{id}, DELETE /{id};
+ *  - ManyToOne: PUT /{id}/<attribute>/{otherId} + DELETE /{id}/<attribute>;
+ *  - coleção: POST + DELETE /{id}/<attribute> (add/remove por ids);
+ *  - ops custom (dos diagramas de sequência) e trigger manual dos jobs.
  *
- * Notas:
- *  - ops custom seguem effectiveOperations (incl. herdadas); jobs seguem getOperations() (próprias);
- *  - erros do backend saem como ProblemDetail (RFC 7807) — 'detail' leva a msg (ex: validação OCL).
  */
-// id: @PathVariable/@RequestBody usam o tipo do id da própria classe e o das classes relacionadas (idTypeOf)
+
+// id: @PathVariable/@RequestBody usam o tipo do id da própria classe e o das classes relacionadas
 public class SpringControllerGenerator {
     private String outputDirectory;
     private String basePackage;
 
-    // nome -> Class, para resolver o tipo de id de outra classe nas relações
+    // nome -> Class, para obter o tipo de id de outra classe nas relações
     private final Map<String, Class> classMap = new HashMap<>();
 
-    public SpringControllerGenerator(String outputDirectory, String basePackage) {
+    // nome de DTO -> classe onwer, para importar so folders de DTO que cada controller usa
+    private final Map<String, String> DTO_ToClass;
+
+    public SpringControllerGenerator(String outputDirectory, String basePackage, Map<String, String> DTO_ToClass) {
         this.outputDirectory = outputDirectory;
         this.basePackage = basePackage;
+        this.DTO_ToClass = DTO_ToClass;
     }
 
     // tipo do id de uma classe pelo nome
@@ -163,32 +158,23 @@ public class SpringControllerGenerator {
         writer.println("    }");
         writer.println();
 
-        // POST /api/entities - Create (skip for abstract classes)
-        if (!cls.isAbstract()) {
-            writer.println("    /**");
-            writer.println("     * POST /api/" + pluralPath);
-            writer.println("     * Create new " + className);
-            writer.println("     * @param dto entity data");
-            writer.println("     * @return created entity");
-            writer.println("     */");
-            writer.println("    @PostMapping");
-            writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Create") + "> create(@RequestBody " + className + "CreateDTO dto) {");
-            writer.println("        " + SpringDTOGenerator.responseDTOName(cls, "Create") + " created = " + serviceName + ".create(dto);");
-            writer.println("        return ResponseEntity.status(HttpStatus.CREATED).body(created);");
-            writer.println("    }");
-            writer.println();
-        }
-
-        // PATCH (não PUT): atualização PARCIAL — campo null/omitido NÃO mexe (evita apagar dados num
-        // PATCH parcial); limpar uma relação faz-se via DELETE /{id}/{role}. Não é RFC-7386 (null não
-        // apaga) — presence-tracking (JsonNullable) daria isso mas não funciona em Boot 4/Jackson 3.
-        // corpo = UpdateDTO próprio (sem id, só single-refs) em vez de reutilizar o CreateDTO
+        // POST /api/entities - Create
+        // if (!cls.isAbstract())
         writer.println("    /**");
-        writer.println("     * PATCH /api/" + pluralPath + "/{id} — partial update.");
-        writer.println("     * Null / omitted fields are IGNORED (not cleared). To fully replace (and null it");
-        writer.println("     * use PUT /api/" + pluralPath + "/{id}, to remove a relationship use");
-        writer.println("     * DELETE /api/" + pluralPath + "/{id}/{role}.");
+        writer.println("     * POST /api/" + pluralPath);
+        writer.println("     * Create new " + className);
+        writer.println("     * @param dto entity data");
+        writer.println("     * @return created entity");
         writer.println("     */");
+        writer.println("    @PostMapping");
+        writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Create") + "> create(@RequestBody " + className + "CreateDTO dto) {");
+        writer.println("        " + SpringDTOGenerator.responseDTOName(cls, "Create") + " created = " + serviceName + ".create(dto);");
+        writer.println("        return ResponseEntity.status(HttpStatus.CREATED).body(created);");
+        writer.println("    }");
+        writer.println();
+
+        // atualização parcial em que campo null/omitido não mexe
+        // (null não apaga: RFC-7386/JsonNullable não funciona em Boot 4/Jackson 3.)
         writer.println("    @PatchMapping(\"/{id}\")");
         writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Update") + "> update(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
@@ -198,7 +184,7 @@ public class SpringControllerGenerator {
         writer.println("    }");
         writer.println();
 
-        // PUT /api/entities/{id} — full replace (not sent -> null); relations same as PATCH
+        // PUT /api/entities/{id} faz full replace (not sent -> null), relations same as PATCH
         writer.println("    /**");
         writer.println("     * PUT /api/" + pluralPath + "/{id} — full replace. fields that arent sent are set to null.");
         writer.println("     * Relationships are managed via the dedicated endpoints (same as PATCH).");
@@ -237,14 +223,12 @@ public class SpringControllerGenerator {
         boolean hasRelationships = false;
 
         for (Association assoc : associations) {
-            // classe que DECLARA a associação (a própria ou um pai abstrato); null => não
-            // participa, ou só a herda de pai concreto (que já gera os seus endpoints).
+            // classe que declara a associação ; null => não participa, ou só a herda de pai concreto (que já gera os seus endpoints).
             String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
             if (declarer == null) continue;
 
-            // numa auto associação bidirecional a classe é os dois lados, por isso processam-se
-            // ambos — senão o lado DONO de um M:N self (onde isOwningSide só é true de um lado)
-            // nunca geraria endpoint. Chama-se o helper uma vez por lado.
+            // auto-associação bidirecional: a classe é os dois lados, processa os dois roles.
+            // (o endpoint de coleção só sai no lado dono e processar só o lado não dono não geraria endpoint.)
             boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass())
                     && assoc.isSourceNavigable() && assoc.isTargetNavigable();
             if (selfBidirectional) {
@@ -264,14 +248,13 @@ public class SpringControllerGenerator {
         }
     }
 
-    // Gera os endpoints de relação para UMA perspetiva (lado) da associação.
-    // Devolve o estado atualizado de hasRelationships
+    // Gera os endpoints de relação para um  lado da associação.
     private boolean generateRelationEndpointsForSide(PrintWriter writer, String className, String serviceName,
                                                      RelationshipInfo rel, boolean hasRelationships) {
         boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
         boolean isCollection = rel.isCollection();                 // eu tenho muitos deles
         String otherClass = rel.otherClass;
-        // nome do campo baseado no role (igual ao service/entidade); sem role usa o nome da classe
+        // nome do campo baseado no role
         String fieldName = rel.field();
 
         // ManyToOne: PUT /{id}/{other}/{otherId} e DELETE /{id}/{other}
@@ -280,7 +263,7 @@ public class SpringControllerGenerator {
             generateAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
             generateRemoveAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
         }
-        // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others} — no lado DONO (isOwningSide)
+        // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others}, no lado owner
         else if (inverseIsCollection && isCollection && rel.isOwner()) {
             if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
             generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
@@ -390,13 +373,9 @@ public class SpringControllerGenerator {
 
         writer.println("import " + basePackage + ".models." + className + ";");
         writer.println("import " + basePackage + ".service." + className + "Service;");
-        writer.println("import " + basePackage + ".dto." + className + "CreateDTO;");
-        writer.println("import " + basePackage + ".dto." + className + "UpdateDTO;");
-        writer.println("import " + basePackage + ".dto." + className + "ResponseDTO;");
-        // DTOs de override de response (um por endpoint com override)
-        cls.getResponseOverrides().keySet().stream().sorted().forEach(endpointType ->
-                writer.println("import " + basePackage + ".dto." + SpringDTOGenerator.responseDTOName(cls, endpointType) + ";"));
-        writer.println("import " + basePackage + ".dto.*;");   // params de ops custom podem ser DTOs de qualquer classe
+        // importa só as folders de DTO que este controller usa (a própria + as referidas nas ops custom)
+        for (String dtoClass : SpringUtils.referencedDTOClasses(cls, classMap.keySet(), DTO_ToClass))
+            writer.println("import " + basePackage + ".dto." + dtoClass.toLowerCase() + ".*;");
         writer.println("import lombok.RequiredArgsConstructor;");
         writer.println("import org.springframework.http.HttpStatus;");
         writer.println("import org.springframework.http.ResponseEntity;");
@@ -431,23 +410,16 @@ public class SpringControllerGenerator {
             writer.println("import " + basePackage + ".service." + extra + "Service;");
         }
 
-        // ResponseDTOs (de outras entidades) + Collectors para endpoints custom que devolvem entidades
-        Set<String> responseDtoImports = new HashSet<>();
+        // Collectors para endpoints custom que devolvem List<entidade>
         boolean needsCollectors = false;
         for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             if (op.isJob() || op.getSequenceDiagram() == null) continue;
             Class owner = GeneratorUtils.declaringClassOf(cls, op);
             Message entry = SpringUtils.findEntryMessage(op.getSequenceDiagram(), owner, op);
             String rt = customOpReturnType(cls, op, entry);
-            if ("void".equals(rt)) continue;
-            String base = GeneratorUtils.extractBaseType(rt);
-            if (classMap.containsKey(base)) {
-                if (!base.equals(className)) responseDtoImports.add(base);
-                if (rt.startsWith("List<")) needsCollectors = true;
+            if (rt.startsWith("List<") && classMap.containsKey(GeneratorUtils.extractBaseType(rt))) {
+                needsCollectors = true;
             }
-        }
-        for (String e : responseDtoImports) {
-            writer.println("import " + basePackage + ".dto." + e + "ResponseDTO;");
         }
         if (needsCollectors) {
             writer.println("import java.util.stream.Collectors;");
@@ -561,9 +533,7 @@ public class SpringControllerGenerator {
             writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, msg(ex));");
             writer.println("    }");
             writer.println();
-            // violação de integridade referencial (apagar entidade ainda referenciada por outra,
-            // ou valor único duplicado) -> 409. NÃO expõe ex.getMessage() porque traz SQL/constraint
-            // cru (info leak).
+            // BD recusa (FK ainda referenciada, ou valor único duplicado) -> 409
             writer.println("    @ExceptionHandler(DataIntegrityViolationException.class)");
             writer.println("    public ProblemDetail handleIntegrity(DataIntegrityViolationException ex) {");
             writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,");
@@ -615,13 +585,13 @@ public class SpringControllerGenerator {
             Interaction interaction = op.getSequenceDiagram();
             if (interaction == null) continue;
 
-            // diagrama foi desenhado na classe que declara a op; a chamada vai à do service concreto
+            // diagrama foi desenhado na classe que declara a op, a chamada vai à do service
             Class owner = GeneratorUtils.declaringClassOf(cls, op);
             Message entryMessage = SpringUtils.findEntryMessage(interaction, owner, op);
             List<MessageArgument> entryArgs = (entryMessage != null) ? entryMessage.getArguments() : new ArrayList<>();
 
-            // endpoint parâmetros = mensagem de entrada; chama o service tal e qual.
-            // binding por tipo: entidade -> erro para ja | DTO -> @RequestBody | simples -> @RequestParam
+            // parâmetros do endpoint = args da mensagem de entrada, o endpoint so chama o service com eles
+            // binding por tipo do arg       DTO -> @RequestBody, simples -> @RequestParam
             writer.println();
             String path = (op.getEndpointName() != null && !op.getEndpointName().isBlank())
                     ? op.getEndpointName() : op.getName();
@@ -633,7 +603,7 @@ public class SpringControllerGenerator {
                 String argType = arg.getType() != null ? GeneratorUtils.removePackageNames(arg.getType()) : "Object";
                 String binding;
                 if (classMap.containsKey(argType)) {
-                    // param do tipo-entidade para ja nao aceita
+                    // param do tipo entidade para ja nao aceita
                     throw new IllegalArgumentException("Operação '" + op.getName() + "': o parâmetro '"
                             + arg.getName() + "' é do tipo-entidade '" + argType + "', ainda não suportado como "
                             + "parâmetro de operação custom. Usa um DTO ou o id (ex: " + arg.getName() + "Id).");

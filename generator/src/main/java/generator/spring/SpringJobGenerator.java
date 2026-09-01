@@ -14,10 +14,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Gera as classes de jobs (@Scheduled) em jobs/, mais a config @EnableScheduling.
- * Cada job é uma classe @Component auto-contida: injeta os repositórios desenhados no
- * seu diagrama e corre o corpo (delegado ao SequenceBodyGenerator). Só gera algo se
- * existir pelo menos uma operação marcada como job.
+ * Gera as classes de jobs (@Scheduled) e a config @EnableScheduling. Cada job é um @Component
+ * que injeta os repositórios do seu diagrama e corre o corpo (do SequenceBodyGenerator).
+ * Só gera a pasta etc se tiver pelos menos uma op marcada como job
  */
 public class SpringJobGenerator {
 
@@ -49,7 +48,7 @@ public class SpringJobGenerator {
         System.out.println("Job generation completed.");
     }
 
-    // @Configuration @EnableScheduling — habilita o scheduler do Spring
+    // @Configuration @EnableScheduling, "Ligar" o scheduler do Spring
     private void generateSchedulingConfig(String jobsDir) throws IOException {
         try (PrintWriter writer = new PrintWriter(new java.io.FileWriter(jobsDir + "/SchedulingConfig.java"))) {
             writer.println("package " + basePackage + ".jobs;");
@@ -65,7 +64,7 @@ public class SpringJobGenerator {
         System.out.println("Generated: SchedulingConfig.java");
     }
 
-    // classe de job: @Component com os repos do diagrama + metodo @Scheduled (corpo do diagrama)
+    // classe de job, @Component com os repos do diagrama + metodo @Scheduled
     private void generateJobClass(Class cls, Operation op, List<Class> classes, List<Association> associations,
                                   List<model.Enumeration> enumerations, String jobsDir) throws IOException {
         Interaction interaction = op.getSequenceDiagram();
@@ -74,25 +73,23 @@ public class SpringJobGenerator {
             throw new IllegalArgumentException("Job '" + op.getName()
                     + "': não tem diagrama de sequência associado — ligue um diagrama à operação ou desmarque-a como job.");
         }
-        // prefixo da classe evita colisão entre jobs  classes diferentes ivroSyncJob x AutorSyncJob
+        // prefixo da classe para evitar colisão entre jobs de classes diferentes
         String jobName = cls.getName() + GeneratorUtils.capitalizeFirst(op.getName()) + "Job";
         String cron = (op.getCron() != null && !op.getCron().isBlank()) ? op.getCron() : "0 * * * * *";
 
         // repos = lifelines do tipo *Repository desenhadas no diagrama do job
         Set<String> repoTypes = new LinkedHashSet<>();
-        if (interaction != null) {
-            for (Lifeline ll : interaction.getLifelines()) {
-                if (ll.getType() == null || !ll.getType().endsWith("Repository")) continue;
-                String entity = ll.getType().substring(0, ll.getType().length() - "Repository".length());
-                boolean known = classes.stream().anyMatch(c -> c.getName().equals(entity));
-                if (!known) {
-                    // lifeline de repo de classe inexistente
-                    throw new IllegalArgumentException("Job '" + op.getName()
-                            + "': o diagrama tem uma lifeline ': " + ll.getType() + "' mas a classe '"
-                            + entity + "' não existe no modelo.");
-                }
-                repoTypes.add(ll.getType());
+        for (Lifeline ll : interaction.getLifelines()) {
+            if (ll.getType() == null || !ll.getType().endsWith("Repository")) continue;
+            String entity = ll.getType().substring(0, ll.getType().length() - "Repository".length());
+            boolean known = classes.stream().anyMatch(c -> c.getName().equals(entity));
+            if (!known) {
+                // lifeline de repo de classe inexistente
+                throw new IllegalArgumentException("Job '" + op.getName()
+                        + "': o diagrama tem uma lifeline ': " + ll.getType() + "' mas a classe '"
+                        + entity + "' não existe no modelo.");
             }
+            repoTypes.add(ll.getType());
         }
 
         try (PrintWriter writer = new PrintWriter(new java.io.FileWriter(jobsDir + "/" + jobName + ".java"))) {

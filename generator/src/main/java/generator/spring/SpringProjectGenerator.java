@@ -14,9 +14,9 @@ import java.nio.file.StandardCopyOption;
 /**
  * Gera o esqueleto do projecto Spring
  * - cria estrutura de pastas
- * - copia templates base (pom.xml, application.properties, main class, test class)
- * - gera pom.xml com dependências (Spring Web, Spring Data JPA, driver do banco)
- * - gera application.properties com configuração de datasource
+ * - copia os assets do template (lombok.config, wrapper Maven)
+ * - gera pom.xml com dependências (Spring Web, Spring Data JPA, driver da db)
+ * - gera application.properties
  * - gera classe principal com @SpringBootApplication
  *
  *  depos os geradores entidades/DTOs/repos/services/controllersescrevem por cima desta base.
@@ -25,7 +25,7 @@ import java.nio.file.StandardCopyOption;
 public class SpringProjectGenerator {
     private SpringProjectSettings settings;
     private String outputDirectory;
-    // tem de ser run de uma pasta filha da raiz do repo (não da raiz nem de um jar empacotado).
+
     private String baseTemplateDir = "../generator/templates/spring-boot-static";
 
     public SpringProjectGenerator(SpringProjectSettings settings, String outputDirectory) {
@@ -45,8 +45,8 @@ public class SpringProjectGenerator {
         }
 
         createDirectoryStructure();
-        // o template só tem assets estáticos (lombok.config, wrapper Maven, etc.);
-        // pom.xml/application.properties/main/test copiados daqui são reescritos pelos geradores abaixo.
+        // o template só tem assets estáticos (lombok.config, wrapper Maven, .gitignore, etc.);
+        // o pom.xml/application.properties/main/test são gerados abaixo, não vêm do template.
         copyBaseTemplate();
         generatePomXml();
         generateApplicationProperties();
@@ -57,7 +57,7 @@ public class SpringProjectGenerator {
         }
         if (settings.isDockerfile()) {
             generateDockerfile();
-            // H2 é embebido mas Postgres/MySQL precisam de um container de BD -> docker-compose
+            // H2 nao precisa mas Postgres/MySQL precisam de um container de BD -> docker-compose
             if (settings.getDatabaseType() != DatabaseType.H2) {
                 generateDockerCompose();
             }
@@ -86,8 +86,7 @@ public class SpringProjectGenerator {
         System.out.println("Generated: Dockerfile");
     }
 
-    // docker-compose: app + container de BD (Postgres/MySQL). credenciais por
-    // env (SPRING_DATASOURCE_*), que o Spring Boot usa por cima do application.properties.
+    // docker-compose: app + container de BD (Postgres/MySQL)
     private void generateDockerCompose() throws IOException {
         String dbName = settings.getApplicationName();
         boolean postgres = settings.getDatabaseType() == DatabaseType.POSTGRESQL;
@@ -186,7 +185,7 @@ public class SpringProjectGenerator {
             w.println("        <relativePath/>");
             w.println("    </parent>");
             w.println();
-            // groupId: package sem a ultima parte, artifactId: ultima parte
+            // groupId: package sem a ultima parte, artifactId: ultima parte (com.example | app)
             String basePackage = settings.getBasePackage();
             int lastDot = basePackage.lastIndexOf('.');
             String groupId = lastDot > 0 ? basePackage.substring(0, lastDot) : basePackage;
@@ -226,12 +225,12 @@ public class SpringProjectGenerator {
             w.println("            <groupId>org.springframework.boot</groupId>");
             w.println("            <artifactId>spring-boot-starter-webmvc</artifactId>");
             w.println("        </dependency>");
-            // Bean Validation (Hibernate Validator) — anotações OCL nas entidades
+            // Bean Validation (Hibernate Validator) para anotações OCL nas entidades
             w.println("        <dependency>");
             w.println("            <groupId>org.springframework.boot</groupId>");
             w.println("            <artifactId>spring-boot-starter-validation</artifactId>");
             w.println("        </dependency>");
-            // OpenAPI / Swagger UI em /swagger-ui.html (springdoc 3.x p/ Spring Boot 4) — opcional
+            // OpenAPI / Swagger UI em /swagger-ui.html (springdoc 3.x p/ Spring Boot 4)
             if (settings.isOpenApi()) {
                 w.println("        <dependency>");
                 w.println("            <groupId>org.springdoc</groupId>");
@@ -318,10 +317,10 @@ public class SpringProjectGenerator {
         }
     }
 
-    // gera 3 ficheiros: application.properties
-    // application-dev.properties (datasource local, schema descartável, logs todos) e
-    // application-prod.properties (datasource via env vars, schema validado, logs ).
-    // Local corre em dev sem config; em produção: SPRING_PROFILES_ACTIVE=prod.
+    // gera 3 ficheiros: application.properties (base), application-dev.properties e application-prod.properties.
+    // dev: BD local, o Hibernate cria/atualiza o schema no arranque, SQL nos logs.
+    // prod: BD por vars env, o Hibernate só valida o schema (não lhe toca), sem SQL nos logs.
+    // dev corre por omissão, prod via SPRING_PROFILES_ACTIVE=prod.
     private void generateApplicationProperties() throws IOException {
         String resDir = outputDirectory + "/src/main/resources/";
         String base = settings.getBasePackage();
@@ -340,7 +339,7 @@ public class SpringProjectGenerator {
             w.println("spring.jpa.properties.hibernate.default_batch_fetch_size=50");
         }
 
-        // application-dev.properties — datasource local + schema descartável + logs verbosos
+        // application-dev.properties
         try (PrintWriter w = new PrintWriter(new FileWriter(resDir + "application-dev.properties"))) {
             switch (settings.getDatabaseType()) {
                 case H2:
@@ -375,7 +374,7 @@ public class SpringProjectGenerator {
             w.println("logging.level." + base + "=DEBUG");
         }
 
-        // application-prod.properties — datasource via env vars, schema validado (não apaga), logs
+        // application-prod.properties
         try (PrintWriter w = new PrintWriter(new FileWriter(resDir + "application-prod.properties"))) {
             w.println("# datasource das env vars: SPRING_DATASOURCE_URL / _USERNAME / _PASSWORD");
             w.println("# (o Spring Boot liga-as automaticamente; o driver é inferido do URL)");
@@ -416,17 +415,11 @@ public class SpringProjectGenerator {
     }
 
     /**
-     * Gera o {@code @MappedSuperclass Auditable} com createdAt/updatedAt
-     * extebds pelas entidades raiz
+     * Gera o @MappedSuperclass Auditable (createdAt/updatedAt), que as outras entidades usam.
      *
-     * Usa o auditing do Spring Data JPA (@CreatedDate / @LastModifiedDate AuditingEntityListener) em vez das anotações específicas do Hibernate
-     * (@CreationTimestamp / @UpdateTimestamp). Assim as classes de domínio geradas
-     * não importam org.hibernate.*: o modelo fica em JPA + Spring Data puros e
-     * mantém-se independente do provedor JPA ao nível do código-fonte.
+     * Usa o auditing do Spring Data JPA (@CreatedDate/@LastModifiedDate + AuditingEntityListener).
      *
-     * createdAt é imutável (updatable = false); updatedAt é atualizado em cada flush
-     * de uma entidade gerida. Ambos são preenchidos automaticamente — não vêm no
-     * CreateDTO, aparecem no ResponseDTO.
+     * createdAt é imutável (updatable=false), updatedAt muda a cada flush.
      */
     private void generateAuditableClass() throws IOException {
         String packagePath = settings.getPackagePath();
