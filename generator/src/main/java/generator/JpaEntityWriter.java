@@ -123,7 +123,8 @@ public final class JpaEntityWriter {
             } else {
                 writer.println("    @OneToMany");
             }
-            writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
+            // @OneToMany unidirecional: a FK fica na tabela do outro lado e aponta para esta classe.
+            writer.println("    @JoinColumn(name = \"" + thisClass.toLowerCase() + "_" + attributeName.toLowerCase() + "_id\")");
         }
 
         if (assoc.isMapEnd(isSource)) {
