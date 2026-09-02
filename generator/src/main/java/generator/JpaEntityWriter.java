@@ -54,13 +54,13 @@ public final class JpaEntityWriter {
     public static void generateManyToMany(PrintWriter writer,
                                           String thisClass,
                                           String otherClass,
-                                          String fieldName,
+                                          String attributeName,
                                           Association assoc,
                                           boolean isSource,
                                           boolean isBidirectional) {
 
         // numa auto associação as duas colunas seriam iguais ("employee_id") entao usa-se o campo na inversa
-        String invJoinCol = (thisClass.equals(otherClass) ? fieldName.toLowerCase() : otherClass.toLowerCase()) + "_id";
+        String invJoinCol = (thisClass.equals(otherClass) ? attributeName.toLowerCase() : otherClass.toLowerCase()) + "_id";
 
         if (isBidirectional) {
             // decide se o campo gerado é @JoinTable (dono) ou mappedBy (inverso)
@@ -69,7 +69,7 @@ public final class JpaEntityWriter {
             if (isOwner) {
                 writer.println("    @ManyToMany");
                 writer.println("    @JoinTable(");
-                writer.println("        name = \"" + thisClass.toLowerCase() + "_" + fieldName.toLowerCase() + "\",");
+                writer.println("        name = \"" + thisClass.toLowerCase() + "_" + attributeName.toLowerCase() + "\",");
                 writer.println("        joinColumns = @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\"),");
                 writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + invJoinCol + "\")");
                 writer.println("    )");
@@ -80,7 +80,7 @@ public final class JpaEntityWriter {
         } else {
             writer.println("    @ManyToMany");
             writer.println("    @JoinTable(");
-            writer.println("        name = \"" + thisClass.toLowerCase() + "_" + fieldName.toLowerCase() + "\",");
+            writer.println("        name = \"" + thisClass.toLowerCase() + "_" + attributeName.toLowerCase() + "\",");
             writer.println("        joinColumns = @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\"),");
             writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + invJoinCol + "\")");
             writer.println("    )");
@@ -91,9 +91,9 @@ public final class JpaEntityWriter {
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
-                    fieldName + " = new HashMap<>();");
+                    attributeName + " = new HashMap<>();");
         } else {
-            writer.println("    private List<" + otherClass + "> " + fieldName +
+            writer.println("    private List<" + otherClass + "> " + attributeName +
                     " = new ArrayList<>();");
         }
     }
@@ -106,7 +106,7 @@ public final class JpaEntityWriter {
     public static void generateOneToMany(PrintWriter writer,
                                          String thisClass,
                                          String otherClass,
-                                         String fieldName,
+                                         String attributeName,
                                          Association assoc,
                                          boolean isSource,
                                          boolean isBidirectional) {
@@ -123,16 +123,16 @@ public final class JpaEntityWriter {
             } else {
                 writer.println("    @OneToMany");
             }
-            writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
+            writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
         }
 
         if (assoc.isMapEnd(isSource)) {
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
-                    fieldName + " = new HashMap<>();");
+                    attributeName + " = new HashMap<>();");
         } else {
-            writer.println("    private List<" + otherClass + "> " + fieldName +
+            writer.println("    private List<" + otherClass + "> " + attributeName +
                     " = new ArrayList<>();");
         }
     }
@@ -143,14 +143,14 @@ public final class JpaEntityWriter {
      */
     public static void generateManyToOne(PrintWriter writer,
                                          String otherClass,
-                                         String fieldName,
+                                         String attributeName,
                                          Association assoc) {
 
         // Ponta sing = referência única. O Map pertence só ao lado da coleção
         // aqui ignora-se, senão saía @ManyToOne sobre um Map (inválido).
         writer.println("    @ManyToOne");
-        writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
-        writer.println("    private " + otherClass + " " + fieldName + ";");
+        writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
+        writer.println("    private " + otherClass + " " + attributeName + ";");
     }
 
     /**
@@ -161,7 +161,7 @@ public final class JpaEntityWriter {
     public static void generateOneToOne(PrintWriter writer,
                                         String thisClass,
                                         String otherClass,
-                                        String fieldName,
+                                        String attributeName,
                                         Association assoc,
                                         boolean isSource,
                                         boolean isBidirectional) {
@@ -174,13 +174,13 @@ public final class JpaEntityWriter {
                         GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
             } else {
                 writer.println("    @OneToMany");
-                writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
+                writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
             }
 
             writer.println("    @MapKey(name = \"" + assoc.getQualifierName() + "\")");
             String qualifierType = assoc.getQualifierType();
             writer.println("    private Map<" + qualifierType + ", " + otherClass + "> " +
-                    fieldName + " = new HashMap<>();");
+                    attributeName + " = new HashMap<>();");
         } else {
             // sem qualifier OneToOne normal
             if (isBidirectional) {
@@ -189,17 +189,17 @@ public final class JpaEntityWriter {
 
                 if (isOwner) {
                     writer.println("    @OneToOne");
-                    writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
+                    writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
                 } else {
                     writer.println("    @OneToOne(mappedBy = \"" +
                             GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
                 }
             } else {
                 writer.println("    @OneToOne");
-                writer.println("    @JoinColumn(name = \"" + fieldName.toLowerCase() + "_id\")");
+                writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
             }
 
-            writer.println("    private " + otherClass + " " + fieldName + ";");
+            writer.println("    private " + otherClass + " " + attributeName + ";");
         }
     }
 }

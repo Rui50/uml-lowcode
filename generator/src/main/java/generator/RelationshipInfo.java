@@ -25,7 +25,7 @@ public class RelationshipInfo {
     }
 
     // nome do campo (baseado no role, sem role usa a classe)
-    public String field() {
+    public String attributeName() {
         return GeneratorUtils.makeAttributeName(otherClass, role, otherMultiplicity);
     }
 

@@ -175,7 +175,7 @@ public class SequenceBodyGenerator {
             if (sep > 0) {
                 String attrName = methodName.substring(0, sep);
                 String op = methodName.substring(sep + 1);
-                Association assoc = findAssocByField(msg.getTarget().getType(), attrName);
+                Association assoc = findAssocByAttribute(msg.getTarget().getType(), attrName);
                 if (assoc != null) {
                     String argName = msg.getArguments().get(0).getName();
                     String base = targetVar + ".get" + GeneratorUtils.capitalizeFirst(attrName) + "()";
@@ -296,16 +296,16 @@ public class SequenceBodyGenerator {
     }
 
     // procura a associação cujo campo (no lado do ownerType) se chama attrName
-    private Association findAssocByField(String ownerType, String attrName) {
+    private Association findAssocByAttribute(String ownerType, String attrName) {
         for (Association a : associations) {
             if (!participates(ownerType, a.getSourceClass()) && !participates(ownerType, a.getTargetClass())) continue;
-            if (attrName.equals(fieldNameFor(a, ownerType))) return a;
+            if (attrName.equals(attributeNameFor(a, ownerType))) return a;
         }
         return null;
     }
 
     // nome do campo, no lado do owner, que refere o outro lado da associação
-    private String fieldNameFor(Association a, String ownerType) {
+    private String attributeNameFor(Association a, String ownerType) {
         if (participates(ownerType, a.getSourceClass())) {
             return GeneratorUtils.makeAttributeName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
         }

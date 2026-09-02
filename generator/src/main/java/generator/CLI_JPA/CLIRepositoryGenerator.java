@@ -39,8 +39,8 @@ public class CLIRepositoryGenerator {
 
         // id
         String idType = cls.getRoot().getIdAttributeType();
-        String idField = cls.getRoot().getIdAttributeName() == null ? "id" : cls.getRoot().getIdAttributeName();
-        String idGetter = "get" + Character.toUpperCase(idField.charAt(0)) + idField.substring(1);
+        String idAttribute = cls.getRoot().getIdAttributeName() == null ? "id" : cls.getRoot().getIdAttributeName();
+        String idGetter = "get" + Character.toUpperCase(idAttribute.charAt(0)) + idAttribute.substring(1);
 
         try (PrintWriter w = new PrintWriter(filename)) {
             w.println("package " + basePackage + ".repository;");

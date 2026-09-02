@@ -74,7 +74,7 @@ public class SpringEndpointList {
     }
 
     private static void addAssociationEndpoints(List<Endpoint> endpoints, String base, RelationshipInfo rel){
-        String otherPath = rel.field().toLowerCase();
+        String otherPath = rel.attributeName().toLowerCase();
         String otherVar = GeneratorUtils.lowercaseFirst(rel.otherClass);
 
         // ManyToOne que gera  PUT /{id}/{other}/{otherId} + DELETE /{id}/{other}

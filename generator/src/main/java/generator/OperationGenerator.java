@@ -68,7 +68,7 @@ import java.util.Map;
  *   - findEntryMessage/firstMessage — primeira mensagem, descendo em fragments.
  *   - participates — ownerType é (ou herda de) a classe desta ponta da associação (subclasse reconhece
  *     associação do pai).
- *   - findAssoc/findAssocByField/fieldNameFor — a que associação um add/remove se refere e o campo.
+ *   - findAssoc/findAssocByAttribute/attributeNameFor — a que associação um add/remove se refere e o campo.
  *   - adaptCollectionAccess — acrescenta .values() ao iterar uma associação Map (qualificada).
  */
 public class OperationGenerator {
@@ -333,7 +333,7 @@ public class OperationGenerator {
             // se for só "add(a)", sem campo à frente, trata como uma chamada normal (fallback).
             Association assoc = null;
             if (attrName != null) {
-                assoc = findAssocByField(associations, cls, ownerType, attrName);
+                assoc = findAssocByAttribute(associations, cls, ownerType, attrName);
             }
 
             if (assoc != null) {
@@ -436,7 +436,7 @@ public class OperationGenerator {
         // listas normais e chamadas normais caem no fallback (transcrição literal).
         if (args != null && args.size() == 1 && attrName != null
                 && ("add".equals(op) || "remove".equals(op))) {
-            Association assoc = findAssocByField(associations, cls, msg.getTarget().getType(), attrName);
+            Association assoc = findAssocByAttribute(associations, cls, msg.getTarget().getType(), attrName);
             if (assoc != null && assoc.hasQualifier()) {
                 MessageArgument arg = args.get(0);
                 String q = assoc.getQualifierName();
@@ -542,16 +542,16 @@ public class OperationGenerator {
     // se a coleção é uma associação (Map), adiciona .values()
     // aceita "this.alunos" ou só "alunos"
     private static String adaptCollectionAccess(String expr, Class cls, List<Association> associations) {
-        String fieldName = expr.startsWith("this.") ? expr.substring("this.".length()).trim() : expr.trim();
+        String attributeName = expr.startsWith("this.") ? expr.substring("this.".length()).trim() : expr.trim();
 
         for (Association assoc : associations) {
             // isOrInheritsFrom (não igual) porque a associação pode ser herdada de um pai
             boolean sourceSide = cls.isOrInheritsFrom(assoc.getSourceClass())
                     && assoc.isTargetNavigable()
-                    && fieldName.equals(GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity()));
+                    && attributeName.equals(GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity()));
             boolean targetSide = cls.isOrInheritsFrom(assoc.getTargetClass())
                     && assoc.isSourceNavigable()
-                    && fieldName.equals(GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity()));
+                    && attributeName.equals(GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity()));
 
             if ((sourceSide || targetSide) && assoc.hasQualifier()) {
                 return expr + ".values()";
@@ -578,7 +578,7 @@ public class OperationGenerator {
         return null;
     }
 
-    private static String fieldNameFor(Association a, Class cls, String ownerType) {
+    private static String attributeNameFor(Association a, Class cls, String ownerType) {
         // lado a partir do owner, se owner é (ou herda) o source, o campo refere o target, e vice-versa
         if (participates(cls, ownerType, a.getSourceClass())) {
             return GeneratorUtils.makeAttributeName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
@@ -606,10 +606,10 @@ public class OperationGenerator {
     }
 
     // procura associação cujo field name no lado do owner é attrName
-    private static Association findAssocByField(List<Association> assocs, Class cls, String ownerType, String attrName) {
+    private static Association findAssocByAttribute(List<Association> assocs, Class cls, String ownerType, String attrName) {
         for (Association a : assocs) {
             if (!participates(cls, ownerType, a.getSourceClass()) && !participates(cls, ownerType, a.getTargetClass())) continue;
-            if (attrName.equals(fieldNameFor(a, cls, ownerType))) return a;
+            if (attrName.equals(attributeNameFor(a, cls, ownerType))) return a;
         }
         return null;
     }

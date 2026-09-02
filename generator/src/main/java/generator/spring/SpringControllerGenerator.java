@@ -255,25 +255,25 @@ public class SpringControllerGenerator {
         boolean isCollection = rel.isCollection();                 // eu tenho muitos deles
         String otherClass = rel.otherClass;
         // nome do campo baseado no role
-        String fieldName = rel.field();
+        String attributeName = rel.attributeName();
 
         // ManyToOne: PUT /{id}/{other}/{otherId} e DELETE /{id}/{other}
         if (inverseIsCollection && !isCollection) {
             if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
-            generateAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
-            generateRemoveAssignEndpoint(writer, className, otherClass, fieldName, serviceName);
+            generateAssignEndpoint(writer, className, otherClass, attributeName, serviceName);
+            generateRemoveAssignEndpoint(writer, className, otherClass, attributeName, serviceName);
         }
         // ManyToMany: POST /{id}/{others} e DELETE /{id}/{others}, no lado owner
         else if (inverseIsCollection && isCollection && rel.isOwner()) {
             if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
-            generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
-            generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);
+            generateCollectionAddEndpoint(writer, className, otherClass, attributeName, serviceName);
+            generateCollectionRemoveEndpoint(writer, className, otherClass, attributeName, serviceName);
         }
         // OneToMany unidirectional (or qualifier/Map): POST + DELETE /{id}/{others}
         else if (rel.hasCollectionEndpoint()) {
             if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
-            generateCollectionAddEndpoint(writer, className, otherClass, fieldName, serviceName);
-            generateCollectionRemoveEndpoint(writer, className, otherClass, fieldName, serviceName);
+            generateCollectionAddEndpoint(writer, className, otherClass, attributeName, serviceName);
+            generateCollectionRemoveEndpoint(writer, className, otherClass, attributeName, serviceName);
         }
         return hasRelationships;
     }
@@ -282,10 +282,10 @@ public class SpringControllerGenerator {
      * ManyToOne: PUT /{id}/{otherClass}/{otherId}
      * Ex: PUT /api/alunos/1/turno/3
      */
-    private void generateAssignEndpoint(PrintWriter writer, String className, String otherClass, String fieldName, String serviceName) {
+    private void generateAssignEndpoint(PrintWriter writer, String className, String otherClass, String attributeName, String serviceName) {
         String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
-        String cap = GeneratorUtils.capitalizeFirst(fieldName);   // nome do método/handler (baseado no role)
-        String otherPath = fieldName.toLowerCase();                // path baseado no role
+        String cap = GeneratorUtils.capitalizeFirst(attributeName);   // nome do método/handler (baseado no role)
+        String otherPath = attributeName.toLowerCase();                // path baseado no role
 
         writer.println();
         writer.println("    /**");
@@ -305,9 +305,9 @@ public class SpringControllerGenerator {
      * ManyToOne: DELETE /{id}/{otherClass}
      * Ex: DELETE /api/alunos/1/turno
      */
-    private void generateRemoveAssignEndpoint(PrintWriter writer, String className, String otherClass, String fieldName, String serviceName) {
-        String cap = GeneratorUtils.capitalizeFirst(fieldName);
-        String otherPath = fieldName.toLowerCase();
+    private void generateRemoveAssignEndpoint(PrintWriter writer, String className, String otherClass, String attributeName, String serviceName) {
+        String cap = GeneratorUtils.capitalizeFirst(attributeName);
+        String otherPath = attributeName.toLowerCase();
 
         writer.println("    /**");
         writer.println("     * ManyToOne: Remove the " + otherClass + " from " + className);
@@ -325,10 +325,10 @@ public class SpringControllerGenerator {
      * Collection (ManyToMany / OneToMany unidirectional): POST /{id}/{others}
      * Ex: POST /api/turmas/1/alunos  body: [1, 2, 3]
      */
-    private void generateCollectionAddEndpoint(PrintWriter writer, String className, String otherClass, String fieldName, String serviceName) {
+    private void generateCollectionAddEndpoint(PrintWriter writer, String className, String otherClass, String attributeName, String serviceName) {
         String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
-        String cap = GeneratorUtils.capitalizeFirst(fieldName);   // nome do método/handler (baseado no role)
-        String otherPath = fieldName.toLowerCase();                // path baseado no role
+        String cap = GeneratorUtils.capitalizeFirst(attributeName);   // nome do método/handler (baseado no role)
+        String otherPath = attributeName.toLowerCase();                // path baseado no role
 
         writer.println();
         writer.println("    /**");
@@ -348,10 +348,10 @@ public class SpringControllerGenerator {
      * Collection (ManyToMany / OneToMany uni): DELETE /{id}/{others}
      * Ex: DELETE /api/turmas/1/alunos  body: [1, 2, 3]
      */
-    private void generateCollectionRemoveEndpoint(PrintWriter writer, String className, String otherClass, String fieldName, String serviceName) {
+    private void generateCollectionRemoveEndpoint(PrintWriter writer, String className, String otherClass, String attributeName, String serviceName) {
         String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
-        String cap = GeneratorUtils.capitalizeFirst(fieldName);
-        String otherPath = fieldName.toLowerCase();
+        String cap = GeneratorUtils.capitalizeFirst(attributeName);
+        String otherPath = attributeName.toLowerCase();
 
         writer.println("    /**");
         writer.println("     * Remove " + otherClass + " entities from " + className + " by IDs");

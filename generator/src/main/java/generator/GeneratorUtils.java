@@ -174,20 +174,20 @@ public class GeneratorUtils {
         if (!isBidirectional) return true;      // unidirecional o lado navegável é o dono
 
         // bidirecional decide-se pela forma (multiplicidade) do campo deste lado vs o do lado inverso
-        String thisFieldMul    = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
-        String inverseFieldMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+        String thisAttributeMul    = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
+        String inverseAttributeMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
 
         // um lado é "coleção" se a multiplicidade for * OU se for a ponta do Map (qualifier)
-        boolean fieldIsCollection   = checkMultiplicity(thisFieldMul)    || assoc.isMapEnd(isSource);
-        boolean inverseIsCollection = checkMultiplicity(inverseFieldMul) || assoc.isMapEnd(!isSource);
+        boolean attributeIsCollection   = checkMultiplicity(thisAttributeMul)    || assoc.isMapEnd(isSource);
+        boolean inverseIsCollection = checkMultiplicity(inverseAttributeMul) || assoc.isMapEnd(!isSource);
 
         // em M:N qualifier o dono é a ponta do QUALIFIER
-        if (fieldIsCollection && inverseIsCollection && assoc.hasQualifier()) {
+        if (attributeIsCollection && inverseIsCollection && assoc.hasQualifier()) {
             return assoc.isMapEnd(isSource);
         }
-        if ( fieldIsCollection &&  inverseIsCollection) return !isSource;   // M:N -> target é dono
-        if ( fieldIsCollection && !inverseIsCollection) return false;   // 1:N -> este é o lado "um" fica mappedBy
-        if (!fieldIsCollection &&  inverseIsCollection) return true;    // N:1 -> este é o lado "muitos" tem a FK
+        if ( attributeIsCollection &&  inverseIsCollection) return !isSource;   // M:N -> target é dono
+        if ( attributeIsCollection && !inverseIsCollection) return false;   // 1:N -> este é o lado "um" fica mappedBy
+        if (!attributeIsCollection &&  inverseIsCollection) return true;    // N:1 -> este é o lado "muitos" tem a FK
         return !isSource;   // 1:1 -> target é dono
     }
 
@@ -198,13 +198,6 @@ public class GeneratorUtils {
     // a classe do outro lado
     public static String otherClassOf(String className, Association a) {
         return a.getSourceClass().equals(className) ? a.getTargetClass() : a.getSourceClass();
-    }
-
-    public static String fieldNameOf(String className, Association a) {
-        boolean s = a.getSourceClass().equals(className);
-        return makeAttributeName(s ? a.getTargetClass() : a.getSourceClass(),
-                                 s ? a.getTargetRole()  : a.getSourceRole(),
-                                 s ? a.getTargetMultiplicity() : a.getSourceMultiplicity());
     }
 
     // o campo desta classe é coleção? (outro lado "muitos" ou associação de map (qualifier))
@@ -309,11 +302,11 @@ public class GeneratorUtils {
     public static String fixMapAccess(String java, Class cls, List<Association> associations) {
         if (java == null) return null;
         if (cls == null) return java;   // interfaces
-        List<String> mapFields = getMapFieldNames(cls, associations);
-        for (String field : mapFields) {
+        List<String> mapAttributes = getMapAttributeNames(cls, associations);
+        for (String attribute : mapAttributes) {
             // o acesso à coleção já vem como getter (this.getAlunos()) um campo que seja Map precisa
             // de .values() antes do .stream()
-            String access = "this.get" + capitalizeFirst(field) + "()";
+            String access = "this.get" + capitalizeFirst(attribute) + "()";
             java = java.replace(access + ".stream()", access + ".values().stream()");
         }
         return java;
@@ -322,30 +315,30 @@ public class GeneratorUtils {
     /**
      * devolve nomes dos campos que são Map (assoc tem qualifier)
      */
-    public static List<String> getMapFieldNames(Class cls, List<Association> associations) {
-        List<String> mapFields = new ArrayList<>();
+    public static List<String> getMapAttributeNames(Class cls, List<Association> associations) {
+        List<String> mapAttributes = new ArrayList<>();
         for (Association assoc : associations) {
             // o Map fica só na ponta que é owner do qualifier (isMapEnd), não nas duas
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable() && assoc.isMapEnd(true)) {
                 String role = assoc.getTargetRole();
                 if (role != null && !role.trim().isEmpty()) {
-                    mapFields.add(role.trim());
+                    mapAttributes.add(role.trim());
                 } else {
                     String base = lowercaseFirst(assoc.getTargetClass());
-                    mapFields.add(base + "s");
+                    mapAttributes.add(base + "s");
                 }
             }
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable() && assoc.isMapEnd(false)) {
                 String role = assoc.getSourceRole();
                 if (role != null && !role.trim().isEmpty()) {
-                    mapFields.add(role.trim());
+                    mapAttributes.add(role.trim());
                 } else {
                     String base = lowercaseFirst(assoc.getSourceClass());
-                    mapFields.add(base + "s");
+                    mapAttributes.add(base + "s");
                 }
             }
         }
-        return mapFields;
+        return mapAttributes;
     }
 
     /**
@@ -449,7 +442,7 @@ public class GeneratorUtils {
     }
 
     // nome da var do id da classe
-    public static String idFieldName(Class cls) {
+    public static String idAttributeName(Class cls) {
         if (cls != null && cls.getRoot().getIdAttributeName() != null) {
             return cls.getRoot().getIdAttributeName();
         } else {
@@ -457,7 +450,7 @@ public class GeneratorUtils {
         }
     }
     public static String idGetter(Class cls) {
-        return "get" + capitalizeFirst(idFieldName(cls));
+        return "get" + capitalizeFirst(idAttributeName(cls));
     }
 
     // saber se a classe é pai de outra (tem subclasses), para gerar @Inheritance

@@ -100,8 +100,8 @@ public class SpringFrontendGenerator {
     }
 
     // nome do campo de id no CreateDTO/ResponseDTO desta relação single
-    private String idField(RelationshipInfo rel) {
-        return rel.field() + "Id";
+    private String idAttribute(RelationshipInfo rel) {
+        return rel.attributeName() + "Id";
     }
 
     private boolean hasApi(String className) {
@@ -114,7 +114,7 @@ public class SpringFrontendGenerator {
     }
     // nome do id na resposta json ("id" gerado, ou id string)
     private String idJsonField(String className) {
-        return GeneratorUtils.idFieldName(classMap.get(className));
+        return GeneratorUtils.idAttributeName(classMap.get(className));
     }
 
     // relações  coleção desta classe com endpoint add/remove (mesma condição do controller:
@@ -303,7 +303,7 @@ public class SpringFrontendGenerator {
                 }
             }
             for (RelationshipInfo rel : rels) {
-                String field = idField(rel);
+                String field = idAttribute(rel);
                 if (hasApi(rel.otherClass)) {
                     w.println("      <label>" + field + " <select name=\"" + field + "\"></select></label>");
                 } else {
@@ -322,9 +322,9 @@ public class SpringFrontendGenerator {
             w.println("    <table id=\"list\">");
             w.print("      <thead><tr>");
             for (String c : columns) w.print("<th>" + c + "</th>");
-            for (RelationshipInfo rel : rels) w.print("<th>" + idField(rel) + "</th>");
+            for (RelationshipInfo rel : rels) w.print("<th>" + idAttribute(rel) + "</th>");
             for (RelationshipInfo coll : colls) {
-                w.print("<th>" + coll.field() + "Ids</th>");
+                w.print("<th>" + coll.attributeName() + "Ids</th>");
             }
             w.println("<th></th></tr></thead>");
             w.println("      <tbody></tbody>");
@@ -334,7 +334,7 @@ public class SpringFrontendGenerator {
             if (!colls.isEmpty()) {
                 w.println("    <h2>Relationships</h2>");
                 for (RelationshipInfo coll : colls) {
-                    String field = coll.field();
+                    String field = coll.attributeName();
                     boolean numeric = idNumeric(coll.otherClass);
                     w.println("    <form class=\"rel\" data-path=\"" + field.toLowerCase()
                             + "\" data-numeric=\"" + numeric + "\" onsubmit=\"addItem(event)\">");
@@ -399,10 +399,10 @@ public class SpringFrontendGenerator {
                 w.println("      <td>${item." + c + " ?? ''}</td>");
             }
             for (RelationshipInfo rel : rels) {
-                w.println("      <td>${item." + idField(rel) + " ?? ''}</td>");
+                w.println("      <td>${item." + idAttribute(rel) + " ?? ''}</td>");
             }
             for (RelationshipInfo coll : colls) {
-                w.println("      <td>${item." + coll.field() + "Ids ?? ''}</td>");
+                w.println("      <td>${item." + coll.attributeName() + "Ids ?? ''}</td>");
             }
             // id do item (a propriedade json): "id" se gerado, senão a chave natural.
             String selfId = defaultId ? "id" : idName;
@@ -419,12 +419,12 @@ public class SpringFrontendGenerator {
                 w.println("async function loadOptions() {");
                 for (RelationshipInfo rel : rels) {
                     if (!hasApi(rel.otherClass)) continue;
-                    w.println("  fillSelect('[name=\"" + idField(rel) + "\"]', '/api/" + plural(rel.otherClass)
+                    w.println("  fillSelect('[name=\"" + idAttribute(rel) + "\"]', '/api/" + plural(rel.otherClass)
                             + "', '" + idJsonField(rel.otherClass) + "');");
                 }
                 for (RelationshipInfo coll : colls) {
                     if (!hasApi(coll.otherClass)) continue;
-                    String path = coll.field().toLowerCase();
+                    String path = coll.attributeName().toLowerCase();
                     w.println("  fillSelect('form[data-path=\"" + path + "\"] [name=\"child\"]', '/api/"
                             + plural(coll.otherClass) + "', '" + idJsonField(coll.otherClass) + "');");
                 }
@@ -461,7 +461,7 @@ public class SpringFrontendGenerator {
             }
             for (RelationshipInfo rel : rels) {
                 // select vazio -> null (não ligar)
-                String field = idField(rel);
+                String field = idAttribute(rel);
                 String value = idNumeric(rel.otherClass)
                         ? "form." + field + ".value ? Number(form." + field + ".value) : null"
                         : "form." + field + ".value || null";
@@ -492,8 +492,8 @@ public class SpringFrontendGenerator {
             if (!rels.isEmpty()) {
                 w.println("  if (editId !== null) {");
                 for (RelationshipInfo rel : rels) {
-                    String rolePath = rel.field().toLowerCase();
-                    w.println("    if (!form." + idField(rel) + ".value) await fetch(`${API}/${editId}/" + rolePath + "`, { method: 'DELETE' });");
+                    String rolePath = rel.attributeName().toLowerCase();
+                    w.println("    if (!form." + idAttribute(rel) + ".value) await fetch(`${API}/${editId}/" + rolePath + "`, { method: 'DELETE' });");
                 }
                 w.println("  }");
             }
@@ -515,7 +515,7 @@ public class SpringFrontendGenerator {
                 }
             }
             for (RelationshipInfo rel : rels) {
-                String field = idField(rel);
+                String field = idAttribute(rel);
                 w.println("  form." + field + ".value = item." + field + " ?? '';");
             }
             // modo editar: destranca o que faz parte do UpdateDTO, tranca o que não faz

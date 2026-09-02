@@ -160,17 +160,17 @@ public class JavaMenuGenerator {
 
         // adicionar das relações
         for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
-            String fieldName = rel.field();
-            String cap = GeneratorUtils.capitalizeFirst(fieldName);
+            String attributeName = rel.attributeName();
+            String cap = GeneratorUtils.capitalizeFirst(attributeName);
 
             if (rel.isCollection()) {
                 // OneToMany, ManyToMany ou Map: Add e Remove
-                options.add(new String[]{"Add " + fieldName, "add" + cap}); //  { "Add turmas , "addTurmas" }
-                options.add(new String[]{"Remove " + fieldName, "remove" + cap});
+                options.add(new String[]{"Add " + attributeName, "add" + cap}); //  { "Add turmas , "addTurmas" }
+                options.add(new String[]{"Remove " + attributeName, "remove" + cap});
             } else {
                 // ManyToOne: Assign e Remove
-                options.add(new String[]{"Assign " + fieldName, "assign" + cap});
-                options.add(new String[]{"Remove " + fieldName, "remove" + cap});
+                options.add(new String[]{"Assign " + attributeName, "assign" + cap});
+                options.add(new String[]{"Remove " + attributeName, "remove" + cap});
             }
         }
 
@@ -297,15 +297,15 @@ public class JavaMenuGenerator {
      */
     private void generateRelationShipPrints(PrintWriter w, Class cls, List<Association> associations, String indent) {
         for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
-            String fieldName = rel.field();
-            String cap = GeneratorUtils.capitalizeFirst(fieldName);
+            String attributeName = rel.attributeName();
+            String cap = GeneratorUtils.capitalizeFirst(attributeName);
             String getter = "entity.get" + cap + "()";
 
             // .values() só se o campo desta ponta for mesmo um Map
             if (rel.assoc.isMapEnd(rel.isSource)) {
-                w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ".values());");
+                w.println(indent + "System.out.println(\"  " + attributeName + ": \" + " + getter + ".values());");
             } else {
-                w.println(indent + "System.out.println(\"  " + fieldName + ": \" + " + getter + ");");
+                w.println(indent + "System.out.println(\"  " + attributeName + ": \" + " + getter + ");");
             }
         }
     }
@@ -385,21 +385,21 @@ public class JavaMenuGenerator {
      */
     private void generateRelationshipMethods(PrintWriter w, Class cls, List<Association> associations) {
         for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
-            String fieldName = rel.field();
+            String attributeName = rel.attributeName();
 
             if (rel.isCollection()) {
-                generateAddMethod(w, cls.getName(), rel.otherClass, fieldName, rel.assoc, rel.isSource);
-                generateRemoveFromListMethod(w, cls.getName(), rel.otherClass, fieldName, rel.assoc, rel.isSource);
+                generateAddMethod(w, cls.getName(), rel.otherClass, attributeName, rel.assoc, rel.isSource);
+                generateRemoveFromListMethod(w, cls.getName(), rel.otherClass, attributeName, rel.assoc, rel.isSource);
             } else {
-                generateAssignMethod(w, cls.getName(), rel.otherClass, fieldName);
-                generateRemoveAssignMethod(w, cls.getName(), rel.otherClass, fieldName);
+                generateAssignMethod(w, cls.getName(), rel.otherClass, attributeName);
+                generateRemoveAssignMethod(w, cls.getName(), rel.otherClass, attributeName);
             }
         }
     }
 
     // Assign method (ManyToOne): entity.setOther(other)
-    private void generateAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
-        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+    private void generateAssignMethod(PrintWriter w, String ownerClass, String otherClass, String attributeName) {
+        String capitalized = GeneratorUtils.capitalizeFirst(attributeName);
         w.println("    private void assign" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
@@ -417,8 +417,8 @@ public class JavaMenuGenerator {
     }
 
     // remove assign
-    private void generateRemoveAssignMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName) {
-        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+    private void generateRemoveAssignMethod(PrintWriter w, String ownerClass, String otherClass, String attributeName) {
+        String capitalized = GeneratorUtils.capitalizeFirst(attributeName);
         w.println("    private void remove" + capitalized + "() {");
         w.println("        Long id = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " entity = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(id);");
@@ -432,8 +432,8 @@ public class JavaMenuGenerator {
 
     // add (OneToMany/ManyToMany/Map): list.add(other) ou map.put(key, other)
     // isSource = a classe do menu está na ponta source desta associação
-    private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc, boolean isSource) {
-        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+    private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String attributeName, Association assoc, boolean isSource) {
+        String capitalized = GeneratorUtils.capitalizeFirst(attributeName);
         w.println("    private void add" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
@@ -461,8 +461,8 @@ public class JavaMenuGenerator {
     }
 
     // remove da lista/map
-    private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, String otherClass, String fieldName, Association assoc, boolean isSource) {
-        String capitalized = GeneratorUtils.capitalizeFirst(fieldName);
+    private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, String otherClass, String attributeName, Association assoc, boolean isSource) {
+        String capitalized = GeneratorUtils.capitalizeFirst(attributeName);
         w.println("    private void remove" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");

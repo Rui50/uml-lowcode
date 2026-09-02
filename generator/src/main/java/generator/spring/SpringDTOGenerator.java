@@ -83,7 +83,7 @@ public class SpringDTOGenerator {
         try (PrintWriter w = new PrintWriter(new File(filename))) {
             // relações navegáveis, menos as escondidas do Create
             List<RelationshipInfo> relationships = RelationshipInfo.collect(cls, associations).stream()
-                    .filter(rel -> !cls.isHiddenInCreate(rel.field()))
+                    .filter(rel -> !cls.isHiddenInCreate(rel.attributeName()))
                     .toList();
 
             w.println("package " + basePackage + ".dto." + cls.getName().toLowerCase() + ";");
@@ -133,7 +133,7 @@ public class SpringDTOGenerator {
 
             // ids das relações ( authorId), a ligação real é feita no service não no toEntity()
             for (RelationshipInfo rel : relationships) {
-                generateRelationshipIdField(w, rel);
+                generateRelationshipIdAttribute(w, rel);
             }
 
             // toEntity() method
@@ -166,7 +166,7 @@ public class SpringDTOGenerator {
 
         try (PrintWriter w = new PrintWriter(new File(filename))) {
             List<RelationshipInfo> relationships = RelationshipInfo.collectSingle(cls, associations).stream()
-                    .filter(rel -> !cls.isHiddenInUpdate(rel.field()))
+                    .filter(rel -> !cls.isHiddenInUpdate(rel.attributeName()))
                     .toList();
 
             w.println("package " + basePackage + ".dto." + cls.getName().toLowerCase() + ";");
@@ -206,7 +206,7 @@ public class SpringDTOGenerator {
             }
 
             for (RelationshipInfo rel : relationships) {
-                generateRelationshipIdField(w, rel);
+                generateRelationshipIdAttribute(w, rel);
             }
 
             w.println("}");
@@ -225,7 +225,7 @@ public class SpringDTOGenerator {
         List<Attribute> defaultAttrs = cls.getAllAttributes().stream()
                 .filter(a -> !cls.isHiddenInResponse(a.getName())).toList();
         List<RelationshipInfo> defaultRels = RelationshipInfo.collect(cls, associations).stream()
-                .filter(r -> !cls.isHiddenInResponse(r.field())).toList();
+                .filter(r -> !cls.isHiddenInResponse(r.attributeName())).toList();
         generateResponseDTOFile(cls, dtoDir, cls.getName() + "ResponseDTO", defaultAttrs, defaultRels);
 
         // um DTO por override de endpoint
@@ -234,7 +234,7 @@ public class SpringDTOGenerator {
             List<Attribute> attrs = cls.getAllAttributes().stream()
                     .filter(a -> !hidden.contains(a.getName())).toList();
             List<RelationshipInfo> rels = RelationshipInfo.collect(cls, associations).stream()
-                    .filter(r -> !hidden.contains(r.field())).toList();
+                    .filter(r -> !hidden.contains(r.attributeName())).toList();
 
             generateResponseDTOFile(cls, dtoDir, responseDTOName(cls, endpointType), attrs, rels);
         }
@@ -317,7 +317,7 @@ public class SpringDTOGenerator {
             if (!relationships.isEmpty()) {
                 w.println();
                 for (RelationshipInfo rel : relationships) {
-                    generateRelationshipIdField(w, rel);
+                    generateRelationshipIdAttribute(w, rel);
                 }
             }
 
@@ -350,37 +350,37 @@ public class SpringDTOGenerator {
         System.out.println("Generated: " + dtoName + ".java");
     }
 
-    private void generateRelationshipIdField(PrintWriter w, RelationshipInfo rel) {
-        String fieldName = rel.field();
+    private void generateRelationshipIdAttribute(PrintWriter w, RelationshipInfo rel) {
+        String attributeName = rel.attributeName();
 
         if (rel.isCollection()) {
             // collection -> List of related IDs
-            w.println("    private List<" + idTypeOf(rel.otherClass) + "> " + fieldName + "Ids;");
+            w.println("    private List<" + idTypeOf(rel.otherClass) + "> " + attributeName + "Ids;");
         } else {
             // single reference -> related ID
-            w.println("    private " + idTypeOf(rel.otherClass) + " " + fieldName + "Id;");
+            w.println("    private " + idTypeOf(rel.otherClass) + " " + attributeName + "Id;");
         }
     }
 
     private void generateRelationshipIdMapping(PrintWriter w, String varName, RelationshipInfo rel) {
         String otherClass = rel.otherClass;
-        String fieldName = rel.field();
-        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
+        String attributeName = rel.attributeName();
+        String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
 
         if (rel.isCollection()) {
             // .values() só se esta ponta for o Map
             if (rel.assoc.isMapEnd(rel.isSource)) {
-                w.println("        dto.set" + capitalizedField + "Ids(" + varName + ".get" + capitalizedField + "() != null");
-                w.println("            ? " + varName + ".get" + capitalizedField + "().values().stream().map(" + otherClass + "::" + idGetterOf(otherClass) + ").collect(Collectors.toList())");
+                w.println("        dto.set" + capitalizedAttribute + "Ids(" + varName + ".get" + capitalizedAttribute + "() != null");
+                w.println("            ? " + varName + ".get" + capitalizedAttribute + "().values().stream().map(" + otherClass + "::" + idGetterOf(otherClass) + ").collect(Collectors.toList())");
                 w.println("            : new ArrayList<>());");
             } else {
-                w.println("        dto.set" + capitalizedField + "Ids(" + varName + ".get" + capitalizedField + "() != null");
-                w.println("            ? " + varName + ".get" + capitalizedField + "().stream().map(" + otherClass + "::" + idGetterOf(otherClass) + ").collect(Collectors.toList())");
+                w.println("        dto.set" + capitalizedAttribute + "Ids(" + varName + ".get" + capitalizedAttribute + "() != null");
+                w.println("            ? " + varName + ".get" + capitalizedAttribute + "().stream().map(" + otherClass + "::" + idGetterOf(otherClass) + ").collect(Collectors.toList())");
                 w.println("            : new ArrayList<>());");
             }
         } else {
-            w.println("        dto.set" + capitalizedField + "Id(" + varName + ".get" + capitalizedField + "() != null");
-            w.println("            ? " + varName + ".get" + capitalizedField + "()." + idGetterOf(otherClass) + "() : null);");
+            w.println("        dto.set" + capitalizedAttribute + "Id(" + varName + ".get" + capitalizedAttribute + "() != null");
+            w.println("            ? " + varName + ".get" + capitalizedAttribute + "()." + idGetterOf(otherClass) + "() : null);");
         }
     }
 

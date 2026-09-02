@@ -296,7 +296,7 @@ public class SpringServiceGenerator {
         boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
         boolean isCollection = rel.isCollection();                 // eu tenho muitos deles
         String otherClass = rel.otherClass;
-        String fieldName = rel.field();
+        String attributeName = rel.attributeName();
         // passam para os métodos chamados a seguir (que ainda recebem os params soltos)
         Association assoc = rel.assoc;
         boolean isBidirectional = rel.isBidirectional();
@@ -306,20 +306,20 @@ public class SpringServiceGenerator {
         // ManyToOne: esta classe tem o FK (lado owner) -> assignX / removeX
         if (inverseIsCollection && !isCollection) {
             if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
-            generateAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
-            generateRemoveAssignMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
+            generateAssignMethod(writer, cls, otherClass, attributeName, assoc, isBidirectional, isSource, declarer);
+            generateRemoveAssignMethod(writer, cls, otherClass, attributeName, assoc, isBidirectional, isSource, declarer);
         }
         // ManyToMany: addX / removeX no lado DONO (@JoinTable)
         else if (inverseIsCollection && isCollection && rel.isOwner()) {
             if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
-            generateManyToManyAddMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
-            generateManyToManyRemoveMethod(writer, cls, otherClass, fieldName, assoc, isBidirectional, isSource, declarer);
+            generateManyToManyAddMethod(writer, cls, otherClass, attributeName, assoc, isBidirectional, isSource, declarer);
+            generateManyToManyRemoveMethod(writer, cls, otherClass, attributeName, assoc, isBidirectional, isSource, declarer);
         }
         // OneToMany unidirectional (ou Map qualificado, inclui bidirecional na ponta owner) -> addX / removeX
         else if (rel.hasCollectionEndpoint()) {
             if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
-            generateOneToManyUniAddMethod(writer, cls, otherClass, fieldName, assoc);
-            generateOneToManyUniRemoveMethod(writer, cls, otherClass, fieldName, assoc);
+            generateOneToManyUniAddMethod(writer, cls, otherClass, attributeName, assoc);
+            generateOneToManyUniRemoveMethod(writer, cls, otherClass, attributeName, assoc);
         }
         return hasRelationships;
     }
@@ -332,7 +332,7 @@ public class SpringServiceGenerator {
      * - declarer é a classe que declara a associação e define o nome do campo inverso
      */
     private void generateAssignMethod(PrintWriter writer, Class cls, String otherClass,
-                                       String fieldName, Association assoc,
+                                       String attributeName, Association assoc,
                                        boolean isBidirectional, boolean isSource, String declarer) {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
@@ -340,10 +340,10 @@ public class SpringServiceGenerator {
         // numa auto-associação o owner e o outro lado são a mesma classe ("employee"), logo as
         // duas variáveis colidiam. Por isso a var/param do outro lado vem do nome do campo
         // ("manager"), não da classe. O repositório continua a vir da classe (employeeRepository).
-        String otherVar = GeneratorUtils.lowercaseFirst(fieldName);
+        String otherVar = GeneratorUtils.lowercaseFirst(attributeName);
         String otherRepoName = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
-        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
-        String prevVar = "previous" + capitalizedField;   // dono anterior deste campo numa reatribuição
+        String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
+        String prevVar = "previous" + capitalizedAttribute;   // dono anterior deste campo numa reatribuição
 
         writer.println();
         writer.println("    /**");
@@ -352,7 +352,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Id the " + otherClass + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO assign" + capitalizedField +
+        writer.println("    public " + className + "ResponseDTO assign" + capitalizedAttribute +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, " + idTypeOf(otherClass) + " " + otherVar + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
@@ -365,35 +365,35 @@ public class SpringServiceGenerator {
         if (isBidirectional) {
             // determinar o nome do campo coleção no outro lado
             String otherSideMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-            String otherSideField = GeneratorUtils.makeAttributeName(declarer,
+            String otherSideAttribute = GeneratorUtils.makeAttributeName(declarer,
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
-            String capitalizedOtherField = GeneratorUtils.capitalizeFirst(otherSideField);
+            String capitalizedOtherAttribute = GeneratorUtils.capitalizeFirst(otherSideAttribute);
 
             // captura o dono anto (para o desligar e validar depois)
             writer.println("        // Remove from previous " + otherClass + " if exists");
-            writer.println("        " + otherClass + " " + prevVar + " = " + varName + ".get" + capitalizedField + "();");
+            writer.println("        " + otherClass + " " + prevVar + " = " + varName + ".get" + capitalizedAttribute + "();");
             writer.println("        if (" + prevVar + " != null) {");
             // inverso Map  -> put/remove, senão List -> add/remove por valor.
             // esta ponta é a "-para-um" (não é coleção), logo um qualifier só pode fazer Map no inverso
             // por isso basta hasQualifier() para saber que o inverso é Map.
             if (assoc.hasQualifier()) {
                 String qKey = varName + ".get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName()) + "()";
-                writer.println("            " + prevVar + ".get" + capitalizedOtherField + "().remove(" + qKey + ");");
+                writer.println("            " + prevVar + ".get" + capitalizedOtherAttribute + "().remove(" + qKey + ");");
                 writer.println("        }");
                 writer.println();
                 writer.println("        // Set both sides of the relationship");
-                writer.println("        " + varName + ".set" + capitalizedField + "(" + otherVar + ");");
-                writer.println("        " + otherVar + ".get" + capitalizedOtherField + "().put(" + qKey + ", " + varName + ");");
+                writer.println("        " + varName + ".set" + capitalizedAttribute + "(" + otherVar + ");");
+                writer.println("        " + otherVar + ".get" + capitalizedOtherAttribute + "().put(" + qKey + ", " + varName + ");");
             } else {
-                writer.println("            " + prevVar + ".get" + capitalizedOtherField + "().remove(" + varName + ");");
+                writer.println("            " + prevVar + ".get" + capitalizedOtherAttribute + "().remove(" + varName + ");");
                 writer.println("        }");
                 writer.println();
                 writer.println("        // Set both sides of the relationship");
-                writer.println("        " + varName + ".set" + capitalizedField + "(" + otherVar + ");");
-                writer.println("        " + otherVar + ".get" + capitalizedOtherField + "().add(" + varName + ");");
+                writer.println("        " + varName + ".set" + capitalizedAttribute + "(" + otherVar + ");");
+                writer.println("        " + otherVar + ".get" + capitalizedOtherAttribute + "().add(" + varName + ");");
             }
         } else {
-            writer.println("        " + varName + ".set" + capitalizedField + "(" + otherVar + ");");
+            writer.println("        " + varName + ".set" + capitalizedAttribute + "(" + otherVar + ");");
         }
 
         writer.println();
@@ -414,19 +414,19 @@ public class SpringServiceGenerator {
      * - Se bidirectional, remove de ambos os lados
      */
     private void generateRemoveAssignMethod(PrintWriter writer, Class cls, String otherClass,
-                                             String fieldName, Association assoc,
+                                             String attributeName, Association assoc,
                                              boolean isBidirectional, boolean isSource, String declarer) {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
-        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
+        String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
 
         writer.println("    /**");
         writer.println("     * ManyToOne: Remove the " + otherClass + " from " + className);
         writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO remove" + capitalizedField +
+        writer.println("    public " + className + "ResponseDTO remove" + capitalizedAttribute +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
@@ -434,27 +434,27 @@ public class SpringServiceGenerator {
         writer.println();
 
         // var do outro lado = nome do campo, não da classe
-        String otherVar = GeneratorUtils.lowercaseFirst(fieldName);
+        String otherVar = GeneratorUtils.lowercaseFirst(attributeName);
 
         if (isBidirectional) {
             String otherSideMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-            String otherSideField = GeneratorUtils.makeAttributeName(declarer,
+            String otherSideAttribute = GeneratorUtils.makeAttributeName(declarer,
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
-            String capitalizedOtherField = GeneratorUtils.capitalizeFirst(otherSideField);
+            String capitalizedOtherAttribute = GeneratorUtils.capitalizeFirst(otherSideAttribute);
 
             // captura o outro lado (para o remover evalidar depois porque a coleção dele mudou)
             writer.println("        // Remove from both sides");
-            writer.println("        " + otherClass + " " + otherVar + " = " + varName + ".get" + capitalizedField + "();");
+            writer.println("        " + otherClass + " " + otherVar + " = " + varName + ".get" + capitalizedAttribute + "();");
             writer.println("        if (" + otherVar + " != null) {");
             if (assoc.hasQualifier()) {   // inverso Map -> remove por chave
-                writer.println("            " + otherVar + ".get" + capitalizedOtherField + "().remove(" + varName + ".get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName()) + "());");
+                writer.println("            " + otherVar + ".get" + capitalizedOtherAttribute + "().remove(" + varName + ".get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName()) + "());");
             } else {
-                writer.println("            " + otherVar + ".get" + capitalizedOtherField + "().remove(" + varName + ");");
+                writer.println("            " + otherVar + ".get" + capitalizedOtherAttribute + "().remove(" + varName + ");");
             }
             writer.println("        }");
         }
 
-        writer.println("        " + varName + ".set" + capitalizedField + "(null);");
+        writer.println("        " + varName + ".set" + capitalizedAttribute + "(null);");
         writer.println();
         generateValidation(writer, cls.getName(), varName);
         if (isBidirectional) {
@@ -475,14 +475,14 @@ public class SpringServiceGenerator {
      * - Adiciona à coleção, se bidirectional sincroniza ambos os lados
      */
     private void generateManyToManyAddMethod(PrintWriter writer, Class cls, String otherClass,
-                                              String fieldName, Association assoc,
+                                              String attributeName, Association assoc,
                                               boolean isBidirectional, boolean isSource, String declarer) {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
         String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherRepoName = otherVar + "Repository";
-        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
+        String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
         String otherPlural = otherVar + "s";
 
         // auto associação (otherClass == className): a var do loop seria "employee", igual à do owner, por isso usa-se "other"
@@ -490,9 +490,9 @@ public class SpringServiceGenerator {
         // nome do campo do outro lado que aponta de volta para esta classe (para sincronizar em memória);
         // usa o role deste lado e o isSource diz qual "este" lado.
         String inverseMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-        String inverseField = GeneratorUtils.makeAttributeName(declarer,
+        String inverseAttribute = GeneratorUtils.makeAttributeName(declarer,
                 isSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
-        String inverseCap = GeneratorUtils.capitalizeFirst(inverseField);
+        String inverseCap = GeneratorUtils.capitalizeFirst(inverseAttribute);
 
         writer.println();
         writer.println("    /**");
@@ -501,7 +501,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO add" + capitalizedField +
+        writer.println("    public " + className + "ResponseDTO add" + capitalizedAttribute +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
@@ -512,7 +512,7 @@ public class SpringServiceGenerator {
         if (assoc.hasQualifier()) {
             String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
-            writer.println("            " + varName + ".get" + capitalizedField + "().put(" +
+            writer.println("            " + varName + ".get" + capitalizedAttribute + "().put(" +
                     elementVar + "." + qualifierGetter + "(), " + elementVar + ");");
             if (isBidirectional) {
                 // o dono de uma M:N qualificada é sempre a ponta do Map
@@ -523,7 +523,7 @@ public class SpringServiceGenerator {
             writer.println("        }");
         } else {
             writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
-            writer.println("            " + varName + ".get" + capitalizedField + "().add(" + elementVar + ");");
+            writer.println("            " + varName + ".get" + capitalizedAttribute + "().add(" + elementVar + ");");
             if (isBidirectional) {
                 writer.println("            " + elementVar + ".get" + inverseCap + "().add(" + varName + ");");
                 generateValidationTab(writer, otherClass, elementVar, "            ");   // valida o elemento (o inverso dele mudou)
@@ -545,14 +545,14 @@ public class SpringServiceGenerator {
      * - Procura as entidades, remove da coleção e sincroniza se bidirectional
      */
     private void generateManyToManyRemoveMethod(PrintWriter writer, Class cls, String otherClass,
-                                                 String fieldName, Association assoc,
+                                                 String attributeName, Association assoc,
                                                  boolean isBidirectional, boolean isSource, String declarer) {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
         String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherRepoName = otherVar + "Repository";
-        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
+        String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
         String otherPlural = otherVar + "s";
 
         // auto-associação: "other" para a var do loop não colidir com a do owner
@@ -560,9 +560,9 @@ public class SpringServiceGenerator {
         // nome do campo do outro lado que aponta de volta para esta classe (para sincronizar em memória);
         // usa o role deste lado
         String inverseMul = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
-        String inverseField = GeneratorUtils.makeAttributeName(declarer,
+        String inverseAttribute = GeneratorUtils.makeAttributeName(declarer,
                 isSource ? assoc.getSourceRole() : assoc.getTargetRole(), inverseMul);
-        String inverseCap = GeneratorUtils.capitalizeFirst(inverseField);
+        String inverseCap = GeneratorUtils.capitalizeFirst(inverseAttribute);
 
         writer.println("    /**");
         writer.println("     * ManyToMany: Remove " + otherClass + " entities from " + className);
@@ -570,7 +570,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO remove" + capitalizedField +
+        writer.println("    public " + className + "ResponseDTO remove" + capitalizedAttribute +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
@@ -581,7 +581,7 @@ public class SpringServiceGenerator {
         if (assoc.hasQualifier()) {
             String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
-            writer.println("            " + varName + ".get" + capitalizedField + "().remove(" +
+            writer.println("            " + varName + ".get" + capitalizedAttribute + "().remove(" +
                     elementVar + "." + qualifierGetter + "());");
             if (isBidirectional) {
                 // inverso de uma M:N qualificada é List -> remove por VALOR
@@ -591,7 +591,7 @@ public class SpringServiceGenerator {
             writer.println("        }");
         } else {
             writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
-            writer.println("            " + varName + ".get" + capitalizedField + "().remove(" + elementVar + ");");
+            writer.println("            " + varName + ".get" + capitalizedAttribute + "().remove(" + elementVar + ");");
             if (isBidirectional) {
                 writer.println("            " + elementVar + ".get" + inverseCap + "().remove(" + varName + ");");
                 generateValidationTab(writer, otherClass, elementVar, "            ");   // valida o elemento (o inverso dele mudou)
@@ -613,13 +613,13 @@ public class SpringServiceGenerator {
      * - Procura as entidades por ID e adiciona à coleção
      */
     private void generateOneToManyUniAddMethod(PrintWriter writer, Class cls, String otherClass,
-                                                String fieldName, Association assoc) {
+                                                String attributeName, Association assoc) {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
         String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherRepoName = otherVar + "Repository";
-        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
+        String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
         String otherPlural = otherVar + "s";
 
         writer.println();
@@ -629,7 +629,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO add" + capitalizedField +
+        writer.println("    public " + className + "ResponseDTO add" + capitalizedAttribute +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
@@ -640,11 +640,11 @@ public class SpringServiceGenerator {
         if (assoc.hasQualifier()) {
             String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
-            writer.println("            " + varName + ".get" + capitalizedField + "().put(" +
+            writer.println("            " + varName + ".get" + capitalizedAttribute + "().put(" +
                     otherVar + "." + qualifierGetter + "(), " + otherVar + ");");
             writer.println("        }");
         } else {
-            writer.println("        " + varName + ".get" + capitalizedField + "().addAll(" + otherPlural + ");");
+            writer.println("        " + varName + ".get" + capitalizedAttribute + "().addAll(" + otherPlural + ");");
         }
 
         writer.println();
@@ -660,13 +660,13 @@ public class SpringServiceGenerator {
      * Ex: TurmaService.removeTurnos(Long turmaId, List<Long> turnoIds)
      */
     private void generateOneToManyUniRemoveMethod(PrintWriter writer, Class cls, String otherClass,
-                                                   String fieldName, Association assoc) {
+                                                   String attributeName, Association assoc) {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
         String otherVar = GeneratorUtils.lowercaseFirst(otherClass);
         String otherRepoName = otherVar + "Repository";
-        String capitalizedField = GeneratorUtils.capitalizeFirst(fieldName);
+        String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
         String otherPlural = otherVar + "s";
 
         writer.println("    /**");
@@ -675,7 +675,7 @@ public class SpringServiceGenerator {
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
-        writer.println("    public " + className + "ResponseDTO remove" + capitalizedField +
+        writer.println("    public " + className + "ResponseDTO remove" + capitalizedAttribute +
                 "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
@@ -686,11 +686,11 @@ public class SpringServiceGenerator {
             String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
-            writer.println("            " + varName + ".get" + capitalizedField + "().remove(" +
+            writer.println("            " + varName + ".get" + capitalizedAttribute + "().remove(" +
                     otherVar + "." + qualifierGetter + "());");
             writer.println("        }");
         } else {
-            writer.println("        " + varName + ".get" + capitalizedField + "().removeIf(" +
+            writer.println("        " + varName + ".get" + capitalizedAttribute + "().removeIf(" +
                     otherVar + " -> " + otherVar + "Ids.contains(" + otherVar + "." + idGetterOf(otherClass) + "()));");
         }
 
@@ -750,26 +750,26 @@ public class SpringServiceGenerator {
             if (rel.isCollection() || !GeneratorUtils.isOwningSide(rel.assoc, rel.isSource)) continue;
             boolean hidden;
             if (forUpdate) {
-                hidden = cls.isHiddenInUpdate(rel.field());
+                hidden = cls.isHiddenInUpdate(rel.attributeName());
             } else {
-                hidden = cls.isHiddenInCreate(rel.field());
+                hidden = cls.isHiddenInCreate(rel.attributeName());
             }
             if (hidden) continue;
 
             String otherClass = rel.otherClass;
-            String capField   = GeneratorUtils.capitalizeFirst(rel.field());
+            String capAttribute   = GeneratorUtils.capitalizeFirst(rel.attributeName());
             // numa auto-associação a var do outro lado colidiria com a do owner ('saved'), por isso vem do campo
-            String otherVar   = GeneratorUtils.lowercaseFirst(capField);
+            String otherVar   = GeneratorUtils.lowercaseFirst(capAttribute);
             String otherRepo  = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";   // repo já injetado
 
-            writer.println("        if (dto.get" + capField + "Id() != null) {");
-            writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capField + "Id())");
-            writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capField + "Id()));");
-            writer.println("            " + entityVar + ".set" + capField + "(" + otherVar + ");");
+            writer.println("        if (dto.get" + capAttribute + "Id() != null) {");
+            writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capAttribute + "Id())");
+            writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capAttribute + "Id()));");
+            writer.println("            " + entityVar + ".set" + capAttribute + "(" + otherVar + ");");
             if (clearSingleOnNull) {
                 // gera o "} else { set(null); }" para id omitido limpar a relação (só útil no PUT replace).
                 writer.println("        } else {");
-                writer.println("            " + entityVar + ".set" + capField + "(null);");
+                writer.println("            " + entityVar + ".set" + capAttribute + "(null);");
                 writer.println("        }");
             } else {
                 // update (PATCH): id null/omitido nao mexe na relação, para remover é com o DELETE /{id}/{role}
@@ -790,23 +790,23 @@ public class SpringServiceGenerator {
             if (rel.isCollection() || GeneratorUtils.isOwningSide(rel.assoc, rel.isSource)) continue;
             boolean hidden;
             if (forUpdate) {
-                hidden = cls.isHiddenInUpdate(rel.field());
+                hidden = cls.isHiddenInUpdate(rel.attributeName());
             } else {
-                hidden = cls.isHiddenInCreate(rel.field());
+                hidden = cls.isHiddenInCreate(rel.attributeName());
             }
             if (hidden) continue;
 
             String otherClass = rel.otherClass;
-            String capField   = GeneratorUtils.capitalizeFirst(rel.field());
-            String otherVar   = GeneratorUtils.lowercaseFirst(capField);
+            String capAttribute   = GeneratorUtils.capitalizeFirst(rel.attributeName());
+            String otherVar   = GeneratorUtils.lowercaseFirst(capAttribute);
             String otherRepo  = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
             // nome do campo desta classe no outro lado da assoc
             String capInv     = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(rel.thisClass(), rel.thisRole(), rel.thisMul()));
 
-            writer.println("        if (dto.get" + capField + "Id() != null) {");
-            writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capField + "Id())");
-            writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capField + "Id()));");
-            writer.println("            " + entityVar + ".set" + capField + "(" + otherVar + ");");   // sincroniza este lado (resposta)
+            writer.println("        if (dto.get" + capAttribute + "Id() != null) {");
+            writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capAttribute + "Id())");
+            writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capAttribute + "Id()));");
+            writer.println("            " + entityVar + ".set" + capAttribute + "(" + otherVar + ");");   // sincroniza este lado (resposta)
             writer.println("            " + otherVar + ".set" + capInv + "(" + entityVar + ");");
             generateValidationTab(writer, otherClass, otherVar, "            ");   // gravamos o outro -> validá-lo
             writer.println("            " + otherRepo + ".save(" + otherVar + ");");
@@ -814,12 +814,12 @@ public class SpringServiceGenerator {
                 // gera o "} else { ... }": id omitido desliga a relação nos dois lados.
                 // quem usa é o PUT
                 writer.println("        } else {");
-                writer.println("            if (" + entityVar + ".get" + capField + "() != null) {");
-                writer.println("                " + entityVar + ".get" + capField + "().set" + capInv + "(null);");
-                generateValidationTab(writer, otherClass, entityVar + ".get" + capField + "()", "                ");   // desligamos o antigo -> validá-lo
-                writer.println("                " + otherRepo + ".save(" + entityVar + ".get" + capField + "());");
+                writer.println("            if (" + entityVar + ".get" + capAttribute + "() != null) {");
+                writer.println("                " + entityVar + ".get" + capAttribute + "().set" + capInv + "(null);");
+                generateValidationTab(writer, otherClass, entityVar + ".get" + capAttribute + "()", "                ");   // desligamos o antigo -> validá-lo
+                writer.println("                " + otherRepo + ".save(" + entityVar + ".get" + capAttribute + "());");
                 writer.println("            }");
-                writer.println("            " + entityVar + ".set" + capField + "(null);");
+                writer.println("            " + entityVar + ".set" + capAttribute + "(null);");
                 writer.println("        }");
             } else {
                 // update (PATCH): id null/omitido nao mexe na relação, remover é com DELETE /{id}/{role}
@@ -844,13 +844,13 @@ public class SpringServiceGenerator {
 
         for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
             if (!rel.isCollection()) continue;
-            if (cls.isHiddenInCreate(rel.field())) continue;   // coleções só se ligam no create
+            if (cls.isHiddenInCreate(rel.attributeName())) continue;   // coleções só se ligam no create
 
             Association assoc = rel.assoc;
             boolean isSource  = rel.isSource;
             String otherClass = rel.otherClass;
-            String capField   = GeneratorUtils.capitalizeFirst(rel.field());
-            String otherVar   = GeneratorUtils.lowercaseFirst(capField);
+            String capAttribute   = GeneratorUtils.capitalizeFirst(rel.attributeName());
+            String otherVar   = GeneratorUtils.lowercaseFirst(capAttribute);
             String otherRepo  = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
 
             // se não somos donos, a FK está no outro -> lado inverso
@@ -864,14 +864,14 @@ public class SpringServiceGenerator {
             String addToSaved;
             if (thisIsMapEnd) {
                 String qGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
-                addToSaved = entityVar + ".get" + capField + "().put(" + otherVar + "." + qGetter + "(), " + otherVar + ");";
+                addToSaved = entityVar + ".get" + capAttribute + "().put(" + otherVar + "." + qGetter + "(), " + otherVar + ");";
             } else {
-                addToSaved = entityVar + ".get" + capField + "().add(" + otherVar + ");";
+                addToSaved = entityVar + ".get" + capAttribute + "().add(" + otherVar + ");";
             }
 
             // só no create: a coleção começa vazia, por isso é só adicionar (sem limpar).
-            writer.println("        if (dto.get" + capField + "Ids() != null) {");
-            writer.println("            for (" + otherClass + " " + otherVar + " : " + otherRepo + ".findAllById(dto.get" + capField + "Ids())) {");
+            writer.println("        if (dto.get" + capAttribute + "Ids() != null) {");
+            writer.println("            for (" + otherClass + " " + otherVar + " : " + otherRepo + ".findAllById(dto.get" + capAttribute + "Ids())) {");
             // adiciona à coleção deste lado (persiste se formos donos, senão é só para a resposta)
             writer.println("                " + addToSaved);
             if (!ownerSide) {

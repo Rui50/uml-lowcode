@@ -27,7 +27,7 @@ public class OCLtoSpringAnnot {
 
     // resultado é as anotações por campo + invariantes mapeadas (que saem do validate())
     public static class Result {
-        public Map<String, List<String>> annotationsByField = new LinkedHashMap<>();
+        public Map<String, List<String>> annotationsByAttribute = new LinkedHashMap<>();
         public Set<Invariant> consumed = new HashSet<>();
     }
 
@@ -66,7 +66,7 @@ public class OCLtoSpringAnnot {
             List<String[]> mapped = mapInvariant(inv, cls, associations);   // null = nao dá para mapear
             if (mapped == null) continue;   // fica no validate()
             for (String[] fa : mapped) {
-                result.annotationsByField.computeIfAbsent(fa[0], k -> new ArrayList<>()).add(fa[1]);
+                result.annotationsByAttribute.computeIfAbsent(fa[0], k -> new ArrayList<>()).add(fa[1]);
             }
             result.consumed.add(inv);
         }
@@ -94,13 +94,13 @@ public class OCLtoSpringAnnot {
 
     // tipo de um campo próprio atributo ou relação, ou null se não existir/for herdado
     // se for herdado fica null de propósito prorque a anotação no campo do pai aplicaria-se a todos os filhos
-    private static String getFieldType(Class cls, String field, List<Association> associations) {
+    private static String getAttributeType(Class cls, String attribute, List<Association> associations) {
         for (Attribute a : cls.getAttributes()) {
-            if (a.getName().equals(field)) return a.getType();
+            if (a.getName().equals(attribute)) return a.getType();
         }
         // relações desta classe (thisClass == cls)
         for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
-            if (rel.field().equals(field) && rel.thisClass().equals(cls.getName())) {
+            if (rel.attributeName().equals(attribute) && rel.thisClass().equals(cls.getName())) {
                 if (rel.assoc.isMapEnd(rel.isSource))
                     return "Map<" + rel.assoc.getQualifierType() + ", " + rel.otherClass + ">";
                 if (rel.isCollection())
@@ -119,7 +119,7 @@ public class OCLtoSpringAnnot {
         // caso especial @Pattern: matches('regex')
         Matcher m = MATCHES.matcher(part);
         if (m.matches()) {
-            String type = getFieldType(cls, m.group(1), associations); // grupo 1 = campo
+            String type = getAttributeType(cls, m.group(1), associations); // grupo 1 = campo
             if(type != null && STRINGS.contains(type)) { // matches é só de texto
                 // fix no regex do utilizador para não partir a string do @Pattern
                 String regex = m.group(2)
@@ -134,9 +134,9 @@ public class OCLtoSpringAnnot {
             Matcher m2 = rule.pattern.matcher(part);
             if (!m2.matches()) continue;  // a forma não da match -> próxima regra
 
-            String field = m2.group(1);
+            String attribute = m2.group(1);
             // group(1) tem de ser um campo da classe se não for ignora e vai para o validate()
-            String type = getFieldType(cls, field, associations);
+            String type = getAttributeType(cls, attribute, associations);
 
             // o campo tem de existir e o tipo ser compatível ( @Positive só em numérico),
             // senão tenta a regra seguinte
@@ -154,7 +154,7 @@ public class OCLtoSpringAnnot {
             if (m2.groupCount() == 2) {
                 ann = ann.replace("$2", m2.group(2));
             }
-            return new String[]{ field, ann };
+            return new String[]{ attribute, ann };
         }
 
         return null; // naofoi reconhecida

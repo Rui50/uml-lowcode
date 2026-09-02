@@ -174,13 +174,13 @@ public class SpringEntityGenerator {
             }
 
             // atributos
-            generateAttributes(writer, cls, constraints.annotationsByField);
+            generateAttributes(writer, cls, constraints.annotationsByAttribute);
 
             // getters derivados
             JpaEntityWriter.generateDerivedGetters(writer, cls);
 
             // relações
-            generateRelationships(writer, cls, associations, allClasses, constraints.annotationsByField);
+            generateRelationships(writer, cls, associations, allClasses, constraints.annotationsByAttribute);
 
             validationGenerator.generateValidateMethod(writer, cls, constraints.consumed);
             validationGenerator.generateCheckInvariantsMethod(writer, cls);
@@ -240,7 +240,7 @@ public class SpringEntityGenerator {
         }
     }
 
-    private void generateAttributes(PrintWriter writer, Class cls, Map<String, List<String>> annsByField) {
+    private void generateAttributes(PrintWriter writer, Class cls, Map<String, List<String>> annsByAttribute) {
         writer.println("    // attributes");
         for (Attribute atr : cls.getAttributes()){
             // skip derived
@@ -249,7 +249,7 @@ public class SpringEntityGenerator {
             // atributo escolhido como @Id
             // tipo do campo é  (Integer em vez de int) porque JPA não aceita primitivos no @Id
             boolean isId = atr.getName().equals(cls.getIdAttributeName());
-            String fieldType = isId ? cls.getRoot().getIdAttributeType() : atr.getType();
+            String attributeType = isId ? cls.getRoot().getIdAttributeType() : atr.getType();
             if (isId) {
                 writer.println("    @Id");
                 // chave natural (String) é atribuída pelo cliente -> sem @GeneratedValue;
@@ -264,14 +264,14 @@ public class SpringEntityGenerator {
             }
             writer.println("    " + GeneratorUtils.columnAnnotation(atr));
             // anotações Bean Validation vindas das invariantes OCL
-            for (String ann : annsByField.getOrDefault(atr.getName(), List.of())) {
+            for (String ann : annsByAttribute.getOrDefault(atr.getName(), List.of())) {
                 writer.println("    " + ann);
             }
             if (atr.hasInit()) {
                 String javaInit = atr.getJavaInitExpression();
-                writer.println("    private " + fieldType + " " + atr.getName() + " = " + javaInit + ";");
+                writer.println("    private " + attributeType + " " + atr.getName() + " = " + javaInit + ";");
             } else {
-                writer.println("    private " + fieldType + " " + atr.getName() + ";");
+                writer.println("    private " + attributeType + " " + atr.getName() + ";");
             }
             writer.println();
         }
@@ -281,7 +281,7 @@ public class SpringEntityGenerator {
      * Intera as associações navegáveis e emite o campo de relação.
      */
     private void generateRelationships(PrintWriter writer, Class cls, List<Association> associations, List<Class> allClasses,
-                                       Map<String, List<String>> annsByField) {
+                                       Map<String, List<String>> annsByAttribute) {
         List<String> generatedRelations = new ArrayList<>();
 
         for(Association association : associations) {
@@ -290,11 +290,11 @@ public class SpringEntityGenerator {
                 String targetRole = association.getTargetRole();
                 String targetMultiplicity = association.getTargetMultiplicity();
 
-                String fieldName = GeneratorUtils.makeAttributeName(targetClass, targetRole, targetMultiplicity);
+                String attributeName = GeneratorUtils.makeAttributeName(targetClass, targetRole, targetMultiplicity);
 
-                if(!generatedRelations.contains(fieldName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, fieldName, targetMultiplicity, association, true, allClasses, annsByField);
-                    generatedRelations.add(fieldName);
+                if(!generatedRelations.contains(attributeName)){
+                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, attributeName, targetMultiplicity, association, true, allClasses, annsByAttribute);
+                    generatedRelations.add(attributeName);
                 }
             }
 
@@ -303,11 +303,11 @@ public class SpringEntityGenerator {
                 String sourceRole = association.getSourceRole();
                 String sourceMultiplicity = association.getSourceMultiplicity();
 
-                String fieldName = GeneratorUtils.makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
+                String attributeName = GeneratorUtils.makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
 
-                if(!generatedRelations.contains(fieldName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, fieldName, sourceMultiplicity, association, false, allClasses, annsByField);
-                    generatedRelations.add(fieldName);
+                if(!generatedRelations.contains(attributeName)){
+                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, attributeName, sourceMultiplicity, association, false, allClasses, annsByAttribute);
+                    generatedRelations.add(attributeName);
                 }
             }
         }
@@ -318,10 +318,10 @@ public class SpringEntityGenerator {
      * com base na multiplicidade e navegabilidade da associação.
      */
     private void generateRelationshipBaseAnnotations(PrintWriter writer, String thisClass,
-                                                     String otherClass, String fieldName,
+                                                     String otherClass, String attributeName,
                                                      String multiplicity, Association assoc,
                                                      boolean isSource, List<Class> allClasses,
-                                                     Map<String, List<String>> annsByField){
+                                                     Map<String, List<String>> annsByAttribute){
         writer.println("    // relationship: " + thisClass + " -> " + otherClass);
 
         // thisMultiplicity = multiplicidade do atributo desta classe (quantos do outro lado);
@@ -340,32 +340,32 @@ public class SpringEntityGenerator {
         }
 
         // Bean Validation vinda das invariantes OCL (self.turno <> null -> @NotNull)
-        for (String ann : annsByField.getOrDefault(fieldName, List.of())) {
+        for (String ann : annsByAttribute.getOrDefault(attributeName, List.of())) {
             writer.println("    " + ann);
         }
 
         // @OrderBy da coleção (persistence tab) só em campos de coleção
         if (isCollection) {
             Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElse(null);
-            String orderBy = (self != null) ? self.getCollectionOrder().get(fieldName) : null;
+            String orderBy = (self != null) ? self.getCollectionOrder().get(attributeName) : null;
             if (orderBy != null) writer.println("    @OrderBy(\"" + orderBy + "\")");
         }
 
         // Many to Many
         if (isCollection && inverseIsCollection) {
-            JpaEntityWriter.generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateManyToMany(writer, thisClass, otherClass, attributeName, assoc, isSource, isBidirectional);
         }
         // One to many
         else if (isCollection) {
-            JpaEntityWriter.generateOneToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateOneToMany(writer, thisClass, otherClass, attributeName, assoc, isSource, isBidirectional);
         }
         // Many to one
         else if (inverseIsCollection) {
-            JpaEntityWriter.generateManyToOne(writer, otherClass, fieldName, assoc);
+            JpaEntityWriter.generateManyToOne(writer, otherClass, attributeName, assoc);
         }
         // One to one
         else {
-            JpaEntityWriter.generateOneToOne(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateOneToOne(writer, thisClass, otherClass, attributeName, assoc, isSource, isBidirectional);
         }
 
         writer.println();

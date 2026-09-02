@@ -263,9 +263,9 @@ public class CLIEntityGenerator {
                                           boolean isSource,
                                           List<String> generated) {
         // nome do atributo a gerar
-        String fieldName = GeneratorUtils.makeAttributeName(otherClass, otherRole, otherMult);
-        if (generated.contains(fieldName)) return;
-        generated.add(fieldName);
+        String attributeName = GeneratorUtils.makeAttributeName(otherClass, otherRole, otherMult);
+        if (generated.contains(attributeName)) return;
+        generated.add(attributeName);
 
         String type = otherClass;
 
@@ -275,12 +275,12 @@ public class CLIEntityGenerator {
         else if (GeneratorUtils.checkMultiplicity(otherMult)) {   // multi side
             type = "List<" + otherClass + ">";
         }
-        String cap  = capitalize(fieldName);
+        String cap  = capitalize(attributeName);
 
         writer.println();
-        writer.println("    public " + type + " get" + cap + "() { return " + fieldName + "; }");
-        writer.println("    public void set" + cap + "(" + type + " " + fieldName + ") { this." + fieldName +
-                " = " + fieldName + "; }");
+        writer.println("    public " + type + " get" + cap + "() { return " + attributeName + "; }");
+        writer.println("    public void set" + cap + "(" + type + " " + attributeName + ") { this." + attributeName +
+                " = " + attributeName + "; }");
     }
 
     private void generateAttributes(PrintWriter writer, Class cls) {
@@ -292,7 +292,7 @@ public class CLIEntityGenerator {
             // atributo escolhido como @Id só é definido na raiz.
             // o @Id usa Integer/Long (não int/long) senão getX() == null da erro
             boolean isId = atr.getName().equals(cls.getIdAttributeName());
-            String fieldType = isId ? cls.getRoot().getIdAttributeType() : atr.getType();
+            String attributeType = isId ? cls.getRoot().getIdAttributeType() : atr.getType();
             if (isId) {
                 writer.println("    @Id");
                 // chave se for string é atribuída pelo cliente -> sem @GeneratedValue
@@ -307,9 +307,9 @@ public class CLIEntityGenerator {
             writer.println("    " + GeneratorUtils.columnAnnotation(atr));
             if (atr.hasInit()) {
                 String javaInit = atr.getJavaInitExpression();
-                writer.println("    private " + fieldType + " " + atr.getName() + " = " + javaInit + ";");
+                writer.println("    private " + attributeType + " " + atr.getName() + " = " + javaInit + ";");
             } else {
-                writer.println("    private " + fieldType + " " + atr.getName() + ";");
+                writer.println("    private " + attributeType + " " + atr.getName() + ";");
             }
             writer.println();
         }
@@ -327,12 +327,12 @@ public class CLIEntityGenerator {
                 String targetRole = association.getTargetRole();
                 String targetMultiplicity = association.getTargetMultiplicity();
 
-                String fieldName = GeneratorUtils.makeAttributeName(targetClass, targetRole, targetMultiplicity);
+                String attributeName = GeneratorUtils.makeAttributeName(targetClass, targetRole, targetMultiplicity);
 
-                if(!generatedRelations.contains(fieldName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, fieldName,
+                if(!generatedRelations.contains(attributeName)){
+                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, attributeName,
                             targetMultiplicity, association, true, allClasses);
-                    generatedRelations.add(fieldName);
+                    generatedRelations.add(attributeName);
                 }
             }
 
@@ -341,12 +341,12 @@ public class CLIEntityGenerator {
                 String sourceRole = association.getSourceRole();
                 String sourceMultiplicity = association.getSourceMultiplicity();
 
-                String fieldName = GeneratorUtils.makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
+                String attributeName = GeneratorUtils.makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
 
-                if(!generatedRelations.contains(fieldName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, fieldName,
+                if(!generatedRelations.contains(attributeName)){
+                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, attributeName,
                             sourceMultiplicity, association, false, allClasses);
-                    generatedRelations.add(fieldName);
+                    generatedRelations.add(attributeName);
                 }
             }
         }
@@ -358,7 +358,7 @@ public class CLIEntityGenerator {
      * com base na multiplicidade e navegabilidade da associação.
      */
     private void generateRelationshipBaseAnnotations(PrintWriter writer, String thisClass,
-                                                     String otherClass, String fieldName,
+                                                     String otherClass, String attributeName,
                                                      String multiplicity, Association assoc,
                                                      boolean isSource, List<Class> allClasses){
         writer.println("    // relationship: " + thisClass + " -> " + otherClass);
@@ -376,25 +376,25 @@ public class CLIEntityGenerator {
         // @OrderBy da coleção
         if (isCollection) {
             Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElse(null);
-            String orderBy = (self != null) ? self.getCollectionOrder().get(fieldName) : null;
+            String orderBy = (self != null) ? self.getCollectionOrder().get(attributeName) : null;
             if (orderBy != null) writer.println("    @OrderBy(\"" + orderBy + "\")");
         }
 
         // Many to Many
         if (isCollection && inverseIsCollection) {
-            JpaEntityWriter.generateManyToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateManyToMany(writer, thisClass, otherClass, attributeName, assoc, isSource, isBidirectional);
         }
         // One to many
         else if (isCollection) {
-            JpaEntityWriter.generateOneToMany(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateOneToMany(writer, thisClass, otherClass, attributeName, assoc, isSource, isBidirectional);
         }
         // Many to one
         else if (inverseIsCollection) {
-            JpaEntityWriter.generateManyToOne(writer, otherClass, fieldName, assoc);
+            JpaEntityWriter.generateManyToOne(writer, otherClass, attributeName, assoc);
         }
         // One to one
         else {
-            JpaEntityWriter.generateOneToOne(writer, thisClass, otherClass, fieldName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateOneToOne(writer, thisClass, otherClass, attributeName, assoc, isSource, isBidirectional);
         }
 
         writer.println();
