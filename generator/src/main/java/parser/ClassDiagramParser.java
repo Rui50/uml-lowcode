@@ -341,13 +341,20 @@ public class ClassDiagramParser {
                     association.setSourceRole(sourceEnd.getName());
                     association.setTargetRole(targetEnd.getName());
 
-                    // agregação (só pode estar num dos lados)
-                    String aggregation = sourceEnd.getPlainAttribute("aggregation");
-                    if (aggregation == null) {
-                        aggregation = targetEnd.getPlainAttribute("aggregation");
+                    String sourceAgg = sourceEnd.getPlainAttribute("aggregation");
+                    String targetAgg = targetEnd.getPlainAttribute("aggregation");
+                    String aggregation;
+                    if (!"none".equals(sourceAgg)) {
+                        aggregation = sourceAgg;
+                    } else {
+                        aggregation = targetAgg;
                     }
                     if (aggregation != null) {
                         association.setAggregationType(aggregation);
+                    }
+
+                    if ("composite".equals(aggregation)) {
+                        association.setCompositeOnSource("composite".equals(sourceAgg));
                     }
 
                     // multiplicidade source

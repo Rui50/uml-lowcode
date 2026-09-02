@@ -8,6 +8,7 @@ public class Association extends Relationship {
     private String targetMultiplicity;
 
     private String aggregationType; // "none", "shared", "composite"
+    private boolean compositeOnSource;
 
     private boolean sourceNavigable;
     private boolean targetNavigable;
@@ -117,6 +118,14 @@ public class Association extends Relationship {
 
     public void setQualifierOnSource(boolean qualifierOnSource) {
         this.qualifierOnSource = qualifierOnSource;
+    }
+
+    public void setCompositeOnSource(boolean compositeOnSource) {
+        this.compositeOnSource = compositeOnSource;
+    }
+
+    public boolean cascadesFrom(boolean isSource) {
+        return "composite".equals(aggregationType) && isSource != compositeOnSource;
     }
 
 

@@ -183,19 +183,22 @@ public final class JpaEntityWriter {
                     attributeName + " = new HashMap<>();");
         } else {
             // sem qualifier OneToOne normal
+            // composição: cascade/orphanRemoval só no lado do todoo (delete o todoo apaga a "parte")
+            boolean cascadeHere = assoc.cascadesFrom(isSource);
+            String cascade = cascadeHere ? ", cascade = CascadeType.ALL, orphanRemoval = true" : "";
             if (isBidirectional) {
                 // decide se o campo gerado é @OneToOne (dono) ou mappedBy (inverso)
                 boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
 
                 if (isOwner) {
-                    writer.println("    @OneToOne");
+                    writer.println("    @OneToOne" + (cascadeHere ? "(cascade = CascadeType.ALL, orphanRemoval = true)" : ""));
                     writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
                 } else {
                     writer.println("    @OneToOne(mappedBy = \"" +
-                            GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
+                            GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\"" + cascade + ")");
                 }
             } else {
-                writer.println("    @OneToOne");
+                writer.println("    @OneToOne" + (cascadeHere ? "(cascade = CascadeType.ALL, orphanRemoval = true)" : ""));
                 writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
             }
 
