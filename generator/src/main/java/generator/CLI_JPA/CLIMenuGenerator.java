@@ -70,7 +70,7 @@ public class CLIMenuGenerator {
 
     //  pede o id de <className> (prompt "<className> ID: "), guarda em <var>,
     // e volta ao menu (return) se a entidade não existir
-    // para o viewById / update / deletei do
+    // para o assign / add / remove / custom
     private void writeReadOrReturn(PrintWriter w, String className, String var) {
         String idVar = var + "Id";
         w.println("        " + idTypeOf(className) + " " + idVar + " = InputUtils." + idReaderOf(className) + "(scanner, \"" + className + " ID: \");");
@@ -80,13 +80,22 @@ public class CLIMenuGenerator {
     }
 
     // pede o id da entidade do menu (prompt "ID: "), return se não existir
-    // para o assign / add / remove / custom
+    // para o viewById / update / delete
     private void writeReadSelfOrReturn(PrintWriter w, String className) {
         w.println("        " + idTypeOf(className) + " id = InputUtils." + idReaderOf(className) + "(scanner, \"ID: \");");
         w.println("        " + className + " entity = " + GeneratorUtils.repoVariable(className) + ".findById(id);");
         w.println("        if (entity == null) {");
         w.println("            System.out.println(\"Not found.\");");
         w.println("            return;");
+        w.println("        }");
+    }
+
+    // fecha o try da transação: } catch { rollback + em.clear() + print o erro }
+    private void writeTransactionClose(PrintWriter w) {
+        w.println("        } catch (RuntimeException ex) {");
+        w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
+        w.println("            em.clear();");
+        w.println("            System.out.println(\"Error: \" + ex.getMessage());");
         w.println("        }");
     }
 
@@ -333,11 +342,7 @@ public class CLIMenuGenerator {
         w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".save(entity);");
         w.println("            em.getTransaction().commit();");
         w.println("            System.out.println(\"Created: \" + entity);");
-        w.println("        } catch (RuntimeException ex) {");
-        w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
-        w.println("            em.clear();");
-        w.println("            System.out.println(\"Error: \" + ex.getMessage());");
-        w.println("        }");
+        writeTransactionClose(w);
         w.println("    }");
     }
 
@@ -429,11 +434,7 @@ public class CLIMenuGenerator {
         w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".save(entity);");
         w.println("            em.getTransaction().commit();");
         w.println("            System.out.println(\"Updated: \" + entity);");
-        w.println("        } catch (RuntimeException ex) {");
-        w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
-        w.println("            em.clear();");
-        w.println("            System.out.println(\"Error: \" + ex.getMessage());");
-        w.println("        }");
+        writeTransactionClose(w);
         w.println("    }");
         w.println();
     }
@@ -449,11 +450,7 @@ public class CLIMenuGenerator {
         w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".deleteById(id);");
         w.println("            em.getTransaction().commit();");
         w.println("            System.out.println(\"Deleted.\");");
-        w.println("        } catch (RuntimeException ex) {");
-        w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
-        w.println("            em.clear();");
-        w.println("            System.out.println(\"Error: \" + ex.getMessage());");
-        w.println("        }");
+        writeTransactionClose(w);
         w.println("    }");
     }
 
@@ -541,11 +538,7 @@ public class CLIMenuGenerator {
         // no bidir o inverso já foi atualizado acima, logo não precisa
         if (!bidir) w.println("            em.refresh(other);");
         w.println("            System.out.println(\"Assigned " + otherClass + " to " + ownerClass + ".\");");
-        w.println("        } catch (RuntimeException ex) {");
-        w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
-        w.println("            em.clear();");
-        w.println("            System.out.println(\"Error: \" + ex.getMessage());");
-        w.println("        }");
+        writeTransactionClose(w);
         w.println("    }");
         w.println();
     }
@@ -587,11 +580,7 @@ public class CLIMenuGenerator {
         w.println("            em.getTransaction().commit();");
         if (!bidir) w.println("            if (previous != null) em.refresh(previous);");   // bidir ent já sincronizado em memória
         w.println("            System.out.println(\"" + otherClass + " removed from \" + entity);");
-        w.println("        } catch (RuntimeException ex) {");
-        w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
-        w.println("            em.clear();");
-        w.println("            System.out.println(\"Error: \" + ex.getMessage());");
-        w.println("        }");
+        writeTransactionClose(w);
         w.println("    }");
         w.println();
     }
@@ -663,11 +652,7 @@ public class CLIMenuGenerator {
         w.println("            em.getTransaction().commit();");
         if (!synced) w.println("            em.refresh(" + refreshVar + ");");   // synced -> já correto em memória
         w.println("            System.out.println(\"Added " + otherClass + " to " + ownerClass + ".\");");
-        w.println("        } catch (RuntimeException ex) {");
-        w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
-        w.println("            em.clear();");
-        w.println("            System.out.println(\"Error: \" + ex.getMessage());");
-        w.println("        }");
+        writeTransactionClose(w);
         w.println("    }");
     }
 
@@ -735,11 +720,7 @@ public class CLIMenuGenerator {
         w.println("            em.getTransaction().commit();");
         if (!synced) w.println("            em.refresh(" + refreshVar + ");");   // synced -> já correto em memória
         w.println("            System.out.println(\"" + otherClass + " removed from " + ownerClass + ".\");");
-        w.println("        } catch (RuntimeException ex) {");
-        w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
-        w.println("            em.clear();");
-        w.println("            System.out.println(\"Error: \" + ex.getMessage());");
-        w.println("        }");
+        writeTransactionClose(w);
         w.println("    }");
     }
 
@@ -802,11 +783,7 @@ public class CLIMenuGenerator {
             w.println("            em.getTransaction().commit();");
             w.println("            System.out.println(\"" + op.getName() + " executed.\");");
             if (!voidReturn) w.println("            System.out.println(\"Result: \" + ret);");
-            w.println("        } catch (RuntimeException ex) {");
-            w.println("            if (em.getTransaction().isActive()) em.getTransaction().rollback();");
-            w.println("            em.clear();");
-            w.println("            System.out.println(\"Error: \" + ex.getMessage());");
-            w.println("        }");
+            writeTransactionClose(w);
             w.println("    }");
         }
     }
