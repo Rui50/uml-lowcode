@@ -515,7 +515,7 @@ public class CLIMenuGenerator {
         if (bidir) {
             // sincroniza o inverso em mem para poder validar o outro lado
             // substitui o em.refresh(other) depois do commit, a coleção fica logo correta em memória.
-            String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+            String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource));
             boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
 
             // aqui esta ponta é single (é o metodo assign), por isso o qualifier, se existir, está no inverso (Map) -> put por chave
@@ -561,16 +561,8 @@ public class CLIMenuGenerator {
 
         if (bidir) {
             // remove o entity do inverso ('previous') em memória, para validar o lado antig
-            String invSide;
-            String invMult;
-            if (isSource) {
-                invSide = "target";
-                invMult = assoc.getSourceMultiplicity();
-            } else {
-                invSide = "source";
-                invMult = assoc.getTargetMultiplicity();
-            }
-            String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, invSide));
+            String invMult = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
+            String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource));
             boolean invColl = GeneratorUtils.checkMultiplicity(invMult);
             // inverso Map -> remove pela chave
             w.println("        if (previous != null) {");
@@ -630,7 +622,7 @@ public class CLIMenuGenerator {
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
             if (bidir) {   // sincroniza o inverso do other para o poder validar, igual ao ramo isOwner
-                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource));
                 boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
                 w.println(invColl ? "        other.get" + invCap + "().add(owner);" : "        other.set" + invCap + "(owner);");
                 otherValClass = otherClass; otherValVar = "other"; synced = true;
@@ -639,14 +631,14 @@ public class CLIMenuGenerator {
             w.println("        owner.get" + capitalized + "().add(other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
             if (bidir) {   // sincroniza o inverso do (other) para o poder validar
-                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource));
                 boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
                 w.println(invColl ? "        other.get" + invCap + "().add(owner);" : "        other.set" + invCap + "(owner);");
                 otherValClass = otherClass; otherValVar = "other"; synced = true;
             }
         } else {
             // lado inverso escrevemos pelo lado dono na var other
-            String ownerCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+            String ownerCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource));
             boolean ownerIsCollection = GeneratorUtils.checkMultiplicity(
                     isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
             // o lado dono pode ser um Map (M:N com qualifier dono = ponta do qualifier) -> put por chave
@@ -705,7 +697,7 @@ public class CLIMenuGenerator {
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
             if (bidir) {   // remove o owner do inverso (em other), para o poder validar
-                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource));
                 boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
                 w.println(invColl ? "        other.get" + invCap + "().remove(owner);" : "        other.set" + invCap + "(null);");
                 otherValClass = otherClass; otherValVar = "other"; synced = true;
@@ -714,7 +706,7 @@ public class CLIMenuGenerator {
             w.println("        owner.get" + capitalized + "().remove(other);");
             saveVar = "owner"; saveRepo = GeneratorUtils.repoVariable(ownerClass); refreshVar = "other"; saveClass = ownerClass;
             if (bidir) {   // remove o owner do inverso (em other)
-                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+                String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource));
                 boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
                 w.println(invColl ? "        other.get" + invCap + "().remove(owner);" : "        other.set" + invCap + "(null);");
                 otherValClass = otherClass; otherValVar = "other"; synced = true;
@@ -722,7 +714,7 @@ public class CLIMenuGenerator {
         } else {
             // lado inverso tem de remover pelo lado dono (em "other")
             String ownerCap = GeneratorUtils.capitalizeFirst(
-                    GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source"));
+                    GeneratorUtils.getOtherSideAttributeName(assoc, isSource));
             boolean ownerIsCollection = GeneratorUtils.checkMultiplicity(
                     isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
             // o lado dono pode ser um Map (M:N qualifier) -> remove pela CHAVE

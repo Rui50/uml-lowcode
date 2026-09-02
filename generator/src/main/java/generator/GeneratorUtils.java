@@ -466,18 +466,18 @@ public class GeneratorUtils {
     /**
      * devolve o nome do atributo do outro lado de uma associação, para o mappedBy e o @JsonIgnoreProperties.
      */
-    public static String getOtherSideAttributeName(Association assoc, String side) {
-        if (side.equals("source")) {
-            return makeAttributeName(
-                    assoc.getTargetClass(),
-                    assoc.getTargetRole(),
-                    assoc.getTargetMultiplicity()
-            );
-        } else {
+    public static String getOtherSideAttributeName(Association assoc, boolean isSource) {
+        if (isSource) {
             return makeAttributeName(
                     assoc.getSourceClass(),
                     assoc.getSourceRole(),
                     assoc.getSourceMultiplicity()
+            );
+        } else {
+            return makeAttributeName(
+                    assoc.getTargetClass(),
+                    assoc.getTargetRole(),
+                    assoc.getTargetMultiplicity()
             );
         }
     }

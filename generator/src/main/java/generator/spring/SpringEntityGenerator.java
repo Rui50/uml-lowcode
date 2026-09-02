@@ -336,7 +336,7 @@ public class SpringEntityGenerator {
 
         // is bidirectional, gerar @JsonIgnoreProperties para evitar loop infinito na serialização JSON
         if (isBidirectional) {
-            writer.println("    @JsonIgnoreProperties(\"" + GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
+            writer.println("    @JsonIgnoreProperties(\"" + GeneratorUtils.getOtherSideAttributeName(assoc, isSource) + "\")");
         }
 
         // Bean Validation vinda das invariantes OCL (self.turno <> null -> @NotNull)

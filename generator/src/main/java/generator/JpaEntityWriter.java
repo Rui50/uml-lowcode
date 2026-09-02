@@ -75,7 +75,7 @@ public final class JpaEntityWriter {
                 writer.println("    )");
             } else {
                 writer.println("    @ManyToMany(mappedBy = \"" +
-                        GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
+                        GeneratorUtils.getOtherSideAttributeName(assoc, isSource) + "\")");
             }
         } else {
             writer.println("    @ManyToMany");
@@ -116,7 +116,7 @@ public final class JpaEntityWriter {
 
         if (isBidirectional) {
             writer.println("    @OneToMany(mappedBy = \"" +
-                    GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\"" + cascade + ")");
+                    GeneratorUtils.getOtherSideAttributeName(assoc, isSource) + "\"" + cascade + ")");
         } else {
             if (isComposite) {
                 writer.println("    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)");
@@ -172,7 +172,7 @@ public final class JpaEntityWriter {
         if (assoc.isMapEnd(isSource)) {
             if (isBidirectional) {
                 writer.println("    @OneToMany(mappedBy = \"" +
-                        GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\")");
+                        GeneratorUtils.getOtherSideAttributeName(assoc, isSource) + "\")");
             } else {
                 writer.println("    @OneToMany");
                 writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
@@ -196,7 +196,7 @@ public final class JpaEntityWriter {
                     writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
                 } else {
                     writer.println("    @OneToOne(mappedBy = \"" +
-                            GeneratorUtils.getOtherSideAttributeName(assoc, isSource ? "target" : "source") + "\"" + cascade + ")");
+                            GeneratorUtils.getOtherSideAttributeName(assoc, isSource) + "\"" + cascade + ")");
                 }
             } else {
                 writer.println("    @OneToOne" + (cascadeHere ? "(cascade = CascadeType.ALL, orphanRemoval = true)" : ""));
