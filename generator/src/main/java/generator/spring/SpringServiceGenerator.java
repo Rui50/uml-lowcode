@@ -918,27 +918,8 @@ public class SpringServiceGenerator {
         writer.println();
 
         // update all attributes from DTO
-        String idAttrName = cls.getRoot().getIdAttributeName();
-        List<Attribute> allAttrs = cls.getAllAttributes().stream()
-                .filter(a -> !a.hasDerive())
-                .filter(a -> !cls.isHiddenInUpdate(a.getName()))   // escondido do UpdateDTO -> não há getter, não se toca
-                .filter(a -> !a.getName().equals(idAttrName))
-                .toList();
-        if (!allAttrs.isEmpty()) {
-            writer.println("        // " + (fullReplace
-                    ? "PUT full replace: escreve cada atributo tal e qual (omitido/null -> null)"
-                    : "PATCH partial: null/omitido -> não mexe; valor -> aplica"));
-            for (Attribute attr : allAttrs) {
-                String getter = "get" + GeneratorUtils.capitalizeFirst(attr.getName());
-                String setter = "set" + GeneratorUtils.capitalizeFirst(attr.getName());
-                if (fullReplace) {
-                    writer.println("        existing." + setter + "(dto." + getter + "());");
-                } else {
-                    writer.println("        if (dto." + getter + "() != null) existing." + setter + "(dto." + getter + "());");
-                }
-            }
-            writer.println();
-        }
+        writer.println("        dto." + (fullReplace ? "replace" : "update") + "(existing);");
+        writer.println();
 
         // entidade já existe e já tem id -> liga os singulares e grava uma vez (coleções têm endpoints próprios).
         linkOwnedSingles(writer, cls, associations, "existing", fullReplace, true);

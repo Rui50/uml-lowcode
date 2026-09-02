@@ -176,6 +176,7 @@ public class SpringDTOGenerator {
             if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaTimeType(a.getType()))) {
                 w.println("import java.time.*;");
             }
+            w.println("import " + basePackage + ".models." + className + ";");
 
             String idName = cls.getRoot().getIdAttributeName();
             List<Attribute> allAttrs = cls.getAllAttributes().stream()
@@ -208,6 +209,25 @@ public class SpringDTOGenerator {
             for (RelationshipInfo rel : relationships) {
                 generateRelationshipIdAttribute(w, rel);
             }
+
+            // map de DTO para entidad
+            // só atributos normais
+            w.println();
+            w.println("    // PATCH: null/omitido -> não mexe; valor -> aplica");
+            w.println("    public void update(" + className + " e) {");
+            for (Attribute attr : allAttrs) {
+                String cap = GeneratorUtils.capitalizeFirst(attr.getName());
+                w.println("        if (get" + cap + "() != null) e.set" + cap + "(get" + cap + "());");
+            }
+            w.println("    }");
+            w.println();
+            w.println("    // PUT: escreve cada atributo tal e qual (omitido/null -> null)");
+            w.println("    public void replace(" + className + " e) {");
+            for (Attribute attr : allAttrs) {
+                String cap = GeneratorUtils.capitalizeFirst(attr.getName());
+                w.println("        e.set" + cap + "(get" + cap + "());");
+            }
+            w.println("    }");
 
             w.println("}");
         }
