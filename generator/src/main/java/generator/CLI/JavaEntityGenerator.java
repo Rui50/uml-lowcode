@@ -32,15 +32,18 @@ public class JavaEntityGenerator {
      *  - gera construtores
      *  - gera toString()
      */
-    public JavaEntityGenerator(String baseOutputPath, List<Interaction> interactions) {
+    private String basePackage;
+
+    public JavaEntityGenerator(String baseOutputPath, String basePackage, List<Interaction> interactions) {
         this.baseOutputPath = baseOutputPath;
+        this.basePackage = basePackage;
         this.interactions = interactions;
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
         System.out.println("Generating java entities");
 
-        String modelsPath = baseOutputPath + "/src/models";
+        String modelsPath = baseOutputPath + "/src/" + basePackage.replace('.', '/') + "/models";
         new File(modelsPath).mkdirs();
 
         this.validationGenerator = new ValidationGenerator();
@@ -62,13 +65,13 @@ public class JavaEntityGenerator {
     public void generateInterfaces(List<model.Interface> interfaces) throws IOException {
         if (interfaces == null || interfaces.isEmpty()) return;
 
-        String modelsPath = baseOutputPath + "/src/models";
+        String modelsPath = baseOutputPath + "/src/" + basePackage.replace('.', '/') + "/models";
         new File(modelsPath).mkdirs();
 
         for (model.Interface iface : interfaces) {
             String filename = modelsPath + "/" + iface.getName() + ".java";
             try (PrintWriter w = new PrintWriter(filename)) {
-                w.println("package models;");
+                w.println("package " + basePackage + ".models;");
                 w.println();
                 w.println("public interface " + iface.getName() + " {");
                 w.println();
@@ -86,7 +89,7 @@ public class JavaEntityGenerator {
         String filename = modelsDir + "/" + enumeration.getName() + ".java";
 
         try (PrintWriter writer = new PrintWriter(new File(filename))) {
-            writer.println("package models;");
+            writer.println("package " + basePackage + ".models;");
             writer.println();
             writer.println("public enum " + enumeration.getName() + " {");
 
@@ -110,7 +113,7 @@ public class JavaEntityGenerator {
 
         try (PrintWriter writer = new PrintWriter(filename)) {
             // package
-            writer.println("package models;");
+            writer.println("package " + basePackage + ".models;");
             writer.println();
 
             // imports

@@ -22,7 +22,7 @@ public class GenerationService {
         validateSelfAssociations(model);
         switch (target) {
             case "plain"  -> generatePlain(model, outputDir, opts);
-            case "cli"    -> generateCli(model, outputDir);
+            case "cli"    -> generateCli(model, outputDir, opts);
             case "spring" -> generateSpring(model, outputDir, opts);
             case "cli-jpa" -> generateCliJpa(model, outputDir, opts);
 
@@ -38,10 +38,12 @@ public class GenerationService {
         if (model.getAssociations() == null) return;
         for (Association a : model.getAssociations()) {
             if (a.getSourceClass() == null || !a.getSourceClass().equals(a.getTargetClass())) continue;
-            boolean srcMissing = a.isSourceNavigable() && isBlank(a.getSourceRole());
-            boolean tgtMissing = a.isTargetNavigable() && isBlank(a.getTargetRole());
+            String srcRole = a.getSourceRole();
+            String tgtRole = a.getTargetRole();
+            boolean srcMissing = a.isSourceNavigable() && (srcRole == null || srcRole.isBlank());
+            boolean tgtMissing = a.isTargetNavigable() && (tgtRole == null || tgtRole.isBlank());
             boolean sameRole = a.isSourceNavigable() && a.isTargetNavigable()
-                    && !isBlank(a.getSourceRole()) && a.getSourceRole().equals(a.getTargetRole());
+                    && srcRole != null && !srcRole.isBlank() && srcRole.equals(tgtRole);
             if (srcMissing || tgtMissing || sameRole) {
                 throw new IllegalArgumentException(
                         "Auto-associação em '" + a.getSourceClass() + "': cada ponta navegável precisa de um "
@@ -51,14 +53,13 @@ public class GenerationService {
         }
     }
 
-    private static boolean isBlank(String s) {
-        return s == null || s.trim().isEmpty();
-    }
-
     private void generatePlain(ParsedModel m, String outputDir, ProjectSettings opts) throws Exception {
-        // plain não passa pelo modal de settings; usa o basePackage se vier, senão "model"
-        String basePackage = (opts != null && opts.getBasePackage() != null && !opts.getBasePackage().isBlank())
-                ? opts.getBasePackage() : "model";
+        String basePackage;
+        if (opts != null && opts.getBasePackage() != null) {
+            basePackage = opts.getBasePackage();
+        } else {
+            basePackage = "model";
+        }
 
         new CodeGenerator(
                 m.getClasses(),
@@ -73,28 +74,34 @@ public class GenerationService {
                 .generateInterfaces(m.getInterfaces());
     }
 
-    private void generateCli(ParsedModel m, String outputDir) throws Exception {
-        new JavaProjectGenerator(outputDir).generate(
+    private void generateCli(ParsedModel m, String outputDir, ProjectSettings opts) throws Exception {
+        String basePackage;
+        if (opts != null && opts.getBasePackage() != null) {
+            basePackage = opts.getBasePackage();
+        } else {
+            basePackage = "app";
+        }
+        new JavaProjectGenerator(outputDir, basePackage).generate(
                 m.getClasses(),
                 m.getAssociations(),
                 m.getEnumerations(),
                 //m.getPimInteractions()
                 m.getAllInteractions()
         );
-        new JavaEntityGenerator(outputDir, m.getAllInteractions())
+        new JavaEntityGenerator(outputDir, basePackage, m.getAllInteractions())
                 .generateInterfaces(m.getInterfaces());
     }
 
     private void generateCliJpa(ParsedModel m, String outputDir, ProjectSettings opts) throws Exception {
         CLIProjectSettings settings = new CLIProjectSettings();
         if (opts != null) {
-            if (opts.getBasePackage() != null && !opts.getBasePackage().isBlank()) {
+            if (opts.getBasePackage() != null) {
                 settings.setBasePackage(opts.getBasePackage());
             }
-            if (opts.getApplicationName() != null && !opts.getApplicationName().isBlank()) {
+            if (opts.getApplicationName() != null) {
                 settings.setApplicationName(opts.getApplicationName());
             }
-            if (opts.getDatabaseType() != null && !opts.getDatabaseType().isBlank()) {
+            if (opts.getDatabaseType() != null) {
                 settings.setDatabaseType(generator.CLI_JPA.DatabaseType.valueOf(opts.getDatabaseType()));
             }
             if (opts.getDockerfile() != null) {
@@ -119,13 +126,13 @@ public class GenerationService {
     private void generateSpring(ParsedModel m, String outputDir, ProjectSettings opts) throws Exception {
         SpringProjectSettings settings = new SpringProjectSettings();
         if (opts != null) {
-            if (opts.getBasePackage() != null && !opts.getBasePackage().isBlank()) {
+            if (opts.getBasePackage() != null) {
                 settings.setBasePackage(opts.getBasePackage());
             }
-            if (opts.getApplicationName() != null && !opts.getApplicationName().isBlank()) {
+            if (opts.getApplicationName() != null) {
                 settings.setApplicationName(opts.getApplicationName());
             }
-            if (opts.getDatabaseType() != null && !opts.getDatabaseType().isBlank()) {
+            if (opts.getDatabaseType() != null) {
                 settings.setDatabaseType(generator.spring.DatabaseType.valueOf(opts.getDatabaseType()));
             }
             if (opts.getServerPort() != null) {
@@ -158,7 +165,7 @@ public class GenerationService {
                 .generateDTOs(m.getClasses(), m.getAssociations(), m.getEnumerations());
         new SpringRepositoryGenerator(outputDir, basePackage)
                 .generateRepositories(m.getClasses());
-        // mapa nome-de-DTO -> classe dona: cada service/controller importa só as folders de DTO que usa
+        // mapa nome deDTO -> classe owner: cada service/controller importa só os folders de DTO que usa
         java.util.Map<String, String> DTO_ToClass = SpringUtils.buildDTOOwnerMap(m.getClasses());
         new SpringServiceGenerator(outputDir, basePackage, DTO_ToClass)
                 .generateServices(m.getClasses(), m.getAssociations(), /*m.getPsmInteractions()*/m.getAllInteractions(), m.getEnumerations());

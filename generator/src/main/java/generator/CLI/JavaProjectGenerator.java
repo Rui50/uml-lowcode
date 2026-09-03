@@ -18,9 +18,11 @@ import java.util.List;
  */
 public class JavaProjectGenerator {
     private String outputDirectory;
+    private final String basePackage;
 
-    public JavaProjectGenerator(String outputDirectory) {
+    public JavaProjectGenerator(String outputDirectory, String basePackage) {
         this.outputDirectory = outputDirectory;
+        this.basePackage = basePackage;
     }
 
     /**
@@ -41,22 +43,22 @@ public class JavaProjectGenerator {
         }
 
         // criar estrutura base
-        new File(outputDirectory + "/src/util").mkdirs();
+        new File(outputDirectory + "/src/" + basePackage.replace('.', '/') + "/util").mkdirs();
 
         // Main.java + InputUtils.java
         generateMainClass();
         generateInputUtils();
 
         // entidades
-        JavaEntityGenerator entityGenerator = new JavaEntityGenerator(outputDirectory, interactions);
+        JavaEntityGenerator entityGenerator = new JavaEntityGenerator(outputDirectory, basePackage, interactions);
         entityGenerator.generateEntities(classes, associations, enumerations);
 
         // repositórios
-        JavaRepositoryGenerator repoGenerator = new JavaRepositoryGenerator(outputDirectory);
+        JavaRepositoryGenerator repoGenerator = new JavaRepositoryGenerator(outputDirectory, basePackage);
         repoGenerator.generateRepositories(classes);
 
         // menus
-        JavaMenuGenerator menuGenerator = new JavaMenuGenerator(outputDirectory, interactions);
+        JavaMenuGenerator menuGenerator = new JavaMenuGenerator(outputDirectory, basePackage, interactions);
         menuGenerator.generateMenus(classes, associations, enumerations);
 
         System.out.println("CLI Application generated in: " + outputDirectory);
@@ -66,10 +68,12 @@ public class JavaProjectGenerator {
      * gera main.java, so cria um MainMenu e chama run()
      */
     private void generateMainClass() throws IOException {
-        String filename = outputDirectory + "/src/Main.java";
+        String filename = outputDirectory + "/src/" + basePackage.replace('.', '/') + "/Main.java";
 
         try (PrintWriter w = new PrintWriter(filename)) {
-            w.println("import menus.MainMenu;");
+            w.println("package " + basePackage + ";");
+            w.println();
+            w.println("import " + basePackage + ".menus.MainMenu;");
             w.println();
             w.println("public class Main {");
             w.println("    public static void main(String[] args) {");
@@ -87,10 +91,10 @@ public class JavaProjectGenerator {
      * gera InputUtils.java — métodos  para ler input do utilizador.
      */
     private void generateInputUtils() throws IOException {
-        String filename = outputDirectory + "/src/util/InputUtils.java";
+        String filename = outputDirectory + "/src/" + basePackage.replace('.', '/') + "/util/InputUtils.java";
 
         try (PrintWriter w = new PrintWriter(filename)) {
-            w.println("package util;");
+            w.println("package " + basePackage + ".util;");
             w.println();
             w.println("import java.util.Scanner;");
             w.println();

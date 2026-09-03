@@ -15,14 +15,17 @@ import java.util.List;
 public class JavaRepositoryGenerator {
     private String baseOutputPath;
 
-    public JavaRepositoryGenerator(String baseOutputPath) {
+    private String basePackage;
+
+    public JavaRepositoryGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
+        this.basePackage = basePackage;
     }
 
     public void generateRepositories(List<Class> classes) throws IOException {
         System.out.println("Generating Java repositories...");
 
-        String repoPath = baseOutputPath + "/src/repository";
+        String repoPath = baseOutputPath + "/src/" + basePackage.replace('.', '/') + "/repository";
         new File(repoPath).mkdirs();
 
         for (Class cls : classes) {
@@ -45,9 +48,9 @@ public class JavaRepositoryGenerator {
     // store partilhado familia se tiver (tipo SINGLE_TABLE)
     private void generateRootRepository(PrintWriter w, Class cls) {
         String type = cls.getName();
-        w.println("package repository;");
+        w.println("package " + basePackage + ".repository;");
         w.println();
-        w.println("import models." + type + ";");
+        w.println("import " + basePackage + ".models." + type + ";");
         w.println("import java.util.*;");
         w.println();
         w.println("public class " + type + "Repository {");
@@ -86,10 +89,10 @@ public class JavaRepositoryGenerator {
     private void generateChildRepository(PrintWriter w, Class cls) {
         String type = cls.getName();
         String root = cls.getRoot().getName();
-        w.println("package repository;");
+        w.println("package " + basePackage + ".repository;");
         w.println();
-        w.println("import models." + type + ";");
-        w.println("import models." + root + ";");
+        w.println("import " + basePackage + ".models." + type + ";");
+        w.println("import " + basePackage + ".models." + root + ";");
         w.println("import java.util.*;");
         w.println("import java.util.stream.Collectors;");
         w.println();

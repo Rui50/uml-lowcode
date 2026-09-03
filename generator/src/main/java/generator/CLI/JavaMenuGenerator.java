@@ -37,8 +37,11 @@ public class JavaMenuGenerator {
     private Set<String> enumNames = new HashSet<>();
     private List<Interaction> interactions;
 
-    public JavaMenuGenerator(String baseOutputPath, List<Interaction> interactions) {
+    private String basePackage;
+
+    public JavaMenuGenerator(String baseOutputPath, String basePackage, List<Interaction> interactions) {
         this.baseOutputPath = baseOutputPath;
+        this.basePackage = basePackage;
         this.interactions = interactions;
     }
 
@@ -52,7 +55,7 @@ public class JavaMenuGenerator {
         }
         System.out.println("Generating Java Menus...");
 
-        String menusPath = baseOutputPath + "/src/menus";
+        String menusPath = baseOutputPath + "/src/" + basePackage.replace('.', '/') + "/menus";
         new File(menusPath).mkdirs();
 
         List<Class> classesToBuild = classes.stream()
@@ -79,11 +82,11 @@ public class JavaMenuGenerator {
         Set<String> neededRepos = GeneratorUtils.getNeededRepositories(cls, associations, allClasses);
 
         try (PrintWriter w = new PrintWriter(filename)) {
-            w.println("package menus;");
+            w.println("package " + basePackage + ".menus;");
             w.println();
-            w.println("import models.*;");
-            w.println("import repository.*;");
-            w.println("import util.InputUtils;");
+            w.println("import " + basePackage + ".models.*;");
+            w.println("import " + basePackage + ".repository.*;");
+            w.println("import " + basePackage + ".util.InputUtils;");
             w.println("import java.util.*;");
             w.println("import java.time.*;");
             w.println();
@@ -562,10 +565,10 @@ public class JavaMenuGenerator {
         String fileName = menusDir + "/MainMenu.java";
 
         try (PrintWriter w = new PrintWriter(fileName)) {
-            w.println("package menus;");
+            w.println("package " + basePackage + ".menus;");
             w.println();
-            w.println("import repository.*;");
-            w.println("import util.InputUtils;");
+            w.println("import " + basePackage + ".repository.*;");
+            w.println("import " + basePackage + ".util.InputUtils;");
             w.println("import java.util.*;");
             w.println("import java.time.*;");
             w.println();

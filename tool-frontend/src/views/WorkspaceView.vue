@@ -55,17 +55,13 @@ function warnReservedNames() {
 
 function startGenerate() {
   warnReservedNames()
-  // cli já usa um package fixo; plain/cli-jpa/spring passam pelo modal para definir o basePackage
-  if (target.value === 'cli') {
-    modelStore.generate(target.value)
-  } else {
-    showSettings.value = true
-  }
+  // todos os targets passam pelo modal para definir o basePackage
+  showSettings.value = true
 }
 
 function onConfirm() {
   modelStore.generate(target.value, {
-    basePackage: projectSettings.basePackage,
+    basePackage: projectSettings.basePackage.trim() || undefined,   // vazio -> omitido, backend usa o default
     applicationName: projectSettings.applicationName,
     databaseType: projectSettings.databaseType,
     serverPort: projectSettings.serverPort,

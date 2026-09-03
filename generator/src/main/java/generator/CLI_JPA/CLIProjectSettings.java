@@ -1,7 +1,7 @@
 package generator.CLI_JPA;
 
 public class CLIProjectSettings {
-    private String basePackage = "com.example.app";
+    private String basePackage = "app";
     private String applicationName = "cli-jpa-template-app";
     // H2 por defeito
     private DatabaseType databaseType = DatabaseType.H2;
