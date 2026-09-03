@@ -1074,15 +1074,20 @@ public class SpringServiceGenerator {
             }
         }
 
-        bodyGen.generateMethodBodyFromInteraction(writer, owner, op, interaction);   // lifeline do service = a do diagrama (owner)
-
-        // invariantes da classe têm de valer no fim de qualquer operação
-        if (cls.hasAnyInvariants()) {
-            writer.println("        " + selfVar + ".checkInvariants();");
-        }
+        bodyGen.generateMethodBodyFromInteraction(writer, owner, op, interaction, returnType, selfVar);   // lifeline do service = a do diagrama (owner)
 
         String returnExpr = GeneratorUtils.findReplyToActor(interaction.getElements());
-        OperationGenerator.generateReturnAndPostconditions(writer, op, returnType, returnExpr, selfVar);
+        if ("void".equals(returnType)) {
+            // void ent sem reply, invariantes e pos condições ficam no fim
+            if (cls.hasAnyInvariants()) {
+                writer.println("        " + selfVar + ".checkInvariants();");
+            }
+            OperationGenerator.generateReturnAndPostconditions(writer, op, returnType, returnExpr, selfVar);
+        } else {
+            // se nao for void os returns (com invariantes e pos conds) jáa foram postos
+            // aqui só validamos que o diagrama tem reply
+            OperationGenerator.validateReturn(op, returnType, returnExpr, selfVar);
+        }
 
         writer.println("    }");
     }

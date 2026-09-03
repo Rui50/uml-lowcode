@@ -183,16 +183,18 @@ public class OperationGenerator {
                     + " = " + snap.getJavaInit() + ";");
         }
 
-        generateElements(writer, interaction.getElements(), entry, cls, associations, 2);
-
-        // a expressão de return vem da reply message para o actor | sem reply, não é feito return
         String returnExpr = GeneratorUtils.findReplyToActor(interaction.getElements());
-        generateReturnAndPostconditions(writer, operation, returnType, returnExpr, "this");
+        validateReturn(operation, returnType, returnExpr, "this");
+        generateElements(writer, interaction.getElements(), entry, cls, associations, 2, operation, returnType, "this");
+        // op void com pos condições ent não tem return e tem de por as pos condições no fim
+        if ("void".equals(returnType)) {
+            writePostconditions(writer, operation, "this", 2);
+        }
 
         writer.println("    }");
     }
 
-    // Fim de uma op com contedo, escreve o 'result' (se uma pós-condição o usar), as pós-condições OCL e o return.
+    // Fim de uma op com contedo, escreve o 'result' (se uma pos cond o usar), as pos conds OCL e o return.
     //
     // selfVar = como o OCL escreve o "self":
     //   - entity -> "this"  (o corpo corre na própria entidade)
@@ -200,12 +202,20 @@ public class OperationGenerator {
     //   getJavaExpression(selfVar) troca o alvo:  "this.getX()" -> "member.getX()"
     public static void generateReturnAndPostconditions(PrintWriter writer, Operation op, String returnType,
                                                        String returnExpr, String selfVar) {
-        boolean needsResult = op.getPostconditions().stream()
-                .anyMatch(p -> {
-                    String je = p.getJavaExpression(selfVar);
-                    return je != null && je.matches(".*\\bresult\\b.*");
-                });
+        validateReturn(op, returnType, returnExpr, selfVar);
+        if (!"void".equals(returnType) && returnExpr != null) {
+            writeReturn(writer, op, returnType, returnExpr, selfVar, 2);
+        } else {
+            writePostconditions(writer, op, selfVar, 2);
+        }
+    }
 
+    // validaçao relacionada ao diagrama tar bem constuido
+    public static void validateReturn(Operation op, String returnType, String returnExpr, String selfVar) {
+        boolean needsResult = op.getPostconditions().stream().anyMatch(p -> {
+            String code = p.getJavaExpression(selfVar);
+            return code != null && code.matches(".*\\bresult\\b.*");
+        });
         if (!"void".equals(returnType) && returnExpr == null) {
             throw new IllegalArgumentException("Operação '" + op.getName() + "': devolve '" + returnType
                     + "' mas o diagrama não tem mensagem de resposta (reply) para o ator.");
@@ -218,36 +228,59 @@ public class OperationGenerator {
             throw new IllegalArgumentException("Operação '" + op.getName()
                     + "': uma pós-condição refere 'result' mas a operação é void (não tem valor de retorno).");
         }
+    }
 
-        if (needsResult && returnExpr != null && !"void".equals(returnType)) {
-            writer.println("        " + returnType + " result = " + returnExpr + ";");
-        }
-
+    // pós-condições OCL
+    private static void writePostconditions(PrintWriter writer, Operation op, String selfVar, int indent) {
+        String ind = "    ".repeat(indent);
         for (Postcondition post : op.getPostconditions()) {
-            writer.println("        if (!(" + post.getJavaExpression(selfVar) + ")) {");
-            writer.println("            throw new IllegalStateException(\"" + GeneratorUtils.fixErrorMessage(post.getMessage()) + "\");");
-            writer.println("        }");
+            writer.println(ind + "if (!(" + post.getJavaExpression(selfVar) + ")) {");
+            writer.println(ind + "    throw new IllegalStateException(\"" + GeneratorUtils.fixErrorMessage(post.getMessage()) + "\");");
+            writer.println(ind + "}");
         }
+    }
 
-        if (!"void".equals(returnType) && returnExpr != null) {
-            writer.println("        return " + (needsResult ? "result" : returnExpr) + ";");
+    // return message
+    //   1. se alguma pós-condição usar 'result', escreve <returnType> result = <expr>;
+    //   2. as verificações das pós-condições OCL
+    //   3. o return
+    public static void writeReturn(PrintWriter writer, Operation op, String returnType,
+                                   String expr, String selfVar, int indent) {
+        String ind = "    ".repeat(indent);
+        // se tem uma postcondição que precisa de result
+        boolean needsResult = op.getPostconditions().stream().anyMatch(p -> {
+            String code = p.getJavaExpression(selfVar);
+            return code != null && code.matches(".*\\bresult\\b.*");
+        });
+        if (needsResult) {
+            writer.println(ind + returnType + " result = " + expr + ";");
         }
+        writePostconditions(writer, op, selfVar, indent);
+        writer.println(ind + "return " + (needsResult ? "result" : expr) + ";");
     }
 
     // Itera as messages e fragments, usa generateMessage / generateFragment
     // so emite mensages enviadas pelo dono do metodo o resto ignora, o resto seria outro diagrama
     private static void generateElements(PrintWriter writer, List<Object> elements,
-                                         Message entry, Class cls, List<Association> associations, int indent) {
+                                         Message entry, Class cls, List<Association> associations, int indent,
+                                         Operation op, String returnType, String selfVar) {
         String indentStr = "    ".repeat(indent);
         for (Object el : elements) {
             if (el instanceof Message) {
                 Message msg = (Message) el;
                 if (msg.getSource() == null || msg.getSource().getType() == null) continue;
                 if (!msg.getSource().getId().equals(entry.getTarget().getId())) continue;
-                if ("reply".equals(msg.getMessageSort())) continue; // replies só serverm para o return — tratadas em findReplyToActor
+                if ("reply".equals(msg.getMessageSort())) {
+                    // reply = return
+                    String expr = msg.getRawName() != null ? msg.getRawName() : msg.getName();
+                    if (expr != null && !expr.isBlank()) {
+                        writeReturn(writer, op, returnType, expr.trim(), selfVar, indent);
+                    }
+                    continue;
+                }
                 generateMessage(writer, msg, entry, cls, associations, indentStr);
             } else if (el instanceof Fragment) {
-                generateFragment(writer, (Fragment) el, entry, cls, associations, indent);
+                generateFragment(writer, (Fragment) el, entry, cls, associations, indent, op, returnType, selfVar);
             }
         }
     }
@@ -477,7 +510,8 @@ public class OperationGenerator {
      *  - alt                       -> if / else if / else conforme os guards dos operandos
      */
     private static void generateFragment(PrintWriter writer, Fragment frag, Message entry,
-                                         Class cls, List<Association> associations, int indent) {
+                                         Class cls, List<Association> associations, int indent,
+                                         Operation operation, String returnType, String selfVar) {
         String indentStr = "    ".repeat(indent);
         String op = frag.getOperator();
 
@@ -498,11 +532,11 @@ public class OperationGenerator {
                 String collection = inner.substring(colon + 1).trim().replace("self.", "this.");
                 collection = adaptCollectionAccess(collection, cls, associations);   // Map -> .values()
                 writer.println(indentStr + "for (" + left + " : " + collection + ") {");
-                generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1);
+                generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1, operation, returnType, selfVar);
                 writer.println(indentStr + "}");
             } else if (guard.startsWith("while")) {
                 writer.println(indentStr + "while (" + GeneratorUtils.extractParen(guard) + ") {");
-                generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1);
+                generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1, operation, returnType, selfVar);
                 writer.println(indentStr + "}");
             } else {
                 throw new IllegalArgumentException(
@@ -515,7 +549,7 @@ public class OperationGenerator {
                 throw new IllegalArgumentException("Fragmento 'opt' tem de ter uma condição (guarda).");
             }
             writer.println(indentStr + "if (" + guard + ") {");
-            generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1);
+            generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1, operation, returnType, selfVar);
             writer.println(indentStr + "}");
         } else if ("alt".equals(op)) {
             List<Operand> ops = frag.getOperands();
@@ -533,7 +567,7 @@ public class OperationGenerator {
                 } else {
                     writer.println(indentStr + "} else {");
                 }
-                generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1);
+                generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1, operation, returnType, selfVar);
             }
             writer.println(indentStr + "}");
         }

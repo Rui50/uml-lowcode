@@ -1,6 +1,7 @@
 package generator.spring;
 
 import generator.GeneratorUtils;
+import generator.OperationGenerator;
 import model.Association;
 import model.Class;
 import model.Operation;
@@ -44,6 +45,11 @@ public class SequenceBodyGenerator {
     // classe do metodo em geração (owner do diagrama)
     private Class currentClass;
 
+    // return
+    private Operation currentOp;
+    private String returnType;
+    private String selfVar;
+
     public SequenceBodyGenerator(List<Association> associations) {
         this.associations = associations;
     }
@@ -53,9 +59,13 @@ public class SequenceBodyGenerator {
         preDeclaredVars.add(varName);
     }
 
-    public void generateMethodBodyFromInteraction(PrintWriter writer, Class cls, Operation op, Interaction interaction) {
+    public void generateMethodBodyFromInteraction(PrintWriter writer, Class cls, Operation op, Interaction interaction,
+                                                  String returnType, String selfVar) {
         // identificar a lifeline do Service (owner deste metodo)
         this.currentClass = cls;
+        this.currentOp = op;
+        this.returnType = returnType;
+        this.selfVar = selfVar;
         String className = cls.getName();
         String serviceName = className + "Service";
 
@@ -110,10 +120,21 @@ public class SequenceBodyGenerator {
     private void generateMessageCode(PrintWriter writer, Message msg, Lifeline serviceLifeline,
                                       Map<String, String> lifelineVarMap, String indent) {
         if (msg.getSource() == null || msg.getTarget() == null) return;
-        if ("reply".equals(msg.getMessageSort())) return;
 
         // só processar mensagens enviadas pelo service
         if (serviceLifeline == null || !msg.getSource().getId().equals(serviceLifeline.getId())) return;
+
+        // reply = return,
+        if ("reply".equals(msg.getMessageSort())) {
+            String expr = msg.getRawName() != null ? msg.getRawName() : msg.getName();
+            if (expr != null && !expr.isBlank()) {
+                if (currentClass.hasAnyInvariants()) {
+                    writer.println(indent + selfVar + ".checkInvariants();");
+                }
+                OperationGenerator.writeReturn(writer, currentOp, returnType, expr.trim(), selfVar, indent.length() / 4);
+            }
+            return;
+        }
 
         // mensagem «create»: gera "Type var = new Type(args)".
         if ("createMessage".equals(msg.getMessageSort())) {

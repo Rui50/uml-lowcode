@@ -119,7 +119,8 @@ public class SpringJobGenerator {
             writer.println();
             writer.println("    @Scheduled(cron = \"" + cron + "\")");
             writer.println("    public void run() {");
-            new SequenceBodyGenerator(associations).generateMethodBodyFromInteraction(writer, cls, op, interaction);
+            new SequenceBodyGenerator(associations).generateMethodBodyFromInteraction(writer, cls, op, interaction,
+                    "void", GeneratorUtils.lowercaseFirst(cls.getName()));   // sempre void
             writer.println("    }");
             writer.println("}");
         }
