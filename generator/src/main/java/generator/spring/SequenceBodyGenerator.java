@@ -106,10 +106,9 @@ public class SequenceBodyGenerator {
     // percorre a lista de elementos (mensagens ou fragmentos) e gera o código correspondente
     private void generateElements(PrintWriter writer, List<Object> elements,
                                   Lifeline serviceLifeline, Map<String, String> lifelineVarMap, int indent) {
-        String indentStr = "    ".repeat(indent);
         for (Object elem : elements) {
             if (elem instanceof Message) {
-                generateMessageCode(writer, (Message) elem, serviceLifeline, lifelineVarMap, indentStr);
+                generateMessageCode(writer, (Message) elem, serviceLifeline, lifelineVarMap, indent);
             } else if (elem instanceof Fragment) {
                 generateFragmentCode(writer, (Fragment) elem, serviceLifeline, lifelineVarMap, indent);
             }
@@ -118,7 +117,8 @@ public class SequenceBodyGenerator {
 
     // ignora mensagens que nao fazem parte do service
     private void generateMessageCode(PrintWriter writer, Message msg, Lifeline serviceLifeline,
-                                      Map<String, String> lifelineVarMap, String indent) {
+                                      Map<String, String> lifelineVarMap, int indent) {
+        String ind = "    ".repeat(indent);
         if (msg.getSource() == null || msg.getTarget() == null) return;
 
         // só processar mensagens enviadas pelo service
@@ -129,9 +129,9 @@ public class SequenceBodyGenerator {
             String expr = msg.getRawName() != null ? msg.getRawName() : msg.getName();
             if (expr != null && !expr.isBlank()) {
                 if (currentClass.hasAnyInvariants()) {
-                    writer.println(indent + selfVar + ".checkInvariants();");
+                    writer.println(ind + selfVar + ".checkInvariants();");
                 }
-                OperationGenerator.writeReturn(writer, currentOp, returnType, expr.trim(), selfVar, indent.length() / 4);
+                OperationGenerator.writeReturn(writer, currentOp, returnType, expr.trim(), selfVar, indent);
             }
             return;
         }
@@ -148,7 +148,7 @@ public class SequenceBodyGenerator {
                 if (i > 0) a.append(", ");
                 a.append(msg.getArguments().get(i).getName());
             }
-            writer.println(indent + type + " " + var + " = new " + type + "(" + a + ");");
+            writer.println(ind + type + " " + var + " = new " + type + "(" + a + ");");
             return;
         }
 
@@ -157,7 +157,7 @@ public class SequenceBodyGenerator {
         if (msg.getAssignVariable() != null && msg.getAssignExpression() == null
                 && msg.getName() == null
                 && msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
-            writer.println(indent + msg.getReturnType() + " " + msg.getAssignVariable() + ";");
+            writer.println(ind + msg.getReturnType() + " " + msg.getAssignVariable() + ";");
             return;
         }
 
@@ -166,7 +166,7 @@ public class SequenceBodyGenerator {
         if (msg.isPlainAssignment()) {
             String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
                     ? msg.getReturnType() + " " : "";
-            writer.println(indent + declType + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
+            writer.println(ind + declType + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
             return;
         }
 
@@ -205,7 +205,7 @@ public class SequenceBodyGenerator {
                     if ("get".equals(op) && msg.getAssignVariable() != null) {
                         String type = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
                                 ? msg.getReturnType() + " " : "";
-                        writer.println(indent + type + msg.getAssignVariable() + " = " + base + ".get(" + argName + ");");
+                        writer.println(ind + type + msg.getAssignVariable() + " = " + base + ".get(" + argName + ");");
                         return;
                     }
 
@@ -220,7 +220,7 @@ public class SequenceBodyGenerator {
                         } else {
                             code = base + "." + op + "(" + argName + ");";
                         }
-                        writer.println(indent + code);
+                        writer.println(ind + code);
                         return;
                     }
                 }
@@ -229,7 +229,7 @@ public class SequenceBodyGenerator {
 
         if (isSelfMessage) {
             // self-message: turma.removeAluno(aluno) -> código direto
-            writer.println(indent + methodName + "(" + args + ");");
+            writer.println(ind + methodName + "(" + args + ");");
         } else if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
             // chamada com retorno: findById(id) : Turma
             String returnType = msg.getReturnType();
@@ -240,16 +240,16 @@ public class SequenceBodyGenerator {
              if (preDeclaredVars.contains(varName)) return;
 
             if (methodName.equals("findById")) {
-                writer.println(indent + returnType + " " + varName + " = " + targetVar + "." +
+                writer.println(ind + returnType + " " + varName + " = " + targetVar + "." +
                         methodName + "(" + args + ")");
-                writer.println(indent + "    .orElseThrow(() -> new NotFoundException(\"" + returnType + " not found\"));");
+                writer.println(ind + "    .orElseThrow(() -> new NotFoundException(\"" + returnType + " not found\"));");
             } else {
-                writer.println(indent + returnType + " " + varName + " = " + targetVar + "." +
+                writer.println(ind + returnType + " " + varName + " = " + targetVar + "." +
                         methodName + "(" + args + ");");
             }
         } else {
             // chamada sem retorno: save(turma)
-            writer.println(indent + targetVar + "." + methodName + "(" + args + ");");
+            writer.println(ind + targetVar + "." + methodName + "(" + args + ");");
         }
     }
 
