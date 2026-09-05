@@ -222,29 +222,9 @@ public class SpringControllerGenerator {
         String serviceName = GeneratorUtils.lowercaseFirst(className) + "Service";
         boolean hasRelationships = false;
 
-        for (Association assoc : associations) {
-            // classe que declara a associação ; null => não participa, ou só a herda de pai concreto (que já gera os seus endpoints).
-            String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
-            if (declarer == null) continue;
-
-            // auto-associação bidirecional: a classe é os dois lados, processa os dois roles.
-            // (o endpoint de coleção só sai no lado dono e processar só o lado não dono não geraria endpoint.)
-            boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass())
-                    && assoc.isSourceNavigable() && assoc.isTargetNavigable();
-            if (selfBidirectional) {
-                RelationshipInfo source = new RelationshipInfo(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity(), assoc, true);
-                RelationshipInfo target = new RelationshipInfo(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity(), assoc, false);
-                hasRelationships = generateRelationEndpointsForSide(writer, className, serviceName, source, hasRelationships);
-                hasRelationships = generateRelationEndpointsForSide(writer, className, serviceName, target, hasRelationships);
-            } else {
-                boolean isSource = assoc.getSourceClass().equals(declarer);
-                RelationshipInfo rel = new RelationshipInfo(
-                        isSource ? assoc.getTargetClass() : assoc.getSourceClass(),
-                        isSource ? assoc.getTargetRole() : assoc.getSourceRole(),
-                        isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity(),
-                        assoc, isSource);
-                hasRelationships = generateRelationEndpointsForSide(writer, className, serviceName, rel, hasRelationships);
-            }
+        // collect() trata da orientação (declarer/herança + auto-assoc bidirecional)
+        for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
+            hasRelationships = generateRelationEndpointsForSide(writer, className, serviceName, rel, hasRelationships);
         }
     }
 

@@ -2,6 +2,7 @@ package generator.plain;
 
 import generator.GeneratorUtils;
 import generator.OperationGenerator;
+import generator.RelationshipInfo;
 import generator.ValidationGenerator;
 import model.Class;
 import model.Enumeration;
@@ -190,51 +191,19 @@ public class ClassGenerator {
 
         writer.println("    // Associations");
 
-        for (Association association : associations){
-
-            // class é source e nav
-            if (association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()){
-                String targetClass = association.getTargetClass();
-                String multiplicity = association.getTargetMultiplicity();
-                String roleName = association.getTargetRole();
-                // attribute name com base na target class e multiplicity
-                String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
-
-                if (!generatedAttributes.contains(attributeName)){
-                    // maps só na ponta que tem o qualifier
-                    if (association.isMapEnd(true)){
-                        String keyType = association.getQualifierType();
-                        writer.println("   " + "private Map<" + keyType + ", " + targetClass + "> " + attributeName + ";");
-                    }
-                    else if (GeneratorUtils.checkMultiplicity(multiplicity)){
-                        writer.println("    " + "private List<" + targetClass + "> " + attributeName + ";");
-                    } else {
-                        writer.println("    " + "private " + targetClass + " " + attributeName + ";");
-                    }
-                    generatedAttributes.add(attributeName);
+        for (RelationshipInfo rel : RelationshipInfo.collectOwn(cls, associations)) {
+            String attributeName = rel.attributeName();
+            if (!generatedAttributes.contains(attributeName)) {
+                // maps só na ponta que tem o qualifier
+                if (rel.isMap()) {
+                    writer.println("   " + "private Map<" + rel.assoc.getQualifierType() + ", " + rel.otherClass + "> " + attributeName + ";");
                 }
-            }
-
-            // class é target e nav
-            if (association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()){
-                String sourceClass = association.getSourceClass();
-                String multiplicity = association.getSourceMultiplicity();
-                String roleName = association.getSourceRole();
-                String attributeName = GeneratorUtils.makeAttributeName(sourceClass, roleName, multiplicity);
-
-                if (!generatedAttributes.contains(attributeName)){
-                    // o Map é deste se o qualifier não está na source
-                    if (association.isMapEnd(false)){
-                        String keyType = association.getQualifierType();
-                        writer.println("   " + "private Map<" + keyType + ", " + sourceClass + "> " + attributeName + ";");
-                    }
-                    else if (GeneratorUtils.checkMultiplicity(multiplicity)){
-                        writer.println("    " + "private List<" + sourceClass + "> " + attributeName + ";");
-                    } else {
-                        writer.println("    " + "private " + sourceClass + " " + attributeName + ";");
-                    }
-                    generatedAttributes.add(attributeName);
+                else if (rel.isCollection()) {
+                    writer.println("    " + "private List<" + rel.otherClass + "> " + attributeName + ";");
+                } else {
+                    writer.println("    " + "private " + rel.otherClass + " " + attributeName + ";");
                 }
+                generatedAttributes.add(attributeName);
             }
         }
     }
@@ -251,33 +220,12 @@ public class ClassGenerator {
             writer.println("        super();");
         }
 
-        for (Association association : associations) {
-            //  class é source e  nav
-            if (association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()) {
-                String multiplicity = association.getTargetMultiplicity();
-                String targetClass = association.getTargetClass();
-                String roleName = association.getTargetRole();
-                String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
-
-                if (association.isMapEnd(true)) {
-                    writer.println("        this." + attributeName + " = new HashMap<>();");
-                } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
-                    writer.println("        this." + attributeName + " = new ArrayList<>();");
-                }
-            }
-
-            // class é  target e nav
-            if (association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()) {
-                String multiplicity = association.getSourceMultiplicity();
-                String sourceClass = association.getSourceClass();
-                String roleName = association.getSourceRole();
-                String attributeName = GeneratorUtils.makeAttributeName(sourceClass, roleName, multiplicity);
-
-                if (association.isMapEnd(false)) {
-                    writer.println("        this." + attributeName + " = new HashMap<>();");
-                } else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
-                    writer.println("        this." + attributeName + " = new ArrayList<>();");
-                }
+        for (RelationshipInfo rel : RelationshipInfo.collectOwn(cls, associations)) {
+            String attributeName = rel.attributeName();
+            if (rel.isMap()) {
+                writer.println("        this." + attributeName + " = new HashMap<>();");
+            } else if (rel.isCollection()) {
+                writer.println("        this." + attributeName + " = new ArrayList<>();");
             }
         }
 
@@ -332,46 +280,19 @@ public class ClassGenerator {
      * Para qualifiers, gera put/get/remove por chave e getAll
      */
     private void generateAssociationMethods(PrintWriter writer, Class cls, List<Association> associations) {
-        for (Association association: associations) {
-
-            // class é a source
-            if (association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()) {
-                String targetClass = association.getTargetClass();
-                String multiplicity = association.getTargetMultiplicity();
-                String roleName = association.getTargetRole();
-                String attributeName = GeneratorUtils.makeAttributeName(targetClass, roleName, multiplicity);
-
-                // para maps só na ponta que tem o qualifier (aqui é a source)
-                if (association.isMapEnd(true)){
-                    String keyType = association.getQualifierType();
-                    generateMapAssociationMethods(writer, targetClass, attributeName, keyType);
-                }
-                // lists
-                else if(GeneratorUtils.checkMultiplicity(multiplicity)) {
-                    generateListAssociationMethods(writer, targetClass, attributeName);
-                }
-                // single associations
-                else {
-                    generateSingleAssociationMethods(writer, targetClass, attributeName);
-                }
+        for (RelationshipInfo rel : RelationshipInfo.collectOwn(cls, associations)) {
+            String attributeName = rel.attributeName();
+            // maps só na ponta que tem o qualifier
+            if (rel.isMap()){
+                generateMapAssociationMethods(writer, rel.otherClass, attributeName, rel.assoc.getQualifierType());
             }
-
-            // class é o target
-            if (association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()) {
-                String sourceClass = association.getSourceClass();
-                String multiplicity = association.getSourceMultiplicity();
-                String roleName = association.getSourceRole();
-                String attributeName = GeneratorUtils.makeAttributeName(sourceClass, roleName, multiplicity);
-
-                if (association.isMapEnd(false)){
-                    String keyType = association.getQualifierType();
-                    generateMapAssociationMethods(writer, sourceClass, attributeName, keyType);
-                }
-                else if (GeneratorUtils.checkMultiplicity(multiplicity)) {
-                    generateListAssociationMethods(writer, sourceClass, attributeName);
-                } else {
-                    generateSingleAssociationMethods(writer, sourceClass, attributeName);
-                }
+            // lists
+            else if (rel.isCollection()) {
+                generateListAssociationMethods(writer, rel.otherClass, attributeName);
+            }
+            // single associations
+            else {
+                generateSingleAssociationMethods(writer, rel.otherClass, attributeName);
             }
         }
     }

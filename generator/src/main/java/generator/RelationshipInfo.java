@@ -56,11 +56,16 @@ public class RelationshipInfo {
         return assoc.isSourceNavigable() && assoc.isTargetNavigable();
     }
 
-    // esta ponta expõe endpoints de coleção (add/remove) quando é o Map (qualificada),
-    // ou um OneToMany unidirecional (o lado * de uma relação não bidirecional)
+    // true se ESTA ponta é o Map (a ponta dona do qualifier)
+    public boolean isMap() {
+        return assoc.isMapEnd(isSource);
+    }
+
+    // esta ponta expõe endpoints de coleção (add/remove) em dois casos:
     public boolean hasCollectionEndpoint() {
-        boolean qualifierHere = assoc.isMapEnd(isSource);
-        return qualifierHere || (!inverseIsCollection() && isCollection() && !isBidirectional());
+        boolean qualifiedMap = isMap();                                             // 1. é o Map (qualificada)
+        boolean unidirManySide = isCollection() && !isBidirectional() && !inverseIsCollection();  // 2. lado * de um OneToMany unidirecional
+        return qualifiedMap || unidirManySide;
     }
 
     /**
@@ -108,6 +113,19 @@ public class RelationshipInfo {
                 rels.add(new RelationshipInfo(assoc.getSourceClass(), assoc.getSourceRole(),
                         assoc.getSourceMultiplicity(), assoc, false));
             }
+        }
+        return rels;
+    }
+
+    // relações proprias da classe: match exato, sem herança. Para os campos da
+    // entidade, a subclasse já herda os do pai por extends.
+    public static List<RelationshipInfo> collectOwn(Class cls, List<Association> associations) {
+        List<RelationshipInfo> rels = new ArrayList<>();
+        for (Association assoc : associations) {
+            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable())
+                rels.add(new RelationshipInfo(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity(), assoc, true));
+            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable())
+                rels.add(new RelationshipInfo(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity(), assoc, false));
         }
         return rels;
     }

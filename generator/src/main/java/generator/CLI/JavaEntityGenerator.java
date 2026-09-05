@@ -10,6 +10,7 @@ import model.Operation;
 import model.Parameter;
 import generator.OperationGenerator;
 import generator.GeneratorUtils;
+import generator.RelationshipInfo;
 
 import java.io.File;
 import java.io.IOException;
@@ -195,24 +196,11 @@ public class JavaEntityGenerator {
         // so para prevenir no caso de nao haver roles para nao duplicar atributos com o mesmo nome de classe
         List<String> generatedAttributes = new ArrayList<>();
 
-        for (Association assoc : associations) {
-            // source side
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
-                String attributeName = GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
-
-                if (!generatedAttributes.contains(attributeName)) {
-                    generateRelationshipAttribute(writer, assoc.getTargetClass(), attributeName, assoc.getTargetMultiplicity(), assoc, true);
-                    generatedAttributes.add(attributeName);
-                }
-            }
-            // target side
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String attributeName = GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
-
-                if (!generatedAttributes.contains(attributeName)) {
-                    generateRelationshipAttribute(writer, assoc.getSourceClass(), attributeName, assoc.getSourceMultiplicity(), assoc, false);
-                    generatedAttributes.add(attributeName);
-                }
+        for (RelationshipInfo rel : RelationshipInfo.collectOwn(cls, associations)) {
+            String attributeName = rel.attributeName();
+            if (!generatedAttributes.contains(attributeName)) {
+                generateRelationshipAttribute(writer, rel.otherClass, attributeName, rel.otherMultiplicity, rel.assoc, rel.isSource);
+                generatedAttributes.add(attributeName);
             }
         }
     }
@@ -321,24 +309,12 @@ public class JavaEntityGenerator {
             associations) {
         List<String> generatedAttributes = new ArrayList<>();
 
-        for (Association assoc : associations) {
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
-                String attributeName = GeneratorUtils.makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity());
-
-                if (!generatedAttributes.contains(attributeName)) {
-                    String type = getRelationshipType(assoc.getTargetClass(), assoc.getTargetMultiplicity(), assoc, true);
-                    generateGetterSetter(writer, type, attributeName);
-                    generatedAttributes.add(attributeName);
-                }
-            }
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String attributeName = GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity());
-
-                if (!generatedAttributes.contains(attributeName)) {
-                    String type = getRelationshipType(assoc.getSourceClass(), assoc.getSourceMultiplicity(), assoc, false);
-                    generateGetterSetter(writer, type, attributeName);
-                    generatedAttributes.add(attributeName);
-                }
+        for (RelationshipInfo rel : RelationshipInfo.collectOwn(cls, associations)) {
+            String attributeName = rel.attributeName();
+            if (!generatedAttributes.contains(attributeName)) {
+                String type = getRelationshipType(rel.otherClass, rel.otherMultiplicity, rel.assoc, rel.isSource);
+                generateGetterSetter(writer, type, attributeName);
+                generatedAttributes.add(attributeName);
             }
         }
     }

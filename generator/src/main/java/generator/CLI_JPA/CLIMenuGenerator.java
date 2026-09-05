@@ -386,7 +386,7 @@ public class CLIMenuGenerator {
             String getter = "entity.get" + cap + "()";
 
             // .values() só se o campo desta ponta for mesmo um Map; senão imprime a referência
-            if (rel.assoc.isMapEnd(rel.isSource)) {
+            if (rel.isMap()) {
                 w.println(indent + "System.out.println(\"  " + attributeName + ": \" + new ArrayList<>(" + getter + ".values()));");
             } else {
                 w.println(indent + "System.out.println(\"  " + attributeName + ": \" + " + getter + ");");

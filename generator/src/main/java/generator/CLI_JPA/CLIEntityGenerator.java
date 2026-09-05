@@ -2,6 +2,7 @@ package generator.CLI_JPA;
 
 import generator.JpaEntityWriter;
 import generator.GeneratorUtils;
+import generator.RelationshipInfo;
 import generator.OperationGenerator;
 import generator.ValidationGenerator;
 import model.*;
@@ -213,21 +214,8 @@ public class CLIEntityGenerator {
 
         // getters and setters for relationship fields
         List<String> generatedRelations = new ArrayList<>();
-        for (Association assoc : associations) {
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable()) {
-                String otherClass = assoc.getTargetClass();
-                String otherRole = assoc.getTargetRole();
-                String thisMult = assoc.getSourceMultiplicity();
-                String otherMult = assoc.getTargetMultiplicity();
-                generateRelationshipGetterSetter(writer, otherClass, otherRole, thisMult, otherMult, assoc, true, generatedRelations);
-            }
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable()) {
-                String otherClass = assoc.getSourceClass();
-                String otherRole = assoc.getSourceRole();
-                String thisMult = assoc.getTargetMultiplicity();
-                String otherMult = assoc.getSourceMultiplicity();
-                generateRelationshipGetterSetter(writer, otherClass, otherRole, thisMult, otherMult, assoc, false, generatedRelations);
-            }
+        for (RelationshipInfo rel : RelationshipInfo.collectOwn(cls, associations)) {
+            generateRelationshipGetterSetter(writer, rel.otherClass, rel.role, rel.thisMul(), rel.otherMultiplicity, rel.assoc, rel.isSource, generatedRelations);
         }
 
 
@@ -321,33 +309,12 @@ public class CLIEntityGenerator {
     private void generateRelationships(PrintWriter writer, Class cls, List<Association> associations, List<Class> allClasses) {
         List<String> generatedRelations = new ArrayList<>();
 
-        for(Association association : associations) {
-            if(association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()){
-                String targetClass = association.getTargetClass();
-                String targetRole = association.getTargetRole();
-                String targetMultiplicity = association.getTargetMultiplicity();
-
-                String attributeName = GeneratorUtils.makeAttributeName(targetClass, targetRole, targetMultiplicity);
-
-                if(!generatedRelations.contains(attributeName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, attributeName,
-                            targetMultiplicity, association, true, allClasses);
-                    generatedRelations.add(attributeName);
-                }
-            }
-
-            if(association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()){
-                String sourceClass = association.getSourceClass();
-                String sourceRole = association.getSourceRole();
-                String sourceMultiplicity = association.getSourceMultiplicity();
-
-                String attributeName = GeneratorUtils.makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
-
-                if(!generatedRelations.contains(attributeName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, attributeName,
-                            sourceMultiplicity, association, false, allClasses);
-                    generatedRelations.add(attributeName);
-                }
+        for (RelationshipInfo rel : RelationshipInfo.collectOwn(cls, associations)) {
+            String attributeName = rel.attributeName();
+            if (!generatedRelations.contains(attributeName)) {
+                generateRelationshipBaseAnnotations(writer, cls.getName(), rel.otherClass, attributeName,
+                        rel.otherMultiplicity, rel.assoc, rel.isSource, allClasses);
+                generatedRelations.add(attributeName);
             }
         }
     }

@@ -305,7 +305,7 @@ public class JavaMenuGenerator {
             String getter = "entity.get" + cap + "()";
 
             // .values() só se o campo desta ponta for mesmo um Map
-            if (rel.assoc.isMapEnd(rel.isSource)) {
+            if (rel.isMap()) {
                 w.println(indent + "System.out.println(\"  " + attributeName + ": \" + " + getter + ".values());");
             } else {
                 w.println(indent + "System.out.println(\"  " + attributeName + ": \" + " + getter + ");");

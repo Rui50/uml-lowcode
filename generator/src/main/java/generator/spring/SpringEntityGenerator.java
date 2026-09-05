@@ -2,6 +2,7 @@ package generator.spring;
 
 import generator.JpaEntityWriter;
 import generator.GeneratorUtils;
+import generator.RelationshipInfo;
 import generator.ValidationGenerator;
 import ocl.OCLtoSpringAnnot;
 import model.Association;
@@ -284,31 +285,11 @@ public class SpringEntityGenerator {
                                        Map<String, List<String>> annsByAttribute) {
         List<String> generatedRelations = new ArrayList<>();
 
-        for(Association association : associations) {
-            if(association.getSourceClass().equals(cls.getName()) && association.isTargetNavigable()){
-                String targetClass = association.getTargetClass();
-                String targetRole = association.getTargetRole();
-                String targetMultiplicity = association.getTargetMultiplicity();
-
-                String attributeName = GeneratorUtils.makeAttributeName(targetClass, targetRole, targetMultiplicity);
-
-                if(!generatedRelations.contains(attributeName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), targetClass, attributeName, targetMultiplicity, association, true, allClasses, annsByAttribute);
-                    generatedRelations.add(attributeName);
-                }
-            }
-
-            if(association.getTargetClass().equals(cls.getName()) && association.isSourceNavigable()){
-                String sourceClass = association.getSourceClass();
-                String sourceRole = association.getSourceRole();
-                String sourceMultiplicity = association.getSourceMultiplicity();
-
-                String attributeName = GeneratorUtils.makeAttributeName(sourceClass, sourceRole, sourceMultiplicity);
-
-                if(!generatedRelations.contains(attributeName)){
-                    generateRelationshipBaseAnnotations(writer, cls.getName(), sourceClass, attributeName, sourceMultiplicity, association, false, allClasses, annsByAttribute);
-                    generatedRelations.add(attributeName);
-                }
+        for (RelationshipInfo rel : RelationshipInfo.collectOwn(cls, associations)) {
+            String attributeName = rel.attributeName();
+            if (!generatedRelations.contains(attributeName)) {
+                generateRelationshipBaseAnnotations(writer, cls.getName(), rel.otherClass, attributeName, rel.otherMultiplicity, rel.assoc, rel.isSource, allClasses, annsByAttribute);
+                generatedRelations.add(attributeName);
             }
         }
     }

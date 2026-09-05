@@ -121,31 +121,12 @@ public class SpringFrontendGenerator {
     // M:N do lado dono, ou O:M unidir/qualifier)
     private List<RelationshipInfo> collectionRelationships(Class cls, List<Association> associations) {
         List<RelationshipInfo> rels = new ArrayList<>();
-        for (Association assoc : associations) {
-            boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
-            String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
-            if (declarer == null) continue;
-            boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass()) && isBidirectional;
-            if (selfBidirectional) {
-                addCollectionSide(rels, assoc, true, declarer);
-                addCollectionSide(rels, assoc, false, declarer);
-            } else {
-                addCollectionSide(rels, assoc, assoc.getSourceClass().equals(declarer), declarer);
-            }
+        for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
+            // M:N do lado dono, ou coleção com endpoint (O:M unidir / Map)
+            boolean manyToMany = rel.inverseIsCollection() && rel.isCollection() && rel.isOwner();
+            if (manyToMany || rel.hasCollectionEndpoint()) rels.add(rel);
         }
         return rels;
-    }
-
-    private void addCollectionSide(List<RelationshipInfo> rels, Association assoc, boolean isSource, String declarer) {
-        String otherClass = GeneratorUtils.otherClassOf(declarer, assoc);
-        String role = isSource ? assoc.getTargetRole() : assoc.getSourceRole();
-        String otherMul = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();
-        RelationshipInfo rel = new RelationshipInfo(otherClass, role, otherMul, assoc, isSource);
-
-        // M:N do lado dono, ou coleção com endpoint (O:M unidir / Map)
-        boolean manyToMany = rel.inverseIsCollection() && rel.isCollection() && rel.isOwner();
-        if (!manyToMany && !rel.hasCollectionEndpoint()) return;
-        rels.add(rel);
     }
 
     // operações custom com endpoint (não job e com diagrama de sequência)

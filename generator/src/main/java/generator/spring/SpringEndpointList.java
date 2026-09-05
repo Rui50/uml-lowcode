@@ -50,25 +50,9 @@ public class SpringEndpointList {
 
 
         // now assoc endpoints
-        for (Association assoc : associations) {
-            // quem gera os endpoints desta associação, null ignora
-            String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
-            if (declarer == null) continue;
-
-            boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass())
-                    && assoc.isSourceNavigable() && assoc.isTargetNavigable();
-
-            if (selfBidirectional) {
-                addAssociationEndpoints(endpoints, base, new RelationshipInfo(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity(), assoc, true));
-                addAssociationEndpoints(endpoints, base, new RelationshipInfo(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity(), assoc, false));
-            } else {
-                boolean isSource = assoc.getSourceClass().equals(declarer);
-                addAssociationEndpoints(endpoints, base, new RelationshipInfo(
-                        isSource ? assoc.getTargetClass() : assoc.getSourceClass(),
-                        isSource ? assoc.getTargetRole()  : assoc.getSourceRole(),
-                        isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity(),
-                        assoc, isSource));
-            }
+        // collect() trata da orientação (declarer/herança + auto-assoc bidirecional)
+        for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
+            addAssociationEndpoints(endpoints, base, rel);
         }
         return endpoints;
     }

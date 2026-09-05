@@ -264,29 +264,9 @@ public class SpringServiceGenerator {
     private void generateRelationShipMethods(PrintWriter writer, Class cls, List<Association> associations, List<Class> classes) {
         boolean hasRelationships = false;
 
-        for (Association assoc : associations) {
-            // classe que declara a associação,  null = não participa,
-            String declarer = GeneratorUtils.assocDeclaringClass(cls, assoc);
-            if (declarer == null) continue;
-
-            // auto-associação bidirecional: a classe é os dois lados, processa os dois roles.
-            // (o metodo de coleção só sai no lado dono)
-            boolean selfBidirectional = assoc.getSourceClass().equals(assoc.getTargetClass())
-                    && assoc.isSourceNavigable() && assoc.isTargetNavigable();
-            if (selfBidirectional) {
-                RelationshipInfo source = new RelationshipInfo(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity(), assoc, true);
-                RelationshipInfo target = new RelationshipInfo(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity(), assoc, false);
-                hasRelationships = generateRelationMethodsForSide(writer, cls, source, hasRelationships);
-                hasRelationships = generateRelationMethodsForSide(writer, cls, target, hasRelationships);
-            } else {
-                boolean isSource = assoc.getSourceClass().equals(declarer);
-                RelationshipInfo rel = new RelationshipInfo(
-                        isSource ? assoc.getTargetClass() : assoc.getSourceClass(),
-                        isSource ? assoc.getTargetRole() : assoc.getSourceRole(),
-                        isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity(),
-                        assoc, isSource);
-                hasRelationships = generateRelationMethodsForSide(writer, cls, rel, hasRelationships);
-            }
+        // collect() trata da orientação (declarer/herança + auto-assoc bidirecional); aqui só geramos por lado
+        for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
+            hasRelationships = generateRelationMethodsForSide(writer, cls, rel, hasRelationships);
         }
     }
 
@@ -747,7 +727,7 @@ public class SpringServiceGenerator {
         boolean selfModified = false;
 
         for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
-            if (rel.isCollection() || !GeneratorUtils.isOwningSide(rel.assoc, rel.isSource)) continue;
+            if (rel.isCollection() || !rel.isOwner()) continue;
             boolean hidden;
             if (forUpdate) {
                 hidden = cls.isHiddenInUpdate(rel.attributeName());
@@ -787,7 +767,7 @@ public class SpringServiceGenerator {
      */
     private boolean linkInverseSingles(PrintWriter writer, Class cls, List<Association> associations, String entityVar, boolean clearSingleOnNull, boolean forUpdate) {
         for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
-            if (rel.isCollection() || GeneratorUtils.isOwningSide(rel.assoc, rel.isSource)) continue;
+            if (rel.isCollection() || rel.isOwner()) continue;
             boolean hidden;
             if (forUpdate) {
                 hidden = cls.isHiddenInUpdate(rel.attributeName());
@@ -847,18 +827,17 @@ public class SpringServiceGenerator {
             if (cls.isHiddenInCreate(rel.attributeName())) continue;   // coleções só se ligam no create
 
             Association assoc = rel.assoc;
-            boolean isSource  = rel.isSource;
             String otherClass = rel.otherClass;
             String capAttribute   = GeneratorUtils.capitalizeFirst(rel.attributeName());
             String otherVar   = GeneratorUtils.lowercaseFirst(capAttribute);
             String otherRepo  = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
 
             // se não somos donos, a FK está no outro -> lado inverso
-            boolean ownerSide = GeneratorUtils.isOwningSide(assoc, isSource);
+            boolean ownerSide = rel.isOwner();
             // nome do campo desta classe no outro lado , para sincronizar a outra ponta
             String capInv     = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(rel.thisClass(), rel.thisRole(), rel.thisMul()));
             boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
-            boolean thisIsMapEnd = assoc.isMapEnd(isSource);
+            boolean thisIsMapEnd = rel.isMap();
 
             //  'other' na coleção deste lado: put(chave, other) se for Map, senão add(other)
             String addToSaved;

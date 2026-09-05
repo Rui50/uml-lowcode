@@ -389,7 +389,7 @@ public class SpringDTOGenerator {
 
         if (rel.isCollection()) {
             // .values() só se esta ponta for o Map
-            if (rel.assoc.isMapEnd(rel.isSource)) {
+            if (rel.isMap()) {
                 w.println("        dto.set" + capitalizedAttribute + "Ids(" + varName + ".get" + capitalizedAttribute + "() != null");
                 w.println("            ? " + varName + ".get" + capitalizedAttribute + "().values().stream().map(" + otherClass + "::" + idGetterOf(otherClass) + ").collect(Collectors.toList())");
                 w.println("            : new ArrayList<>());");
