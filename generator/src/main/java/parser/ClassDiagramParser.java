@@ -208,6 +208,26 @@ public class ClassDiagramParser {
         String visibility = element.getPlainAttribute("visibility");
         attribute.setVisibility(visibility != null ? visibility : "public");
 
+        // nas coleções o o trigger gcattrval apanha o xmi:value de todos os netos de
+        // <xmi:Extension>, logo apanha o <genericType> e outras coisas tambem (isAbstract/isVisble)
+        // Só o tipo da coleção tem '<'
+        String generic = null;
+        for (Object o : element.getSetAttribute("generictype")) {
+            String v = String.valueOf(o);
+            if (v.contains("<")) { generic = v; break; }
+        }
+        if (generic != null) {
+            String kind = generic.substring(0, generic.indexOf('<')).trim(); // List / Set
+            String elem = generic.substring(generic.indexOf('<') + 1, generic.lastIndexOf('>')).trim();
+            if ((kind.equals("List") || kind.equals("Set")) && GeneratorUtils.isSimpleParamType(elem)) {
+                attribute.setType(GeneratorUtils.fixType(elem)); // tipo do elemento,
+                attribute.setCollectionType(kind);  // "List" / "Set"
+                return attribute;
+            }
+            throw new RuntimeException("Atributo '" + element.getName() + "' tem tipo generico '" + generic
+                    + "' nao suportado (só List/Set de tipos basicos por agora; Map ou coleção de entidades ainda não).");
+        }
+
         ModelElement type = (ModelElement) element.getRefAttribute("propertytype");
         if (type != null) {
             attribute.setType(type.getName());

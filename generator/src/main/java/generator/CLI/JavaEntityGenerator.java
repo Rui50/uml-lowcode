@@ -163,7 +163,7 @@ public class JavaEntityGenerator {
                 if (attr.hasDerive()) {
                     generateDerivedGetter(writer, attr);
                 } else {
-                    generateGetterSetter(writer, attr.getType(), attr.getName());
+                    generateGetterSetter(writer, attr.getAttributeType(), attr.getName());
                 }
             }
 
@@ -186,7 +186,15 @@ public class JavaEntityGenerator {
     private void generateAttributes(PrintWriter writer, Class cls) {
         for (Attribute attr : cls.getAttributes()) {
             if (attr.hasDerive()) continue;
-            writer.println("    private " + attr.getType() + " " + attr.getName() + ";");
+            String line = "    private " + attr.getAttributeType() + " " + attr.getName();
+            if (attr.isCollection()) {
+                if (attr.getCollectionType().equals("List")) {
+                    line += " = new ArrayList<>()";
+                } else {
+                    line += " = new HashSet<>()";
+                }
+            }
+            writer.println(line + ";");
         }
         if (!cls.getAttributes().isEmpty()) writer.println();
     }
@@ -244,13 +252,13 @@ public class JavaEntityGenerator {
         // atributos herdados
         for (Attribute attr : paramParentAttrs) {
             if (!first) writer.print(", ");
-            writer.print(attr.getType() + " " + attr.getName());
+            writer.print(attr.getAttributeType() + " " + attr.getName());
             first = false;
         }
         // atributos próprios
         for (Attribute attr : paramAttrs) {
             if (!first) writer.print(", ");
-            writer.print(attr.getType() + " " + attr.getName());
+            writer.print(attr.getAttributeType() + " " + attr.getName());
             first = false;
         }
         writer.println(") {");
@@ -332,7 +340,7 @@ public class JavaEntityGenerator {
             writer.println(" +");
             String capitalized = GeneratorUtils.capitalizeFirst(attr.getName());
             String expr = "get" + capitalized + "()";
-            if (attr.getType().equals("String")) {
+            if (!attr.isCollection() && attr.getType().equals("String")) {
                 writer.print("            \", " + attr.getName() + "='\" + " + expr + " + \"'\"");
             } else {
                 writer.print("            \", " + attr.getName() + "=\" + " + expr);

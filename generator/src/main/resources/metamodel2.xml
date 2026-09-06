@@ -116,6 +116,9 @@ other part of SDMetrics.
     <!-- tipo da lifeline (VP extension) -->
     <attribute name="vptype">Type name from Visual Paradigm extension (for lifeline represents).</attribute>
 
+    <!-- tipo generico decoleções  (List<String>) -->
+    <attribute name="generictype" type="data" multiplicity="many">Generic type string</attribute>
+
 </modelelement>
 
 <modelelement name="port" parent="property" />

@@ -128,7 +128,13 @@ public class SpringDTOGenerator {
             w.println();
             for (Attribute attr : allAttrs) {
                 // (Integer, não int) porque um campo omitido no POST chega a null, não a 0.
-                w.println("    private " + GeneratorUtils.fixType(attr.getType()) + " " + attr.getName() + ";");
+                String attributeType;
+                if (attr.isCollection()) {
+                    attributeType = attr.getAttributeType();
+                } else {
+                    attributeType = GeneratorUtils.fixType(attr.getType());
+                }
+                w.println("    private " + attributeType + " " + attr.getName() + ";");
             }
 
             // ids das relações ( authorId), a ligação real é feita no service não no toEntity()
@@ -203,7 +209,13 @@ public class SpringDTOGenerator {
             w.println();
             for (Attribute attr : allAttrs) {
                 // (Integer, não int) porque um campo omitido no PATCH chega a null, não a 0.
-                w.println("    private " + GeneratorUtils.fixType(attr.getType()) + " " + attr.getName() + ";");
+                String attributeType;
+                if (attr.isCollection()) {
+                    attributeType = attr.getAttributeType();
+                } else {
+                    attributeType = GeneratorUtils.fixType(attr.getType());
+                }
+                w.println("    private " + attributeType + " " + attr.getName() + ";");
             }
 
             for (RelationshipInfo rel : relationships) {
@@ -330,7 +342,7 @@ public class SpringDTOGenerator {
 
             // attributes ity)
             for (Attribute attr : allAttrs) {
-                w.println("    private " + attr.getType() + " " + attr.getName() + ";");
+                w.println("    private " + attr.getAttributeType() + " " + attr.getName() + ";");
             }
 
             // relationship ID fields
@@ -354,7 +366,12 @@ public class SpringDTOGenerator {
 
             for (Attribute attr : allAttrs) {
                 String cap = GeneratorUtils.capitalizeFirst(attr.getName());
-                w.println("        dto.set" + cap + "(" + varName + ".get" + cap + "());");
+                if (attr.isCollection()) {
+                    String container = attr.getCollectionType().equals("List") ? "ArrayList" : "HashSet";
+                    w.println("        dto.set" + cap + "(new " + container + "<>(" + varName + ".get" + cap + "()));");
+                } else {
+                    w.println("        dto.set" + cap + "(" + varName + ".get" + cap + "());");
+                }
             }
 
             for (RelationshipInfo rel : relationships) {

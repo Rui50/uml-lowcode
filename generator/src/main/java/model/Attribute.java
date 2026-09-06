@@ -8,6 +8,8 @@ public class Attribute {
     private String type;
     private String visibility;
 
+    private String collectionType; // "List"/"Set"
+
     private String initExpression; // expressão ocl para inits
     private String javaInitExpression; // expressão java
 
@@ -45,6 +47,25 @@ public class Attribute {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getCollectionType() {
+        return collectionType;
+    }
+    public void setCollectionType(String collectionType) {
+        this.collectionType = collectionType;
+    }
+    public boolean isCollection() {
+        return collectionType != null;
+    }
+
+    // "List<String>" para listas ou sets senao o tipo normal
+    public String getAttributeType() {
+        if (isCollection()) {
+            return collectionType + "<" + type + ">";
+        } else {
+            return type;
+        }
     }
 
     public String getVisibility() {

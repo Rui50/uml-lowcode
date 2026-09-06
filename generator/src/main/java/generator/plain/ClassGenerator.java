@@ -176,7 +176,7 @@ public class ClassGenerator {
         writer.println("    // Attributes");
         for (Attribute attribute : cls.getAttributes()){
             if (attribute.hasDerive()) continue;
-            writer.println("    " + attribute.getVisibility() + " " + attribute.getType() + " " + attribute.getName() + ";");
+            writer.println("    " + attribute.getVisibility() + " " + attribute.getAttributeType() + " " + attribute.getName() + ";");
         }
     }
 
@@ -229,6 +229,17 @@ public class ClassGenerator {
             }
         }
 
+        // coleções (List<String>/Set<Long>)
+        for (Attribute attribute : cls.getAttributes()) {
+            if (attribute.isCollection()) {
+                if (attribute.getCollectionType().equals("List")) {
+                    writer.println("        this." + attribute.getName() + " = new ArrayList<>();");
+                } else {
+                    writer.println("        this." + attribute.getName() + " = new HashSet<>();");
+                }
+            }
+        }
+
         // attribute inits do ocl
         for (Attribute attribute : cls.getAttributes()) {
             if (attribute.hasInit()) {
@@ -248,7 +259,7 @@ public class ClassGenerator {
 
         for (Attribute attribute : cls.getAttributes()) {
             String name = attribute.getName();
-            String type = attribute.getType();
+            String type = attribute.getAttributeType();
             String capitalizedName = GeneratorUtils.capitalizeFirst(name);
 
             if (attribute.hasDerive()){

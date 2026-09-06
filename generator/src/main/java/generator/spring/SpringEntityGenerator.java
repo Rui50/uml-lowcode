@@ -247,6 +247,18 @@ public class SpringEntityGenerator {
             // skip derived
             if (atr.hasDerive()) continue;
 
+            // coleção (List<String> Set<Long>) @ElementCollection
+            if (atr.isCollection()) {
+                writer.println("    @ElementCollection");
+                for (String ann : annsByAttribute.getOrDefault(atr.getName(), List.of())) {
+                    writer.println("    " + ann);
+                }
+                String init = atr.getCollectionType().equals("List") ? "new ArrayList<>()" : "new HashSet<>()";
+                writer.println("    private " + atr.getAttributeType() + " " + atr.getName() + " = " + init + ";");
+                writer.println();
+                continue;
+            }
+
             // atributo escolhido como @Id
             // tipo do campo é  (Integer em vez de int) porque JPA não aceita primitivos no @Id
             boolean isId = atr.getName().equals(cls.getIdAttributeName());

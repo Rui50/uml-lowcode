@@ -839,8 +839,33 @@ public class CLIMenuGenerator {
     /***
      * UTILS HERE
      */
+    private String elementParse(String elementType, String token) {
+        switch (elementType) {
+            case "String":  return token;
+            case "Integer": return "Integer.parseInt(" + token + ")";
+            case "Long":    return "Long.parseLong(" + token + ")";
+            case "Double":  return "Double.parseDouble(" + token + ")";
+            case "Float":   return "Float.parseFloat(" + token + ")";
+            case "Boolean": return "Boolean.parseBoolean(" + token + ")";
+            default:
+                if (isTimeType(elementType)) return elementType + ".parse(" + token + ")";
+                throw new IllegalArgumentException("Elemento de coleção '" + elementType + "' não suportado no CLI.");
+        }
+    }
+
     private void generateReadInputForAttribute(PrintWriter w, Attribute attr) {
         String name = attr.getName();
+
+        // colecoes dos atributos: input separado por vírgulas
+        if (attr.isCollection()) {
+            String container = attr.getCollectionType().equals("List") ? "ArrayList" : "HashSet";
+            w.println("        System.out.print(\"" + name + " (separado por vírgulas): \");");
+            w.println("        " + attr.getAttributeType() + " " + name + " = new " + container + "<>();");
+            w.println("        String " + name + "Line = scanner.nextLine().trim();");
+            w.println("        if (!" + name + "Line.isEmpty()) for (String s : " + name + "Line.split(\",\")) "
+                    + name + ".add(" + elementParse(attr.getType(), "s.trim()") + ");");
+            return;
+        }
 
         switch (attr.getType()) {
             case "String":
@@ -899,6 +924,19 @@ public class CLIMenuGenerator {
     private void generateUpdateAttribute(PrintWriter w, Attribute attr) {
         String name = attr.getName();
         String capitalized = GeneratorUtils.capitalizeFirst(name);
+
+        // coleção de tipos basicos: input separado por vírgulas, enter mantém
+        if (attr.isCollection()) {
+            String container = attr.getCollectionType().equals("List") ? "ArrayList" : "HashSet";
+            w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() + \"] (separado por vírgulas, enter mantém): \");");
+            w.println("        String " + name + "Line = scanner.nextLine().trim();");
+            w.println("        if (!" + name + "Line.isEmpty()) {");
+            w.println("            " + attr.getAttributeType() + " " + name + " = new " + container + "<>();");
+            w.println("            for (String s : " + name + "Line.split(\",\")) " + name + ".add(" + elementParse(attr.getType(), "s.trim()") + ");");
+            w.println("            entity.set" + capitalized + "(" + name + ");");
+            w.println("        }");
+            return;
+        }
 
         switch (attr.getType()) {
             case "String":

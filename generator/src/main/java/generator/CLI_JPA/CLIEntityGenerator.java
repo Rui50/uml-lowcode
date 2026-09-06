@@ -197,7 +197,7 @@ public class CLIEntityGenerator {
             String name = attr.getName();
             String type = name.equals(cls.getIdAttributeName())
                     ? cls.getRoot().getIdAttributeType()
-                    : attr.getType();
+                    : attr.getAttributeType();
             String cap  = capitalize(name);
             writer.println();
             writer.println("    public " + type + " get" + cap + "() { return " + name + "; }");
@@ -276,6 +276,15 @@ public class CLIEntityGenerator {
         for (Attribute atr : cls.getAttributes()){
 
             if (atr.hasDerive()) continue;
+
+            // colecao (List<String> Set<Long>) com @ElementCollection e init,
+            if (atr.isCollection()) {
+                writer.println("    @ElementCollection");
+                String init = atr.getCollectionType().equals("List") ? "new ArrayList<>()" : "new HashSet<>()";
+                writer.println("    private " + atr.getAttributeType() + " " + atr.getName() + " = " + init + ";");
+                writer.println();
+                continue;
+            }
 
             // atributo escolhido como @Id só é definido na raiz.
             // o @Id usa Integer/Long (não int/long) senão getX() == null da erro
