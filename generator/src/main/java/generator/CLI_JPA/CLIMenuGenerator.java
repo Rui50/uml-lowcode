@@ -99,6 +99,21 @@ public class CLIMenuGenerator {
         w.println("        }");
     }
 
+    // sincroniza o lado inverso em memória (senão o outro lado gerido fica "stale").
+    private void writeInverseLink(PrintWriter w, Association assoc, boolean isSource,
+                                  String container, String element, String indent) {
+        String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource));
+        boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
+        if (assoc.hasQualifier()) {
+            String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
+            w.println(indent + container + ".get" + invCap + "().put(" + element + ".get" + qualCap + "(), " + element + ");");
+        } else if (invColl) {
+            w.println(indent + container + ".get" + invCap + "().add(" + element + ");");
+        } else {
+            w.println(indent + container + ".set" + invCap + "(" + element + ");");
+        }
+    }
+
     /**
      * entrada: gera todos os menus (um por entidade + MainMenu)
      */
@@ -330,7 +345,16 @@ public class CLIMenuGenerator {
             w.println("        entity.set" + cap + "(" + attr.getName() + ");");
         }
         for (RelationshipInfo rel : singleOwned) {
-            w.println("        entity.set" + GeneratorUtils.capitalizeFirst(rel.attributeName()) + "(" + rel.attributeName() + ");");
+            String var = rel.attributeName();
+            w.println("        entity.set" + GeneratorUtils.capitalizeFirst(var) + "(" + var + ");");
+
+            // sincroniza o inverso em memória, senão o outro lado fica com a coleção "stale"
+            // (var pode ser null -> relação opcional -> guard)
+            if (rel.assoc.isSourceNavigable() && rel.assoc.isTargetNavigable()) {
+                w.println("        if (" + var + " != null) {");
+                writeInverseLink(w, rel.assoc, rel.isSource, var, "entity", "            ");
+                w.println("        }");
+            }
         }
 
         // validation
@@ -513,18 +537,9 @@ public class CLIMenuGenerator {
         w.println("        owner.set" + capitalized + "(other);");
 
         if (bidir) {
-            // sincroniza o inverso em mem para poder validar o outro lado
-            // substitui o em.refresh(other) depois do commit, a coleção fica logo correta em memória.
-            String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(assoc, isSource));
-            boolean invColl = GeneratorUtils.checkMultiplicity(isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity());
-
-            // aqui esta ponta é single (é o metodo assign), por isso o qualifier, se existir, está no inverso (Map) -> put por chave
-            if (assoc.hasQualifier()) {
-                String qualCap = GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
-                w.println("        other.get" + invCap + "().put(owner.get" + qualCap + "(), owner);");
-            } else {
-                w.println(invColl ? "        other.get" + invCap + "().add(owner);" : "        other.set" + invCap + "(owner);");
-            }
+            // sincroniza o inverso em mem para poder validar o outro lado (substitui o em.refresh(other) pós-commit).
+            // aqui esta ponta é single (assign), por isso o qualifier, se existir, está no inverso (Map) -> put por chave
+            writeInverseLink(w, assoc, isSource, "other", "owner", "        ");
             generateValidation(w, ownerClass, "owner", otherClass, "other", false);
         } else {
             generateValidation(w, ownerClass, "owner", null, null, false);
