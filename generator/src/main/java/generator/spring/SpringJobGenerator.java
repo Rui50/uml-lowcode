@@ -107,6 +107,7 @@ public class SpringJobGenerator {
             writer.println();
             writer.println("import java.util.*;");
             writer.println("import java.util.stream.Collectors;");
+            writer.println("import java.time.*;");
             writer.println();
             writer.println("@Component");
             writer.println("@RequiredArgsConstructor");

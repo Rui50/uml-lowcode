@@ -138,6 +138,13 @@ especifica do visual paradigm
 <trigger name="generictype" type="gcattrval" src="xmi:Extension" attr="xmi:value" />
 </xmitransformation>
 
+<!-- A lifeline guarda o tipo que representa num ownedAttribute sem xmi:type (em <type value=".."/>), lido pelo
+     vptype. O generictype das coleções (acima) lê da mesma xmi:Extension e, como o SDMetrics só mantém um
+     trigger ativo, ficava com o último e apagava o vptype. Daí as represents terem transformação à parte. -->
+<xmitransformation modelelement="property" xmipattern="ownedAttribute" condition="isStatic=''" recurse="true">
+<trigger name="vptype" type="gcattrval" src="xmi:Extension" attr="value" />
+</xmitransformation>
+
 <xmitransformation modelelement="port" xmipattern="uml:Port" recurse="true" />
 
 <xmitransformation modelelement="operation" xmipattern="uml:Operation" recurse="true">
