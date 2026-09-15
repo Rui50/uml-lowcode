@@ -293,6 +293,13 @@ public class OperationGenerator {
      */
     private static void generateMessage(PrintWriter writer, Message msg, Message entry,
                                         Class cls, List<Association> associations, String indent) {
+        // break/continue sao mensagens reservadas (self sempre e se nao tiverem argumentos ou seja n sao metodos)
+        String n = msg.getName();
+        if (("break".equals(n) || "continue".equals(n)) && msg.getArguments().isEmpty()) {
+            writer.println(indent + n + ";");
+            return;
+        }
+
         ////////// Create message
 
         // mensagem «create»: gera "Type var = new Type(args)".

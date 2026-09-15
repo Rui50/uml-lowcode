@@ -124,6 +124,13 @@ public class SequenceBodyGenerator {
         // só processar mensagens enviadas pelo service
         if (serviceLifeline == null || !msg.getSource().getId().equals(serviceLifeline.getId())) return;
 
+        // break/continue sao mensagens reservadas (self sempre e se nao tiverem argumentos ou seja n sao metodos)
+        String n = msg.getName();
+        if (("break".equals(n) || "continue".equals(n)) && msg.getArguments().isEmpty()) {
+            writer.println(ind + n + ";");
+            return;
+        }
+
         // reply = return,
         if ("reply".equals(msg.getMessageSort())) {
             String expr = msg.getRawName() != null ? msg.getRawName() : msg.getName();
