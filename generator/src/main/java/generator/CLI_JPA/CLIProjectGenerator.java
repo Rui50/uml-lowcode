@@ -53,6 +53,7 @@ public class CLIProjectGenerator {
         generatePersistenceXml();
         generateConfigProperties();
         generateMainClass();
+        generateDbClass();
         generateInputUtils();
         if (settings.isDockerfile()) {
             generateDockerfile();
@@ -345,6 +346,7 @@ public class CLIProjectGenerator {
             w.println("package " + basePackage + ";");
             w.println();
             w.println("import " + basePackage + ".menus.MainMenu;");
+            w.println("import " + basePackage + ".models.Db;");
             w.println("import jakarta.persistence.EntityManager;");
             w.println("import jakarta.persistence.EntityManagerFactory;");
             w.println("import jakarta.persistence.Persistence;");
@@ -358,6 +360,7 @@ public class CLIProjectGenerator {
             w.println("    public static void main(String[] args) throws Exception {");
             w.println("        EntityManagerFactory emf = buildEntityManagerFactory();");
             w.println("        EntityManager em = emf.createEntityManager();");
+            w.println("        Db.init(em);");
             w.println("        try {");
             w.println("            new MainMenu(em).run();");
             w.println("        } finally {");
@@ -380,6 +383,40 @@ public class CLIProjectGenerator {
             w.println("}");
         }
         System.out.println("Generated: Main.java");
+    }
+
+    // persistencia para os corpos de operacao que correm NA entidade
+    // O EntityManager fica estatico para as mensagens save/delete desenhadas
+    // na entidade poderem gravar entidades criadas no corpo, que o repo do owner nao alcanca
+    private void generateDbClass() throws IOException {
+        String basePackage = settings.getBasePackage();
+        // fica no pacote models para que os corpos de operacao o usem sem import
+        String dir = outputDirectory + "/src/main/java/" + settings.getPackagePath() + "/models";
+        String filename = dir + "/Db.java";
+
+        try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
+            w.println("package " + basePackage + ".models;");
+            w.println();
+            w.println("import jakarta.persistence.EntityManager;");
+            w.println();
+            w.println("public class Db {");
+            w.println();
+            w.println("    static EntityManager em;");
+            w.println();
+            w.println("    public static void init(EntityManager entityManager) { em = entityManager; }");
+            w.println();
+            w.println("    public static <T> T save(T entity) {");
+            w.println("        if (em.contains(entity)) return entity;   // ja gerido: o dirty checking grava");
+            w.println("        em.persist(entity);                        // entidade nova criada no corpo");
+            w.println("        return entity;");
+            w.println("    }");
+            w.println();
+            w.println("    public static void delete(Object entity) {");
+            w.println("        em.remove(em.contains(entity) ? entity : em.merge(entity));");
+            w.println("    }");
+            w.println("}");
+        }
+        System.out.println("Generated: Db.java");
     }
 
 

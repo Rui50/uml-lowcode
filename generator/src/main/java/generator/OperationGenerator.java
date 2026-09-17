@@ -300,6 +300,14 @@ public class OperationGenerator {
             return;
         }
 
+        // save/delete sao mensagens reservadas
+        //  do owner para a entidade a gravar, so faz sentido nos alvos com BD
+        if (("save".equals(n) || "delete".equals(n)) && msg.getArguments() != null && msg.getArguments().size() == 1) {
+            String arg = msg.getArguments().get(0).getName().replace("self.", "this.");
+            writer.println(indent + "Db." + n + "(" + arg + ");");
+            return;
+        }
+
         ////////// Create message
 
         // mensagem «create»: gera "Type var = new Type(args)".
@@ -529,16 +537,22 @@ public class OperationGenerator {
 
             // o guard escreve o loop: "for (Type var : toiter)" ou "while (cond)"
             if (guard.startsWith("for")) {
-                String inner = GeneratorUtils.extractParen(guard);                 // "Aluno a : alunos"
-                int colon = inner.indexOf(':');
-                if (colon == -1) {
-                    throw new IllegalArgumentException(
-                            "Guard de loop 'for' tem de ser 'for (Tipo var : coleção)': '" + guard + "'");
+                String inner = GeneratorUtils.extractParen(guard);                 // "Aluno a : alunos" ou "int i = 0; i < n; i++"
+                if (inner.contains(";")) {
+                    // for normal , transcreve tal e qual, so muda  self. -> this.
+                    writer.println(indentStr + "for (" + inner.replace("self.", "this.") + ") {");
+                } else {
+                    // iterar uma colecao
+                    int colon = inner.indexOf(':');
+                    if (colon == -1) {
+                        throw new IllegalArgumentException(
+                                "Guard de loop 'for' tem de ser 'for (Tipo var : coleção)' ou 'for (i = 0; i < 1; i++)': '" + guard + "'");
+                    }
+                    String left = inner.substring(0, colon).trim();      // "Aluno a"
+                    String collection = inner.substring(colon + 1).trim().replace("self.", "this.");
+                    collection = adaptCollectionAccess(collection, cls, associations);   // Map -> .values()
+                    writer.println(indentStr + "for (" + left + " : " + collection + ") {");
                 }
-                String left = inner.substring(0, colon).trim();      // "Aluno a"
-                String collection = inner.substring(colon + 1).trim().replace("self.", "this.");
-                collection = adaptCollectionAccess(collection, cls, associations);   // Map -> .values()
-                writer.println(indentStr + "for (" + left + " : " + collection + ") {");
                 generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1, operation, returnType, selfVar);
                 writer.println(indentStr + "}");
             } else if (guard.startsWith("while")) {
