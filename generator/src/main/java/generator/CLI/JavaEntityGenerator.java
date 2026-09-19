@@ -160,6 +160,7 @@ public class JavaEntityGenerator {
 
             // se o atributo é derived, só gera getter com a expressão OCL, sem setter
             for (Attribute attr : cls.getAttributes()) {
+                if ("id".equals(attr.getName())) continue;   // getId/setId ja vem do id auto
                 if (attr.hasDerive()) {
                     generateDerivedGetter(writer, attr);
                 } else {
@@ -186,6 +187,8 @@ public class JavaEntityGenerator {
     private void generateAttributes(PrintWriter writer, Class cls) {
         for (Attribute attr : cls.getAttributes()) {
             if (attr.hasDerive()) continue;
+            // o id é sempre o Long gerido pelo repo
+            if ("id".equals(attr.getName())) continue;
             String line = "    private " + attr.getAttributeType() + " " + attr.getName();
             if (attr.isCollection()) {
                 if (attr.getCollectionType().equals("List")) {
@@ -219,11 +222,11 @@ public class JavaEntityGenerator {
 
         // filter aos derives e inits só os que são parâmetros do construtor (this.x = x recebido)
         List<Attribute> paramParentAttrs = parentAttrs.stream()
-                .filter(a -> !a.hasDerive() && !a.hasInit()).toList();
+                .filter(a -> !a.hasDerive() && !a.hasInit() && !"id".equals(a.getName())).toList();
 
         // atributos próprios, sem derivados
         List<Attribute> ownAttrs = cls.getAttributes().stream()
-                .filter(a -> !a.hasDerive()).toList();
+                .filter(a -> !a.hasDerive() && !"id".equals(a.getName())).toList();
 
         // sem inits
         List<Attribute> paramAttrs = ownAttrs.stream()
@@ -337,6 +340,7 @@ public class JavaEntityGenerator {
         writer.print("            \"id=\" + getId()");
 
         for (Attribute attr : cls.getAllAttributes()) {
+            if ("id".equals(attr.getName())) continue;
             writer.println(" +");
             String capitalized = GeneratorUtils.capitalizeFirst(attr.getName());
             String expr = "get" + capitalized + "()";

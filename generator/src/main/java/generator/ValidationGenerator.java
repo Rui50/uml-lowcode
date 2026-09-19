@@ -45,22 +45,22 @@ public class ValidationGenerator {
 
         // javadoc
         writer.println("    /**");
-        writer.println("     * Validate entity with OCL");
-        writer.println("     * ");
-
-        // invariantes da própria classe
-        for (Invariant inv : cls.getInvariants()) {
-            if (skip.contains(inv)) continue;
-            writer.println("     * - " + inv.getName() + ": " + inv.getOclExpression());
-        }
-
-        // invariantes herdadas de interfaces
-        for (Interface iface : cls.getRealizations()) {
-            for (Invariant inv : iface.getInvariants()) {
-                writer.println("     * - [" + iface.getName() + "] " + inv.getName() + ": " +
-                        inv.getOclExpression());
-            }
-        }
+        writer.println("     * Checks the invariants of this entity");
+        // writer.println("     * ");
+        //
+        // // invariantes da própria classe
+        // for (Invariant inv : cls.getInvariants()) {
+        //     if (skip.contains(inv)) continue;
+        //     writer.println("     * - " + inv.getName() + ": " + inv.getOclExpression());
+        // }
+        //
+        // // invariantes herdadas de interfaces
+        // for (Interface iface : cls.getRealizations()) {
+        //     for (Invariant inv : iface.getInvariants()) {
+        //         writer.println("     * - [" + iface.getName() + "] " + inv.getName() + ": " +
+        //                 inv.getOclExpression());
+        //     }
+        // }
         writer.println("     * ");
         writer.println("     * @return list of errors (empty if valid)");
         writer.println("     */");
@@ -117,8 +117,7 @@ public class ValidationGenerator {
                 : prefix + "Invariant '" + inv.getName() + "' violated.";
 
         //  if (!(expr)) { errors.add("msg") }
-        writer.println("        // Invariant: " + (fromInterface != null ? "(from " + fromInterface + ") "
-                : "") + inv.getName());
+        writer.println("        // " + inv.getName() + " - " + inv.getOclExpression());
         writer.println("        if (!(" + javaExpression + ")) {");
         writer.println("            errors.add(\"" + GeneratorUtils.fixErrorMessage(errorMessage) + "\");");
         writer.println("        }");

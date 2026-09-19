@@ -111,7 +111,11 @@ public class JavaRepositoryGenerator {
         w.println();
         w.println("    public " + type + " findById(Long id) {");
         w.println("        " + root + " found = root.findById(id);");
-        w.println("        return (found instanceof " + type + ") ? (" + type + ") found : null;");
+        w.println("        if (found instanceof " + type + ") {");
+        w.println("            return (" + type + ") found;");
+        w.println("        } else {");
+        w.println("            return null;");
+        w.println("        }");
         w.println("    }");
         w.println();
         w.println("    public List<" + type + "> findAll() {");

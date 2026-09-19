@@ -83,9 +83,6 @@ public class SpringControllerGenerator {
             generateImports(writer, className, cls, allClasses, associations);
 
             // class declaration
-            writer.println("/**");
-            writer.println(" * REST Controller for " + className);
-            writer.println(" */");
             writer.println("@RestController");
 
             String pluralPath = className.toLowerCase();
@@ -128,13 +125,9 @@ public class SpringControllerGenerator {
             pluralPath = pluralPath + "s";
         }
 
-        writer.println("    // CRUD Endpoints");
-        writer.println();
-
         // GET /api/entities - Get all
         writer.println("    /**");
         writer.println("     * GET /api/" + pluralPath);
-        writer.println("     * Retrieve all " + className + " entities");
         writer.println("     * @return list of all entities");
         writer.println("     */");
         writer.println("    @GetMapping");
@@ -146,15 +139,14 @@ public class SpringControllerGenerator {
         // GET /api/entities/{id} - Get by ID
         writer.println("    /**");
         writer.println("     * GET /api/" + pluralPath + "/{id}");
-        writer.println("     * Retrieve " + className + " by ID");
         writer.println("     * @param id entity id");
         writer.println("     * @return entity if found, 404 if not");
         writer.println("     */");
         writer.println("    @GetMapping(\"/{id}\")");
         writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Get") + "> getById(@PathVariable " + idTypeOf(className) + " id) {");
-        writer.println("        return " + serviceName + ".findById(id)");
-        writer.println("            .map(ResponseEntity::ok)");
-        writer.println("            .orElse(ResponseEntity.notFound().build());");
+        writer.println("        " + SpringDTOGenerator.responseDTOName(cls, "Get") + " dto = " + serviceName + ".findById(id)");
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className + " not found: \" + id));");
+        writer.println("        return ResponseEntity.ok(dto);");
         writer.println("    }");
         writer.println();
 
@@ -162,7 +154,6 @@ public class SpringControllerGenerator {
         // if (!cls.isAbstract())
         writer.println("    /**");
         writer.println("     * POST /api/" + pluralPath);
-        writer.println("     * Create new " + className);
         writer.println("     * @param dto entity data");
         writer.println("     * @return created entity");
         writer.println("     */");
@@ -186,8 +177,7 @@ public class SpringControllerGenerator {
 
         // PUT /api/entities/{id} faz full replace (not sent -> null), relations same as PATCH
         writer.println("    /**");
-        writer.println("     * PUT /api/" + pluralPath + "/{id} — full replace. fields that arent sent are set to null.");
-        writer.println("     * Relationships are managed via the dedicated endpoints (same as PATCH).");
+        writer.println("     * PUT /api/" + pluralPath + "/{id} — full replace so fields that arent sent are set to null.");
         writer.println("     */");
         writer.println("    @PutMapping(\"/{id}\")");
         writer.println("    public ResponseEntity<" + SpringDTOGenerator.responseDTOName(cls, "Update") + "> replace(");
@@ -201,7 +191,6 @@ public class SpringControllerGenerator {
         // DELETE /api/entities/{id} - Delete
         writer.println("    /**");
         writer.println("     * DELETE /api/" + pluralPath + "/{id}");
-        writer.println("     * Delete " + className);
         writer.println("     * @param id entity id");
         writer.println("     * @return 204 No Content if deleted, 404 if not found");
         writer.println("     */");
@@ -335,8 +324,7 @@ public class SpringControllerGenerator {
 
         writer.println("    /**");
         writer.println("     * Remove " + otherClass + " entities from " + className + " by IDs");
-        writer.println("     * Ex: DELETE /{id}/" + otherPath + "?ids=1,2,3  (ids na query, não no body:");
-        writer.println("     * um body em DELETE não tem semântica definida e pode ser ignorado por proxies/clientes)");
+        writer.println("     * DELETE /{id}/" + otherPath + "?ids=1,2,3  (ids na query, não no body");
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}/" + otherPath + "\")");
         writer.println("    public ResponseEntity<" + className + "ResponseDTO> remove" + cap + "(");
@@ -353,6 +341,7 @@ public class SpringControllerGenerator {
 
         writer.println("import " + basePackage + ".models." + className + ";");
         writer.println("import " + basePackage + ".service." + className + "Service;");
+        writer.println("import " + basePackage + ".exception.NotFoundException;");
         // importa só as folders de DTO que este controller usa (a própria + as referidas nas ops custom)
         for (String dtoClass : SpringUtils.referencedDTOClasses(cls, classMap.keySet(), DTO_ToClass))
             writer.println("import " + basePackage + ".dto." + dtoClass.toLowerCase() + ".*;");
@@ -447,6 +436,7 @@ public class SpringControllerGenerator {
     }
 
     // exceção dedicada para "entidade não encontrada" — mapeada para 404 no GlobalExceptionHandler.
+    // https://medium.com/@butotoshalom/resourcenotfoundexception-in-spring-boot-what-why-and-how-efeaa93142e5
     private void generateNotFoundException() throws IOException {
         String exceptionDir = outputDirectory + "/src/main/java/" + basePackage.replace('.', '/') + "/exception";
         new java.io.File(exceptionDir).mkdirs();
@@ -481,36 +471,21 @@ public class SpringControllerGenerator {
             writer.println("import org.slf4j.Logger;");
             writer.println("import org.slf4j.LoggerFactory;");
             writer.println();
-            writer.println("// Respostas de erro em formato ProblemDetail (RFC 7807/9457). Ref:");
+            writer.println("// Respostas de erro em formato ProblemDetail");
             writer.println("// https://www.baeldung.com/spring-boot-return-errors-problemdetail");
             writer.println("@ControllerAdvice");
             writer.println("public class GlobalExceptionHandler {");
             writer.println();
             writer.println("    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);");
             writer.println();
-            writer.println("    @ExceptionHandler(IllegalArgumentException.class)");
-            writer.println("    public ProblemDetail handleValidationError(IllegalArgumentException ex) {");
-            writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, msg(ex));");
-            writer.println("    }");
-            writer.println();
-            writer.println("    // violações de pré/pós-condição (OCL) são erros do cliente -> 400, não 404");
-            writer.println("    @ExceptionHandler(IllegalStateException.class)");
-            writer.println("    public ProblemDetail handleContractError(IllegalStateException ex) {");
-            writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, msg(ex));");
-            writer.println("    }");
-            writer.println();
-            writer.println("    // violações Bean Validation (anotações OCL) -> 400. Vêm diretas (insert imediato");
-            writer.println("    // com @GeneratedValue IDENTITY) OU embrulhadas em TransactionSystemException (commit/jobs)");
-            writer.println("    @ExceptionHandler({ConstraintViolationException.class, TransactionSystemException.class})");
+            writer.println("    @ExceptionHandler({");
+            writer.println("        IllegalArgumentException.class,     // OCL: invariante falhou (checkInvariants)");
+            writer.println("        IllegalStateException.class,        // OCL: pré ou pós-condição falhou");
+            writer.println("        ConstraintViolationException.class, // Bean Validation (@NotNull, @Size...) ");
+            writer.println("        TransactionSystemException.class    // err no commit ");
+            writer.println("    })");
             writer.println("    public ProblemDetail handleValidation(Exception ex) {");
-            writer.println("        Throwable cause = (ex instanceof TransactionSystemException tse) ? tse.getRootCause() : ex;");
-            writer.println("        if (cause instanceof ConstraintViolationException cve) {");
-            writer.println("            String detail = cve.getConstraintViolations().stream()");
-            writer.println("                .map(v -> v.getPropertyPath() + \" \" + v.getMessage())");
-            writer.println("                .collect(java.util.stream.Collectors.joining(\", \"));");
-            writer.println("            return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);");
-            writer.println("        }");
-            writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, msg(ex));");
+            writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, msg(ex));");
             writer.println("    }");
             writer.println();
             // BD recusa (FK ainda referenciada, ou valor único duplicado) -> 409
@@ -526,9 +501,7 @@ public class SpringControllerGenerator {
             writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, msg(ex));");
             writer.println("    }");
             writer.println();
-            writer.println("    // qualquer outro erro inesperado do servidor -> 500 (NÃO 404).");
-            writer.println("    // Stack trace completo vai para o log; a resposta NÃO expõe a mensagem");
-            writer.println("    // (podia trazer SQL/detalhes internos — mesma razão do handler de integridade).");
+            writer.println("    // qualquer outro erro -> 500");
             writer.println("    @ExceptionHandler(RuntimeException.class)");
             writer.println("    public ProblemDetail handleServerError(RuntimeException ex) {");
             writer.println("        log.error(\"Unhandled server error\", ex);");
@@ -536,7 +509,7 @@ public class SpringControllerGenerator {
             writer.println("    }");
             writer.println();
             writer.println("    // mensagem do erro, ou o nome da exceção se não houver mensagem");
-            writer.println("    private static String msg(Exception ex) {");
+            writer.println("    private static String msg(Throwable ex) {");
             writer.println("        return ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();");
             writer.println("    }");
             writer.println("}");
@@ -557,7 +530,7 @@ public class SpringControllerGenerator {
         String serviceName = GeneratorUtils.lowercaseFirst(className) + "Service";
 
         writer.println();
-        writer.println("    // Custom Operation Endpoints dos diagramas sequencia");
+        writer.println("    // Custom Operation Endpoints");
 
         for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
             if (op.isJob()) continue;   // jobs são @Scheduled, não têm endpoint REST

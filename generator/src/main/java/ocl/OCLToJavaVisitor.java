@@ -331,7 +331,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
                     sb.append(left).append(negate ? " != " : " == ").append(right);
                 } else {
                     if (negate) sb.append("!");
-                    sb.append("java.util.Objects.equals(").append(left).append(", ").append(right).append(")");
+                    sb.append("Objects.equals(").append(left).append(", ").append(right).append(")");
                 }
                 continue;
             }
@@ -462,6 +462,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         String text = ctx.getText();
 
         // ->size() -> .size()
+        // talvez (int) ...count() em vez de .size() (evita a lista quando vem de um ->select)
         if (text.equals("->size()")) return base + ".size()";
         if (text.equals("->isEmpty()")) return base + ".isEmpty()";
         if (text.equals("->notEmpty()")) return "!" + base + ".isEmpty()";
@@ -605,7 +606,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         // ->excluding(x) -> base.stream().filter(v -> !java.util.Objects.equals(v,x)).collect(toList())
         if (text.startsWith("->excluding(")) {
             String item = visit(ctx.expression(0));
-            return base + ".stream().filter(__v -> !java.util.Objects.equals(__v, " + item +
+            return base + ".stream().filter(elemToCheck -> !Objects.equals(elemToCheck, " + item +
                     ")).collect(java.util.stream.Collectors.toList())";
         }
 

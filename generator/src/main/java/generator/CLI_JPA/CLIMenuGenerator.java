@@ -733,7 +733,8 @@ public class CLIMenuGenerator {
         w.println("        try {");
         w.println("            " + saveRepo + ".save(" + saveVar + ");");
         w.println("            em.getTransaction().commit();");
-        if (!synced) w.println("            em.refresh(" + refreshVar + ");");   // synced -> já correto em memória
+        // orphanRemoval pode ter apagado o refreshVar no commit, ent so faz refresh se nao tiver sido removido
+        if (!synced) w.println("            if (em.contains(" + refreshVar + ")) em.refresh(" + refreshVar + ");");
         w.println("            System.out.println(\"" + otherClass + " removed from " + ownerClass + ".\");");
         writeTransactionClose(w);
         w.println("    }");

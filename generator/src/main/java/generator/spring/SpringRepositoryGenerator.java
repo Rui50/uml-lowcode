@@ -64,9 +64,6 @@ public class SpringRepositoryGenerator {
             writer.println();
 
             // Interface
-            writer.println("/**");
-            writer.println(" * Repository for " + className + " entity");
-            writer.println(" */");
             writer.println("@Repository");
             // tipo do id
             writer.println("public interface " + className + "Repository extends JpaRepository<" +

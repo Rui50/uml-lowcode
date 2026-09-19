@@ -20,9 +20,9 @@ public class OCLToJavaTest {
     @Test
     void comparisonsAndEquality() {
         check("self.preco > 0", "this.getPreco() > 0");
-        check("self.nome <> ''", "!java.util.Objects.equals(this.getNome(), \"\")");
-        check("self.nome = 'x'", "java.util.Objects.equals(this.getNome(), \"x\")");
-        check("self.estado = Estado::ATIVO", "java.util.Objects.equals(this.getEstado(), Estado.ATIVO)");
+        check("self.nome <> ''", "!Objects.equals(this.getNome(), \"\")");
+        check("self.nome = 'x'", "Objects.equals(this.getNome(), \"x\")");
+        check("self.estado = Estado::ATIVO", "Objects.equals(this.getEstado(), Estado.ATIVO)");
     }
 
     @Test
@@ -106,7 +106,7 @@ public class OCLToJavaTest {
     @Test
     void stringOps() {
         check("self.nome->toUpperCase() = 'ABC'",
-                "java.util.Objects.equals(this.getNome().toUpperCase(), \"ABC\")");
+                "Objects.equals(this.getNome().toUpperCase(), \"ABC\")");
         check("self.codigo->toInteger() > 0", "Integer.parseInt(this.getCodigo()) > 0");
         check("self.valor->toReal() >= 1.5", "Double.parseDouble(this.getValor()) >= 1.5");
         check("self.flag->toBoolean()", "Boolean.parseBoolean(this.getFlag())");

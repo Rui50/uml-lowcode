@@ -330,12 +330,9 @@ public class SpringProjectGenerator {
             w.println("spring.application.name=" + settings.getApplicationName());
             w.println("server.port=" + settings.getServerPort());
             w.println();
-            w.println("# perfil por defeito = dev (corre localmente sem config).");
-            w.println("# em produção: SPRING_PROFILES_ACTIVE=prod");
             w.println("spring.profiles.active=dev");
             w.println();
-            w.println("# evita N+1 ao mapear coleções: carrega as coleções lazy de uma página em");
-            w.println("# lotes (WHERE fk IN (...)) em vez de uma query por row");
+            w.println("# evita o N+1: em vez de uma query por cada coleção, junta-as numa só");
             w.println("spring.jpa.properties.hibernate.default_batch_fetch_size=50");
         }
 
@@ -376,8 +373,10 @@ public class SpringProjectGenerator {
 
         // application-prod.properties
         try (PrintWriter w = new PrintWriter(new FileWriter(resDir + "application-prod.properties"))) {
-            w.println("# datasource das env vars: SPRING_DATASOURCE_URL / _USERNAME / _PASSWORD");
-            w.println("# (o Spring Boot liga-as automaticamente; o driver é inferido do URL)");
+            w.println("#spring.datasource.url=");
+            w.println("#spring.datasource.username=");
+            w.println("#spring.datasource.password=");
+            w.println();
             w.println("spring.jpa.hibernate.ddl-auto=validate");
             w.println("spring.h2.console.enabled=false");
             w.println("spring.jpa.show-sql=false");

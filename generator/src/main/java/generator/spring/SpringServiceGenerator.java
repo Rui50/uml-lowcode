@@ -202,8 +202,6 @@ public class SpringServiceGenerator {
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
 
-        writer.println("   // CRUD methods");
-
         // findAll() — paginado: Page<DTO> a partir de findAll(Pageable) do repositório
         writer.println("    /**");
         writer.println("     * @param pageable paginação/ordenação (query params: page, size, sort)");
@@ -328,7 +326,7 @@ public class SpringServiceGenerator {
 
         writer.println();
         writer.println("    /**");
-        writer.println("     * ManyToOne: Assign a " + otherClass + " to " + className);
+        writer.println("     * ManyToOne");
         writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @param " + otherVar + "Id the " + otherClass + " id");
         writer.println("     * @return the updated " + className);
@@ -403,7 +401,7 @@ public class SpringServiceGenerator {
         String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
 
         writer.println("    /**");
-        writer.println("     * ManyToOne: Remove the " + otherClass + " from " + className);
+        writer.println("     * ManyToOne");
         writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
@@ -477,7 +475,7 @@ public class SpringServiceGenerator {
 
         writer.println();
         writer.println("    /**");
-        writer.println("     * ManyToMany: Add " + otherClass + " entities to " + className);
+        writer.println("     * ManyToMany");
         writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
@@ -546,7 +544,7 @@ public class SpringServiceGenerator {
         String inverseCap = GeneratorUtils.capitalizeFirst(inverseAttribute);
 
         writer.println("    /**");
-        writer.println("     * ManyToMany: Remove " + otherClass + " entities from " + className);
+        writer.println("     * ManyToMany");
         writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
@@ -605,7 +603,7 @@ public class SpringServiceGenerator {
 
         writer.println();
         writer.println("    /**");
-        writer.println("     * OneToMany (unidirectional): Add " + otherClass + " entities to " + className);
+        writer.println("     * OneToMany (unidirectional)");
         writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
@@ -651,7 +649,7 @@ public class SpringServiceGenerator {
         String otherPlural = otherVar + "s";
 
         writer.println("    /**");
-        writer.println("     * OneToMany (unidirectional): Remove " + otherClass + " entities from " + className);
+        writer.println("     * OneToMany (unidirectional)");
         writer.println("     * @param " + varName + "Id the " + className + " id");
         writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);

@@ -212,7 +212,11 @@ public class SpringFrontendGenerator {
         try (PrintWriter w = new PrintWriter(new File(staticDir + "/index.html"))) {
             w.println("<!DOCTYPE html>");
             w.println("<html lang=\"en\">");
-            w.println("<head><meta charset=\"utf-8\"><title>App</title><link rel=\"stylesheet\" href=\"style.css\"></head>");
+            w.println("<head>");
+            w.println("  <meta charset=\"utf-8\">");
+            w.println("  <title>App</title>");
+            w.println("  <link rel=\"stylesheet\" href=\"style.css\">");
+            w.println("</head>");
             w.println("<body>");
             writeSidebar(w, pages, null);
             w.println("  <main>");
@@ -258,7 +262,11 @@ public class SpringFrontendGenerator {
         try (PrintWriter w = new PrintWriter(new File(staticDir + "/" + name.toLowerCase() + ".html"))) {
             w.println("<!DOCTYPE html>");
             w.println("<html lang=\"en\">");
-            w.println("<head><meta charset=\"utf-8\"><title>" + name + "</title><link rel=\"stylesheet\" href=\"style.css\"></head>");
+            w.println("<head>");
+            w.println("  <meta charset=\"utf-8\">");
+            w.println("  <title>" + name + "</title>");
+            w.println("  <link rel=\"stylesheet\" href=\"style.css\">");
+            w.println("</head>");
             w.println("<body>");
             writeSidebar(w, pages, name);
             w.println("  <main>");
@@ -276,21 +284,26 @@ public class SpringFrontendGenerator {
                     // atributo enum -> <select> com os literais (o valor é o nome da constante)
                     StringBuilder opts = new StringBuilder("<option value=\"\">-- none --</option>");
                     for (String lit : enumLiterals.get(a.getType())) opts.append("<option>").append(lit).append("</option>");
-                    w.println("      <label>" + a.getName()
-                            + " <select name=\"" + a.getName() + "\"" + locked + ">" + opts + "</select></label>");
+                    w.println("      <label>" + a.getName());
+                    w.println("        <select name=\"" + a.getName() + "\"" + locked + ">" + opts + "</select>");
+                    w.println("      </label>");
                 } else {
-                    w.println("      <label>" + a.getName()
-                            + " <input name=\"" + a.getName() + "\" type=\"" + inputType(a.getType()) + "\"" + locked + "></label>");
+                    w.println("      <label>" + a.getName());
+                    w.println("        <input name=\"" + a.getName() + "\" type=\"" + inputType(a.getType()) + "\"" + locked + ">");
+                    w.println("      </label>");
                 }
             }
             for (RelationshipInfo rel : rels) {
                 String field = idAttribute(rel);
                 if (hasApi(rel.otherClass)) {
-                    w.println("      <label>" + field + " <select name=\"" + field + "\"></select></label>");
+                    w.println("      <label>" + field);
+                    w.println("        <select name=\"" + field + "\"></select>");
+                    w.println("      </label>");
                 } else {
                     // sem endpoint (alvo abstrato ou controller desligado), não é lista -> escreve-se o id
-                    w.println("      <label>" + field + " <input name=\"" + field
-                            + "\" type=\"" + (idNumeric(rel.otherClass) ? "number" : "text") + "\"></label>");
+                    w.println("      <label>" + field);
+                    w.println("        <input name=\"" + field + "\" type=\"" + (idNumeric(rel.otherClass) ? "number" : "text") + "\">");
+                    w.println("      </label>");
                 }
             }
             w.println("      <button type=\"submit\" id=\"submitBtn\">Create</button>");
@@ -298,16 +311,18 @@ public class SpringFrontendGenerator {
             w.println("    </form>");
 
             // tabela
-            w.println("    <p> a tabela e os selects de relação mostram só a");
-            w.println("         1ª página do findAll </p>");
+            w.println("    <p> a tabela e os selects de relação mostram só a 1ª página do findAll </p>");
             w.println("    <table id=\"list\">");
-            w.print("      <thead><tr>");
-            for (String c : columns) w.print("<th>" + c + "</th>");
-            for (RelationshipInfo rel : rels) w.print("<th>" + idAttribute(rel) + "</th>");
+            w.println("      <thead>");
+            w.println("        <tr>");
+            for (String c : columns) w.println("          <th>" + c + "</th>");
+            for (RelationshipInfo rel : rels) w.println("          <th>" + idAttribute(rel) + "</th>");
             for (RelationshipInfo coll : colls) {
-                w.print("<th>" + coll.attributeName() + "Ids</th>");
+                w.println("          <th>" + coll.attributeName() + "Ids</th>");
             }
-            w.println("<th></th></tr></thead>");
+            w.println("          <th></th>");
+            w.println("        </tr>");
+            w.println("      </thead>");
             w.println("      <tbody></tbody>");
             w.println("    </table>");
 
@@ -319,13 +334,17 @@ public class SpringFrontendGenerator {
                     boolean numeric = idNumeric(coll.otherClass);
                     w.println("    <form class=\"rel\" data-path=\"" + field.toLowerCase()
                             + "\" data-numeric=\"" + numeric + "\" onsubmit=\"addItem(event)\">");
-                    w.println("      <label>" + name + " id <input name=\"parent\" type=\""
-                            + (parentNumeric ? "number" : "text") + "\"></label>");
+                    w.println("      <label>" + name + " id");
+                    w.println("        <input name=\"parent\" type=\"" + (parentNumeric ? "number" : "text") + "\">");
+                    w.println("      </label>");
                     if (hasApi(coll.otherClass)) {
-                        w.println("      <label>" + field + " <select name=\"child\"></select></label>");
+                        w.println("      <label>" + field);
+                        w.println("        <select name=\"child\"></select>");
+                        w.println("      </label>");
                     } else {
-                        w.println("      <label>" + field + " <input name=\"child\" type=\""
-                                + (numeric ? "number" : "text") + "\"></label>");
+                        w.println("      <label>" + field);
+                        w.println("        <input name=\"child\" type=\"" + (numeric ? "number" : "text") + "\">");
+                        w.println("      </label>");
                     }
                     w.println("      <button type=\"submit\">Add</button>");
                     w.println("      <button type=\"button\" onclick=\"removeItem(this)\">Remove</button>");
@@ -342,8 +361,9 @@ public class SpringFrontendGenerator {
                             + opMethod(op) + "\" onsubmit=\"runOp(event)\">");
                     for (MessageArgument arg : opArgs(cls, op)) {
                         String type = GeneratorUtils.removePackageNames(arg.getType() != null ? arg.getType() : "Object");
-                        w.println("      <label>" + arg.getName() + " <input name=\"" + arg.getName()
-                                + "\" type=\"" + inputType(type) + "\"></label>");
+                        w.println("      <label>" + arg.getName());
+                        w.println("        <input name=\"" + arg.getName() + "\" type=\"" + inputType(type) + "\">");
+                        w.println("      </label>");
                     }
                     w.println("      <button type=\"submit\">" + op.getName() + "</button>");
                     w.println("    </form>");
@@ -366,11 +386,12 @@ public class SpringFrontendGenerator {
             // script
             w.println("<script>");
             w.println("const API = '" + api + "';");
-            w.println("let editId = null;   // null = a criar (POST); senão o id a editar (PATCH)");
+            w.println("let editId = null;   // se for null está a criar (POST), se tiver id está a editar então (PATCH)");
             w.println();
+            w.println("// carrega a tabela");
             w.println("async function load() {");
             w.println("  const data = await (await fetch(API)).json();");
-            w.println("  const items = data.content ?? data;  // Page -> content; plain array -> itself");
+            w.println("  const items = data.content ?? data;");
             w.println("  const tbody = document.querySelector('#list tbody');");
             w.println("  tbody.innerHTML = '';");
             w.println("  for (const item of items) {");
@@ -397,6 +418,7 @@ public class SpringFrontendGenerator {
             boolean hasSelect = rels.stream().anyMatch(r -> hasApi(r.otherClass))
                     || colls.stream().anyMatch(r -> hasApi(r.otherClass));
             if (hasSelect) {
+                w.println("// preenche cada dropdown com os ids da respetiva relação");
                 w.println("async function loadOptions() {");
                 for (RelationshipInfo rel : rels) {
                     if (!hasApi(rel.otherClass)) continue;
@@ -411,6 +433,7 @@ public class SpringFrontendGenerator {
                 }
                 w.println("}");
                 w.println();
+                w.println("// preenche um dropdown com os ids dos elementos de uma relação");
                 w.println("async function fillSelect(selector, url, idField) {");
                 w.println("  const data = await (await fetch(url)).json();");
                 w.println("  const items = data.content ?? data;");
@@ -426,7 +449,7 @@ public class SpringFrontendGenerator {
                 w.println();
             }
 
-            // submit do form: POST se a criar, PATCH /{editId} se a editar (atualização parcial)
+            w.println("// submit no form de criar (post) ou editar (patch)");
             w.println("async function save(event) {");
             w.println("  event.preventDefault();");
             w.println("  const form = event.target;");
@@ -463,9 +486,10 @@ public class SpringFrontendGenerator {
             w.println("  const url = editId === null ? API : `${API}/${editId}`;");
             w.println("  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });");
             w.println("  if (!res.ok) {");
-            w.println("    // o backend devolve ProblemDetail (RFC 7807): a mensagem (validação OCL, etc.) vem em 'detail'");
             w.println("    const err = await res.json().catch(() => null);");
-            w.println("    alert(err && (err.detail || err.error) ? (err.detail || err.error) : 'Save failed: ' + res.status);");
+            w.println("    let msg = 'Save failed: ' + res.status;");
+            w.println("    if (err?.detail) msg = err.detail;");
+            w.println("    alert(msg);");
             w.println("    return;");
             w.println("  }");
             // relações single: o PATCH ignora null (não remove)
@@ -483,7 +507,7 @@ public class SpringFrontendGenerator {
             w.println("}");
             w.println();
 
-            // edit: carrega a entidade no form e entra em modo edição
+            w.println("// carrega a entidade no form e entra em \"modo\" edição");
             w.println("async function edit(id) {");
             w.println("  const item = await (await fetch(`${API}/${id}`)).json();");
             w.println("  const form = document.querySelector('form');");
@@ -513,7 +537,7 @@ public class SpringFrontendGenerator {
             w.println("}");
             w.println();
 
-            // cancelEdit: volta ao modo criar (limpa o form e o estado)
+            w.println("// volta ao modo criar (limpa o form e o estado)");
             w.println("function cancelEdit() {");
             w.println("  const form = document.querySelector('form');");
             w.println("  form.reset();");
@@ -550,16 +574,22 @@ public class SpringFrontendGenerator {
                 w.println("  await sendItem(btn.closest('form'), 'DELETE');");
                 w.println("}");
                 w.println();
+                w.println("// add/remove de um item numa coleção");
                 w.println("async function sendItem(form, method) {");
                 w.println("  const child = form.dataset.numeric === 'true' ? Number(form.child.value) : form.child.value;");
                 w.println("  const base = `${API}/${form.parent.value}/${form.dataset.path}`;");
                 w.println("  // DELETE: ids na query (?ids=...); POST: id no body)");
-                w.println("  const res = method === 'DELETE'");
-                w.println("    ? await fetch(`${base}?ids=${child}`, { method })");
-                w.println("    : await fetch(base, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify([child]) });");
+                w.println("  let res;");
+                w.println("  if (method === 'DELETE') {");
+                w.println("    res = await fetch(`${base}?ids=${child}`, { method });");
+                w.println("  } else {");
+                w.println("    res = await fetch(base, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify([child]) });");
+                w.println("  }");
                 w.println("  if (!res.ok) {");
                 w.println("    const err = await res.json().catch(() => null);");
-                w.println("    alert(err && (err.detail || err.error) ? (err.detail || err.error) : method + ' failed: ' + res.status);");
+                w.println("    let msg = method + ' failed: ' + res.status;");
+                w.println("    if (err?.detail) msg = err.detail;");
+                w.println("    alert(msg);");
                 w.println("    return;");
                 w.println("  }");
                 w.println("  load();");
@@ -569,6 +599,7 @@ public class SpringFrontendGenerator {
 
             // operações custom: chama /api/<plural>/<op> com os params em query string e mostra o resultado
             if (!ops.isEmpty()) {
+                w.println("// chama o endpoint de uma operação custom");
                 w.println("async function runOp(event) {");
                 w.println("  event.preventDefault();");
                 w.println("  const form = event.target;");
@@ -591,12 +622,15 @@ public class SpringFrontendGenerator {
 
             // jobs: dispara o trigger (POST /api/<plural>/<op>, sem params) e atualiza a lista
             if (!jobs.isEmpty()) {
+                w.println("// chama o endpoint de um job");
                 w.println("async function runJob(event) {");
                 w.println("  event.preventDefault();");
                 w.println("  const res = await fetch(`${API}/${event.target.dataset.path}`, { method: 'POST' });");
                 w.println("  if (!res.ok) {");
                 w.println("    const err = await res.json().catch(() => null);");
-                w.println("    alert(err && (err.detail || err.error) ? (err.detail || err.error) : 'Job failed: ' + res.status);");
+                w.println("    let msg = 'Job failed: ' + res.status;");
+                w.println("    if (err?.detail) msg = err.detail;");
+                w.println("    alert(msg);");
                 w.println("    return;");
                 w.println("  }");
                 w.println("  alert('Job ran');");

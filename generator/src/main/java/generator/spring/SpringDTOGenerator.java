@@ -225,7 +225,7 @@ public class SpringDTOGenerator {
             // map de DTO para entidad
             // só atributos normais
             w.println();
-            w.println("    // PATCH: null/omitido -> não mexe; valor -> aplica");
+            w.println("    // PATCH: só aplica os campos enviados (null não mexe)");
             w.println("    public void update(" + className + " e) {");
             for (Attribute attr : allAttrs) {
                 String cap = GeneratorUtils.capitalizeFirst(attr.getName());
@@ -233,7 +233,7 @@ public class SpringDTOGenerator {
             }
             w.println("    }");
             w.println();
-            w.println("    // PUT: escreve cada atributo tal e qual (omitido/null -> null)");
+            w.println("    // PUT: aplica todos os campos (o que vier null fica null)");
             w.println("    public void replace(" + className + " e) {");
             for (Attribute attr : allAttrs) {
                 String cap = GeneratorUtils.capitalizeFirst(attr.getName());
