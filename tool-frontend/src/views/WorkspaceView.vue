@@ -7,6 +7,7 @@ import { useAnnotationsStore } from '@/stores/annotations'
 import { SQL_RESERVED } from '@/constants/sqlReserved'
 
 import Select from 'primevue/select'
+import Button from 'primevue/button'
 import DiagramList from '@/components/DiagramList.vue'
 import DiagramCanvas from '@/components/DiagramCanvas.vue'
 import Annotations from '@/components/Annotations.vue'
@@ -92,9 +93,9 @@ function onConfirm() {
           optionValue="value"
           size="small"
           aria-label="Generation target"
+          class="target-select"
         />
-        <button class="btn" @click="startGenerate">Generate</button>
-        <button class="btn" @click="modelStore.reset()">Upload another</button>
+        <Button label="Generate" size="small" @click="startGenerate" />
         <SettingsModal v-model:open="showSettings" :target="target" @confirm="onConfirm" />
       </div>
     </header>
@@ -169,22 +170,8 @@ function onConfirm() {
   font-size: 0.85rem;
   color: var(--muted);
 }
-
-.btn {
-  font: inherit;
-  font-size: 0.85rem;
-  color: var(--ink);
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  cursor: pointer;
-  padding: 0.38rem 0.8rem;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-.btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--contrast);
+.target-select {
+  width: 150px;
 }
 
 .layout {

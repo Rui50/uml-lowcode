@@ -30,6 +30,11 @@ function attrAnnotated(attrName: string): boolean {
   const k = `${props.data.id}.${attrName}`
   return k in annotations.initByAttribute || k in annotations.deriveByAttribute
 }
+
+function opAnnotated(opId: string): boolean {
+  return (annotations.preconditionsByOperation[opId]?.length ?? 0) > 0
+    || (annotations.postconditionsByOperation[opId]?.length ?? 0) > 0
+}
 </script>
 
 <template>
@@ -37,10 +42,11 @@ function attrAnnotated(attrName: string): boolean {
       <Handle type="target" :position="Position.Top" />
 
       <div class="header">
-        <span v-if="classAnnotated" class="dot" />
         <div class="title">
           <div v-if="data.isAbstract" class="stereotype">«abstract»</div>
-          <div class="class-name" :class="{ abstract: data.isAbstract }">{{ data.name }}</div>
+          <div class="class-name" :class="{ abstract: data.isAbstract }">
+            <span v-if="classAnnotated" class="dot" />{{ data.name }}
+          </div>
         </div>
         <div v-if="data.parent" class="parent">: {{ data.parent }}</div>
       </div>
@@ -55,6 +61,7 @@ function attrAnnotated(attrName: string): boolean {
 
       <ul class="section operations">
         <li v-for="op in data.operations" :key="op.id">
+          <span v-if="opAnnotated(op.id)" class="dot" />
           {{ op.name }}({{ op.parameters.map(p => `${p.name}: ${p.type}`).join(', ') }}){{ op.returnType ? ':' : '' }}
           <span v-if="op.returnType" class="type"> {{ op.returnType }}</span>
         </li>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useModelStore } from '@/stores/model'  
+import { useModelStore } from '@/stores/model'
+import Button from 'primevue/button'
 
 const store = useModelStore()
 const collapsed = ref(false)
@@ -43,6 +44,11 @@ const selectedSequenceId = computed(() =>
           No sequence diagrams
         </li>
       </ul>
+
+      <div v-if="!collapsed" class="list-footer">
+        <Button label="Change Diagram" icon="pi pi-upload" severity="secondary"
+          size="small" text class="change-btn" @click="store.reset()" />
+      </div>
     </aside>
   </template>
 
@@ -54,7 +60,8 @@ const selectedSequenceId = computed(() =>
     width: 240px;
     flex-shrink: 0;
     height: 100%;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
     transition: width 0.15s;
   }
   .diagram-list.collapsed {
@@ -100,6 +107,15 @@ const selectedSequenceId = computed(() =>
     list-style: none;
     padding: 0.5rem 0;
     margin: 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .list-footer {
+    border-top: 1px solid var(--color-border);
+    padding: 0.5rem 0.75rem;
+  }
+  .change-btn {
+    width: 100%;
   }
   li {
     padding: 0.5rem 0.75rem;

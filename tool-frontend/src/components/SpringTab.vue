@@ -50,6 +50,21 @@ function endpointTypeOf(e: Endpoint): EndpointType | null {
   return null   // DELETE não devolve corpo
 }
 
+function overrideBtn(e: Endpoint) {
+  const endpointType = endpointTypeOf(e)
+  const active =
+    endpointType != null &&
+    classKey.value != null &&
+    annotations.hasResponseOverride(classKey.value, endpointType)
+
+  if (active) {
+    return { label: 'Custom', icon: 'pi pi-check-circle', severity: 'warn' }
+  } else {
+    return { label: 'Customize', icon: 'pi pi-pencil', severity: 'success' }
+  }
+
+}
+
 // endpointType expandido na lista de endpoints (config do override de response)
 const expandedEndpointType = ref<EndpointType | null>(null)
 watch(className, () => { expandedEndpointType.value = null })
@@ -128,10 +143,18 @@ const fieldRows = computed(() => {
 
 const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
 
+// presets de cron
+const cronPresets = [
+  { label: 'Hourly', value: '0 0 * * * *' },
+  { label: 'Every 12 hours', value: '0 0 */12 * * *' },
+  { label: 'Daily (midnight)', value: '0 0 0 * * *' },
+  { label: 'Weekly (Sun 00:00)', value: '0 0 0 * * SUN' },
+]
+
 // valida o cron, o Spring usa 6 campos (seg min hora dia mês dia da semana),
 // Vazio = o gerador usa o default, '-' = desativado; macros @daily etc. válidas.
-function cronError(cron: string): string | null {
-  const c = cron.trim()
+function cronError(cron: string | null): string | null {
+  const c = (cron ?? '').trim()
   if (!c || c === '-') return null
   if (/^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(c)) return null
   const f = c.split(/\s+/)
@@ -181,7 +204,7 @@ watch(classKey, (id) => {
       <div class="job-toggle">
         <Checkbox v-model="annotations.generateControllerByClass[classKey!]" :binary="true" inputId="gen-controller" />
         <label for="gen-controller">Generate REST controller</label>
-        <span class="tip" v-tooltip.top="'Se desativado, esta classe não expõe endpoints REST. A entidade, repositório e serviço continuam a ser gerados.'">ⓘ</span>
+        <span class="tip" v-tooltip.top="'Se desativado, esta classe não expõe endpoints REST. A entidade, repositório e serviço continuam a ser gerados.'"><i class="pi pi-info-circle"></i></span>
       </div>
     </div>
   </section>
@@ -190,7 +213,7 @@ watch(classKey, (id) => {
   <section v-if="!isInterface && allEndpoints.length && annotations.generateControllerByClass[classKey!] !== false" class="block">
     <header class="block-head">
       <h4>Available endpoints
-        <span class="tip" v-tooltip.top="`'customize' molda só a RESPOSTA de cada endpoint CRUD (ResponseDTO próprio). O corpo de Create/Update define-se em 'Base DTO fields'.`">ⓘ</span>
+        <span class="tip" v-tooltip.top="`'customize' molda só a RESPOSTA de cada endpoint CRUD (ResponseDTO próprio). O corpo de Create/Update define-se em 'Base DTO fields'.`"><i class="pi pi-info-circle"></i></span>
       </h4>
     </header>
     <ul class="endpoint-list">
@@ -199,11 +222,10 @@ watch(classKey, (id) => {
           <span class="verb" :class="e.httpMethod.toLowerCase()">{{ e.httpMethod }}</span>
           <code class="ep-path" v-tooltip.top="e.path">{{ e.path.replace('/api', '') }}</code>
           <!-- só nos 4 endpoints CRUD com corpo: um clique liga o override e abre os campos -->
-          <a v-if="endpointTypeOf(e)" class="ep-override-btn"
-            :class="{ active: annotations.hasResponseOverride(classKey!, endpointTypeOf(e)!) }"
-            @click="openOverride(endpointTypeOf(e)!)">
-            {{ annotations.hasResponseOverride(classKey!, endpointTypeOf(e)!) ? '● custom' : 'customize' }}
-          </a>
+          <Button v-if="endpointTypeOf(e)"
+            v-bind="overrideBtn(e)"
+            size="small" text class="ep-override-btn"
+            @click="openOverride(endpointTypeOf(e)!)" />
         </div>
         <!-- painel do override: response próprio deste endpoint (independente do default) -->
         <div v-if="endpointTypeOf(e) && expandedEndpointType === endpointTypeOf(e)" class="override-panel">
@@ -221,7 +243,8 @@ watch(classKey, (id) => {
               <span>{{ row.name }}<span v-if="row.inherited" class="enum-hint"> (herdado)</span></span>
             </label>
           </div>
-          <a class="override-remove" @click="removeOverride(endpointTypeOf(e)!)">remove</a>
+          <Button label="Remove" icon="pi pi-trash" severity="danger" size="small" text
+            class="override-remove" @click="removeOverride(endpointTypeOf(e)!)" />
         </div>
       </li>
     </ul>
@@ -231,7 +254,7 @@ watch(classKey, (id) => {
   <section v-if="!isInterface && fieldRows.length" class="block">
     <header class="block-head">
       <h4>Base DTO fields
-        <span class="tip" v-tooltip.top="'Unchecked = hidden from that DTO. Init fields are already forced out of Create; derived are response-only.'">ⓘ</span>
+        <span class="tip" v-tooltip.top="'Unchecked = hidden from that DTO. Init fields are already forced out of Create; derived are response-only.'"><i class="pi pi-info-circle"></i></span>
       </h4>
     </header>
     <table class="dto-matrix">
@@ -242,7 +265,7 @@ watch(classKey, (id) => {
         <tr v-for="row in fieldRows" :key="row.name">
           <td class="attr-label">{{ row.name }}<span v-if="row.isRelation" class="enum-hint">({{ row.collection ? 'coleção' : 'ref' }})</span><span v-if="row.inherited" class="enum-hint">(herdado)</span><span v-if="row.hasInit" class="enum-hint">(init)</span><span v-else-if="row.hasDerive" class="enum-hint">(derive)</span></td>
           <td v-for="role in DTO_ROLES" :key="role">
-            <span v-if="row.locked[role]" class="lock" v-tooltip.top="'fixed by init/derive, collection (not in update), or hidden by parent'">🔒</span>
+            <i v-if="row.locked[role]" class="pi pi-lock lock" v-tooltip.top="'fixed by init/derive, collection (not in update), or hidden by parent'" />
             <Checkbox v-else
               :binary="true"
               :modelValue="!annotations.isDTOHidden(classKey!, role, row.name)"
@@ -263,7 +286,7 @@ watch(classKey, (id) => {
       <div class="job-toggle">
         <Checkbox v-model="annotations.beanValidationByClass[classKey!]" :binary="true" inputId="bean-validation" />
         <label for="bean-validation">Invariantes OCL como anotações</label>
-        <span class="tip" v-tooltip.top="'Invariantes simples (ex: points >= 0) viram anotações Bean Validation no campo; as restantes continuam no método validate().'">ⓘ</span>
+        <span class="tip" v-tooltip.top="'Invariantes simples (ex: points >= 0) viram anotações Bean Validation no campo; as restantes continuam no método validate().'"><i class="pi pi-info-circle"></i></span>
       </div>
     </div>
   </section>
@@ -288,6 +311,10 @@ watch(classKey, (id) => {
           <InputText v-model="annotations.endpointByOperation[op.id]!.endpointName" :placeholder="op.name" />
         </div>
         <div v-else class="cron-field">
+          <Select
+            :options="cronPresets" optionLabel="label" optionValue="value"
+            v-model="annotations.endpointByOperation[op.id]!.cron"
+            placeholder="choose a preset if needed" showClear class="cron-presets" />
           <InputText v-model="annotations.endpointByOperation[op.id]!.cron" placeholder="cron — ex: 0 0 * * * *"
                      :invalid="!!cronError(annotations.endpointByOperation[op.id]!.cron)" />
           <small v-if="cronError(annotations.endpointByOperation[op.id]!.cron)" class="cron-err">
@@ -360,7 +387,7 @@ watch(classKey, (id) => {
   line-height: 1.4;
 }
 .tip {
-  font-size: 11px;
+  font-size: 13px;
   opacity: 0.5;
   cursor: help;
   margin-left: 4px;
@@ -425,35 +452,43 @@ watch(classKey, (id) => {
 }
 .ep-override-btn {
   margin-left: auto;
-  font-size: 11px;
-  color: var(--color-primary);
-  cursor: pointer;
-  white-space: nowrap;
+  flex: none;
 }
-.ep-override-btn.active {
-  color: #f59e0b;
-  font-weight: 600;
+.ep-override-btn,
+.override-remove {
+  padding: 2px 6px;
+  gap: 4px;
+}
+.ep-override-btn :deep(.p-button-label),
+.override-remove :deep(.p-button-label),
+.ep-override-btn :deep(.p-button-icon),
+.override-remove :deep(.p-button-icon) {
+  font-size: 11px;
 }
 .override-panel {
-  margin: 4px 0 6px 54px;
+  margin: 8px 0;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 .override-name {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
   font-size: 12px;
 }
 .override-name span {
   opacity: 0.7;
 }
+.override-name :deep(.p-inputtext) {
+  width: 100%;
+}
 .override-remove {
-  font-size: 11px;
-  color: #ef4444;
-  cursor: pointer;
-  align-self: flex-start;
+  align-self: flex-end;
 }
 .override-fields {
   display: flex;
@@ -518,7 +553,7 @@ watch(classKey, (id) => {
 }
 .dto-matrix .lock {
   opacity: 0.5;
-  font-size: 11px;
+  font-size: 12px;
   cursor: default;
 }
 </style>

@@ -13,7 +13,7 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import Textarea from 'primevue/textarea'
+import OclField from './OclField.vue'
 import Select from 'primevue/select';
 import Checkbox from 'primevue/checkbox'
 import InputNumber from 'primevue/inputnumber'
@@ -197,10 +197,10 @@ function close() {
                 placeholder="name (optional)"
                 v-model="inv.name"
               />
-              <Textarea
+              <OclField
                 v-model="inv.expression"
                 placeholder="self.alunos->size() <= 30"
-                rows="3" auto-resize
+                header="Invariant"
               />
               <InputText
                 placeholder="error message (optional)"
@@ -229,10 +229,10 @@ function close() {
               </div>
 
               <div v-if="key(attr.name) in annotations.initByAttribute" class="sub-entry">
-                <Textarea
+                <OclField
                   :placeholder="initPlaceholder(attr)"
                   v-model="annotations.initByAttribute[key(attr.name)]"
-                  rows="2" auto-resize
+                  header="Init"
                 />
                 <Button
                   icon="pi pi-trash" size="small" severity="danger" text
@@ -249,10 +249,10 @@ function close() {
               </span>
 
               <div v-if="key(attr.name) in annotations.deriveByAttribute" class="sub-entry">
-                <Textarea
+                <OclField
                   placeholder="derive expression"
                   v-model="annotations.deriveByAttribute[key(attr.name)]"
-                  rows="2" auto-resize
+                  header="Derive"
                 />
                 <Button
                   icon="pi pi-trash" size="small" severity="danger" text
@@ -278,10 +278,10 @@ function close() {
               <h4>Operations</h4>
             </header>
             <div v-for="op in operations" :key="op.id" class="entry">
-              <div class="attr-label">
+              <div class="op-head">
                 {{ op.name }}
               </div>
-              <div class="sub-entry">
+              <div class="sub-entry seq-link">
                 <Select
                   v-model="annotations.operationToSeqDiagram[op.id]"
                   :options="interactionOptions"
@@ -305,10 +305,10 @@ function close() {
                   class="entry"
                 >
                   <InputText placeholder="name (optional)" v-model="pre.name" />
-                  <Textarea
+                  <OclField
                     v-model="pre.expression"
                     placeholder="self.alunos->size() > 0"
-                    rows="2" auto-resize
+                    header="Precondition"
                   />
                   <InputText placeholder="error message (optional)" v-model="pre.message" />
                   <Button
@@ -332,10 +332,10 @@ function close() {
                   class="entry"
                 >
                   <InputText placeholder="name (optional)" v-model="post.name" />
-                  <Textarea
+                  <OclField
                     v-model="post.expression"
                     placeholder="self.alunos->size() = self.alunos@pre->size() + 1"
-                    rows="2" auto-resize
+                    header="Postcondition"
                   />
                   <InputText placeholder="error message (optional)" v-model="post.message" />
                   <Button
@@ -358,7 +358,7 @@ function close() {
           <section v-if="ownsTable" class="block">
             <header class="block-head">
               <h4>Table name
-                <span class="tip" v-tooltip.top="'Override do nome da tabela. Vazio = nome da classe em minúsculas. Útil para evitar palavras reservadas em SQL (ex: Order, User).'">ⓘ</span>
+                <span class="tip" v-tooltip.top="'Override do nome da tabela. Vazio = nome da classe em minúsculas. Útil para evitar palavras reservadas em SQL (ex: Order, User).'"><i class="pi pi-info-circle"></i></span>
               </h4>
             </header>
             <div class="entry">
@@ -397,7 +397,7 @@ function close() {
           <section v-if="isSuperclass" class="block">
             <header class="block-head">
               <h4>Inheritance strategy
-                <span class="tip" v-tooltip.top="'Mapeamento JPA da hierarquia (alvos Spring e CLI-JPA).'">ⓘ</span>
+                <span class="tip" v-tooltip.top="'Mapeamento JPA da hierarquia (alvos Spring e CLI-JPA).'"><i class="pi pi-info-circle"></i></span>
               </h4>
             </header>
             <div class="entry">
@@ -415,7 +415,7 @@ function close() {
           <section v-if="attributes.length" class="block">
             <header class="block-head">
               <h4>Column mapping
-                <span class="tip" v-tooltip.top="'Config de coluna JPA que a OCL não exprime: unique e precisão/escala (só em tipos decimais).'">ⓘ</span>
+                <span class="tip" v-tooltip.top="'Config de coluna JPA que a OCL não exprime: unique e precisão/escala (só em tipos decimais).'"><i class="pi pi-info-circle"></i></span>
               </h4>
             </header>
             <table class="col-map">
@@ -424,7 +424,7 @@ function close() {
                   <th>Attribute</th>
                   <th class="c">Unique</th>
                   <th class="c">Precision</th>
-                  <th class="c" title="Só se aplica a BigDecimal (vírgula fixa). Em double/float é ignorado — o Hibernate não aceita scale nesses tipos.">Scale ⓘ</th>
+                  <th class="c">Scale <span class="tip" v-tooltip.top="'Só se aplica a BigDecimal (vírgula fixa). Em double/float é ignorado — o Hibernate não aceita scale nesses tipos.'"><i class="pi pi-info-circle"></i></span></th>
                 </tr>
               </thead>
               <tbody>
@@ -454,7 +454,7 @@ function close() {
           <section v-if="collectionRelations.length" class="block">
             <header class="block-head">
               <h4>Collection ordering
-                <span class="tip" v-tooltip.top="'@OrderBy — ordena os itens de uma coleção. Vazio = ordem indefinida.'">ⓘ</span>
+                <span class="tip" v-tooltip.top="'@OrderBy — ordena os itens de uma coleção. Vazio = ordem indefinida.'"><i class="pi pi-info-circle"></i></span>
               </h4>
             </header>
             <div v-for="rel in collectionRelations" :key="rel.name" class="order-row">
@@ -494,12 +494,18 @@ function close() {
     /*background: var(--color-secondary);*/
     background: var(--background);
     color: var(--color-text);
-    width: 360px;
+    width: 400px;
     flex-shrink: 0;
     height: 100%;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+  }
+
+  .right-panel :deep(.p-textarea) {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.4;
   }
 
   .panel-head {
@@ -514,7 +520,7 @@ function close() {
   }
 
   .block {
-    padding: 16px 0;
+    padding: 24px 0;
   }
   .block + .block {
     border-top: 1px solid var(--color-border);
@@ -523,7 +529,7 @@ function close() {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     padding: 0 4px;
   }
   .block-head h4 {
@@ -537,7 +543,7 @@ function close() {
   .entry {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     padding: 8px;
     margin-bottom: 8px;
     border: 1px solid var(--color-border);
@@ -565,9 +571,18 @@ function close() {
     align-items: center;
   }
 
+  .seq-link {
+    margin-top: 6px;
+  }
+
   .sub-entry :deep(.p-inputtext),
   .sub-entry :deep(.p-textarea) {
     flex: 1;
+  }
+
+  .sub-entry :deep(.ocl-field) {
+    flex: 1;
+    min-width: 0;
   }
 
   .sub-entry :deep(.p-select) {
@@ -599,7 +614,7 @@ function close() {
     margin: 0;
     line-height: 1.4;
   }
-  .tip { font-size: 11px; opacity: 0.5; cursor: help; margin-left: 4px; font-weight: normal; }
+  .tip { font-size: 13px; opacity: 0.5; cursor: help; margin-left: 4px; font-weight: normal; }
   .hint.warn {
     opacity: 1;
     color: var(--p-orange-600, #c2410c);
@@ -634,11 +649,34 @@ function close() {
     height: 100%;
   }
 
+  .op-head {
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: 600;
+    margin: -8px; 
+    padding: 6px 8px;
+    border-radius: 6px 6px 0 0;
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  }
+
   .sub-block {
     margin-top: 6px;
-    padding-left: 8px;
-    border-left: 2px solid var(--color-border);
   }
+
+  .sub-block + .sub-block {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .sub-block .entry {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+  }
+  
   .sub-head {
     display: flex;
     align-items: center;
@@ -647,7 +685,7 @@ function close() {
     opacity: 0.7;
     text-transform: uppercase;
     letter-spacing: 0.4px;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
   }
 
   .col-map { 
