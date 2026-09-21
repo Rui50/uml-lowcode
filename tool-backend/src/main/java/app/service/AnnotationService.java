@@ -223,6 +223,7 @@ public class AnnotationService {
                 a.setUnique(cfg.isUnique());
                 a.setPrecision(cfg.getPrecision());
                 a.setScale(cfg.getScale());
+                a.setColumnName(cfg.getName());
             }
         });
     }

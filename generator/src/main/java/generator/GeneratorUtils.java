@@ -138,7 +138,8 @@ public class GeneratorUtils {
 
     // gera o @Column: sempre com o name (nome do atributo) unique/precision/scale só se definidos
     public static String columnAnnotation(Attribute atr) {
-        StringBuilder sb = new StringBuilder("@Column(name = \"").append(atr.getName()).append("\"");
+        String colName = (atr.getColumnName() != null) ? atr.getColumnName() : atr.getName();
+        StringBuilder sb = new StringBuilder("@Column(name = \"").append(colName).append("\"");
         if (atr.isUnique()) sb.append(", unique = true");
         if (atr.getPrecision() != null) sb.append(", precision = ").append(atr.getPrecision());
         // scale só se aplica a BigDecimal/BigInteger; em float/double o Hibernate rebenta no arranque

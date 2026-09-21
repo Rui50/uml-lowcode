@@ -20,6 +20,7 @@ export interface ColumnConfig {
   unique: boolean
   precision: number | null
   scale: number | null
+  name: string  // @Column(name) override
 }
 
 export interface EndpointConfig {
@@ -152,7 +153,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   }
 
   function addColumnConfig(key: string) {
-    columnByAttribute.value[key] = { unique: false, precision: null, scale: null }
+    columnByAttribute.value[key] = { unique: false, precision: null, scale: null, name: '' }
   }
 
   function deleteColumnConfig(key: string) {

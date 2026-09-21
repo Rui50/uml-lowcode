@@ -20,6 +20,7 @@ public class Attribute {
     private boolean unique;      // @Column(unique = true)
     private Integer precision;   // decimais total de dígitos
     private Integer scale;       // decimais casas decimais
+    private String columnName;   // @Column(name) override
 
     public Attribute() {
         this.name = "";
@@ -111,6 +112,11 @@ public class Attribute {
     public void setPrecision(Integer precision) { this.precision = precision; }
 
     public Integer getScale() { return scale; }
+
+    public String getColumnName() { return columnName; }
+    public void setColumnName(String columnName) {
+        this.columnName = (columnName != null && !columnName.isBlank()) ? columnName.trim() : null;
+    }
     public void setScale(Integer scale) { this.scale = scale; }
 
     public boolean hasColumnConfig() {

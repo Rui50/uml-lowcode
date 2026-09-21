@@ -420,7 +420,7 @@ function close() {
           <section v-if="attributes.length" class="block">
             <header class="block-head">
               <h4>Column mapping
-                <span class="tip" v-tooltip.top="'Config de coluna JPA que a OCL não exprime: unique e precisão/escala (só em tipos decimais).'"><i class="pi pi-info-circle"></i></span>
+                <span class="tip" v-tooltip.top="'Config de coluna JPA: nome da coluna (vazio = nome do atributo), unique e precisão/escala (só em decimais).'"><i class="pi pi-info-circle"></i></span>
               </h4>
             </header>
             <table class="col-map">
@@ -455,6 +455,22 @@ function close() {
             </table>
           </section>
 
+          <!-- Column name override por atributo -->
+          <section v-if="attributes.length" class="block">
+            <header class="block-head">
+              <h4>Column names
+                <span class="tip" v-tooltip.top="'Nome da coluna na base de dados por atributo. Vazio = nome do atributo.'"><i class="pi pi-info-circle"></i></span>
+              </h4>
+            </header>
+            <div v-for="attr in attributes" :key="attr.name" class="order-row">
+              <span class="order-rel">{{ attr.name }} <span class="type">{{ attr.type }}</span></span>
+              <InputText
+                v-model="annotations.columnByAttribute[key(attr.name)]!.name"
+                :placeholder="attr.name" size="small"
+              />
+            </div>
+          </section>
+
           <!-- Collection ordering (@OrderBy) por coleção -->
           <section v-if="collectionRelations.length" class="block">
             <header class="block-head">
@@ -485,7 +501,7 @@ function close() {
               <h4>Fetch strategy
                 <span class="tip" v-tooltip.top="'LAZY (recomendado) carrega a relação só quando é usada | EAGER carrega sempre com a entidade.'"><i class="pi pi-info-circle"></i></span>
               </h4>
-            </header
+            </header>
             <div v-for="rel in singularRelations" :key="rel.name" class="order-row">
               <span class="order-rel">{{ rel.name }} <span class="type">-> {{ rel.targetClass }}</span></span>
               <SelectButton
@@ -753,6 +769,7 @@ function close() {
   .col-map .attr-cell .type { color: var(--color-primary); }
 
   .col-map td.is-disabled { opacity: 0.4; }
+
 
   .col-map :deep(.p-inputnumber-input) {
     width: 3.2rem;
