@@ -139,7 +139,7 @@ public class SpringEntityGenerator {
             writer.println("import lombok.*;");
             writer.println("import java.util.*;");
             // atributos de data precisam de java.time
-            if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaTimeType(a.getType()))) {
+            if (GeneratorUtils.needsJavaTime(cls)) {
                 writer.println("import java.time.*;");
             }
             writer.println();

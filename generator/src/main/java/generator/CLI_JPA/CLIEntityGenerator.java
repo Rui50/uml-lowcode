@@ -96,7 +96,7 @@ public class CLIEntityGenerator {
             // imports
             writer.println("import jakarta.persistence.*;");
             writer.println("import java.util.*;");
-            writer.println("import java.time.*;");   // atributos de data (LocalDate, etc.)
+            if (GeneratorUtils.needsJavaTime(cls)) writer.println("import java.time.*;");   // atributos de data (LocalDate, etc.)
             writer.println();
 
             // anotações base da classe

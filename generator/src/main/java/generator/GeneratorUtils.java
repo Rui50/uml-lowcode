@@ -496,6 +496,18 @@ public class GeneratorUtils {
         }
     }
 
+    // para nao verificar todas as mensagens se tiver operacao importamos
+    public static boolean needsJavaTime(Class cls) {
+        if (cls.getAllAttributes().stream().anyMatch(a -> isJavaTimeType(a.getType()))) return true;
+        for (Operation op : effectiveOperations(cls)) {
+            if (isJavaTimeType(op.getReturnType())) return true;
+            if (op.getParameters() != null
+                    && op.getParameters().stream().anyMatch(p -> isJavaTimeType(p.getType()))) return true;
+            if (op.getSequenceDiagram() != null) return true;
+        }
+        return false;
+    }
+
     // o que não for simples nem entidade é DTO (@RequestBody)
     public static boolean isSimpleParamType(String type) {
         if (type == null) return false;
