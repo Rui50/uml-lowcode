@@ -145,11 +145,12 @@ public final class JpaEntityWriter {
     public static void generateManyToOne(PrintWriter writer,
                                          String otherClass,
                                          String attributeName,
-                                         Association assoc) {
+                                         Association assoc,
+                                         String fetch) {
 
         // Ponta sing = referência única. O Map pertence só ao lado da coleção
         // aqui ignora-se, senão saía @ManyToOne sobre um Map (inválido).
-        writer.println("    @ManyToOne");
+        writer.println("    @ManyToOne(fetch = FetchType." + fetch + ")");
         writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
         writer.println("    private " + otherClass + " " + attributeName + ";");
     }
@@ -165,7 +166,8 @@ public final class JpaEntityWriter {
                                         String attributeName,
                                         Association assoc,
                                         boolean isSource,
-                                        boolean isBidirectional) {
+                                        boolean isBidirectional,
+                                        String fetch) {
 
         // tem qualifier meste ponta, é OneToMany.
         // Map como coleção, nunca no ramo 1:1
@@ -192,14 +194,14 @@ public final class JpaEntityWriter {
                 boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
 
                 if (isOwner) {
-                    writer.println("    @OneToOne" + (cascadeHere ? "(cascade = CascadeType.ALL, orphanRemoval = true)" : ""));
+                    writer.println("    @OneToOne(fetch = FetchType." + fetch + (cascadeHere ? ", cascade = CascadeType.ALL, orphanRemoval = true" : "") + ")");
                     writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
                 } else {
                     writer.println("    @OneToOne(mappedBy = \"" +
-                            GeneratorUtils.getOtherSideAttributeName(assoc, isSource) + "\"" + cascade + ")");
+                            GeneratorUtils.getOtherSideAttributeName(assoc, isSource) + "\", fetch = FetchType." + fetch + cascade + ")");
                 }
             } else {
-                writer.println("    @OneToOne" + (cascadeHere ? "(cascade = CascadeType.ALL, orphanRemoval = true)" : ""));
+                writer.println("    @OneToOne(fetch = FetchType." + fetch + (cascadeHere ? ", cascade = CascadeType.ALL, orphanRemoval = true" : "") + ")");
                 writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
             }
 

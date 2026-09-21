@@ -63,6 +63,7 @@ public class Class {
     private Set<String> hiddenInUpdate = new HashSet<>();
     private Set<String> hiddenInResponse = new HashSet<>();
     private Map<String, String> collectionOrder = new HashMap<>();   // field da coleção  "attr ASC|DESC" (@OrderBy)
+    private Map<String, String> fetchStrategy = new HashMap<>();      // field singular -> "LAZY"|"EAGER"
 
     // override por ENDPOINT (endpointType: List | Get | Create | Update) esse endpoint
     // devolve um ResponseDTO próprio, com campos escondidos independentes do default da classe
@@ -211,6 +212,7 @@ public class Class {
     public Set<String> getHiddenInUpdate() { return hiddenInUpdate; }
     public Set<String> getHiddenInResponse() { return hiddenInResponse; }
     public Map<String, String> getCollectionOrder() { return collectionOrder; }
+    public Map<String, String> getFetchStrategy() { return fetchStrategy; }
 
     // escondido se esta classe ou qualquer pai esconder
     public boolean isHiddenInCreate(String attrName) {

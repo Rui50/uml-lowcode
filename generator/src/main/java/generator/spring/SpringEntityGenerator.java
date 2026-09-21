@@ -337,12 +337,17 @@ public class SpringEntityGenerator {
             writer.println("    " + ann);
         }
 
+        // the class being being generated
+        Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElseThrow();
+
         // @OrderBy da coleção (persistence tab) só em campos de coleção
         if (isCollection) {
-            Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElse(null);
-            String orderBy = (self != null) ? self.getCollectionOrder().get(attributeName) : null;
+            String orderBy = self.getCollectionOrder().get(attributeName);
             if (orderBy != null) writer.println("    @OrderBy(\"" + orderBy + "\")");
         }
+
+        // fetch das relações sings (@ManyToOne/@OneToOne) se ausente = LAZY
+        String fetch = self.getFetchStrategy().getOrDefault(attributeName, "LAZY");
 
         // Many to Many
         if (isCollection && inverseIsCollection) {
@@ -354,11 +359,11 @@ public class SpringEntityGenerator {
         }
         // Many to one
         else if (inverseIsCollection) {
-            JpaEntityWriter.generateManyToOne(writer, otherClass, attributeName, assoc);
+            JpaEntityWriter.generateManyToOne(writer, otherClass, attributeName, assoc, fetch);
         }
         // One to one
         else {
-            JpaEntityWriter.generateOneToOne(writer, thisClass, otherClass, attributeName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateOneToOne(writer, thisClass, otherClass, attributeName, assoc, isSource, isBidirectional, fetch);
         }
 
         writer.println();

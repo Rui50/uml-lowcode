@@ -15,6 +15,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import OclField from './OclField.vue'
 import Select from 'primevue/select';
+import SelectButton from 'primevue/selectbutton'
 import Checkbox from 'primevue/checkbox'
 import InputNumber from 'primevue/inputnumber'
 
@@ -27,6 +28,10 @@ const { selected, isInterface, className, classKey, attributes, operations, key 
 // coleções da classe selecionada + atributos da classe alvo (para o dropdown de order-by)
 const collectionRelations = computed(() =>
   (model.selectedClass?.relations ?? []).filter(r => r.collection)
+)
+// so rels singulares (@ManyToOne/@OneToOne) — alvo do fetch strategy
+const singularRelations = computed(() =>
+  (model.selectedClass?.relations ?? []).filter(r => !r.collection)
 )
 function orderOptions(rel: RelationField) {
   const target = model.model?.classes.find(c => c.name === rel.targetClass)
@@ -474,6 +479,25 @@ function close() {
             </div>
           </section>
 
+          <!-- Fetch strategy  (@ManyToOne/@OneToOne) -->
+          <section v-if="singularRelations.length" class="block">
+            <header class="block-head">
+              <h4>Fetch strategy
+                <span class="tip" v-tooltip.top="'LAZY (recomendado) carrega a relação só quando é usada | EAGER carrega sempre com a entidade.'"><i class="pi pi-info-circle"></i></span>
+              </h4>
+            </header
+            <div v-for="rel in singularRelations" :key="rel.name" class="order-row">
+              <span class="order-rel">{{ rel.name }} <span class="type">-> {{ rel.targetClass }}</span></span>
+              <SelectButton
+                :modelValue="annotations.fetchStrategy(key(rel.name))"
+                @update:modelValue="val => val && annotations.setFetchStrategy(key(rel.name), val)"
+                :options="['LAZY', 'EAGER']"
+                :allowEmpty="false"
+                size="small"
+              />
+            </div>
+          </section>
+
           <p v-if="!ownsTable && !isIdRoot && !isSuperclass && !attributes.length" class="empty">
             Sem opções de persistência para esta classe.
           </p>
@@ -653,7 +677,7 @@ function close() {
     font-family: monospace;
     font-size: 13px;
     font-weight: 600;
-    margin: -8px; 
+    margin: -8px;
     padding: 6px 8px;
     border-radius: 6px 6px 0 0;
     border-bottom: 1px solid var(--color-border);
@@ -676,7 +700,7 @@ function close() {
     background: transparent;
     padding: 0;
   }
-  
+
   .sub-head {
     display: flex;
     align-items: center;
@@ -688,24 +712,24 @@ function close() {
     margin-bottom: 8px;
   }
 
-  .col-map { 
-    width: 100%; border-collapse: collapse; font-size: 12px; 
+  .col-map {
+    width: 100%; border-collapse: collapse; font-size: 12px;
   }
 
-  .col-map th, .col-map td { 
-    padding: 5px 6px; vertical-align: middle; 
+  .col-map th, .col-map td {
+    padding: 5px 6px; vertical-align: middle;
   }
 
-  .col-map thead th { 
-    border-bottom: 1px solid var(--color-border); 
+  .col-map thead th {
+    border-bottom: 1px solid var(--color-border);
   }
 
-  .col-map tbody td { 
-    border-bottom: 1px solid var(--color-border); 
+  .col-map tbody td {
+    border-bottom: 1px solid var(--color-border);
   }
 
-  .col-map tbody tr:last-child td { 
-    border-bottom: none; 
+  .col-map tbody tr:last-child td {
+    border-bottom: none;
   }
 
   .col-map th {
@@ -717,13 +741,13 @@ function close() {
     letter-spacing: 0.3px;
   }
 
-  .col-map th.c, .col-map td.c { 
-    text-align: center; 
+  .col-map th.c, .col-map td.c {
+    text-align: center;
   }
 
-  .col-map .attr-cell { 
-    font-family: monospace; 
-    white-space: nowrap; 
+  .col-map .attr-cell {
+    font-family: monospace;
+    white-space: nowrap;
   }
 
   .col-map .attr-cell .type { color: var(--color-primary); }
@@ -731,30 +755,30 @@ function close() {
   .col-map td.is-disabled { opacity: 0.4; }
 
   .col-map :deep(.p-inputnumber-input) {
-    width: 3.2rem; 
-    padding: 3px 5px; 
-    text-align: center; 
+    width: 3.2rem;
+    padding: 3px 5px;
+    text-align: center;
   }
 
   .order-row {
     display: flex;
-    align-items: center; 
-    gap: 8px; 
+    align-items: center;
+    gap: 8px;
     padding: 3px 0;
   }
 
-  .order-rel { 
-    flex: 1; 
-    font-family: monospace; 
-    font-size: 12px; 
+  .order-rel {
+    flex: 1;
+    font-family: monospace;
+    font-size: 12px;
   }
 
-  .order-rel .type { 
-    color: var(--color-primary); 
+  .order-rel .type {
+    color: var(--color-primary);
   }
 
-  .order-row :deep(.p-select) { 
-    min-width: 8rem; 
+  .order-row :deep(.p-select) {
+    min-width: 8rem;
   }
 
 </style>

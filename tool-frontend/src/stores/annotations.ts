@@ -62,6 +62,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // key "classId.relationName" -> ordenação da coleção (ausente = sem @OrderBy, ordem indefinida)
   const orderByCollection = ref<Record<string, { attribute: string; direction: 'ASC' | 'DESC' }>>({})
+  // key "classId.relationName" -> fetch de uma relação singular (ausente = LAZY)
+  const fetchByRelation = ref<Record<string, 'LAZY' | 'EAGER'>>({})
 
   const operationToSeqDiagram = ref<Record<string, string>>({})
 
@@ -174,6 +176,14 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   function toggleOrderDirection(key: string) {
     const cur = orderByCollection.value[key]
     if (cur) cur.direction = cur.direction === 'ASC' ? 'DESC' : 'ASC'
+  }
+
+  function fetchStrategy(key: string): 'LAZY' | 'EAGER' {
+    return fetchByRelation.value[key] ?? 'LAZY'
+  }
+
+  function setFetchStrategy(key: string, value: 'LAZY' | 'EAGER') {
+    fetchByRelation.value[key] = value
   }
 
   function addPrecondition(opId: string) {
@@ -293,6 +303,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       responseOverrideByClass.value = {}
       columnByAttribute.value = {}
       orderByCollection.value = {}
+      fetchByRelation.value = {}
       return
     }
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -313,6 +324,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     responseOverrideByClass.value = data.responseOverrideByClass || {}
     columnByAttribute.value = data.columnByAttribute || {}
     orderByCollection.value = data.orderByCollection || {}
+    fetchByRelation.value = data.fetchByRelation || {}
   }
 
   function saveForModel(name: string | null) {
@@ -335,6 +347,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
       responseOverrideByClass: responseOverrideByClass.value,
       columnByAttribute: columnByAttribute.value,
       orderByCollection: orderByCollection.value,
+      fetchByRelation: fetchByRelation.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
@@ -350,7 +363,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
   // save current bucket on any annotation change
   watch(
-    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass, dtoHiddenByClass, responseOverrideByClass, columnByAttribute, orderByCollection],
+    [invariantsByClass, initByAttribute, deriveByAttribute, operationToSeqDiagram, preconditionsByOperation, postconditionsByOperation, inheritanceStrategyByClass, idByClass, endpointByOperation, generateControllerByClass, beanValidationByClass, tableNameByClass, dtoHiddenByClass, responseOverrideByClass, columnByAttribute, orderByCollection, fetchByRelation],
     () => saveForModel(modelStore.fileName),
     { deep: true }
   )
@@ -372,6 +385,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     responseOverrideByClass.value = {}
     columnByAttribute.value = {}
     orderByCollection.value = {}
+    fetchByRelation.value = {}
   }
 
   return {
@@ -392,6 +406,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     responseOverrideByClass,
     columnByAttribute,
     orderByCollection,
+    fetchByRelation,
 
     // actions
     addInvariant,
@@ -407,6 +422,8 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     orderDirection,
     setOrderAttribute,
     toggleOrderDirection,
+    fetchStrategy,
+    setFetchStrategy,
     addPrecondition,
     deletePrecondition,
     addPostcondition,

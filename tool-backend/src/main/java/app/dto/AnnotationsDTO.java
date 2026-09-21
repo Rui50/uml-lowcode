@@ -57,4 +57,7 @@ public class AnnotationsDTO {
 
     // key "classId.relationName" -> @OrderBy da coleção (ausente = sem ordenação)
     private Map<String, OrderByDTO> orderByCollection = new HashMap<>();
+
+    // key "classId.relationName" -> fetch de uma rel singular ("LAZY"|"EAGER" ou ausente = LAZY)
+    private Map<String, String> fetchByRelation = new HashMap<>();
 }

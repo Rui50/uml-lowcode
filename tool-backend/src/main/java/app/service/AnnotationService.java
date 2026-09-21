@@ -33,6 +33,7 @@ public class AnnotationService {
         applyDerives(classes, associations, payload.getDeriveByAttribute());
         applyColumnConfig(classes, payload.getColumnByAttribute());
         applyOrdering(classes, payload.getOrderByCollection());
+        applyFetch(classes, payload.getFetchByRelation());
 
         applyOperationLinks(classes, model.getAllInteractions(), payload.getOperationToSeqDiagram());
         applyPreconditions(classes, associations, payload.getPreconditionsByOperation());
@@ -239,6 +240,18 @@ public class AnnotationService {
         });
     }
 
+    // fetch por rel singular (persistence tab): key "Class.relation" -> "LAZY"|"EAGER"
+    private void applyFetch(List<Class> classes, Map<String, String> map) {
+        if (map == null) return;
+        map.forEach((key, value) -> {
+            String[] parts = key.split("\\.", 2);
+            if (parts.length != 2 || value == null) return;
+            Class c = findClass(classes, parts[0]);
+            if (c == null) return;
+            c.getFetchStrategy().put(parts[1], "EAGER".equals(value) ? "EAGER" : "LAZY");
+        });
+    }
+
     // anotações tem chave por xmi:id
     private Class findClass(List<Class> classes, String id) {
         return classes.stream().filter(c -> id.equals(c.getId())).findFirst().orElse(null);
@@ -351,6 +364,7 @@ public class AnnotationService {
             c.getHiddenInResponse().clear();
             c.getResponseOverrides().clear();
             c.getCollectionOrder().clear();
+            c.getFetchStrategy().clear();
 
             c.setInheritanceStrategy("SINGLE_TABLE");
             c.setGenerateController(true);

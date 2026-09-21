@@ -349,12 +349,16 @@ public class CLIEntityGenerator {
         boolean inverseIsCollection = GeneratorUtils.checkMultiplicity(otherMultiplicity) || assoc.isMapEnd(!isSource); // o do outro lado
         boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
+        Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElseThrow();
+
         // @OrderBy da coleção
         if (isCollection) {
-            Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElse(null);
-            String orderBy = (self != null) ? self.getCollectionOrder().get(attributeName) : null;
+            String orderBy = self.getCollectionOrder().get(attributeName);
             if (orderBy != null) writer.println("    @OrderBy(\"" + orderBy + "\")");
         }
+
+        // fetch das relações SINGULARES (@ManyToOne/@OneToOne); ausente = LAZY
+        String fetch = self.getFetchStrategy().getOrDefault(attributeName, "LAZY");
 
         // Many to Many
         if (isCollection && inverseIsCollection) {
@@ -366,11 +370,11 @@ public class CLIEntityGenerator {
         }
         // Many to one
         else if (inverseIsCollection) {
-            JpaEntityWriter.generateManyToOne(writer, otherClass, attributeName, assoc);
+            JpaEntityWriter.generateManyToOne(writer, otherClass, attributeName, assoc, fetch);
         }
         // One to one
         else {
-            JpaEntityWriter.generateOneToOne(writer, thisClass, otherClass, attributeName, assoc, isSource, isBidirectional);
+            JpaEntityWriter.generateOneToOne(writer, thisClass, otherClass, attributeName, assoc, isSource, isBidirectional, fetch);
         }
 
         writer.println();
