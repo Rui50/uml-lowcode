@@ -40,10 +40,11 @@ function orderOptions(rel: RelationField) {
 
 const activeTab = ref<Tab>("ocl")
 
-// decimais para precision/scale ativos (senão desativados na tabela)
-const DECIMAL_TYPES = ['double', 'float', 'Double', 'Float', 'BigDecimal']
-function isDecimal(type: string) {
-  return DECIMAL_TYPES.includes(type)
+function hasPrecision(type: string) {
+  return type === 'BigDecimal' || type === 'BigInteger'
+}
+function hasScale(type: string) {
+  return type === 'BigDecimal'
 }
 
 // a tabela de column mapping liga o v-model direto a columnByAttribute[key], por isso
@@ -428,8 +429,8 @@ function close() {
                 <tr>
                   <th>Attribute</th>
                   <th class="c">Unique</th>
-                  <th class="c">Precision</th>
-                  <th class="c">Scale <span class="tip" v-tooltip.top="'Só se aplica a BigDecimal (vírgula fixa). Em double/float é ignorado — o Hibernate não aceita scale nesses tipos.'"><i class="pi pi-info-circle"></i></span></th>
+                  <th class="c">Precision <span class="tip" v-tooltip.top="'Só em BigDecimal/BigInteger (total de dígitos).'"><i class="pi pi-info-circle"></i></span></th>
+                  <th class="c">Scale <span class="tip" v-tooltip.top="'Só em BigDecimal (casas decimais).'"><i class="pi pi-info-circle"></i></span></th>
                 </tr>
               </thead>
               <tbody>
@@ -438,16 +439,16 @@ function close() {
                   <td class="c">
                     <Checkbox v-model="annotations.columnByAttribute[key(attr.name)]!.unique" binary />
                   </td>
-                  <td class="c" :class="{ 'is-disabled': !isDecimal(attr.type) }">
+                  <td class="c" :class="{ 'is-disabled': !hasPrecision(attr.type) }">
                     <InputNumber
                       v-model="annotations.columnByAttribute[key(attr.name)]!.precision"
-                      :disabled="!isDecimal(attr.type)" :min="1" :useGrouping="false"
+                      :disabled="!hasPrecision(attr.type)" :min="1" :useGrouping="false"
                     />
                   </td>
-                  <td class="c" :class="{ 'is-disabled': !isDecimal(attr.type) }">
+                  <td class="c" :class="{ 'is-disabled': !hasScale(attr.type) }">
                     <InputNumber
                       v-model="annotations.columnByAttribute[key(attr.name)]!.scale"
-                      :disabled="!isDecimal(attr.type)" :min="0" :useGrouping="false"
+                      :disabled="!hasScale(attr.type)" :min="0" :useGrouping="false"
                     />
                   </td>
                 </tr>
