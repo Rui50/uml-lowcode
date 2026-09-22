@@ -1,6 +1,7 @@
 package parser;
 
 import generator.GeneratorUtils;
+import generator.RelationshipInfo;
 import model.Association;
 import model.Attribute;
 import model.Class;
@@ -104,12 +105,27 @@ public class AnnotationParser {
         // coleção tinha nesse momento, mas não o estado interno de cada objeto. Serve para
         // comparar valores ou tamanhos antes/depois, não o conteúdo profundo dos objetos.
         // ver se é atributo — snapshot é cópia por valor
+
+        /*
         for (Attribute a : cls.getAttributes()) {
             if (a.getName().equals(attrName)) {
                 return new PreSnapshot(varName, "this.get" + GeneratorUtils.capitalizeFirst(attrName) + "()", a.getType());
             }
         }
+        */
+
+        // atributo próprio ou herdado; coleção de tipos básicos leva cópia (senão apontava para a mesma lista)
+        for (Attribute a : cls.getAllAttributes()) {
+            if (!a.getName().equals(attrName)) continue;
+            String getter = "this.get" + GeneratorUtils.capitalizeFirst(attrName) + "()";
+            if (a.isCollection()) {
+                String copy = a.getCollectionType().equals("List") ? "ArrayList" : "HashSet";
+                return new PreSnapshot(varName, "new " + copy + "<>(" + getter + ")", a.getAttributeType());
+            }
+            return new PreSnapshot(varName, getter, a.getType());
+        }
         // associação (multiplicidade *) ou referência única
+        /*
         for (Association assoc : associations) {
             String otherClass, mult;
             if (cls.getName().equals(assoc.getSourceClass()) && attrName.equals(assoc.getTargetRole())) {
@@ -132,6 +148,20 @@ public class AnnotationParser {
                 return new PreSnapshot(varName, "new ArrayList<>(this.get" + GeneratorUtils.capitalizeFirst(attrName) + "())", "List<" + otherClass + ">");
             }
             return new PreSnapshot(varName, "this.get" + GeneratorUtils.capitalizeFirst(attrName) + "()", otherClass);
+        }
+        */
+        // relação própria ou herdada, pelo nome do campo gerado; só a ponta do qualifier é que é Map
+        for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
+            if (!rel.attributeName().equals(attrName)) continue;
+            String getter = "this.get" + GeneratorUtils.capitalizeFirst(attrName) + "()";
+            if (rel.isMap()) {
+                return new PreSnapshot(varName, "new HashMap<>(" + getter + ")",
+                        "Map<" + rel.assoc.getQualifierType() + ", " + rel.otherClass + ">");
+            }
+            if (rel.isCollection()) {
+                return new PreSnapshot(varName, "new ArrayList<>(" + getter + ")", "List<" + rel.otherClass + ">");
+            }
+            return new PreSnapshot(varName, getter, rel.otherClass);
         }
         throw new IllegalArgumentException("@pre references unknown property '" + attrName + "' on class " + cls.getName());
     }
