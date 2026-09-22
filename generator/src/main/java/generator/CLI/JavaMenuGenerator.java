@@ -693,7 +693,8 @@ public class JavaMenuGenerator {
                     w.println("        " + attr.getType() + " " + name + " = null;");
                     w.println("        while (" + name + " == null) {");
                     w.println("            System.out.print(\"" + name + " \" + java.util.Arrays.toString(" + attr.getType() + ".values()) + \": \");");
-                    w.println("            try { " + name + " = " + attr.getType() + ".valueOf(scanner.nextLine().trim().toUpperCase()); }");
+                    // w.println("            try { " + name + " = " + attr.getType() + ".valueOf(scanner.nextLine().trim().toUpperCase()); }");
+                    w.println("            try { " + name + " = " + attr.getType() + ".valueOf(scanner.nextLine().trim()); }");
                     w.println("            catch (IllegalArgumentException ex) { System.out.println(\"Invalid value. Try again.\"); }");
                     w.println("        }");
                 } else if (isTimeType(attr.getType())) {
@@ -787,7 +788,8 @@ public class JavaMenuGenerator {
                     w.println("            System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() + \"] \" + java.util.Arrays.toString(" + attr.getType() + ".values()) + \": \");");
                     w.println("            String " + name + "Str = scanner.nextLine();");
                     w.println("            if (" + name + "Str.isEmpty()) break;");
-                    w.println("            try { entity.set" + capitalized + "(" + attr.getType() + ".valueOf(" + name + "Str.trim().toUpperCase())); break; }");
+                    // w.println("            try { entity.set" + capitalized + "(" + attr.getType() + ".valueOf(" + name + "Str.trim().toUpperCase())); break; }");
+                    w.println("            try { entity.set" + capitalized + "(" + attr.getType() + ".valueOf(" + name + "Str.trim())); break; }");
                     w.println("            catch (IllegalArgumentException ex) { System.out.println(\"Invalid value. Try again.\"); }");
                     w.println("        }");
                 } else if (isTimeType(attr.getType())) {

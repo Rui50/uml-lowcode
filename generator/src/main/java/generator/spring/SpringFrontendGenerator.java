@@ -74,6 +74,17 @@ public class SpringFrontendGenerator {
             case "int": case "Integer": case "long": case "Long":
             case "short": case "Short": case "byte": case "Byte":
             case "double": case "Double": case "float": case "Float":
+            case "BigDecimal": case "BigInteger":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    // decimais precisam de step="any", senão o browser só aceita inteiros no input number
+    private boolean isDecimal(String type) {
+        switch (type) {
+            case "double": case "Double": case "float": case "Float": case "BigDecimal":
                 return true;
             default:
                 return false;
@@ -289,7 +300,9 @@ public class SpringFrontendGenerator {
                     w.println("      </label>");
                 } else {
                     w.println("      <label>" + a.getName());
-                    w.println("        <input name=\"" + a.getName() + "\" type=\"" + inputType(a.getType()) + "\"" + locked + ">");
+                    // w.println("        <input name=\"" + a.getName() + "\" type=\"" + inputType(a.getType()) + "\"" + locked + ">");
+                    w.println("        <input name=\"" + a.getName() + "\" type=\"" + inputType(a.getType()) + "\""
+                            + (isDecimal(a.getType()) ? " step=\"any\"" : "") + locked + ">");
                     w.println("      </label>");
                 }
             }

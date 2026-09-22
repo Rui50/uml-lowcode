@@ -6,6 +6,7 @@ import model.Attribute;
 import model.Class;
 import model.Enumeration;
 import model.Interface;
+import model.Operation;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -98,6 +99,25 @@ public class ModelValidator {
                     + "' doesnt seem like a normal type, check it's correct (may fail to compile).");
             }
         }
+        return warnings;
+    }
+
+    // nomes de métodos que o gerador já cria
+    // talvez expandir para nomes derivados: getX/setX dos atributos e addX/removeX/assignX das relações
+    private static final Set<String> GENERATED_METHOD_NAMES = Set.of(
+        "validate", "run", "create", "viewAll", "viewById", "update", "replace", "delete",
+        "getAll", "getById", "findAll", "findById", "deleteById", "existsById"
+    );
+
+    // operação com o nome de um metodo gerado pode não compilar ent so avisa
+    // melhorar para tambem ter em conta o target secalhar
+    public static List<String> findOperationNameCollisions(List<Class> classes) {
+        List<String> warnings = new ArrayList<>();
+        for (Class c : classes)
+            for (Operation op : c.getOperations())
+                if (GENERATED_METHOD_NAMES.contains(op.getName()))
+                    warnings.add("Operation '" + c.getName() + "." + op.getName()
+                            + "' has the same name as a generated method; rename it (may fail to compile).");
         return warnings;
     }
 }

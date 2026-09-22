@@ -92,12 +92,20 @@ public class SpringJobGenerator {
             repoTypes.add(ll.getType());
         }
 
+        // update to check if service actually exists later
+        // services de outras classes desenhados no diagrama
+        Set<String> serviceTypes = new LinkedHashSet<>();
+        for (Lifeline ll : interaction.getLifelines())
+            if (ll.getType() != null && ll.getType().endsWith("Service") && !ll.getType().equals(cls.getName() + "Service"))
+                serviceTypes.add(ll.getType());
+
         try (PrintWriter writer = new PrintWriter(new java.io.FileWriter(jobsDir + "/" + jobName + ".java"))) {
             writer.println("package " + basePackage + ".jobs;");
             writer.println();
             for (Class c : classes) writer.println("import " + basePackage + ".models." + c.getName() + ";");
             for (model.Enumeration e : enumerations) writer.println("import " + basePackage + ".models." + e.getName() + ";");
             for (String repo : repoTypes) writer.println("import " + basePackage + ".repository." + repo + ";");
+            for (String service : serviceTypes) writer.println("import " + basePackage + ".service." + service + ";");
             writer.println();
             writer.println("import lombok.RequiredArgsConstructor;");
             writer.println("import org.springframework.stereotype.Component;");
@@ -108,6 +116,7 @@ public class SpringJobGenerator {
             writer.println("import java.util.*;");
             writer.println("import java.util.stream.Collectors;");
             writer.println("import java.time.*;");
+            writer.println("import java.math.*;");
             writer.println();
             writer.println("@Component");
             writer.println("@RequiredArgsConstructor");
@@ -116,6 +125,9 @@ public class SpringJobGenerator {
             writer.println();
             for (String repo : repoTypes) {
                 writer.println("    private final " + repo + " " + GeneratorUtils.lowercaseFirst(repo) + ";");
+            }
+            for (String service : serviceTypes) {
+                writer.println("    private final " + service + " " + GeneratorUtils.lowercaseFirst(service) + ";");
             }
             writer.println();
             writer.println("    @Scheduled(cron = \"" + cron + "\")");

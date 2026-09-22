@@ -142,6 +142,10 @@ public class SpringEntityGenerator {
             if (GeneratorUtils.needsJavaTime(cls)) {
                 writer.println("import java.time.*;");
             }
+            // atributos BigDecimal/BigInteger precisam de java.math
+            if (GeneratorUtils.needsJavaMath(cls)) {
+                writer.println("import java.math.*;");
+            }
             writer.println();
 
             // anotações base da classe

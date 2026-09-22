@@ -94,8 +94,11 @@ public class SequenceBodyGenerator {
                 String repoVar = GeneratorUtils.lowercaseFirst(ll.getType());
                 lifelineVarMap.put(ll.getId(), repoVar);
             }
-            if (ll.getType() != null && ll.getType().endsWith("Service")) {
-                lifelineVarMap.put(ll.getId(), "self");
+            // if (ll.getType() != null && ll.getType().endsWith("Service")) {
+            //     lifelineVarMap.put(ll.getId(), "self");
+            // }
+            if (ll.getType() != null && ll.getType().endsWith("Service") && !ll.getId().equals(serviceLifeline.getId())) {
+                lifelineVarMap.put(ll.getId(), GeneratorUtils.lowercaseFirst(ll.getType()));   // outro service -> campo injetado
             }
         }
 

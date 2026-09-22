@@ -42,6 +42,7 @@ public class ParsingService {
         model.getWarnings().addAll(ModelValidator.collectTypeWarnings(model.getClasses(), model.getEnumerations(), model.getInterfaces()));
         model.getWarnings().addAll(ModelValidator.findSelfAssociationErrors(model.getAssociations()));
         model.getWarnings().addAll(ModelValidator.findRelationFieldCollisions(model.getAssociations()));
+        model.getWarnings().addAll(ModelValidator.findOperationNameCollisions(model.getClasses()));
 
         return model;
     }

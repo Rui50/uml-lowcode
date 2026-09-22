@@ -95,6 +95,10 @@ public class SpringDTOGenerator {
             if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaTimeType(a.getType()))) {
                 w.println("import java.time.*;");
             }
+            // atributos BigDecimal/BigInteger precisam de java.math
+            if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaMathType(a.getType()))) {
+                w.println("import java.math.*;");
+            }
             w.println("import " + basePackage + ".models." + className + ";");
 
             // id gerado pela BD -> fora do CreateDTO
@@ -181,6 +185,9 @@ public class SpringDTOGenerator {
             w.println("import java.util.*;");
             if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaTimeType(a.getType()))) {
                 w.println("import java.time.*;");
+            }
+            if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaMathType(a.getType()))) {
+                w.println("import java.math.*;");
             }
             w.println("import " + basePackage + ".models." + className + ";");
 
@@ -293,6 +300,10 @@ public class SpringDTOGenerator {
             // java.time.* cobre Instant (timestamps) e atributos de data (LocalDate, etc.)
             if (timestamps || cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaTimeType(a.getType()))) {
                 w.println("import java.time.*;");
+            }
+            // atributos BigDecimal/BigInteger precisam de java.math
+            if (cls.getAllAttributes().stream().anyMatch(a -> GeneratorUtils.isJavaMathType(a.getType()))) {
+                w.println("import java.math.*;");
             }
             w.println("import " + basePackage + ".models." + className + ";");
 

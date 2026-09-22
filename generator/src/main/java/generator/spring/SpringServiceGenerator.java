@@ -138,6 +138,7 @@ public class SpringServiceGenerator {
         writer.println("import java.util.*;");
         writer.println("import java.util.stream.Collectors;");
         writer.println("import java.time.*;");
+        writer.println("import java.math.*;");
         writer.println();
 
         // importar os modelos das entidades se necessário
@@ -189,6 +190,10 @@ public class SpringServiceGenerator {
                         GeneratorUtils.lowercaseFirst(entity) + "Repository;");
             }
         }
+
+        // services de outras classes chamados nos diagramas das operações
+        for (String service : diagramServices(cls))
+            writer.println("    private final " + service + " " + GeneratorUtils.lowercaseFirst(service) + ";");
 
         writer.println();
     }
@@ -1106,6 +1111,20 @@ public class SpringServiceGenerator {
             }
         }
         return entities;
+    }
+
+    // update to check if service actually exists later
+    // services de outras classes (lifelines ": XService") nos diagramas das operações desta classe
+    private Set<String> diagramServices(Class cls) {
+        Set<String> services = new LinkedHashSet<>();
+        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
+            if (op.isJob() || op.getSequenceDiagram() == null) continue;
+            String ownerService = GeneratorUtils.declaringClassOf(cls, op).getName() + "Service";
+            for (Lifeline ll : op.getSequenceDiagram().getLifelines())
+                if (ll.getType() != null && ll.getType().endsWith("Service") && !ll.getType().equals(ownerService))
+                    services.add(ll.getType());
+        }
+        return services;
     }
 
     // uma expressão Java traduzida de OCL refere self quando contém "this." (self -> this na tradução)

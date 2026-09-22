@@ -115,6 +115,7 @@ public class ClassGenerator {
             // imports
             writer.println("import java.util.*;");
             if (GeneratorUtils.needsJavaTime(cls)) writer.println("import java.time.*;");   // atributos de data (LocalDate, etc.)
+            if (GeneratorUtils.needsJavaMath(cls)) writer.println("import java.math.*;");   // atributos BigDecimal/BigInteger
             writer.println();
 
             // class declaration and if abstract

@@ -354,6 +354,8 @@ public class SpringControllerGenerator {
         writer.println();
         writer.println("import java.util.List;");
         writer.println("import java.util.UUID;");
+        writer.println("import java.time.*;");
+        writer.println("import java.math.*;");
 
         // jobs desta classe: importados para o endpoint de trigger manual
         for (Operation op : cls.getOperations()) {

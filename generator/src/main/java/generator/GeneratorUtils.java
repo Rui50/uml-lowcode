@@ -509,6 +509,22 @@ public class GeneratorUtils {
         return false;
     }
 
+    // para saber se é preciso "import java.math.*" para BigDecimal/BigInteger
+    public static boolean isJavaMathType(String type) {
+        return "BigDecimal".equals(type) || "BigInteger".equals(type);
+    }
+
+    public static boolean needsJavaMath(Class cls) {
+        if (cls.getAllAttributes().stream().anyMatch(a -> isJavaMathType(a.getType()))) return true;
+        for (Operation op : effectiveOperations(cls)) {
+            if (isJavaMathType(op.getReturnType())) return true;
+            if (op.getParameters() != null
+                    && op.getParameters().stream().anyMatch(p -> isJavaMathType(p.getType()))) return true;
+            if (op.getSequenceDiagram() != null) return true;
+        }
+        return false;
+    }
+
     // o que não for simples nem entidade é DTO (@RequestBody)
     public static boolean isSimpleParamType(String type) {
         if (type == null) return false;
@@ -521,6 +537,7 @@ public class GeneratorUtils {
             case "boolean": case "Boolean":
             case "char": case "Character":
             case "String":
+            case "BigDecimal": case "BigInteger":
                 return true;
             default:
                 return isJavaTimeType(type);
