@@ -3,11 +3,16 @@
   import { useModelStore } from '@/stores/model';
   import ProgressSpinner from 'primevue/progressspinner';
   import Message from 'primevue/message';
+  import { useToast } from 'primevue/usetoast';
 
   const modelStore = useModelStore();
+  const toast = useToast();
 
-  function selectFile(file: File) {
-    modelStore.parseFile(file);
+  async function selectFile(file: File) {
+    await modelStore.parseFile(file);
+    for (const w of modelStore.model?.warnings ?? []) {
+      toast.add({ severity: 'warn', summary: 'Model Warning', detail: w, life: 8000 });
+    }
   }
 </script>
 

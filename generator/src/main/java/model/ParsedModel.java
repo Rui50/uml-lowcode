@@ -1,5 +1,6 @@
 package model;
 
+import java.util.ArrayList;
 import java.util.List;
 import model.sequence.Interaction;
 
@@ -13,6 +14,7 @@ public class ParsedModel {
     private List<Interaction> pimInteractions;
     private List<Interaction> allInteractions;
     private List<Interface> interfaces;
+    private final List<String> warnings = new ArrayList<>();   // avisos do parse
 
     public ParsedModel(List<Class> classes,
                        List<Association> associations,
@@ -87,6 +89,8 @@ public class ParsedModel {
     }
 
     public List<Interface> getInterfaces() { return interfaces; }
+
+    public List<String> getWarnings() { return warnings; }
 
 }
 

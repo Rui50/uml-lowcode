@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useModelStore } from '@/stores/model'
 import { useProjectSettingsStore } from '@/stores/projectSettings'
@@ -8,6 +8,7 @@ import { SQL_RESERVED } from '@/constants/sqlReserved'
 
 import Select from 'primevue/select'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import DiagramList from '@/components/DiagramList.vue'
 import DiagramCanvas from '@/components/DiagramCanvas.vue'
 import Annotations from '@/components/Annotations.vue'
@@ -23,6 +24,19 @@ const targetOptions = [
 ]
 
 const showSettings = ref(false);
+
+// avisos do parse e com botão "Diagram Issues" abre um modal.
+// dispensar esconde o botão
+const showIssues = ref(false);
+const issuesDismissed = ref(false);
+const issues = computed(() => modelStore.model?.warnings ?? []);
+function dismissIssues() {
+  issuesDismissed.value = true;
+  showIssues.value = false;
+}
+// novo modelo -> volta a mostrar o botão
+watch(() => modelStore.model, () => { issuesDismissed.value = false; });
+
 const projectSettings = useProjectSettingsStore();
 const annotations = useAnnotationsStore();
 const toast = useToast();
@@ -84,6 +98,28 @@ function onConfirm() {
         <code v-if="modelStore.fileName" class="brand__file">{{ modelStore.fileName }}</code>
       </div>
 
+      <Button
+        v-if="issues.length && !issuesDismissed"
+        :label="`Diagram Issues (${issues.length})`"
+        severity="warn" size="small" text
+        class="issues-btn"
+        @click="showIssues = true"
+      />
+      <Dialog
+        v-model:visible="showIssues" modal header="Diagram Issues"
+        :style="{ width: '34rem' }" :dismissableMask="true"
+      >
+        <ul class="issues-list">
+          <li v-for="(w, i) in issues" :key="i">
+            <span>{{ w }}</span>
+          </li>
+        </ul>
+        <template #footer>
+          <Button label="Dismiss" size="small" text severity="secondary" @click="dismissIssues" />
+          <Button label="Close" size="small" text @click="showIssues = false" />
+        </template>
+      </Dialog>
+
       <div class="actions">
         <span class="target-label">Generation target</span>
         <Select
@@ -123,6 +159,7 @@ function onConfirm() {
   --surface: var(--p-content-background, var(--color-secondary, #ffffff));
   --mono: ui-monospace, "JetBrains Mono", "SF Mono", "Fira Code", Menlo, Consolas, monospace;
 
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -131,6 +168,33 @@ function onConfirm() {
   border-bottom: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink);
+}
+
+
+.issues-btn {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.issues-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.issues-list li {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  background: var(--color-secondary-hover);
+  color: var(--color-text, #1f2933);
 }
 
 .brand {

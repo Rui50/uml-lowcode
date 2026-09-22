@@ -98,7 +98,7 @@ public class ToolService {
         List<InterfaceDTO> interfaces = model.getInterfaces().stream()
                 .map(this::toInterfaceDto).toList();
 
-        return new ParseResponse(classes, associations, interactions, enumerations, interfaces);    }
+        return new ParseResponse(classes, associations, interactions, enumerations, interfaces, model.getWarnings());    }
 
     private ClassDTO toClassDto(Class c, List<Association> associations) {
         String parent = c.getParentClass() != null ? c.getParentClass().getName() : null;

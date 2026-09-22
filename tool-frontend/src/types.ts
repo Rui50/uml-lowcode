@@ -165,4 +165,5 @@ export interface ParseResponse {
   interactions: InteractionDTO[]
   enumerations: EnumerationDTO[]
   interfaces: InterfaceDTO[]
+  warnings: string[]   // avisos do parse
 }

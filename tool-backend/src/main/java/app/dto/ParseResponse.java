@@ -17,4 +17,5 @@ public class ParseResponse {
     private List<InteractionDTO> interactions;
     private List<EnumerationDTO> enumerations;
     private List<InterfaceDTO> interfaces;
+    private List<String> warnings;   // avisos do parse
 }
