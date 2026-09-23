@@ -244,6 +244,12 @@ public class SpringControllerGenerator {
             generateCollectionAddEndpoint(writer, className, otherClass, attributeName, serviceName);
             generateCollectionRemoveEndpoint(writer, className, otherClass, attributeName, serviceName);
         }
+        // OneToOne: PUT /{id}/{other}/{otherId} e DELETE /{id}/{other}, como no ManyToOne
+        else if (!inverseIsCollection && !isCollection) {
+            if (!hasRelationships) { writer.println("    // Relationship Endpoints"); hasRelationships = true; }
+            generateAssignEndpoint(writer, className, otherClass, attributeName, serviceName);
+            generateRemoveAssignEndpoint(writer, className, otherClass, attributeName, serviceName);
+        }
         return hasRelationships;
     }
 

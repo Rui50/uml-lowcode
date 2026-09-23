@@ -149,10 +149,16 @@ public class SequenceBodyGenerator {
         // mensagem «create»: gera "Type var = new Type(args)".
         if ("createMessage".equals(msg.getMessageSort())) {
             String type = msg.getTarget().getType();
-            String var = msg.getAssignVariable() != null ? msg.getAssignVariable()
-                    : (msg.getTarget().getRepresents() != null && !msg.getTarget().getRepresents().isBlank()
-                        ? msg.getTarget().getRepresents()
-                        : GeneratorUtils.lowercaseFirst(type));
+            // nome da variável: o "x =" do diagrama, senão o nome da lifeline, senão o tipo em minuscula
+            String var;
+            String represents = msg.getTarget().getRepresents();
+            if (msg.getAssignVariable() != null) {
+                var = msg.getAssignVariable();
+            } else if (represents != null && !represents.isBlank()) {
+                var = represents;
+            } else {
+                var = GeneratorUtils.lowercaseFirst(type);
+            }
             StringBuilder a = new StringBuilder();
             for (int i = 0; i < msg.getArguments().size(); i++) {
                 if (i > 0) a.append(", ");
@@ -174,8 +180,11 @@ public class SequenceBodyGenerator {
         // atribuição simples (sem chamada): "x = expr" ou "x = expr : Type"
         // ": Type" presente -> declara; ausente -> reatribui
         if (msg.isPlainAssignment()) {
-            String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
-                    ? msg.getReturnType() + " " : "";
+            // com ": Tipo" declara a variável, sem ele é só reatribuir
+            String declType = "";
+            if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
+                declType = msg.getReturnType() + " ";
+            }
             writer.println(ind + declType + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
             return;
         }
@@ -185,9 +194,11 @@ public class SequenceBodyGenerator {
         String targetVar = lifelineVarMap.get(msg.getTarget().getId());
         if (targetVar == null) {
             String represents = msg.getTarget().getRepresents();
-            targetVar = (represents != null && !represents.isBlank())
-                    ? represents
-                    : GeneratorUtils.lowercaseFirst(msg.getTarget().getType());
+            if (represents != null && !represents.isBlank()) {
+                targetVar = represents;
+            } else {
+                targetVar = GeneratorUtils.lowercaseFirst(msg.getTarget().getType());
+            }
         }
 
         // construir lista dos argumentos
@@ -223,10 +234,13 @@ public class SequenceBodyGenerator {
                     if ("add".equals(op) || "remove".equals(op)) {
                         String code;
                         if (assoc.hasQualifier()) {
+                            // Map: a chave vem do qualifier, add -> put(chave, x) e remove -> remove(chave)
                             String keyGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName()) + "()";
-                            code = "add".equals(op)
-                                    ? base + ".put(" + argName + "." + keyGetter + ", " + argName + ");"
-                                    : base + ".remove(" + argName + "." + keyGetter + ");";
+                            if ("add".equals(op)) {
+                                code = base + ".put(" + argName + "." + keyGetter + ", " + argName + ");";
+                            } else {
+                                code = base + ".remove(" + argName + "." + keyGetter + ");";
+                            }
                         } else {
                             code = base + "." + op + "(" + argName + ");";
                         }
@@ -237,29 +251,38 @@ public class SequenceBodyGenerator {
             }
         }
 
-        if (isSelfMessage) {
-            // self-message: turma.removeAluno(aluno) -> código direto
-            writer.println(ind + methodName + "(" + args + ");");
-        } else if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
-            // chamada com retorno: findById(id) : Turma
-            String returnType = msg.getReturnType();
-            String varName = msg.getAssignVariable() != null
-                    ? msg.getAssignVariable()
-                    : GeneratorUtils.lowercaseFirst(returnType);
+        // receiver: a self-message chama direto (contar()), as outras vão pela var da lifeline alvo
+        String receiver = "";
+        if (!isSelfMessage) {
+            receiver = targetVar + ".";
+        }
+        // a chamada já escrita, com receiver e argumentos: "turmaRepository.findById(id)"
+        String call = receiver + methodName + "(" + args + ")";
 
+        // tem ": Tipo" no diagrama ent o resultado é para guardar numa variável
+        if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
+            String returnType = msg.getReturnType();
+            // nome da variável: o "x =" do diagrama, se não escreveu a var usa o tipo em minuscula
+            String varName;
+            if (msg.getAssignVariable() != null) {
+                varName = msg.getAssignVariable();
+            } else {
+                varName = GeneratorUtils.lowercaseFirst(returnType);
+            }
+
+            // já declarada antes (o self carregado para as condições) -> não declarar outra vez
              if (preDeclaredVars.contains(varName)) return;
 
-            if (methodName.equals("findById")) {
-                writer.println(ind + returnType + " " + varName + " = " + targetVar + "." +
-                        methodName + "(" + args + ")");
+            // findById do repositório devolve Optional -> precisa do orElseThrow (self-message nunca é repo)
+            if (!isSelfMessage && methodName.equals("findById")) {
+                writer.println(ind + returnType + " " + varName + " = " + call);
                 writer.println(ind + "    .orElseThrow(() -> new NotFoundException(\"" + returnType + " not found\"));");
             } else {
-                writer.println(ind + returnType + " " + varName + " = " + targetVar + "." +
-                        methodName + "(" + args + ");");
+                writer.println(ind + returnType + " " + varName + " = " + call + ";");
             }
         } else {
-            // chamada sem retorno: save(turma)
-            writer.println(ind + targetVar + "." + methodName + "(" + args + ");");
+            // sem tipo de retorno -> só a chamada: save(turma)
+            writer.println(ind + call + ";");
         }
     }
 

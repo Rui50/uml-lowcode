@@ -258,7 +258,7 @@ public class SpringEntityGenerator {
                     writer.println("    " + ann);
                 }
                 String init = atr.getCollectionType().equals("List") ? "new ArrayList<>()" : "new HashSet<>()";
-                writer.println("    private " + atr.getAttributeType() + " " + atr.getName() + " = " + init + ";");
+                writer.println("    " + atr.getVisibility() + " " + atr.getAttributeType() + " " + atr.getName() + " = " + init + ";");
                 writer.println();
                 continue;
             }
@@ -286,9 +286,9 @@ public class SpringEntityGenerator {
             }
             if (atr.hasInit()) {
                 String javaInit = atr.getJavaInitExpression();
-                writer.println("    private " + attributeType + " " + atr.getName() + " = " + javaInit + ";");
+                writer.println("    " + atr.getVisibility() + " " + attributeType + " " + atr.getName() + " = " + javaInit + ";");
             } else {
-                writer.println("    private " + attributeType + " " + atr.getName() + ";");
+                writer.println("    " + atr.getVisibility() + " " + attributeType + " " + atr.getName() + ";");
             }
             writer.println();
         }

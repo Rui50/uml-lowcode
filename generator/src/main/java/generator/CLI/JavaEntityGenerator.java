@@ -190,7 +190,7 @@ public class JavaEntityGenerator {
             if (attr.hasDerive()) continue;
             // o id é sempre o Long gerido pelo repo
             if ("id".equals(attr.getName())) continue;
-            String line = "    private " + attr.getAttributeType() + " " + attr.getName();
+            String line = "    " + attr.getVisibility() + " " + attr.getAttributeType() + " " + attr.getName();
             if (attr.isCollection()) {
                 if (attr.getCollectionType().equals("List")) {
                     line += " = new ArrayList<>()";

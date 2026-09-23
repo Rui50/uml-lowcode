@@ -282,7 +282,7 @@ public class CLIEntityGenerator {
             if (atr.isCollection()) {
                 writer.println("    @ElementCollection");
                 String init = atr.getCollectionType().equals("List") ? "new ArrayList<>()" : "new HashSet<>()";
-                writer.println("    private " + atr.getAttributeType() + " " + atr.getName() + " = " + init + ";");
+                writer.println("    " + atr.getVisibility() + " " + atr.getAttributeType() + " " + atr.getName() + " = " + init + ";");
                 writer.println();
                 continue;
             }
@@ -305,9 +305,9 @@ public class CLIEntityGenerator {
             writer.println("    " + GeneratorUtils.columnAnnotation(atr));
             if (atr.hasInit()) {
                 String javaInit = atr.getJavaInitExpression();
-                writer.println("    private " + attributeType + " " + atr.getName() + " = " + javaInit + ";");
+                writer.println("    " + atr.getVisibility() + " " + attributeType + " " + atr.getName() + " = " + javaInit + ";");
             } else {
-                writer.println("    private " + attributeType + " " + atr.getName() + ";");
+                writer.println("    " + atr.getVisibility() + " " + attributeType + " " + atr.getName() + ";");
             }
             writer.println();
         }

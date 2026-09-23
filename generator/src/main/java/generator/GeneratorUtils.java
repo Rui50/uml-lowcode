@@ -536,8 +536,10 @@ public class GeneratorUtils {
             case "float": case "Float":
             case "boolean": case "Boolean":
             case "char": case "Character":
+            case "short": case "Short":
             case "String":
             case "BigDecimal": case "BigInteger":
+            case "UUID":
                 return true;
             default:
                 return isJavaTimeType(type);

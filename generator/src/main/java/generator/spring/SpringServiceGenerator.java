@@ -305,7 +305,114 @@ public class SpringServiceGenerator {
             generateOneToManyUniAddMethod(writer, cls, otherClass, attributeName, assoc);
             generateOneToManyUniRemoveMethod(writer, cls, otherClass, attributeName, assoc);
         }
+        // 1:1 (nenhum dos lados é coleção) -> assignX / removeX, de cada lado navegável
+        else if (!inverseIsCollection && !isCollection) {
+            if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
+            generateOneToOneAssignMethod(writer, cls, rel);
+            generateOneToOneRemoveMethod(writer, cls, rel);
+        }
         return hasRelationships;
+    }
+
+    // nome do campo desta classe do lado de lá (para sincronizar a outra ponta de um 1:1)
+    private String inverseAttributeOf(RelationshipInfo rel) {
+        return GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(
+                rel.thisClass(), rel.thisRole(), rel.thisMul()));
+    }
+
+    /**
+     * 1:1 - assign: liga a relação (sincroniza a outra ponta se for bidirecional).
+     */
+    private void generateOneToOneAssignMethod(PrintWriter writer, Class cls, RelationshipInfo rel) {
+        String className = cls.getName();
+        String varName = GeneratorUtils.lowercaseFirst(className);
+        String repoName = varName + "Repository";
+        String otherClass = rel.otherClass;
+        String otherVar = GeneratorUtils.lowercaseFirst(rel.attributeName());
+        String otherRepoName = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
+        String capAttribute = GeneratorUtils.capitalizeFirst(rel.attributeName());
+        String capInverse = inverseAttributeOf(rel);
+
+        writer.println();
+        writer.println("    /**");
+        writer.println("     * OneToOne");
+        writer.println("     * @param " + varName + "Id the " + className + " id");
+        writer.println("     * @param " + otherVar + "Id the " + otherClass + " id");
+        writer.println("     * @return the updated " + className);
+        writer.println("     */");
+        writer.println("    public " + className + "ResponseDTO assign" + capAttribute +
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, " + idTypeOf(otherClass) + " " + otherVar + "Id) {");
+        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
+                " not found: \" + " + varName + "Id));");
+        writer.println("        " + otherClass + " " + otherVar + " = " + otherRepoName + ".findById(" + otherVar + "Id)");
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + otherClass +
+                " not found: \" + " + otherVar + "Id));");
+        writer.println();
+        writer.println("        " + varName + ".set" + capAttribute + "(" + otherVar + ");");
+        if (rel.isBidirectional()) {
+            writer.println("        " + otherVar + ".set" + capInverse + "(" + varName + ");");
+        }
+        writer.println();
+        generateValidation(writer, className, varName);
+        if (rel.isBidirectional()) generateValidation(writer, otherClass, otherVar);
+
+        if (rel.isOwner()) {
+            writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
+        } else {
+            // a FK está no outro lado, é esse que tem de ser gravado
+            writer.println("        " + otherRepoName + ".save(" + otherVar + ");");
+            writer.println("        " + className + " saved = " + varName + ";");
+        }
+        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
+        writer.println("    }");
+    }
+
+    /**
+     * 1:1 - remove: desliga a relação (limpa a outra ponta se for bidirecional).
+     *  StudentMemberService.removeCard(Long studentMemberId)
+     */
+    private void generateOneToOneRemoveMethod(PrintWriter writer, Class cls, RelationshipInfo rel) {
+        String className = cls.getName();
+        String varName = GeneratorUtils.lowercaseFirst(className);
+        String repoName = varName + "Repository";
+        String otherClass = rel.otherClass;
+        String otherVar = GeneratorUtils.lowercaseFirst(rel.attributeName());
+        String otherRepoName = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
+        String capAttribute = GeneratorUtils.capitalizeFirst(rel.attributeName());
+        String capInverse = inverseAttributeOf(rel);
+
+        writer.println();
+        writer.println("    /**");
+        writer.println("     * OneToOne");
+        writer.println("     * @param " + varName + "Id the " + className + " id");
+        writer.println("     * @return the updated " + className);
+        writer.println("     */");
+        writer.println("    public " + className + "ResponseDTO remove" + capAttribute +
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id) {");
+        writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
+        writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
+                " not found: \" + " + varName + "Id));");
+        writer.println();
+        writer.println("        " + otherClass + " " + otherVar + " = " + varName + ".get" + capAttribute + "();");
+        writer.println("        if (" + otherVar + " != null) {");
+        if (rel.isBidirectional()) {
+            writer.println("            " + otherVar + ".set" + capInverse + "(null);");
+        }
+        writer.println("            " + varName + ".set" + capAttribute + "(null);");
+        if (!rel.isOwner()) {
+            writer.println("            " + otherRepoName + ".save(" + otherVar + ");");
+        }
+        writer.println("        }");
+        writer.println();
+        generateValidation(writer, className, varName);
+        if (rel.isOwner()) {
+            writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
+        } else {
+            writer.println("        " + className + " saved = " + varName + ";");
+        }
+        writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
+        writer.println("    }");
     }
 
     /**

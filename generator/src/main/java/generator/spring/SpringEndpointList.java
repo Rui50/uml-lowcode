@@ -76,6 +76,11 @@ public class SpringEndpointList {
             endpoints.add(new Endpoint("POST",   base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Add " + plural(rel.otherClass), null));
             endpoints.add(new Endpoint("DELETE", base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Remove " + rel.otherClass, null));
         }
+        // OneToOne que gera PUT /{id}/{other}/{otherId} + DELETE /{id}/{other}, de cada lado navegável
+        else if (!rel.inverseIsCollection() && !rel.isCollection()) {
+            endpoints.add(new Endpoint("PUT",    base + "/{id}/" + otherPath + "/{" + otherVar + "Id}", TYPE.ASSOCIATION, "Assign " + rel.otherClass, null));
+            endpoints.add(new Endpoint("DELETE", base + "/{id}/" + otherPath, TYPE.ASSOCIATION, "Unassign " + rel.otherClass, null));
+        }
     }
 
     private static String plural(String className) {

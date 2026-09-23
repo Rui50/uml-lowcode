@@ -22,11 +22,11 @@ import java.util.stream.Collectors;
 
 public class AnnotationService {
     public void apply(ParsedModel model, AnnotationsDTO payload) {
-        if (payload == null) return;
-
         List<Class> classes = model.getClasses();
         List<Association> associations = model.getAssociations();
+
         clearAnnotations(classes, model.getInterfaces());
+        if (payload == null) return;
 
         applyInvariants(classes, associations, payload.getInvariantsByClass(), model.getInterfaces());
         applyInits(classes, associations, payload.getInitByAttribute());

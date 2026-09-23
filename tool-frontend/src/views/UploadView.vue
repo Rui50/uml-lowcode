@@ -10,8 +10,15 @@
 
   async function selectFile(file: File) {
     await modelStore.parseFile(file);
-    for (const w of modelStore.model?.warnings ?? []) {
-      toast.add({ severity: 'warn', summary: 'Model Warning', detail: w, life: 8000 });
+    // so resumo, a lista está no "Diagram Issues"
+    const warnings = modelStore.model?.warnings ?? [];
+    if (warnings.length) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Model Warnings',
+        detail: `${warnings.length} warning(s) — see "Diagram Issues"`,
+        life: 6000,
+      });
     }
   }
 </script>

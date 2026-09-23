@@ -747,32 +747,40 @@ public class JavaMenuGenerator {
                 w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
                         "\"]: \");");
                 w.println("        String " + name + "Str = scanner.nextLine();");
-                w.println("        if (!" + name + "Str.isEmpty()) entity.set" + capitalized +
-                        "(Integer.parseInt(" + name + "Str));");
+                w.println("        if (!" + name + "Str.isEmpty()) {");
+                w.println("            try { entity.set" + capitalized + "(Integer.parseInt(" + name + "Str.trim())); }");
+                w.println("            catch (NumberFormatException ex) { System.out.println(\"Invalid value, keeping current.\"); }");
+                w.println("        }");
                 break;
             case "long":
             case "Long":
                 w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
                         "\"]: \");");
                 w.println("        String " + name + "Str = scanner.nextLine();");
-                w.println("        if (!" + name + "Str.isEmpty()) entity.set" + capitalized +
-                        "(Long.parseLong(" + name + "Str));");
+                w.println("        if (!" + name + "Str.isEmpty()) {");
+                w.println("            try { entity.set" + capitalized + "(Long.parseLong(" + name + "Str.trim())); }");
+                w.println("            catch (NumberFormatException ex) { System.out.println(\"Invalid value, keeping current.\"); }");
+                w.println("        }");
                 break;
             case "float":
             case "Float":
                 w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
                         "\"]: \");");
                 w.println("        String " + name + "Str = scanner.nextLine();");
-                w.println("        if (!" + name + "Str.isEmpty()) entity.set" + capitalized +
-                        "(Float.parseFloat(" + name + "Str));");
+                w.println("        if (!" + name + "Str.isEmpty()) {");
+                w.println("            try { entity.set" + capitalized + "(Float.parseFloat(" + name + "Str.trim())); }");
+                w.println("            catch (NumberFormatException ex) { System.out.println(\"Invalid value, keeping current.\"); }");
+                w.println("        }");
                 break;
             case "double":
             case "Double":
                 w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
                         "\"]: \");");
                 w.println("        String " + name + "Str = scanner.nextLine();");
-                w.println("        if (!" + name + "Str.isEmpty()) entity.set" + capitalized +
-                        "(Double.parseDouble(" + name + "Str));");
+                w.println("        if (!" + name + "Str.isEmpty()) {");
+                w.println("            try { entity.set" + capitalized + "(Double.parseDouble(" + name + "Str.trim())); }");
+                w.println("            catch (NumberFormatException ex) { System.out.println(\"Invalid value, keeping current.\"); }");
+                w.println("        }");
                 break;
             case "boolean":
             case "Boolean":

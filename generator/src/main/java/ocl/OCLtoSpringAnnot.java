@@ -42,7 +42,8 @@ public class OCLtoSpringAnnot {
     // percorre por ordem e fica na 1 que der match, as específicas tao antes das gerais (">= 0" antes de ">= N")
     static final List<Rule> RULES = List.of(
             new Rule("(\\w+) <> null",                "@NotNull",        null),
-            new Rule("(\\w+) <> ''",                  "@NotEmpty",       STRINGS),
+            // (@NotEmpty seria  "x <> null and x <> ''", mas as regras são por parte do "and" para ja)
+            // new Rule("(\\w+) <> ''",                  "@NotEmpty",       STRINGS),
             new Rule("(\\w+) >= 0",                   "@PositiveOrZero", NUMBERS),
             new Rule("(\\w+) > 0",                    "@Positive",       NUMBERS),
             new Rule("(\\w+) <= 0",                   "@NegativeOrZero", NUMBERS),

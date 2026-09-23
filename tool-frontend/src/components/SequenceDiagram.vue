@@ -24,6 +24,11 @@ const container = ref<HTMLDivElement>()
 
 mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" })
 
+// ";" é o separador de instruções do mermaid ent tmeos de remover das msgs
+function mmText(s: string) {
+  return s.replace(/;/g, '#59;')
+}
+
 function buildMermaidDiagram(i: InteractionDTO): string {
   const lines: string[] = ['sequenceDiagram']
 
@@ -31,7 +36,7 @@ function buildMermaidDiagram(i: InteractionDTO): string {
 
   for (const lifeline of orderedLifelines) {
     const label = lifeline.type ? `${lifeline.represents || ""} : ${lifeline.type}`.trim() : (lifeline.name || lifeline.id)
-    lines.push(`  participant ${lifeline.id} as ${label}`)
+    lines.push(`  participant ${lifeline.id} as ${mmText(label)}`)
   }
 
   buildElements(i.elements, lines, '  ')
@@ -45,7 +50,7 @@ function buildElements(elements: SequenceElement[], lines: string[], indent: str
       const source = elem.sourceLifelineId
       const target = elem.targetLifelineId
       const arrow = elem.messageSort === 'reply' ? '-->>' : '->>'
-      lines.push(`${indent}${source} ${arrow} ${target}: ${elem.label || ''}`)
+      lines.push(`${indent}${source} ${arrow} ${target}: ${mmText(elem.label || '')}`)
     } else {
       buildFragment(elem, lines, indent)
     }
@@ -67,7 +72,7 @@ function buildFragment(fragment: FragmentDTO, lines: string[], indent: string) {
     const operand = fragment.operands[i]
     // to silence typ
     if (!operand) continue
-    const guard = operand?.guard ?? ""
+    const guard = mmText(operand?.guard ?? "")
     if (i === 0) {
       lines.push(`${indent}${keyword} ${guard}`.trimEnd())
     } else if (sep) {
@@ -121,7 +126,7 @@ async function render(){
 onMounted(render)
 watch(() => props.interaction, render)
 
-</script> 
+</script>
 
 <template>
   <div ref="container" class="seq-diagram"></div>
