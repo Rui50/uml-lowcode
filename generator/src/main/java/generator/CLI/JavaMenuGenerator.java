@@ -108,7 +108,7 @@ public class JavaMenuGenerator {
             generateRunMethod(w, cls, associations);
 
             // CRUD
-            if (!cls.isAbstract()) generateCreateMethod(w, cls);
+            if (!cls.isAbstract()) generateCreateMethod(w, cls, associations);
             generateViewAllMethod(w, cls, associations);
             generateViewByIdMethod(w, cls, associations);
             generateUpdateMethod(w, cls);
@@ -213,7 +213,7 @@ public class JavaMenuGenerator {
      * nao le atributos derivados
      * valida invariantes
      */
-    private void generateCreateMethod(PrintWriter w, Class cls) {
+    private void generateCreateMethod(PrintWriter w, Class cls, List<Association> associations) {
         w.println("    private void create() {");
 
         // recolher atributos do pai + próprios
@@ -234,6 +234,27 @@ public class JavaMenuGenerator {
         }
         w.println();
 
+        // pede o id de cada relação single antes do validate(): senão uma relação obrigatória
+        // (self.x <> null) nunca poderia ser preenchida e a classe ficava incriável. Vazio = null.
+        List<RelationshipInfo> singleRels = RelationshipInfo.collectForMenus(cls, associations).stream()
+                .filter(r -> !r.isCollection())
+                .toList();
+        for (RelationshipInfo rel : singleRels) {
+            String other = rel.otherClass;
+            String attribute = rel.attributeName();
+            String in = attribute + "IdIn";
+            w.println("        System.out.print(\"" + other + " ID para " + attribute + " (enter = nenhum): \");");
+            w.println("        String " + in + " = scanner.nextLine().trim();");
+            w.println("        " + other + " " + attribute + " = null;");
+            w.println("        if (!" + in + ".isEmpty()) {");
+            w.println("            try { " + attribute + " = " + GeneratorUtils.repoVariable(other)
+                    + ".findById(Long.valueOf(" + in + ")); }");
+            w.println("            catch (RuntimeException ex) { System.out.println(\"Invalid id.\"); return; }");
+            w.println("            if (" + attribute + " == null) { System.out.println(\"" + other + " not found.\"); return; }");
+            w.println("        }");
+            w.println();
+        }
+
         // criar entidade com construtor (pai + próprios)
         w.print("        " + cls.getName() + " entity = new " + cls.getName() + "(");
         for (int i = 0; i < allAttrs.size(); i++) {
@@ -241,6 +262,16 @@ public class JavaMenuGenerator {
             w.print(allAttrs.get(i).getName());
         }
         w.println(");");
+
+        for (RelationshipInfo rel : singleRels) {
+            String var = rel.attributeName();
+            w.println("        entity.set" + GeneratorUtils.capitalizeFirst(var) + "(" + var + ");");
+            if (rel.isBidirectional()) {
+                w.println("        if (" + var + " != null) {");
+                writeInverseLink(w, rel, var, "entity", "            ");
+                w.println("        }");
+            }
+        }
 
         // validation
         if (cls.hasAnyInvariants()) {
@@ -388,21 +419,46 @@ public class JavaMenuGenerator {
      */
     private void generateRelationshipMethods(PrintWriter w, Class cls, List<Association> associations) {
         for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
-            String attributeName = rel.attributeName();
-
             if (rel.isCollection()) {
-                generateAddMethod(w, cls.getName(), rel.otherClass, attributeName, rel.assoc, rel.isSource);
-                generateRemoveFromListMethod(w, cls.getName(), rel.otherClass, attributeName, rel.assoc, rel.isSource);
+                generateAddMethod(w, cls.getName(), rel);
+                generateRemoveFromListMethod(w, cls.getName(), rel);
             } else {
-                generateAssignMethod(w, cls.getName(), rel.otherClass, attributeName);
-                generateRemoveAssignMethod(w, cls.getName(), rel.otherClass, attributeName);
+                generateAssignMethod(w, cls.getName(), rel);
+                generateRemoveAssignMethod(w, cls.getName(), rel);
             }
         }
     }
 
+    // escreve o campo do outro lado (Map -> put pela chave, coleção -> add, singular -> set)
+    private void writeInverseLink(PrintWriter w, RelationshipInfo rel, String inverseVar, String ownVar, String indent) {
+        String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(rel.assoc, rel.isSource));
+        if (rel.assoc.isMapEnd(!rel.isSource)) {
+            String qualCap = GeneratorUtils.capitalizeFirst(rel.assoc.getQualifierName());
+            w.println(indent + inverseVar + ".get" + invCap + "().put(" + ownVar + ".get" + qualCap + "(), " + ownVar + ");");
+        } else if (rel.inverseIsCollection()) {
+            w.println(indent + inverseVar + ".get" + invCap + "().add(" + ownVar + ");");
+        } else {
+            w.println(indent + inverseVar + ".set" + invCap + "(" + ownVar + ");");
+        }
+    }
+
+    // mesma logica do writeInverseLink, para as opções de desligar
+    private void writeInverseUnlink(PrintWriter w, RelationshipInfo rel, String inverseVar, String ownVar, String indent) {
+        String invCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.getOtherSideAttributeName(rel.assoc, rel.isSource));
+        if (rel.assoc.isMapEnd(!rel.isSource)) {
+            String qualCap = GeneratorUtils.capitalizeFirst(rel.assoc.getQualifierName());
+            w.println(indent + inverseVar + ".get" + invCap + "().remove(" + ownVar + ".get" + qualCap + "());");
+        } else if (rel.inverseIsCollection()) {
+            w.println(indent + inverseVar + ".get" + invCap + "().remove(" + ownVar + ");");
+        } else {
+            w.println(indent + inverseVar + ".set" + invCap + "(null);");
+        }
+    }
+
     // Assign method (ManyToOne): entity.setOther(other)
-    private void generateAssignMethod(PrintWriter w, String ownerClass, String otherClass, String attributeName) {
-        String capitalized = GeneratorUtils.capitalizeFirst(attributeName);
+    private void generateAssignMethod(PrintWriter w, String ownerClass, RelationshipInfo rel) {
+        String otherClass = rel.otherClass;
+        String capitalized = GeneratorUtils.capitalizeFirst(rel.attributeName());
         w.println("    private void assign" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
@@ -413,6 +469,7 @@ public class JavaMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
         w.println("        owner.set" + capitalized + "(other);");
+        if (rel.isBidirectional()) writeInverseLink(w, rel, "other", "owner", "        ");
         w.println("        " + GeneratorUtils.repoVariable(ownerClass) + ".save(owner);");
         w.println("        System.out.println(\"Assigned " + otherClass + " to " + ownerClass + ".\");");
         w.println("    }");
@@ -420,23 +477,32 @@ public class JavaMenuGenerator {
     }
 
     // remove assign
-    private void generateRemoveAssignMethod(PrintWriter w, String ownerClass, String otherClass, String attributeName) {
-        String capitalized = GeneratorUtils.capitalizeFirst(attributeName);
+    private void generateRemoveAssignMethod(PrintWriter w, String ownerClass, RelationshipInfo rel) {
+        String otherClass = rel.otherClass;
+        String capitalized = GeneratorUtils.capitalizeFirst(rel.attributeName());
         w.println("    private void remove" + capitalized + "() {");
         w.println("        Long id = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " entity = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(id);");
         w.println("        if (entity == null) { System.out.println(\"" + ownerClass + " not found.\"); return; }");
         w.println();
+        if (rel.isBidirectional()) {
+            w.println("        " + otherClass + " previous = entity.get" + capitalized + "();");
+        }
         w.println("        entity.set" + capitalized + "(null);");
+        if (rel.isBidirectional()) {
+            w.println("        if (previous != null) {");
+            writeInverseUnlink(w, rel, "previous", "entity", "            ");
+            w.println("        }");
+        }
         w.println("        System.out.println(\"" + otherClass + " removed from \" + entity);");
         w.println("    }");
         w.println();
     }
 
     // add (OneToMany/ManyToMany/Map): list.add(other) ou map.put(key, other)
-    // isSource = a classe do menu está na ponta source desta associação
-    private void generateAddMethod(PrintWriter w, String ownerClass, String otherClass, String attributeName, Association assoc, boolean isSource) {
-        String capitalized = GeneratorUtils.capitalizeFirst(attributeName);
+    private void generateAddMethod(PrintWriter w, String ownerClass, RelationshipInfo rel) {
+        String otherClass = rel.otherClass;
+        String capitalized = GeneratorUtils.capitalizeFirst(rel.attributeName());
         w.println("    private void add" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
@@ -447,15 +513,15 @@ public class JavaMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
-        if (assoc.isMapEnd(isSource)) {
+        if (rel.isMap()) {
             // Map fazemos put com a chave sendo o qualifier do outro objeto
             // owner.getAlunos().put(other.getNumero(), other)
-            String qualifierName = assoc.getQualifierName();
-            String qualCap = GeneratorUtils.capitalizeFirst(qualifierName);
+            String qualCap = GeneratorUtils.capitalizeFirst(rel.assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().put(other.get" + qualCap + "(), other);");
         } else {
             w.println("        owner.get" + capitalized + "().add(other);");
         }
+        if (rel.isBidirectional()) writeInverseLink(w, rel, "other", "owner", "        ");
 
         w.println("        " + GeneratorUtils.repoVariable(ownerClass) + ".save(owner);");
         w.println("        System.out.println(\"Added " + otherClass + " to " + ownerClass + ".\");");
@@ -464,8 +530,9 @@ public class JavaMenuGenerator {
     }
 
     // remove da lista/map
-    private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, String otherClass, String attributeName, Association assoc, boolean isSource) {
-        String capitalized = GeneratorUtils.capitalizeFirst(attributeName);
+    private void generateRemoveFromListMethod(PrintWriter w, String ownerClass, RelationshipInfo rel) {
+        String otherClass = rel.otherClass;
+        String capitalized = GeneratorUtils.capitalizeFirst(rel.attributeName());
         w.println("    private void remove" + capitalized + "() {");
         w.println("        Long ownerId = InputUtils.readLong(scanner, \"" + ownerClass + " ID: \");");
         w.println("        " + ownerClass + " owner = " + GeneratorUtils.repoVariable(ownerClass) + ".findById(ownerId);");
@@ -476,14 +543,14 @@ public class JavaMenuGenerator {
         w.println("        if (other == null) { System.out.println(\"" + otherClass + " not found.\"); return; }");
         w.println();
 
-        if (assoc.isMapEnd(isSource)) {
+        if (rel.isMap()) {
             // map remove pela chave
-            String qualifierName = assoc.getQualifierName();
-            String qualCap = GeneratorUtils.capitalizeFirst(qualifierName);
+            String qualCap = GeneratorUtils.capitalizeFirst(rel.assoc.getQualifierName());
             w.println("        owner.get" + capitalized + "().remove(other.get" + qualCap + "());");
         } else {
             w.println("        owner.get" + capitalized + "().remove(other);");
         }
+        if (rel.isBidirectional()) writeInverseUnlink(w, rel, "other", "owner", "        ");
 
         w.println("        System.out.println(\"" + otherClass + " removed from \" + owner);");
         w.println("    }");
