@@ -317,11 +317,11 @@ public class CLIMenuGenerator {
 
         // Se uma relação é obrigatória (self.x <> null), tem de se poder preencher no create, senão a entidade
         // nunca passa na validação. Por isso pede-se aqui o id do outro objeto (enter = vazio para as opcionais).
-        // so as que esta classe grava (o lado dono), o resto fica para o assignX.
-        List<RelationshipInfo> singleOwned = RelationshipInfo.collectForMenus(cls, associations).stream()
-                .filter(r -> !r.isCollection() && r.isOwner())
+        // single dos DOIS lados: o não dono (1:1 bidirecional) também tem de poder ser preenchido
+        List<RelationshipInfo> singleRels = RelationshipInfo.collectForMenus(cls, associations).stream()
+                .filter(r -> !r.isCollection())
                 .toList();
-        for (RelationshipInfo rel : singleOwned) {
+        for (RelationshipInfo rel : singleRels) {
             String other = rel.otherClass;
             String attribute = rel.attributeName();
             String in = attribute + "IdIn";
@@ -344,7 +344,7 @@ public class CLIMenuGenerator {
             String cap = GeneratorUtils.capitalizeFirst(attr.getName());
             w.println("        entity.set" + cap + "(" + attr.getName() + ");");
         }
-        for (RelationshipInfo rel : singleOwned) {
+        for (RelationshipInfo rel : singleRels) {
             String var = rel.attributeName();
             w.println("        entity.set" + GeneratorUtils.capitalizeFirst(var) + "(" + var + ");");
 
@@ -364,6 +364,13 @@ public class CLIMenuGenerator {
         w.println("        em.getTransaction().begin();");
         w.println("        try {");
         w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".save(entity);");
+        // lado não dono: quem grava a relação é o outro objeto (tem a FK)
+        for (RelationshipInfo rel : singleRels) {
+            if (rel.isOwner()) continue;
+            String var = rel.attributeName();
+            w.println("            if (" + var + " != null) " + GeneratorUtils.repoVariable(rel.otherClass)
+                    + ".save(" + var + ");");
+        }
         w.println("            em.getTransaction().commit();");
         w.println("            System.out.println(\"Created: \" + entity);");
         writeTransactionClose(w);
