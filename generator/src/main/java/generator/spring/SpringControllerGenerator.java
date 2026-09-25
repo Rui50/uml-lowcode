@@ -196,8 +196,9 @@ public class SpringControllerGenerator {
         writer.println("     */");
         writer.println("    @DeleteMapping(\"/{id}\")");
         writer.println("    public ResponseEntity<Void> delete(@PathVariable " + idTypeOf(className) + " id) {");
+        // o deleteById ignora um id inexistente em silêncio, lança-se como os outros 404 para ter o mesmo ProblemDetail
         writer.println("        if (!" + serviceName + ".existsById(id)) {");
-        writer.println("            return ResponseEntity.notFound().build();");
+        writer.println("            throw new NotFoundException(\"" + className + " not found: \" + id);");
         writer.println("        }");
         writer.println();
         writer.println("        " + serviceName + ".deleteById(id);");
@@ -312,8 +313,8 @@ public class SpringControllerGenerator {
         writer.println("    @PostMapping(\"/{id}/" + otherPath + "\")");
         writer.println("    public ResponseEntity<" + className + "ResponseDTO> add" + cap + "(");
         writer.println("            @PathVariable " + idTypeOf(className) + " id,");
-        writer.println("            @RequestBody List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
-        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".add" + cap + "(id, " + otherVar + "Ids);");
+        writer.println("            @RequestBody List<" + idTypeOf(otherClass) + "> ids) {");
+        writer.println("        " + className + "ResponseDTO updated = " + serviceName + ".add" + cap + "(id, ids);");
         writer.println("        return ResponseEntity.ok(updated);");
         writer.println("    }");
         writer.println();
@@ -518,7 +519,11 @@ public class SpringControllerGenerator {
             writer.println();
             writer.println("    // mensagem do erro, ou o nome da exceção se não houver mensagem");
             writer.println("    private static String msg(Throwable ex) {");
-            writer.println("        return ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();");
+            writer.println("        if (ex.getMessage() != null) {");
+            writer.println("            return ex.getMessage();");
+            writer.println("        } else {");
+            writer.println("            return ex.getClass().getSimpleName();");
+            writer.println("        }");
             writer.println("    }");
             writer.println("}");
         }

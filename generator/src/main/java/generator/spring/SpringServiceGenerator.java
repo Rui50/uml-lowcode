@@ -561,7 +561,7 @@ public class SpringServiceGenerator {
 
     /**
      * ManyToMany - add: adicionar entidades relacionadas por IDs
-     * Ex: TurmaService.addAlunos(Long turmaId, List<Long> alunoIds)
+     * Ex: TurmaService.addAlunos(Long turmaId, List<Long> ids)
      * - Procura todas as entidades por ID
      * - Adiciona à coleção, se bidirectional sincroniza ambos os lados
      */
@@ -589,15 +589,15 @@ public class SpringServiceGenerator {
         writer.println("    /**");
         writer.println("     * ManyToMany");
         writer.println("     * @param " + varName + "Id the " + className + " id");
-        writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
+        writer.println("     * @param ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO add" + capitalizedAttribute +
-                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
                 " not found: \" + " + varName + "Id));");
-        writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
+        writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(ids);");
         writer.println();
 
         if (assoc.hasQualifier()) {
@@ -632,7 +632,7 @@ public class SpringServiceGenerator {
 
     /**
      * ManyToMany - remove: remover entidades relacionadas por IDs
-     * Ex: TurmaService.removeAlunos(Long turmaId, List<Long> alunoIds)
+     * Ex: TurmaService.removeAlunos(Long turmaId, List<Long> ids)
      * - Procura as entidades, remove da coleção e sincroniza se bidirectional
      */
     private void generateManyToManyRemoveMethod(PrintWriter writer, Class cls, String otherClass,
@@ -658,15 +658,15 @@ public class SpringServiceGenerator {
         writer.println("    /**");
         writer.println("     * ManyToMany");
         writer.println("     * @param " + varName + "Id the " + className + " id");
-        writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
+        writer.println("     * @param ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO remove" + capitalizedAttribute +
-                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
                 " not found: \" + " + varName + "Id));");
-        writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
+        writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(ids);");
         writer.println();
 
         if (assoc.hasQualifier()) {
@@ -717,15 +717,15 @@ public class SpringServiceGenerator {
         writer.println("    /**");
         writer.println("     * OneToMany (unidirectional)");
         writer.println("     * @param " + varName + "Id the " + className + " id");
-        writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to add");
+        writer.println("     * @param ids list of " + otherClass + " ids to add");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO add" + capitalizedAttribute +
-                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
                 " not found: \" + " + varName + "Id));");
-        writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
+        writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(ids);");
         writer.println();
 
         if (assoc.hasQualifier()) {
@@ -763,11 +763,11 @@ public class SpringServiceGenerator {
         writer.println("    /**");
         writer.println("     * OneToMany (unidirectional)");
         writer.println("     * @param " + varName + "Id the " + className + " id");
-        writer.println("     * @param " + otherVar + "Ids list of " + otherClass + " ids to remove");
+        writer.println("     * @param ids list of " + otherClass + " ids to remove");
         writer.println("     * @return the updated " + className);
         writer.println("     */");
         writer.println("    public " + className + "ResponseDTO remove" + capitalizedAttribute +
-                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> " + otherVar + "Ids) {");
+                "(" + cls.getRoot().getIdAttributeType() + " " + varName + "Id, List<" + idTypeOf(otherClass) + "> ids) {");
         writer.println("        " + className + " " + varName + " = " + repoName + ".findById(" + varName + "Id)");
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className +
                 " not found: \" + " + varName + "Id));");
@@ -775,14 +775,14 @@ public class SpringServiceGenerator {
 
         if (assoc.hasQualifier()) {
             String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
-            writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(" + otherVar + "Ids);");
+            writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(ids);");
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedAttribute + "().remove(" +
                     otherVar + "." + qualifierGetter + "());");
             writer.println("        }");
         } else {
             writer.println("        " + varName + ".get" + capitalizedAttribute + "().removeIf(" +
-                    otherVar + " -> " + otherVar + "Ids.contains(" + otherVar + "." + idGetterOf(otherClass) + "()));");
+                    otherVar + " -> ids.contains(" + otherVar + "." + idGetterOf(otherClass) + "()));");
         }
 
         writer.println();
@@ -808,16 +808,25 @@ public class SpringServiceGenerator {
         writer.println("        " + className + " " + varName + " = dto.toEntity();");
         writer.println();
 
-        // tem dois saves:
-        //  1. relações singulares de que é owner (linkOwnedSingles)
+        // id atribuído pelo cliente: o save() vê o id preenchido, faz merge e o POST repetido reescrevia a linha
+        if (cls.isIdAssigned()) {
+            String idGetter = varName + "." + idGetterOf(className) + "()";
+            writer.println("        if (" + repoName + ".existsById(" + idGetter + ")) {");
+            writer.println("            throw new IllegalStateException(\"" + className + " already exists: \" + " + idGetter + ");");
+            writer.println("        }");
+            writer.println();
+        }
+
+        //  1. singulares dos dois lados, ANTES do INSERT: a Bean Validation corre lá dentro e estaria null;
         //  2. save() = INSERT, que gera o id desta entidade;
-        //  3. ligações que referem esta entidade pelo id (inverse/coleções) «
+        //  3. coleções, que precisam desse id (a FK está nos filhos)
         //  4. 2º save só quando esta entidade é owner de coleção (M:N) porque aí a ligação só persiste ao gravr
         //     Se a FK está no outro já se gravou lá -> nada a gravar outra vez aqui.
         linkOwnedSingles(writer, cls, associations, varName, true, false);
+        // clearSingleOnNull = false porque numa entidade nova não há par anterior para desligar
+        boolean inverseModified = linkInverseSingles(writer, cls, associations, varName, false, false);
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println();
-        boolean inverseModified     = linkInverseSingles(writer, cls, associations, "saved", true, false);
         boolean collectionsModified = linkCollections(writer, cls, associations, "saved");
 
         // valida com tudo ligado e se rebentar, o @Transactional faz rollback do INSERT

@@ -263,7 +263,8 @@ public class SpringDTOGenerator {
         // para o response default primeiro, esconde os hiddenInResponse
         List<Attribute> defaultAttrs = cls.getAllAttributes().stream()
                 .filter(a -> !cls.isHiddenInResponse(a.getName())).toList();
-        List<RelationshipInfo> defaultRels = RelationshipInfo.collect(cls, associations).stream()
+        // collectForMenus e não collect: a resposta mostra também as relações herdadas, como já faz com os atributos
+        List<RelationshipInfo> defaultRels = RelationshipInfo.collectForMenus(cls, associations).stream()
                 .filter(r -> !cls.isHiddenInResponse(r.attributeName())).toList();
         generateResponseDTOFile(cls, dtoDir, cls.getName() + "ResponseDTO", defaultAttrs, defaultRels);
 
@@ -272,7 +273,7 @@ public class SpringDTOGenerator {
             Set<String> hidden = cls.responseOverrideHidden(endpointType);
             List<Attribute> attrs = cls.getAllAttributes().stream()
                     .filter(a -> !hidden.contains(a.getName())).toList();
-            List<RelationshipInfo> rels = RelationshipInfo.collect(cls, associations).stream()
+            List<RelationshipInfo> rels = RelationshipInfo.collectForMenus(cls, associations).stream()
                     .filter(r -> !hidden.contains(r.attributeName())).toList();
 
             generateResponseDTOFile(cls, dtoDir, responseDTOName(cls, endpointType), attrs, rels);
