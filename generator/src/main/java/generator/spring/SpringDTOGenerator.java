@@ -242,6 +242,20 @@ public class SpringDTOGenerator {
             w.println();
             w.println("    // PUT: aplica todos os campos (o que vier null fica null)");
             w.println("    public void replace(" + className + " e) {");
+            // primitivo omitido não pode ficar null (o setter da entidade recebe int/boolean), exige-se em vez de rebentar
+            List<Attribute> primitives = allAttrs.stream()
+                    .filter(a -> !a.isCollection() && GeneratorUtils.isPrimitive(a.getType())).toList();
+            if (!primitives.isEmpty()) {
+                w.println("        List<String> missing = new ArrayList<>();");
+                for (Attribute attr : primitives) {
+                    w.println("        if (get" + GeneratorUtils.capitalizeFirst(attr.getName())
+                            + "() == null) missing.add(\"" + attr.getName() + "\");");
+                }
+                w.println("        if (!missing.isEmpty()) {");
+                w.println("            throw new IllegalArgumentException(\"PUT requires all fields, missing: \""
+                        + " + String.join(\", \", missing));");
+                w.println("        }");
+            }
             for (Attribute attr : allAttrs) {
                 String cap = GeneratorUtils.capitalizeFirst(attr.getName());
                 w.println("        e.set" + cap + "(get" + cap + "());");

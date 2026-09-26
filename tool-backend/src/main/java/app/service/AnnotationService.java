@@ -359,6 +359,7 @@ public class AnnotationService {
                 a.setUnique(false);
                 a.setPrecision(null);
                 a.setScale(null);
+                a.setColumnName(null);
             }
             c.getHiddenInCreate().clear();
             c.getHiddenInUpdate().clear();

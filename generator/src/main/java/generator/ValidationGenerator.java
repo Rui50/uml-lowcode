@@ -117,7 +117,9 @@ public class ValidationGenerator {
                 : prefix + "Invariant '" + inv.getName() + "' violated.";
 
         //  if (!(expr)) { errors.add("msg") }
-        writer.println("        // " + inv.getName() + " - " + inv.getOclExpression());
+        // OCL vem de uma textarea portanto limpamos os \n
+        String oclLine = inv.getOclExpression().replaceAll("\\s+", " ").trim();
+        writer.println("        // " + inv.getName() + " - " + oclLine);
         writer.println("        if (!(" + javaExpression + ")) {");
         writer.println("            errors.add(\"" + GeneratorUtils.fixErrorMessage(errorMessage) + "\");");
         writer.println("        }");

@@ -395,6 +395,10 @@ public class CLIEntityGenerator {
             try (PrintWriter w = new PrintWriter(dir + "/" + iface.getName() + ".java")) {
                 w.println("package " + basePackage + ".models;");
                 w.println();
+                w.println("import java.util.*;");
+                w.println("import java.time.*;");
+                w.println("import java.math.*;");
+                w.println();
                 w.println("public interface " + iface.getName() + " {");
                 w.println();
                 for (Operation op : iface.getOperations()) {

@@ -20,17 +20,23 @@ import java.util.List;
 
 public class AnnotationParser {
 
+    // traduz e aplica as correções que precisam do modelo (Maps, size() de String)
+    private static String toJava(String expression, Class cls, List<Association> associations) {
+        String java = GeneratorUtils.fixMapAccess(OCLToJavaVisitor.toJava(expression), cls, associations);
+        return GeneratorUtils.fixStringSize(java, cls);
+    }
+
     public static Invariant parseInvariant(String name, String expression, String message,
                                            Class cls, List<Association> associations) {
         Invariant inv = new Invariant(name, expression, message);
-        inv.setJavaExpression(GeneratorUtils.fixMapAccess(OCLToJavaVisitor.toJava(expression), cls, associations));
+        inv.setJavaExpression(toJava(expression, cls, associations));
         return inv;
     }
 
     public static Precondition parsePrecondition(String name, String expression, String message,
                                                  Class cls, List<Association> associations) {
         Precondition pre = new Precondition(name, expression, message);
-        pre.setJavaExpression(GeneratorUtils.fixMapAccess(OCLToJavaVisitor.toJava(expression), cls, associations));
+        pre.setJavaExpression(toJava(expression, cls, associations));
         return pre;
     }
 
@@ -41,20 +47,20 @@ public class AnnotationParser {
         // scan por @pre
         String oclWithoutPre = processPreReferences(expression, cls, associations, post.getPreSnapshots());
 
-        post.setJavaExpression(GeneratorUtils.fixMapAccess(OCLToJavaVisitor.toJava(oclWithoutPre), cls, associations));
+        post.setJavaExpression(toJava(oclWithoutPre, cls, associations));
         return post;
     }
 
     public static void applyInit(Attribute a, String expression,
                                  Class cls, List<Association> associations) {
         a.setInitExpression(expression);
-        a.setJavaInitExpression(GeneratorUtils.fixMapAccess(OCLToJavaVisitor.toJava(expression), cls, associations));
+        a.setJavaInitExpression(toJava(expression, cls, associations));
     }
 
     public static void applyDerive(Attribute a, String expression,
                                    Class cls, List<Association> associations) {
         a.setDeriveExpression(expression);
-        a.setJavaDeriveExpression(GeneratorUtils.fixMapAccess(OCLToJavaVisitor.toJava(expression), cls, associations));
+        a.setJavaDeriveExpression(toJava(expression, cls, associations));
     }
 
 

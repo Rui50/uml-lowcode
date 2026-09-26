@@ -211,6 +211,7 @@ public class OperationGenerator {
     }
 
     // validaçao relacionada ao diagrama tar bem constuido
+    // TODO op void com reply no diagrama emite "return x;" dar returna  erro
     public static void validateReturn(Operation op, String returnType, String returnExpr, String selfVar) {
         boolean needsResult = op.getPostconditions().stream().anyMatch(p -> {
             String code = p.getJavaExpression(selfVar);
@@ -385,7 +386,8 @@ public class OperationGenerator {
             }
 
             if (assoc != null) {
-                String base = receiver + "." + attrName;
+                // pelo getter: o campo é private e num pai ou noutra classe não se lhe chega diretamente
+                String base = receiver + ".get" + GeneratorUtils.capitalizeFirst(attrName) + "()";
                 String code;
                 if (assoc.hasQualifier()) {
                     // map com PUT(key, value) ou remove(key)

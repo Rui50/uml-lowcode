@@ -73,6 +73,10 @@ public class ClassGenerator {
             try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
                 w.println("package " + basePackage + ";");
                 w.println();
+                w.println("import java.util.*;");
+                w.println("import java.time.*;");
+                w.println("import java.math.*;");
+                w.println();
                 w.println("public interface " + iface.getName() + " {");
                 w.println();
                 for (Operation op : iface.getOperations()) {
@@ -334,9 +338,10 @@ public class ClassGenerator {
         writer.println("        this." + attributeName + ".remove(key);");
         writer.println("    }");
 
-        // get all method
+        // get all method: get<X>() (sem chave) como nos outros alvos, overload do get<X>(key).
+        // O OCL traduz um campo Map para this.get<X>(), por isso o nome tem de ser igual nos 4.
         writer.println();
-        writer.println("    public Map<" + keyType + ", " + targetClass + "> getAll" + cap + "() {");
+        writer.println("    public Map<" + keyType + ", " + targetClass + "> get" + cap + "() {");
         writer.println("        return this." + attributeName + ";");
         writer.println("    }");
     }

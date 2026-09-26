@@ -614,6 +614,8 @@ public class SpringServiceGenerator {
             writer.println("        }");
         } else {
             writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
+            // sem o contains a mesma ligação duplicava na tabela
+            writer.println("            if (" + varName + ".get" + capitalizedAttribute + "().contains(" + elementVar + ")) continue;");
             writer.println("            " + varName + ".get" + capitalizedAttribute + "().add(" + elementVar + ");");
             if (isBidirectional) {
                 writer.println("            " + elementVar + ".get" + inverseCap + "().add(" + varName + ");");

@@ -81,6 +81,10 @@ public class GeneratorUtils {
         }
     }
 
+    public static boolean isPrimitive(String type) {
+        return type != null && !fixType(type).equals(type);
+    }
+
     public static String lowercaseFirst(String s) {
         if (s == null || s.isEmpty()) return s;
         return Character.toLowerCase(s.charAt(0)) + s.substring(1);
@@ -298,17 +302,35 @@ public class GeneratorUtils {
     }
 
     /**
-     * corrige acesso a Maps (campos com qualifier): .stream() -> .values().stream()
+     * corrige acesso a Maps (campos com qualifier): o OCL traduz para Collection
      */
     public static String fixMapAccess(String java, Class cls, List<Association> associations) {
         if (java == null) return null;
         if (cls == null) return java;   // interfaces
         List<String> mapAttributes = getMapAttributeNames(cls, associations);
         for (String attribute : mapAttributes) {
-            // o acesso à coleção já vem como getter (this.getAlunos()) um campo que seja Map precisa
-            // de .values() antes do .stream()
+            // o acesso à coleção já vem como getter (this.getAlunos())
             String access = "this.get" + capitalizeFirst(attribute) + "()";
             java = java.replace(access + ".stream()", access + ".values().stream()");
+            java = java.replace(access + ".contains(", access + ".containsValue(");
+            java = java.replace(access + ".containsAll(", access + ".values().containsAll(");
+            java = java.replace("frequency(" + access + ",", "frequency(" + access + ".values(),");
+            java = java.replace("new HashSet<>(" + access + ")", "new HashSet<>(" + access + ".values())");
+        }
+        return java;
+    }
+
+    /**
+     * o size() do OCL é o comprimento da String
+     * so da prop clase
+     */
+    public static String fixStringSize(String java, Class cls) {
+        if (java == null) return null;
+        if (cls == null) return java;   // interfaces
+        for (Attribute attribute : cls.getAllAttributes()) {
+            if (!"String".equals(attribute.getType())) continue;
+            String access = "this.get" + capitalizeFirst(attribute.getName()) + "()";
+            java = java.replace(access + ".size()", access + ".length()");
         }
         return java;
     }
