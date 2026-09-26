@@ -317,6 +317,23 @@ public class CLIProjectGenerator {
             w.println("        return value;");
             w.println("    }");
             w.println();
+            // por linha (o Scanner não tem hasNextBigDecimal)
+            w.println("    public static java.math.BigDecimal readBigDecimal(Scanner scanner, String prompt) {");
+            w.println("        while (true) {");
+            w.println("            System.out.print(prompt);");
+            w.println("            try { return new java.math.BigDecimal(scanner.nextLine().trim()); }");
+            w.println("            catch (NumberFormatException e) { System.out.println(\"Invalid number.\"); }");
+            w.println("        }");
+            w.println("    }");
+            w.println();
+            w.println("    public static java.math.BigInteger readBigInteger(Scanner scanner, String prompt) {");
+            w.println("        while (true) {");
+            w.println("            System.out.print(prompt);");
+            w.println("            try { return new java.math.BigInteger(scanner.nextLine().trim()); }");
+            w.println("            catch (NumberFormatException e) { System.out.println(\"Invalid number.\"); }");
+            w.println("        }");
+            w.println("    }");
+            w.println();
             w.println("    public static java.util.UUID readUuid(Scanner scanner, String prompt) {");
             w.println("        while (true) {");
             w.println("            System.out.print(prompt);");

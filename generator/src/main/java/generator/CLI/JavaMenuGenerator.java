@@ -749,6 +749,12 @@ public class JavaMenuGenerator {
             case "Double":
                 w.println("        double " + name + " = InputUtils.readDouble(scanner, \"" + name + ": \");");
                 break;
+            case "BigDecimal":
+                w.println("        java.math.BigDecimal " + name + " = InputUtils.readBigDecimal(scanner, \"" + name + ": \");");
+                break;
+            case "BigInteger":
+                w.println("        java.math.BigInteger " + name + " = InputUtils.readBigInteger(scanner, \"" + name + ": \");");
+                break;
             case "boolean":
             case "Boolean":
                 // parseBoolean: tudo o que não for "true" assume-se false
@@ -846,6 +852,17 @@ public class JavaMenuGenerator {
                 w.println("        String " + name + "Str = scanner.nextLine();");
                 w.println("        if (!" + name + "Str.isEmpty()) {");
                 w.println("            try { entity.set" + capitalized + "(Double.parseDouble(" + name + "Str.trim())); }");
+                w.println("            catch (NumberFormatException ex) { System.out.println(\"Invalid value, keeping current.\"); }");
+                w.println("        }");
+                break;
+            case "BigDecimal":
+            case "BigInteger":
+                w.println("        System.out.print(\"" + name + " [\" + entity.get" + capitalized + "() +" +
+                        "\"]: \");");
+                w.println("        String " + name + "Str = scanner.nextLine();");
+                w.println("        if (!" + name + "Str.isEmpty()) {");
+                w.println("            try { entity.set" + capitalized + "(new java.math." + attr.getType()
+                        + "(" + name + "Str.trim())); }");
                 w.println("            catch (NumberFormatException ex) { System.out.println(\"Invalid value, keeping current.\"); }");
                 w.println("        }");
                 break;

@@ -138,7 +138,8 @@ public class SequenceBodyGenerator {
         if ("reply".equals(msg.getMessageSort())) {
             String expr = msg.getRawName() != null ? msg.getRawName() : msg.getName();
             if (expr != null && !expr.isBlank()) {
-                if (currentClass.hasAnyInvariants()) {
+                // o self só está declarado se foi carregado  sem ele não há variável onde chamar o checkInvariants
+                if (currentClass.hasAnyInvariants() && preDeclaredVars.contains(selfVar)) {
                     writer.println(ind + selfVar + ".checkInvariants();");
                 }
                 OperationGenerator.writeReturn(writer, currentOp, returnType, expr.trim(), selfVar, indent);

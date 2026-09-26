@@ -302,8 +302,8 @@ public class SpringServiceGenerator {
         // OneToMany unidirectional (ou Map qualificado, inclui bidirecional na ponta owner) -> addX / removeX
         else if (rel.hasCollectionEndpoint()) {
             if (!hasRelationships) { writer.println("    // Relationship stuff"); hasRelationships = true; }
-            generateOneToManyUniAddMethod(writer, cls, otherClass, attributeName, assoc);
-            generateOneToManyUniRemoveMethod(writer, cls, otherClass, attributeName, assoc);
+            generateOneToManyUniAddMethod(writer, cls, otherClass, attributeName, assoc, isBidirectional, isSource, declarer);
+            generateOneToManyUniRemoveMethod(writer, cls, otherClass, attributeName, assoc, isBidirectional, isSource, declarer);
         }
         // 1:1 (nenhum dos lados é coleção) -> assignX / removeX, de cada lado navegável
         else if (!inverseIsCollection && !isCollection) {
@@ -706,7 +706,8 @@ public class SpringServiceGenerator {
      * - Procura as entidades por ID e adiciona à coleção
      */
     private void generateOneToManyUniAddMethod(PrintWriter writer, Class cls, String otherClass,
-                                                String attributeName, Association assoc) {
+                                                String attributeName, Association assoc,
+                                                boolean isBidirectional, boolean isSource, String declarer) {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
@@ -714,6 +715,10 @@ public class SpringServiceGenerator {
         String otherRepoName = otherVar + "Repository";
         String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
         String otherPlural = otherVar + "s";
+        // campo do outro lado que aponta de volta, aqui é sempre singular
+        String inverseCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer,
+                isSource ? assoc.getSourceRole() : assoc.getTargetRole(),
+                isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity()));
 
         writer.println();
         writer.println("    /**");
@@ -735,6 +740,11 @@ public class SpringServiceGenerator {
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedAttribute + "().put(" +
                     otherVar + "." + qualifierGetter + "(), " + otherVar + ");");
+            if (isBidirectional) {
+                // o Map é o lado mappedBy quem grava a ligação é o outro, que tem a FK
+                writer.println("            " + otherVar + ".set" + inverseCap + "(" + varName + ");");
+                writer.println("            " + otherRepoName + ".save(" + otherVar + ");");
+            }
             writer.println("        }");
         } else {
             writer.println("        " + varName + ".get" + capitalizedAttribute + "().addAll(" + otherPlural + ");");
@@ -753,7 +763,8 @@ public class SpringServiceGenerator {
      * Ex: TurmaService.removeTurnos(Long turmaId, List<Long> turnoIds)
      */
     private void generateOneToManyUniRemoveMethod(PrintWriter writer, Class cls, String otherClass,
-                                                   String attributeName, Association assoc) {
+                                                   String attributeName, Association assoc,
+                                                   boolean isBidirectional, boolean isSource, String declarer) {
         String className = cls.getName();
         String varName = GeneratorUtils.lowercaseFirst(className);
         String repoName = varName + "Repository";
@@ -761,6 +772,9 @@ public class SpringServiceGenerator {
         String otherRepoName = otherVar + "Repository";
         String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
         String otherPlural = otherVar + "s";
+        String inverseCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer,
+                isSource ? assoc.getSourceRole() : assoc.getTargetRole(),
+                isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity()));
 
         writer.println("    /**");
         writer.println("     * OneToMany (unidirectional)");
@@ -781,6 +795,11 @@ public class SpringServiceGenerator {
             writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedAttribute + "().remove(" +
                     otherVar + "." + qualifierGetter + "());");
+            if (isBidirectional) {
+                // desligar é limpar a FK no outro lado, o Map é só a vista
+                writer.println("            " + otherVar + ".set" + inverseCap + "(null);");
+                writer.println("            " + otherRepoName + ".save(" + otherVar + ");");
+            }
             writer.println("        }");
         } else {
             writer.println("        " + varName + ".get" + capitalizedAttribute + "().removeIf(" +
@@ -1129,23 +1148,27 @@ public class SpringServiceGenerator {
 
         String selfVar = GeneratorUtils.lowercaseFirst(ownerName);   // var/id seguem a classe do diagrama (ex: member, memberId)
         boolean hasConditions = !op.getPreconditions().isEmpty() || !op.getPostconditions().isEmpty();
-        // carregamos self se: uma condição o referir (this.), houver snapshot @pre, ou a classe tiver
-        // invariantes (verificam-se no fim, DbC). Uma condição só sobre parâmetros (pre: d > 0) não precisa.
+        // uma condição que refira self obriga a carregá-lo
         boolean needsSelf =
-                cls.hasAnyInvariants()
-                || op.getPreconditions().stream().anyMatch(p -> refsSelf(p.getJavaExpression()))
+                op.getPreconditions().stream().anyMatch(p -> refsSelf(p.getJavaExpression()))
                 || op.getPostconditions().stream().anyMatch(p -> refsSelf(p.getJavaExpression())
                         || !p.getPreSnapshots().isEmpty());
 
-        if (needsSelf) {
-            // self é carregado a partir de um parâmetro com o nome convencional <entityVar>Id (ex: turmaId)
-            String idParam = selfVar + "Id";
-            boolean hasIdParam = entryMessage.getArguments().stream()
-                    .anyMatch(a -> idParam.equals(a.getName()));
-            if (!hasIdParam) {
-                throw new IllegalArgumentException("Operação '" + operName + "': condições ou invariantes que referem 'self' "
-                        + "precisam de um parâmetro '" + idParam + "' para o carregar.");
-            }
+        // nome convencional do parâmetro: <entityVar>Id (ex: turmaId)
+        String idParam = selfVar + "Id";
+        boolean hasIdParam = entryMessage.getArguments().stream()
+                .anyMatch(a -> idParam.equals(a.getName()));
+
+        // sem o id não há como carregar o self que a condição pede
+        if (needsSelf && !hasIdParam) {
+            throw new IllegalArgumentException("Operação '" + operName + "': condições que referem 'self' "
+                    + "precisam de um parâmetro '" + idParam + "' para o carregar.");
+        }
+
+        // as invariantes são da classe: não obrigam a carregar, só aproveitam se já houver id
+        boolean loadSelf = needsSelf || (cls.hasAnyInvariants() && hasIdParam);
+
+        if (loadSelf) {
 
             String repoName = GeneratorUtils.lowercaseFirst(className) + "Repository";
             writer.println("        " + ownerName + " " + selfVar + " = " + repoName + ".findById(" + idParam + ")");
@@ -1180,7 +1203,8 @@ public class SpringServiceGenerator {
         String returnExpr = GeneratorUtils.findReplyToActor(interaction.getElements());
         if ("void".equals(returnType)) {
             // void ent sem reply, invariantes e pos condições ficam no fim
-            if (cls.hasAnyInvariants()) {
+            // loadSelf: sem o self carregado não há variável onde chamar o checkInvariants
+            if (cls.hasAnyInvariants() && loadSelf) {
                 writer.println("        " + selfVar + ".checkInvariants();");
             }
             OperationGenerator.generateReturnAndPostconditions(writer, op, returnType, returnExpr, selfVar);

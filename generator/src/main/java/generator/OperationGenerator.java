@@ -599,7 +599,17 @@ public class OperationGenerator {
     // se a coleção é uma associação (Map), adiciona .values()
     // aceita "this.alunos" ou só "alunos"
     private static String adaptCollectionAccess(String expr, Class cls, List<Association> associations) {
-        String attributeName = expr.startsWith("this.") ? expr.substring("this.".length()).trim() : expr.trim();
+        // o guard escreve "self.<campo>" e vai pelo getter,
+        // A associação só decide se precisa de .values() (ponta qualificada = Map).
+
+        // variável local
+        if (!expr.startsWith("this.")) return expr;
+        // "this.tarefas" -> "tarefas"
+        String attributeName = expr.substring("this.".length()).trim();
+        // navegação, fica como está
+        if (attributeName.contains(".")) return expr;
+        // campo é private
+        String getter = "this.get" + GeneratorUtils.capitalizeFirst(attributeName) + "()";
 
         for (Association assoc : associations) {
             // isOrInheritsFrom (não igual) porque a associação pode ser herdada de um pai
@@ -610,11 +620,10 @@ public class OperationGenerator {
                     && assoc.isSourceNavigable()
                     && attributeName.equals(GeneratorUtils.makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity()));
 
-            if ((sourceSide || targetSide) && assoc.hasQualifier()) {
-                return expr + ".values()";
-            }
+            // Map
+            if ((sourceSide || targetSide) && assoc.hasQualifier()) return getter + ".values()";
         }
-        return expr;
+        return getter;
     }
 
     // ownerType é a classe desta ponta da associação?
