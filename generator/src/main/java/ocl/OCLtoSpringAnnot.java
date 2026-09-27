@@ -93,12 +93,16 @@ public class OCLtoSpringAnnot {
                 .replaceAll("\\s+", " ");     // limpar espaços
     }
 
-    // tipo de um campo próprio atributo ou relação, ou null se não existir/for herdado
+    // tipo de um ATRIBUTO próprio, ou null se não existir / for herdado / for relação
     // se for herdado fica null de propósito prorque a anotação no campo do pai aplicaria-se a todos os filhos
+    // relação também fica null: a Bean Validation só corre quando a linha deta entidade é escrita, e mexer
+    // numa relação escreve o outro lado, por isso a anotação nunca dispara. Fica no validate(), que corre sempre.
     private static String getAttributeType(Class cls, String attribute, List<Association> associations) {
         for (Attribute a : cls.getAttributes()) {
             if (a.getName().equals(attribute)) return a.getType();
         }
+        /* as relações também devolviam tipo, e a invariante saía do validate() para uma anotação
+           que nunca dispara.
         // relações desta classe (thisClass == cls)
         for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
             if (rel.attributeName().equals(attribute) && rel.thisClass().equals(cls.getName())) {
@@ -109,6 +113,7 @@ public class OCLtoSpringAnnot {
                 return rel.otherClass;
             }
         }
+        */
         return null;
     }
 

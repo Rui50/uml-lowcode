@@ -406,6 +406,8 @@ public class SpringServiceGenerator {
         writer.println("        }");
         writer.println();
         generateValidation(writer, className, varName);
+        // o outro lado também ficou sem par por isso validar
+        if (rel.isBidirectional()) generateValidationIfPresent(writer, otherClass, otherVar);
         if (rel.isOwner()) {
             writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         } else {
