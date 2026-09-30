@@ -14,8 +14,5 @@ export function useSelectedClass() {
   const attributes = computed(() => isInterface.value ? [] : model.selectedClass?.attributes ?? [])
   const operations = computed(() => isInterface.value ? [] : model.selectedClass?.operations ?? [])
 
-  // chave "<classId>.attrName" usada nos mapas de anotação por atributo
-  const key = (name: string) => `${classKey.value}.${name}`
-
-  return { selected, isInterface, className, classKey, attributes, operations, key }
+  return { selected, isInterface, className, classKey, attributes, operations }
 }

@@ -23,7 +23,7 @@ type Tab = "ocl" | "persistence" | "spring"
 
 const model = useModelStore()
 const annotations = useAnnotationsStore()
-const { selected, isInterface, className, classKey, attributes, operations, key } = useSelectedClass()
+const { selected, isInterface, className, classKey, attributes, operations } = useSelectedClass()
 
 // coleções da classe selecionada + atributos da classe alvo (para o dropdown de order-by)
 const collectionRelations = computed(() =>
@@ -47,12 +47,18 @@ function hasScale(type: string) {
   return type === 'BigDecimal'
 }
 
-// a tabela de column mapping liga o v-model direto a columnByAttribute[key], por isso
-// cada atributo precisa de um objeto default
+const hasInit = (name: string) => classKey.value != null && annotations.initByAttribute[classKey.value]?.[name] !== undefined
+const hasDerive = (name: string) => classKey.value != null && annotations.deriveByAttribute[classKey.value]?.[name] !== undefined
+
+// ColumnConfig do atributo na classe atual (o seed watch garante que existe)
+const col = (name: string) => annotations.columnByAttribute[classKey.value!]![name]!
+
+// cada atributo precisa de um ColumnConfig default para o v-model do column mapping ligar direto
 watch([attributes, className], () => {
+  const classId = classKey.value
+  if (!classId) return
   for (const a of attributes.value) {
-    const k = key(a.name)
-    if (!(k in annotations.columnByAttribute)) annotations.addColumnConfig(k)
+    if (annotations.columnByAttribute[classId]?.[a.name] === undefined) annotations.addColumnConfig(classId, a.name)
   }
 }, { immediate: true })
 
@@ -126,7 +132,7 @@ const idConfig = computed(() =>
 const idEligibleAttributes = computed(() =>
   (model.selectedClass?.attributes ?? []).filter(a =>
     ELIGIBLE_ID_TYPES.includes(a.type) &&
-    !(key(a.name) in annotations.deriveByAttribute)
+    !hasDerive(a.name)
   )
 )
 
@@ -234,43 +240,45 @@ function close() {
                 </span>
               </div>
 
-              <div v-if="key(attr.name) in annotations.initByAttribute" class="sub-entry">
+              <div v-if="hasInit(attr.name)" class="sub-entry">
                 <OclField
                   :placeholder="initPlaceholder(attr)"
-                  v-model="annotations.initByAttribute[key(attr.name)]"
+                  :modelValue="annotations.initExpr(classKey!, attr.name)"
+                  @update:modelValue="v => annotations.setInit(classKey!, attr.name, v ?? '')"
                   header="Init"
                 />
                 <Button
                   icon="pi pi-trash" size="small" severity="danger" text
-                  @click="annotations.deleteInit(key(attr.name))"
+                  @click="annotations.deleteInit(classKey!, attr.name)"
                 />
               </div>
               <!-- init e derive são exclusivos: bloqueia add init se já tem derive -->
-              <span v-else :title="key(attr.name) in annotations.deriveByAttribute ? 'Already has a derive — an attribute can\'t be both' : ''">
+              <span v-else :title="hasDerive(attr.name) ? 'Already has a derive — an attribute can\'t be both' : ''">
                 <Button
                   label="Add init" icon="pi pi-plus" size="small" text
-                  :disabled="key(attr.name) in annotations.deriveByAttribute"
-                  @click="annotations.addInit(key(attr.name))"
+                  :disabled="hasDerive(attr.name)"
+                  @click="annotations.addInit(classKey!, attr.name)"
                 />
               </span>
 
-              <div v-if="key(attr.name) in annotations.deriveByAttribute" class="sub-entry">
+              <div v-if="hasDerive(attr.name)" class="sub-entry">
                 <OclField
                   placeholder="derive expression"
-                  v-model="annotations.deriveByAttribute[key(attr.name)]"
+                  :modelValue="annotations.deriveExpr(classKey!, attr.name)"
+                  @update:modelValue="v => annotations.setDerive(classKey!, attr.name, v ?? '')"
                   header="Derive"
                 />
                 <Button
                   icon="pi pi-trash" size="small" severity="danger" text
-                  @click="annotations.deleteDerive(key(attr.name))"
+                  @click="annotations.deleteDerive(classKey!, attr.name)"
                 />
               </div>
               <!-- bloqueia add derive se já tem init -->
-              <span v-else :title="key(attr.name) in annotations.initByAttribute ? 'Already has an init — an attribute can\'t be both' : ''">
+              <span v-else :title="hasInit(attr.name) ? 'Already has an init — an attribute can\'t be both' : ''">
                 <Button
                   label="Add derive" icon="pi pi-plus" size="small" text
-                  :disabled="key(attr.name) in annotations.initByAttribute"
-                  @click="annotations.addDerive(key(attr.name))"
+                  :disabled="hasInit(attr.name)"
+                  @click="annotations.addDerive(classKey!, attr.name)"
                 />
               </span>
             </div>
@@ -437,17 +445,17 @@ function close() {
                 <tr v-for="attr in attributes" :key="attr.name">
                   <td class="attr-cell">{{ attr.name }} <span class="type">{{ attr.type }}</span></td>
                   <td class="c">
-                    <Checkbox v-model="annotations.columnByAttribute[key(attr.name)]!.unique" binary />
+                    <Checkbox v-model="col(attr.name).unique" binary />
                   </td>
                   <td class="c" :class="{ 'is-disabled': !hasPrecision(attr.type) }">
                     <InputNumber
-                      v-model="annotations.columnByAttribute[key(attr.name)]!.precision"
+                      v-model="col(attr.name).precision"
                       :disabled="!hasPrecision(attr.type)" :min="1" :useGrouping="false"
                     />
                   </td>
                   <td class="c" :class="{ 'is-disabled': !hasScale(attr.type) }">
                     <InputNumber
-                      v-model="annotations.columnByAttribute[key(attr.name)]!.scale"
+                      v-model="col(attr.name).scale"
                       :disabled="!hasScale(attr.type)" :min="0" :useGrouping="false"
                     />
                   </td>
@@ -466,7 +474,7 @@ function close() {
             <div v-for="attr in attributes" :key="attr.name" class="order-row">
               <span class="order-rel">{{ attr.name }} <span class="type">{{ attr.type }}</span></span>
               <InputText
-                v-model="annotations.columnByAttribute[key(attr.name)]!.name"
+                v-model="col(attr.name).name"
                 :placeholder="attr.name" size="small"
               />
             </div>
@@ -482,16 +490,16 @@ function close() {
             <div v-for="rel in collectionRelations" :key="rel.name" class="order-row">
               <span class="order-rel">{{ rel.name }} <span class="type">-> {{ rel.targetClass }}</span></span>
               <Select
-                :modelValue="annotations.orderAttribute(key(rel.name))"
-                @update:modelValue="annotations.setOrderAttribute(key(rel.name), $event ?? '')"
+                :modelValue="annotations.orderAttribute(classKey!, rel.name)"
+                @update:modelValue="annotations.setOrderAttribute(classKey!, rel.name, $event ?? '')"
                 :options="orderOptions(rel)" optionLabel="label" optionValue="value"
                 placeholder="— none —" showClear
               />
               <Button
-                v-if="annotations.orderAttribute(key(rel.name))"
-                :label="annotations.orderDirection(key(rel.name))"
+                v-if="annotations.orderAttribute(classKey!, rel.name)"
+                :label="annotations.orderDirection(classKey!, rel.name)"
                 icon="pi pi-sort-alt" size="small" text
-                @click="annotations.toggleOrderDirection(key(rel.name))"
+                @click="annotations.toggleOrderDirection(classKey!, rel.name)"
               />
             </div>
           </section>
@@ -506,8 +514,8 @@ function close() {
             <div v-for="rel in singularRelations" :key="rel.name" class="order-row">
               <span class="order-rel">{{ rel.name }} <span class="type">-> {{ rel.targetClass }}</span></span>
               <SelectButton
-                :modelValue="annotations.fetchStrategy(key(rel.name))"
-                @update:modelValue="val => val && annotations.setFetchStrategy(key(rel.name), val)"
+                :modelValue="annotations.fetchStrategy(classKey!, rel.name)"
+                @update:modelValue="val => val && annotations.setFetchStrategy(classKey!, rel.name, val)"
                 :options="['LAZY', 'EAGER']"
                 :allowEmpty="false"
                 size="small"

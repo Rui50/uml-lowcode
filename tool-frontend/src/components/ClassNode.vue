@@ -27,8 +27,9 @@ const classAnnotated = computed(() => {
 })
 
 function attrAnnotated(attrName: string): boolean {
-  const k = `${props.data.id}.${attrName}`
-  return k in annotations.initByAttribute || k in annotations.deriveByAttribute
+  const id = props.data.id
+  return annotations.initByAttribute[id]?.[attrName] !== undefined
+      || annotations.deriveByAttribute[id]?.[attrName] !== undefined
 }
 
 function opAnnotated(opId: string): boolean {

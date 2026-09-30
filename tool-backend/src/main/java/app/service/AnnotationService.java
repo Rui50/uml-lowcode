@@ -184,86 +184,91 @@ public class AnnotationService {
         return interfaces.stream().filter(i -> id.equals(i.getId())).findFirst().orElse(null);
     }
 
-    private void applyInits(List<Class> classes, List<Association> associations, Map<String, String> map) {
-        map.forEach((key, expr) -> {
-            Attribute a = findAttribute(classes, key);
-            // owner class needed by parser for map detection
-            Class c = findClass(classes, key.split("\\.", 2)[0]);
-            if (a != null) {
+    private void applyInits(List<Class> classes, List<Association> associations, Map<String, Map<String, String>> map) {
+        if (map == null) return;
+        map.forEach((classId, byAttr) -> {
+            Class c = findClass(classes, classId);
+            if (c == null || byAttr == null) return;
+            byAttr.forEach((attrName, expr) -> {
+                Attribute a = attrByName(c, attrName);
+                if (a == null) return;
                 try {
                     AnnotationParser.applyInit(a, expr, c, associations);
                 } catch (IllegalArgumentException ex) {
-                    throw new IllegalArgumentException("Init em " + key + ": " + ex.getMessage());
+                    throw new IllegalArgumentException("Init em " + classId + "." + attrName + ": " + ex.getMessage());
                 }
-            }
+            });
         });
     }
 
-    private void applyDerives(List<Class> classes, List<Association> associations, Map<String, String> map) {
-        map.forEach((key, expr) -> {
-            Attribute a = findAttribute(classes, key);
-            // owner class needed by parser for map detection
-            Class c = findClass(classes, key.split("\\.", 2)[0]);
-            if (a != null) {
+    private void applyDerives(List<Class> classes, List<Association> associations, Map<String, Map<String, String>> map) {
+        if (map == null) return;
+        map.forEach((classId, byAttr) -> {
+            Class c = findClass(classes, classId);
+            if (c == null || byAttr == null) return;
+            byAttr.forEach((attrName, expr) -> {
+                Attribute a = attrByName(c, attrName);
+                if (a == null) return;
                 try {
                     AnnotationParser.applyDerive(a, expr, c, associations);
                 } catch (IllegalArgumentException ex) {
-                    throw new IllegalArgumentException("Derive em " + key + ": " + ex.getMessage());
+                    throw new IllegalArgumentException("Derive em " + classId + "." + attrName + ": " + ex.getMessage());
                 }
-            }
+            });
         });
     }
 
     // persistence tab só as partes que a OCL não exprime (unique/precision/scale/name)
-    private void applyColumnConfig(List<Class> classes, Map<String, ColumnConfigDTO> map) {
+    private void applyColumnConfig(List<Class> classes, Map<String, Map<String, ColumnConfigDTO>> map) {
         if (map == null) return;
-        map.forEach((key, cfg) -> {
-            Attribute a = findAttribute(classes, key);
-            if (a != null && cfg != null) {
+        map.forEach((classId, byAttr) -> {
+            Class c = findClass(classes, classId);
+            if (c == null || byAttr == null) return;
+            byAttr.forEach((attrName, cfg) -> {
+                Attribute a = attrByName(c, attrName);
+                if (a == null || cfg == null) return;
                 a.setUnique(cfg.isUnique());
                 a.setPrecision(cfg.getPrecision());
                 a.setScale(cfg.getScale());
                 a.setColumnName(cfg.getName());
-            }
+            });
         });
     }
 
-    // @OrderBy por coleção (persistence tab): key "Class.relation" -> {attribute, direction}
-    private void applyOrdering(List<Class> classes, Map<String, OrderByDTO> map) {
+    // @OrderBy por coleção (persistence tab): classId -> (relation -> {attribute, direction})
+    private void applyOrdering(List<Class> classes, Map<String, Map<String, OrderByDTO>> map) {
         if (map == null) return;
-        map.forEach((key, cfg) -> {
-            String[] parts = key.split("\\.", 2);
-            if (parts.length != 2 || cfg == null || cfg.getAttribute() == null || cfg.getAttribute().isBlank()) return;
-            Class c = findClass(classes, parts[0]);
-            if (c == null) return;
-            String dir = "DESC".equals(cfg.getDirection()) ? "DESC" : "ASC";
-            c.getCollectionOrder().put(parts[1], cfg.getAttribute() + " " + dir);
+        map.forEach((classId, byRel) -> {
+            Class c = findClass(classes, classId);
+            if (c == null || byRel == null) return;
+            byRel.forEach((relation, cfg) -> {
+                if (cfg == null || cfg.getAttribute() == null || cfg.getAttribute().isBlank()) return;
+                // por relação: "<attr> ASC|DESC" -> argumento do @OrderBy gerado na entidade
+                c.getCollectionOrder().put(relation, cfg.getAttribute() + " " + cfg.getDirection());
+            });
         });
     }
 
-    // fetch por rel singular (persistence tab): key "Class.relation" -> "LAZY"|"EAGER"
-    private void applyFetch(List<Class> classes, Map<String, String> map) {
+    // fetch por rel singular (persistence tab): classId -> (relation -> "LAZY"|"EAGER")
+    private void applyFetch(List<Class> classes, Map<String, Map<String, String>> map) {
         if (map == null) return;
-        map.forEach((key, value) -> {
-            String[] parts = key.split("\\.", 2);
-            if (parts.length != 2 || value == null) return;
-            Class c = findClass(classes, parts[0]);
-            if (c == null) return;
-            c.getFetchStrategy().put(parts[1], "EAGER".equals(value) ? "EAGER" : "LAZY");
+        map.forEach((classId, byRel) -> {
+            Class c = findClass(classes, classId);
+            if (c == null || byRel == null) return;
+            byRel.forEach((relation, value) -> {
+                if (value == null) return;
+                c.getFetchStrategy().put(relation, value);
+            });
         });
     }
 
-    // anotações tem chave por xmi:id
+    // anotações têm chave por xmi:id da classe
     private Class findClass(List<Class> classes, String id) {
         return classes.stream().filter(c -> id.equals(c.getId())).findFirst().orElse(null);
     }
 
-    private Attribute findAttribute(List<Class> classes, String key) {
-        String[] parts = key.split("\\.", 2);
-        if (parts.length != 2) return null;
-        Class c = findClass(classes, parts[0]);
-        if (c == null) return null;
-        for (Attribute a : c.getAttributes()) if (a.getName().equals(parts[1])) return a;
+    private static Attribute attrByName(Class c, String name) {
+        for (Attribute a : c.getAttributes()) if (a.getName().equals(name)) return a;
         return null;
     }
 

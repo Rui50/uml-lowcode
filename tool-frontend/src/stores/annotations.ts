@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { useModelStore } from './model'
+import { useProjectSettingsStore } from './projectSettings'
 import type { ResponseDTOoverride } from '@/types'
 
 export interface OclAnnotation {
@@ -54,17 +55,17 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   // key: classId (xmi:id) -> invariants
   const invariantsByClass = ref<Record<string, OclAnnotation[]>>({})
 
-  // key: "classId.attrName" -> init expression
-  const initByAttribute = ref<Record<string, string>>({})
-  // key: "classId.attrName" -> derive expression
-  const deriveByAttribute = ref<Record<string, string>>({})
-  // key: "classId.attrName" -> config de coluna JPA (ausente = @Column só com name-default)
-  const columnByAttribute = ref<Record<string, ColumnConfig>>({})
+  // classId -> (attrName -> init expression)
+  const initByAttribute = ref<Record<string, Record<string, string>>>({})
+  // classId -> (attrName -> derive expression)
+  const deriveByAttribute = ref<Record<string, Record<string, string>>>({})
+  // classId -> (attrName -> config de coluna JPA),  ausente = @Column só com name-default
+  const columnByAttribute = ref<Record<string, Record<string, ColumnConfig>>>({})
 
-  // key "classId.relationName" -> ordenação da coleção (ausente = sem @OrderBy, ordem indefinida)
-  const orderByCollection = ref<Record<string, { attribute: string; direction: 'ASC' | 'DESC' }>>({})
-  // key "classId.relationName" -> fetch de uma relação singular (ausente = LAZY)
-  const fetchByRelation = ref<Record<string, 'LAZY' | 'EAGER'>>({})
+  // classId -> (relationName -> ordenação da coleção),  ausente = sem @OrderBy, ordem indefinida
+  const orderByCollection = ref<Record<string, Record<string, { attribute: string; direction: 'ASC' | 'DESC' }>>>({})
+  // classId -> (relationName -> fetch de uma relação singular), ausente = LAZY
+  const fetchByRelation = ref<Record<string, Record<string, 'LAZY' | 'EAGER'>>>({})
 
   const operationToSeqDiagram = ref<Record<string, string>>({})
 
@@ -136,55 +137,80 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     }
   }
 
-  function addInit(key: string) {
-    initByAttribute.value[key] = ''
+  function addInit(classId: string, name: string) {
+    const m = (initByAttribute.value[classId] ??= {})
+    m[name] = ''
   }
 
-  function deleteInit(key: string) {
-    delete initByAttribute.value[key]
+  function deleteInit(classId: string, name: string) {
+    const m = initByAttribute.value[classId]
+    if (m) delete m[name]
   }
 
-  function addDerive(key: string) {
-    deriveByAttribute.value[key] = ''
+  function initExpr(classId: string, name: string): string {
+    return initByAttribute.value[classId]?.[name] ?? ''
   }
 
-  function deleteDerive(key: string) {
-    delete deriveByAttribute.value[key]
+  function setInit(classId: string, name: string, value: string) {
+    const m = (initByAttribute.value[classId] ??= {})
+    m[name] = value
   }
 
-  function addColumnConfig(key: string) {
-    columnByAttribute.value[key] = { unique: false, precision: null, scale: null, name: '' }
+  function addDerive(classId: string, name: string) {
+    const m = (deriveByAttribute.value[classId] ??= {})
+    m[name] = ''
   }
 
-  function deleteColumnConfig(key: string) {
-    delete columnByAttribute.value[key]
+  function deleteDerive(classId: string, name: string) {
+    const m = deriveByAttribute.value[classId]
+    if (m) delete m[name]
   }
 
-  function orderAttribute(key: string): string {
-    return orderByCollection.value[key]?.attribute ?? ''
+  function deriveExpr(classId: string, name: string): string {
+    return deriveByAttribute.value[classId]?.[name] ?? ''
   }
 
-  function orderDirection(key: string): 'ASC' | 'DESC' {
-    return orderByCollection.value[key]?.direction ?? 'ASC'
+  function setDerive(classId: string, name: string, value: string) {
+    const m = (deriveByAttribute.value[classId] ??= {})
+    m[name] = value
   }
 
-  function setOrderAttribute(key: string, attr: string) {
-    if (!attr) { delete orderByCollection.value[key]; return }   // — none — = sem @OrderBy
-    const cur = orderByCollection.value[key]
-    orderByCollection.value[key] = { attribute: attr, direction: cur?.direction ?? 'ASC' }
+  function addColumnConfig(classId: string, name: string) {
+    const m = (columnByAttribute.value[classId] ??= {})
+    m[name] = { unique: false, precision: null, scale: null, name: '' }
   }
 
-  function toggleOrderDirection(key: string) {
-    const cur = orderByCollection.value[key]
+  function deleteColumnConfig(classId: string, name: string) {
+    const m = columnByAttribute.value[classId]
+    if (m) delete m[name]
+  }
+
+  function orderAttribute(classId: string, name: string): string {
+    return orderByCollection.value[classId]?.[name]?.attribute ?? ''
+  }
+
+  function orderDirection(classId: string, name: string): 'ASC' | 'DESC' {
+    return orderByCollection.value[classId]?.[name]?.direction ?? 'ASC'
+  }
+
+  function setOrderAttribute(classId: string, name: string, attr: string) {
+    const m = (orderByCollection.value[classId] ??= {})
+    if (!attr) { delete m[name]; return }   // — none — = sem @OrderBy
+    m[name] = { attribute: attr, direction: m[name]?.direction ?? 'ASC' }
+  }
+
+  function toggleOrderDirection(classId: string, name: string) {
+    const cur = orderByCollection.value[classId]?.[name]
     if (cur) cur.direction = cur.direction === 'ASC' ? 'DESC' : 'ASC'
   }
 
-  function fetchStrategy(key: string): 'LAZY' | 'EAGER' {
-    return fetchByRelation.value[key] ?? 'LAZY'
+  function fetchStrategy(classId: string, name: string): 'LAZY' | 'EAGER' {
+    return fetchByRelation.value[classId]?.[name] ?? 'LAZY'
   }
 
-  function setFetchStrategy(key: string, value: 'LAZY' | 'EAGER') {
-    fetchByRelation.value[key] = value
+  function setFetchStrategy(classId: string, name: string, value: 'LAZY' | 'EAGER') {
+    const m = (fetchByRelation.value[classId] ??= {})
+    m[name] = value
   }
 
   function addPrecondition(opId: string) {
@@ -286,29 +312,31 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   // Storage
   const STORAGE_KEY = 'annotations'
 
-  function loadForModel(name: string | null) {
-    if(!name) {
-      invariantsByClass.value = {}
-      initByAttribute.value = {}
-      deriveByAttribute.value = {}
-      operationToSeqDiagram.value = {}
-      preconditionsByOperation.value = {}
-      postconditionsByOperation.value = {}
-      inheritanceStrategyByClass.value = {}
-      idByClass.value = {}
-      endpointByOperation.value = {}
-      generateControllerByClass.value = {}
-      beanValidationByClass.value = {}
-      tableNameByClass.value = {}
-      dtoHiddenByClass.value = {}
-      responseOverrideByClass.value = {}
-      columnByAttribute.value = {}
-      orderByCollection.value = {}
-      fetchByRelation.value = {}
-      return
+  // todas as anotações (para o localStorage e para exportar)
+  function toJSON() {
+    return {
+      invariantsByClass: invariantsByClass.value,
+      initByAttribute: initByAttribute.value,
+      deriveByAttribute: deriveByAttribute.value,
+      operationToSeqDiagram: operationToSeqDiagram.value,
+      preconditionsByOperation: preconditionsByOperation.value,
+      postconditionsByOperation: postconditionsByOperation.value,
+      inheritanceStrategyByClass: inheritanceStrategyByClass.value,
+      idByClass: idByClass.value,
+      endpointByOperation: endpointByOperation.value,
+      generateControllerByClass: generateControllerByClass.value,
+      beanValidationByClass: beanValidationByClass.value,
+      tableNameByClass: tableNameByClass.value,
+      dtoHiddenByClass: dtoHiddenByClass.value,
+      responseOverrideByClass: responseOverrideByClass.value,
+      columnByAttribute: columnByAttribute.value,
+      orderByCollection: orderByCollection.value,
+      fetchByRelation: fetchByRelation.value,
     }
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    const data = all[name] || {}
+  }
+
+  // o invers
+  function fromJSON(data: Record<string, any>) {
     invariantsByClass.value = data.invariantsByClass || {}
     initByAttribute.value = data.initByAttribute || {}
     deriveByAttribute.value = data.deriveByAttribute || {}
@@ -328,28 +356,19 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     fetchByRelation.value = data.fetchByRelation || {}
   }
 
+  function loadForModel(name: string | null) {
+    if(!name) {
+      fromJSON({})
+      return
+    }
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    fromJSON(all[name] || {})
+  }
+
   function saveForModel(name: string | null) {
     if(!name) return
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    all[name] = {
-      invariantsByClass: invariantsByClass.value,
-      initByAttribute: initByAttribute.value,
-      deriveByAttribute: deriveByAttribute.value,
-      operationToSeqDiagram: operationToSeqDiagram.value,
-      preconditionsByOperation: preconditionsByOperation.value,
-      postconditionsByOperation: postconditionsByOperation.value,
-      inheritanceStrategyByClass: inheritanceStrategyByClass.value,
-      idByClass: idByClass.value,
-      endpointByOperation: endpointByOperation.value,
-      generateControllerByClass: generateControllerByClass.value,
-      beanValidationByClass: beanValidationByClass.value,
-      tableNameByClass: tableNameByClass.value,
-      dtoHiddenByClass: dtoHiddenByClass.value,
-      responseOverrideByClass: responseOverrideByClass.value,
-      columnByAttribute: columnByAttribute.value,
-      orderByCollection: orderByCollection.value,
-      fetchByRelation: fetchByRelation.value,
-    }
+    all[name] = toJSON()
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
   }
 
@@ -370,23 +389,46 @@ export const useAnnotationsStore = defineStore('annotations', () => {
   )
 
   function reset() {
-    invariantsByClass.value = {}
-    initByAttribute.value = {}
-    deriveByAttribute.value = {}
-    operationToSeqDiagram.value = {}
-    preconditionsByOperation.value = {}
-    postconditionsByOperation.value = {}
-    inheritanceStrategyByClass.value = {}
-    idByClass.value = {}
-    endpointByOperation.value = {}
-    generateControllerByClass.value = {}
-    beanValidationByClass.value = {}
-    tableNameByClass.value = {}
-    dtoHiddenByClass.value = {}
-    responseOverrideByClass.value = {}
-    columnByAttribute.value = {}
-    orderByCollection.value = {}
-    fetchByRelation.value = {}
+    fromJSON({})
+  }
+
+  // ficheiro de anotações: model + anotações + settings
+  function exportToFile(fileName: string | null) {
+    const settings = useProjectSettingsStore()
+    const data = {
+      version: 1,
+      model: fileName ?? '',
+      exportedAt: new Date().toISOString(),
+      annotations: toJSON(),
+      settings: {
+        basePackage: settings.basePackage,
+        applicationName: settings.applicationName,
+        databaseType: settings.databaseType,
+        serverPort: settings.serverPort,
+        openApi: settings.openApi,
+        dockerfile: settings.dockerfile,
+        timestamps: settings.timestamps,
+        demoFrontend: settings.demoFrontend,
+      },
+    }
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = (fileName?.replace(/\.[^.]+$/, '') || 'model') + '-annotations.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // devolve o nome do modelo que estava no ficheiro, para quem chama avisar se não for o mesmo
+  async function importFromFile(file: File, fileName: string | null): Promise<string> {
+    const data = JSON.parse(await file.text())
+    fromJSON(data.annotations || {})
+    if (data.settings) {
+      const settings = useProjectSettingsStore()
+      Object.assign(settings, data.settings)
+    }
+    saveForModel(fileName)
+    return data.model || ''
   }
 
   return {
@@ -415,8 +457,12 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     prefillMandatoryRelations,
     addInit,
     deleteInit,
+    initExpr,
+    setInit,
     addDerive,
     deleteDerive,
+    deriveExpr,
+    setDerive,
     addColumnConfig,
     deleteColumnConfig,
     orderAttribute,
@@ -440,5 +486,7 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     isOverrideHidden,
     toggleOverrideHidden,
     reset,
+    exportToFile,
+    importFromFile,
   }
 })

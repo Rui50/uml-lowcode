@@ -116,9 +116,8 @@ const fieldRows = computed(() => {
     const attrRows = c.attributes
       .filter(a => a.name !== idAttr)
       .map(a => {
-        const k = `${c.id}.${a.name}`
-        const hasInit = k in annotations.initByAttribute
-        const hasDerive = k in annotations.deriveByAttribute
+        const hasInit = annotations.initByAttribute[c.id]?.[a.name] !== undefined
+        const hasDerive = annotations.deriveByAttribute[c.id]?.[a.name] !== undefined
         return {
           name: a.name, inherited: depth > 0, isRelation: false, collection: false, hasInit, hasDerive,
           locked: {

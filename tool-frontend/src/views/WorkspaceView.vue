@@ -49,8 +49,8 @@ watch(() => modelStore.error, (msg) => {
   }
 });
 
-// avisa para classes cujo nome é palavra reservada SQL e que AINDA não têm override de tabela.
-// definir um Table name (painel Persistence) ou renomear a classe faz o aviso desaparecer.
+// avisa para classes e atributos cujo nome é palavra reservada SQL e que AINDA não têm override.
+// definir um Table/Column name (painel Persistence) ou renomear faz o aviso desaparecer.
 function warnReservedNames() {
   if (target.value !== 'spring' && target.value !== 'cli-jpa') return  // só targets com BD
   const offending = (modelStore.model?.classes ?? [])
@@ -63,6 +63,22 @@ function warnReservedNames() {
       summary: 'Nome reservado em SQL',
       detail: `As classes [${offending.join(', ')}] usam palavras reservadas em SQL — `
             + `define um Table name no painel Persistence (ou renomeia a classe).`,
+      life: 8000,
+    })
+  }
+
+  // para atributos em que o nome bate com nome reservado de tabela
+  const offendingAttrs = (modelStore.model?.classes ?? [])
+    .flatMap(c => c.attributes.map(a => ({ cls: c, attr: a })))
+    .filter(({ attr }) => SQL_RESERVED.has(attr.name.toLowerCase()))
+    .filter(({ cls, attr }) => !annotations.columnByAttribute[cls.id]?.[attr.name]?.name?.trim())
+    .map(({ cls, attr }) => `${cls.name}.${attr.name}`)
+  if (offendingAttrs.length) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Nome reservado em SQL',
+      detail: `Os atributos [${offendingAttrs.join(', ')}] usam palavras reservadas em SQL — `
+            + `define um Column name no painel Persistence (ou renomeia o atributo).`,
       life: 8000,
     })
   }

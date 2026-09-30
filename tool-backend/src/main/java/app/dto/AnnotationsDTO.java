@@ -15,9 +15,9 @@ public class AnnotationsDTO {
     // key classId (xmi:id)
     private Map<String, List<OclDTO>> invariantsByClass = new HashMap<>();
 
-    // key "classId.attrName"
-    private Map<String, String> initByAttribute = new HashMap<>();
-    private Map<String, String> deriveByAttribute = new HashMap<>();
+    // key classId -> (attrName -> expressão)
+    private Map<String, Map<String, String>> initByAttribute = new HashMap<>();
+    private Map<String, Map<String, String>> deriveByAttribute = new HashMap<>();
 
     // key operationId
     private Map<String, String> operationToSeqDiagram = new HashMap<>();
@@ -49,15 +49,15 @@ public class AnnotationsDTO {
     private Map<String, HiddenFieldsDTO> dtoHiddenByClass = new HashMap<>();
 
     // key classId (xmi:id) -> endpointType ("List"|"Get"|"Create"|"Update") -> override do response DESSE
-    // endpoint (nome + escondidos; entrada presente = override ativo; ausente = ResponseDTO da classe)
+    // endpoint (nome + escondidos, entrada presente = override ativo, ausente = ResponseDTO da classe)
     private Map<String, Map<String, ResponseOverrideDTO>> responseOverrideByClass = new HashMap<>();
 
-    // key "classId.attrName" -> config de coluna JPA (persistence tab sem nada = @Column só com name-default)
-    private Map<String, ColumnConfigDTO> columnByAttribute = new HashMap<>();
+    // key classId -> (attrName -> config de coluna JPA), sem nada = @Column só com name-default
+    private Map<String, Map<String, ColumnConfigDTO>> columnByAttribute = new HashMap<>();
 
-    // key "classId.relationName" -> @OrderBy da coleção (ausente = sem ordenação)
-    private Map<String, OrderByDTO> orderByCollection = new HashMap<>();
+    // key classId -> (relationName -> @OrderBy da coleção), ausente = sem ordenação
+    private Map<String, Map<String, OrderByDTO>> orderByCollection = new HashMap<>();
 
-    // key "classId.relationName" -> fetch de uma rel singular ("LAZY"|"EAGER" ou ausente = LAZY)
-    private Map<String, String> fetchByRelation = new HashMap<>();
+    // key classId -> (relationName -> fetch de uma rel singular "LAZY"|"EAGER"), ausente = LAZY
+    private Map<String, Map<String, String>> fetchByRelation = new HashMap<>();
 }
