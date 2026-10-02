@@ -103,6 +103,28 @@ function onConfirm() {
   })
 }
 
+const importInput = ref<HTMLInputElement | null>(null)
+
+async function onImport(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const importedModel = await annotations.importFromFile(file, modelStore.fileName)
+    if (importedModel && modelStore.fileName && importedModel !== modelStore.fileName) {
+      toast.add({ severity: 'warn', summary: 'Modelo diferente',
+        detail: `As anotações eram do modelo "${importedModel}", não de "${modelStore.fileName}". Importadas na mesma — confirma se encaixam.`,
+        life: 8000 })
+    } else {
+      toast.add({ severity: 'success', summary: 'Anotações importadas', life: 3000 })
+    }
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Falha ao importar', detail: String(err), life: 6000 })
+  } finally {
+    input.value = ''   // permite reimportar o mesmo ficheiro
+  }
+}
+
 </script>
 
 <template>
@@ -147,6 +169,21 @@ function onConfirm() {
           aria-label="Generation target"
           class="target-select"
         />
+        <Button
+          label="Export"
+          size="small" text severity="secondary"
+          title="Export annotations (+ settings) as JSON"
+          :disabled="!modelStore.fileName"
+          @click="annotations.exportToFile(modelStore.fileName)"
+        />
+        <Button
+          label="Import"
+          size="small" text severity="secondary"
+          title="Import annotations (+ settings) from JSON"
+          :disabled="!modelStore.fileName"
+          @click="importInput?.click()"
+        />
+        <input ref="importInput" type="file" accept="application/json" hidden @change="onImport" />
         <Button label="Generate" size="small" @click="startGenerate" />
         <SettingsModal v-model:open="showSettings" :target="target" @confirm="onConfirm" />
       </div>
