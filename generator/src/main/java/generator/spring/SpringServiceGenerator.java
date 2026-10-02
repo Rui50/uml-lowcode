@@ -134,6 +134,7 @@ public class SpringServiceGenerator {
         writer.println("import org.springframework.data.domain.Page;");
         writer.println("import org.springframework.data.domain.Pageable;");
         writer.println("import " + basePackage + ".exception.NotFoundException;");
+        writer.println("import " + basePackage + ".exception.ConflictException;");
         writer.println();
         writer.println("import java.util.*;");
         writer.println("import java.util.stream.Collectors;");
@@ -244,7 +245,22 @@ public class SpringServiceGenerator {
         writer.println("     * @param id the entity id");
         writer.println("     */");
         writer.println("    public void deleteById(" + cls.getRoot().getIdAttributeType() + " id) {");
-        writer.println("        " + repoName + ".deleteById(id);");
+        // 1:1 inverso: recusa apagar enquanto ainda ligado.
+        List<RelationshipInfo> inverseSingles = new ArrayList<>();
+        for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations))
+            if (!rel.isCollection() && !rel.isOwner()) inverseSingles.add(rel);
+        if (inverseSingles.isEmpty()) {
+            writer.println("        " + repoName + ".deleteById(id);");
+        } else {
+            writer.println("        " + className + " entity = " + repoName + ".findById(id)");
+            writer.println("            .orElseThrow(() -> new NotFoundException(\"" + className + " not found: \" + id));");
+            for (RelationshipInfo rel : inverseSingles) {
+                String capAttr = GeneratorUtils.capitalizeFirst(rel.attributeName());
+                writer.println("        if (entity.get" + capAttr + "() != null)");
+                writer.println("            throw new ConflictException(\"Cannot delete " + className + " \" + id + \": still linked to " + rel.otherClass + " — unlink first\");");
+            }
+            writer.println("        " + repoName + ".delete(entity);");
+        }
         writer.println("    }");
         writer.println();
 
@@ -349,6 +365,14 @@ public class SpringServiceGenerator {
         writer.println("            .orElseThrow(() -> new NotFoundException(\"" + otherClass +
                 " not found: \" + " + otherVar + "Id));");
         writer.println();
+        // 1:1 exclusivo: recusa se este lado ou o outro já estiver ligado a terceiro.
+        writer.println("        if (" + varName + ".get" + capAttribute + "() != null && !" + varName + ".get" + capAttribute + "()." + idGetterOf(otherClass) + "().equals(" + otherVar + "." + idGetterOf(otherClass) + "()))");
+        writer.println("            throw new ConflictException(\"" + className + " \" + " + varName + "." + idGetterOf(className) + "() + \" already linked to another " + otherClass + "\");");
+        if (rel.isBidirectional()) {
+            writer.println("        if (" + otherVar + ".get" + capInverse + "() != null && !" + otherVar + ".get" + capInverse + "()." + idGetterOf(className) + "().equals(" + varName + "." + idGetterOf(className) + "()))");
+            writer.println("            throw new ConflictException(\"" + otherClass + " \" + " + otherVar + "." + idGetterOf(otherClass) + "() + \" already linked to another " + className + "\");");
+        }
+        writer.println();
         writer.println("        " + varName + ".set" + capAttribute + "(" + otherVar + ");");
         if (rel.isBidirectional()) {
             writer.println("        " + otherVar + ".set" + capInverse + "(" + varName + ");");
@@ -436,7 +460,6 @@ public class SpringServiceGenerator {
         String otherVar = GeneratorUtils.lowercaseFirst(attributeName);
         String otherRepoName = GeneratorUtils.lowercaseFirst(otherClass) + "Repository";
         String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
-        String prevVar = "previous" + capitalizedAttribute;   // dono anterior deste campo numa reatribuição
 
         writer.println();
         writer.println("    /**");
@@ -462,27 +485,16 @@ public class SpringServiceGenerator {
                     isSource ? assoc.getSourceRole() : assoc.getTargetRole(), otherSideMul);
             String capitalizedOtherAttribute = GeneratorUtils.capitalizeFirst(otherSideAttribute);
 
-            // captura o dono anto (para o desligar e validar depois)
-            writer.println("        // Remove from previous " + otherClass + " if exists");
-            writer.println("        " + otherClass + " " + prevVar + " = " + varName + ".get" + capitalizedAttribute + "();");
-            writer.println("        if (" + prevVar + " != null) {");
-            // inverso Map  -> put/remove, senão List -> add/remove por valor.
-            // esta ponta é a "-para-um" (não é coleção), logo um qualifier só pode fazer Map no inverso
-            // por isso basta hasQualifier() para saber que o inverso é Map.
+            // recusa reassign para outro id mas o mesmo id passa.
+            writer.println("        if (" + varName + ".get" + capitalizedAttribute + "() != null && !" + varName + ".get" + capitalizedAttribute + "()." + idGetterOf(otherClass) + "().equals(" + otherVar + "." + idGetterOf(otherClass) + "()))");
+            writer.println("            throw new ConflictException(\"" + className + " \" + " + varName + "." + idGetterOf(className) + "() + \" already linked to another " + otherClass + "\");");
+            writer.println();
+            writer.println("        // Set both sides of the relationship");
+            writer.println("        " + varName + ".set" + capitalizedAttribute + "(" + otherVar + ");");
             if (assoc.hasQualifier()) {
                 String qKey = varName + ".get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName()) + "()";
-                writer.println("            " + prevVar + ".get" + capitalizedOtherAttribute + "().remove(" + qKey + ");");
-                writer.println("        }");
-                writer.println();
-                writer.println("        // Set both sides of the relationship");
-                writer.println("        " + varName + ".set" + capitalizedAttribute + "(" + otherVar + ");");
                 writer.println("        " + otherVar + ".get" + capitalizedOtherAttribute + "().put(" + qKey + ", " + varName + ");");
             } else {
-                writer.println("            " + prevVar + ".get" + capitalizedOtherAttribute + "().remove(" + varName + ");");
-                writer.println("        }");
-                writer.println();
-                writer.println("        // Set both sides of the relationship");
-                writer.println("        " + varName + ".set" + capitalizedAttribute + "(" + otherVar + ");");
                 writer.println("        " + otherVar + ".get" + capitalizedOtherAttribute + "().add(" + varName + ");");
             }
         } else {
@@ -493,7 +505,6 @@ public class SpringServiceGenerator {
         generateValidation(writer, cls.getName(), varName);
         if (isBidirectional) {
             generateValidation(writer, otherClass, otherVar);   // novo outro lado (ganhou este "elem")
-            generateValidationIfPresent(writer, otherClass, prevVar);   // dono antigo  (perdeu-o)
         }
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println("        return " + className + "ResponseDTO.fromEntity(saved);");
@@ -888,6 +899,9 @@ public class SpringServiceGenerator {
             writer.println("        if (dto.get" + capAttribute + "Id() != null) {");
             writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capAttribute + "Id())");
             writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capAttribute + "Id()));");
+            // recusa reassign para outro id (no create é null)
+            writer.println("            if (" + entityVar + ".get" + capAttribute + "() != null && !" + entityVar + ".get" + capAttribute + "()." + idGetterOf(otherClass) + "().equals(dto.get" + capAttribute + "Id()))");
+            writer.println("                throw new ConflictException(\"" + cls.getName() + " \" + " + entityVar + "." + idGetterOf(cls.getName()) + "() + \" already linked to another " + otherClass + "\");");
             writer.println("            " + entityVar + ".set" + capAttribute + "(" + otherVar + ");");
             if (clearSingleOnNull) {
                 // gera o "} else { set(null); }" para id omitido limpar a relação (só útil no PUT replace).
@@ -929,6 +943,9 @@ public class SpringServiceGenerator {
             writer.println("        if (dto.get" + capAttribute + "Id() != null) {");
             writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capAttribute + "Id())");
             writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capAttribute + "Id()));");
+            // recusa se o outro já estiver ligado a terceiro
+            writer.println("            if (" + otherVar + ".get" + capInv + "() != null && !" + otherVar + ".get" + capInv + "()." + idGetterOf(cls.getName()) + "().equals(" + entityVar + "." + idGetterOf(cls.getName()) + "()))");
+            writer.println("                throw new ConflictException(\"" + otherClass + " \" + " + otherVar + "." + idGetterOf(otherClass) + "() + \" already linked to another " + cls.getName() + "\");");
             writer.println("            " + entityVar + ".set" + capAttribute + "(" + otherVar + ");");   // sincroniza este lado (resposta)
             writer.println("            " + otherVar + ".set" + capInv + "(" + entityVar + ");");
             generateValidationTab(writer, otherClass, otherVar, "            ");   // gravamos o outro -> validá-lo
@@ -1000,6 +1017,9 @@ public class SpringServiceGenerator {
                 // lado inverso logo a FK está no outro -> ligar o campo inversoe gravar o outro
                 if (!inverseIsCollection) {
                     // O:M inverso: o outro tem referência singular
+                    // recusa se o filho já tem pai
+                    writer.println("                if (" + otherVar + ".get" + capInv + "() != null)");
+                    writer.println("                    throw new ConflictException(\"" + otherClass + " \" + " + otherVar + "." + idGetterOf(otherClass) + "() + \" already linked to another " + cls.getName() + "\");");
                     writer.println("                " + otherVar + ".set" + capInv + "(" + entityVar + ");");
                 } else if (assoc.hasQualifier() && !thisIsMapEnd) {
                     // M:N inverso e o Map está do lado do OUTRO -> o campo inverso é put por chave

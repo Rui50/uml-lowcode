@@ -67,6 +67,7 @@ public class SpringControllerGenerator {
 
         generateExceptionHandler(controllerDir);
         generateNotFoundException();
+        generateConflictException();
 
         System.out.println("Generation of controllers completed.");
     }
@@ -462,6 +463,28 @@ public class SpringControllerGenerator {
         System.out.println("Generated exception: " + filename);
     }
 
+    // exception  para "conflito de ligação" 409
+    private void generateConflictException() throws IOException {
+        String exceptionDir = outputDirectory + "/src/main/java/" + basePackage.replace('.', '/') + "/exception";
+        new java.io.File(exceptionDir).mkdirs();
+        String filename = exceptionDir + "/ConflictException.java";
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("package " + basePackage + ".exception;");
+            writer.println();
+            writer.println("public class ConflictException extends RuntimeException {");
+            writer.println("    public ConflictException(String message) {");
+            writer.println("        super(message);");
+            writer.println("    }");
+            writer.println("}");
+        }
+        System.out.println("Generated exception: " + filename);
+    }
+
+
+    //https://www.geeksforgeeks.org/springboot/exception-handling-in-spring-boot/
+    // https://dzone.com/articles/effective-exception-handling-java-spring-boot-application
+    //https://stackoverflow.com/questions/49177111/production-level-exception-handling-in-spring-boot
+    //https://blog.anilgulati.com/mastering-exception-handling-in-spring-boot
     private void generateExceptionHandler(String controllerDir) throws IOException {
         String filename = controllerDir + "/GlobalExceptionHandler.java";
 
@@ -477,6 +500,7 @@ public class SpringControllerGenerator {
             writer.println("import org.springframework.transaction.TransactionSystemException;");
             writer.println("import org.springframework.dao.DataIntegrityViolationException;");
             writer.println("import " + basePackage + ".exception.NotFoundException;");
+            writer.println("import " + basePackage + ".exception.ConflictException;");
             writer.println("import org.slf4j.Logger;");
             writer.println("import org.slf4j.LoggerFactory;");
             writer.println();
@@ -508,6 +532,12 @@ public class SpringControllerGenerator {
             writer.println("    @ExceptionHandler(NotFoundException.class)");
             writer.println("    public ProblemDetail handleNotFound(NotFoundException ex) {");
             writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, msg(ex));");
+            writer.println("    }");
+            writer.println();
+            writer.println("    // conflito de ligação -> 409");
+            writer.println("    @ExceptionHandler(ConflictException.class)");
+            writer.println("    public ProblemDetail handleConflict(ConflictException ex) {");
+            writer.println("        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, msg(ex));");
             writer.println("    }");
             writer.println();
             writer.println("    // qualquer outro erro -> 500");
