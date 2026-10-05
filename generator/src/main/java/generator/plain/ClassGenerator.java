@@ -201,7 +201,7 @@ public class ClassGenerator {
             if (!generatedAttributes.contains(attributeName)) {
                 // maps só na ponta que tem o qualifier
                 if (rel.isMap()) {
-                    writer.println("   " + "private Map<" + rel.assoc.getQualifierType() + ", " + rel.otherClass + "> " + attributeName + ";");
+                    writer.println("    " + "private Map<" + rel.assoc.getQualifierType() + ", " + rel.otherClass + "> " + attributeName + ";");
                 }
                 else if (rel.isCollection()) {
                     writer.println("    " + "private List<" + rel.otherClass + "> " + attributeName + ";");
@@ -260,7 +260,7 @@ public class ClassGenerator {
     * para atributos derivados, gera apenas o getter
      */
     private void generateGettersSetters(PrintWriter writer, Class cls){
-        writer.print("    // Getters and Setters");
+        writer.println("    // Getters and Setters");
 
         for (Attribute attribute : cls.getAttributes()) {
             String name = attribute.getName();
@@ -338,8 +338,8 @@ public class ClassGenerator {
         writer.println("        this." + attributeName + ".remove(key);");
         writer.println("    }");
 
-        // get all method: get<X>() (sem chave) como nos outros alvos, overload do get<X>(key).
-        // O OCL traduz um campo Map para this.get<X>(), por isso o nome tem de ser igual nos 4.
+        // get<X>() sem chave: devolve o Map inteiro (o get<X>(key) acima devolve só um valor)
+        // precisa deste nome porque o OCL traduz self.x -> this.getX(), igual às listas/singulares
         writer.println();
         writer.println("    public Map<" + keyType + ", " + targetClass + "> get" + cap + "() {");
         writer.println("        return this." + attributeName + ";");

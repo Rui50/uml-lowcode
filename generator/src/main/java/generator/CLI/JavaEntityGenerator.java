@@ -25,6 +25,8 @@ public class JavaEntityGenerator {
     private String baseOutputPath;
     private ValidationGenerator validationGenerator;
     private List<Interaction> interactions;
+    private String basePackage;
+
 
     /**
      * Para ja
@@ -33,8 +35,6 @@ public class JavaEntityGenerator {
      *  - gera construtores
      *  - gera toString()
      */
-    private String basePackage;
-
     public JavaEntityGenerator(String baseOutputPath, String basePackage, List<Interaction> interactions) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;

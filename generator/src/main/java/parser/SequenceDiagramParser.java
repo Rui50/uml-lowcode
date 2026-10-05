@@ -132,14 +132,7 @@ public class SequenceDiagramParser {
                         + (m.getRawName() != null ? m.getRawName() : m.getName())
                         + "' não tem número de sequência — não é possível determinar a ordem.");
             }
-            // o número tem de ser do tipo "1" ou "1.2.3"
-            /*
-            if (!vp.matches("\\d+(\\.\\d+)*")) {
-                throw new IllegalArgumentException(
-                        "Diagrama de sequência '" + interaction.getName() + "': a mensagem '"
-                        + (m.getRawName() != null ? m.getRawName() : m.getName())
-                        + "' tem um número de sequência inválido ('" + vp + "') — esperado algo como 1 ou 1.2.");
-            }*/
+            // vale a pena validar se o vp number é válido ??
         }
 
         // ordenar por VP number para garantir que a ordem visual é a correta
@@ -353,15 +346,16 @@ public class SequenceDiagramParser {
         // verificar se tem assignment (var = method)
         String signaturePart = rawName;
         int equalsIndex = rawName.indexOf('=');
+        // paren = chamada de metodo
         int parenOpen = rawName.indexOf('(');
 
         // 1
         // primeiro separa a atribuição se houver var = ...
         // o '=' tem de vir antes do '(' para ser assignment (senão pode ser parte de um argumento)
         if (equalsIndex != -1 && (parenOpen == -1 || equalsIndex < parenOpen)) {
-            // var de atribuição
+            // var de atribuição , tudo antes do '='
             message.setAssignVariable(rawName.substring(0, equalsIndex).trim());
-            // resto da assinatura (method(args) : returnType)
+            // resto da assinatura (method(args) : returnType), tudo depois do '='
             signaturePart = rawName.substring(equalsIndex + 1).trim();
             parenOpen = signaturePart.indexOf('(');
         }
@@ -369,8 +363,8 @@ public class SequenceDiagramParser {
         // 2
         // sem parenteses entao não é chamada, é atribuiçãp
         if (parenOpen == -1) {
+            // se tiver assignVariable, então é "x = expr" ou "x = expr : Type"
             if (message.getAssignVariable() != null) {
-                //  "x = expr" ou "x = expr : Type"
                 String expr = signaturePart.trim();
                 // encontra onde está o :
                 int colon = findTypeSeparator(expr);
@@ -379,12 +373,14 @@ public class SequenceDiagramParser {
                     // pega no tipo
                     String type = expr.substring(colon + 1).trim();
                     if (!type.isEmpty()) message.setReturnType(type);
+                    // o resto é a expressão ex "getUser()"
                     expr = expr.substring(0, colon).trim();
                 }
                 // é so um assign
                 message.setAssignExpression(expr);
             } else {
                 // sem assign variable é so instaciar uma var
+                // ex "varName: Type" ou "varName"
                 int colon = findTypeSeparator(signaturePart);
                 if (colon != -1) {
                     // var name ta antes do colon, tipo de pois
@@ -434,46 +430,6 @@ public class SequenceDiagramParser {
             if (!returnType.isEmpty()) {
                 message.setReturnType(returnType);
             }
-        }
-
-    }
-
-    private void parseMessageSignature2(Message message, String rawName) {
-        if (rawName == null || rawName.isEmpty()) {
-            message.setName(rawName);
-            return;
-        }
-
-        // regex: (variavel =)? metodo(args) (: ReturnType)?
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                "^(?:(.+?)\\s*=\\s*)?(.+?)\\((.*)\\)(?:\\s*:\\s*(.+))?$"
-        );
-        java.util.regex.Matcher m = pattern.matcher(rawName.trim());
-
-        if (m.matches()) {
-            if (m.group(1) != null) {
-                message.setAssignVariable(m.group(1).trim());
-            }
-            message.setName(m.group(2).trim());
-
-            // parse argumentos
-            String argsString = m.group(3).trim();
-            if (!argsString.isEmpty()) {
-                List<String> argParts = splitArguments(argsString);
-                for (String argPart : argParts) {
-                    MessageArgument arg = parseArgument(argPart.trim());
-                    if (arg != null) {
-                        message.getArguments().add(arg);
-                    }
-                }
-            }
-
-            if (m.group(4) != null) {
-                message.setReturnType(m.group(4).trim());
-            }
-        } else {
-            // sem parenteses — nome simples
-            message.setName(rawName.trim());
         }
 
     }
@@ -560,68 +516,5 @@ public class SequenceDiagramParser {
             if (d != 0) return d;
         }
         return ap.length - bp.length;
-    }
-
-    // Alternativa ITERATIVA (while) à recursão, opção futura — não está ligada; o parser usa a recursiva.
-    // Aqui a mensagem já é inserida: buildFromMessages iteraria as mensagens (por ordem do número) e,
-    // para cada uma, chamaria isto, que cria os operandos/fragmentos em falta até à raiz e coloca a
-    // mensagem no seu operando (o mais fundo). O fragmento "pendente" é o que falta ligar ao nível de cima.
-    private void placeMessageIterative(Message msg, ModelElement container, Interaction interaction,
-                                          String rootId, Map<String, Operand> operands, Map<String, Fragment> fragments) {
-        // raiz -> insere direto na interação
-        if (container.getXMIID().equals(rootId)) { interaction.getElements().add(msg); return; }
-        // operando já construído -> insere e sai
-        Operand already = operands.get(container.getXMIID());
-        if (already != null) { already.getElements().add(msg); return; }
-
-        ModelElement current = container;   // vai subindo (é sempre um operando ou a raiz)
-        Operand deepest = null;             // o operando do container inicial (onde a mensagem vai)
-        Fragment pending = null;            // fragmento à espera de ser ligado ao nível de cima
-
-        while (true) {
-            String id = current.getXMIID();
-
-            // chegámos à raiz: o fragmento pendente liga-se diretamente à interação
-            if (id.equals(rootId)) {
-                if (pending != null) interaction.getElements().add(pending);
-                break;
-            }
-            // encontrámos um operando já criado por uma mensagem anterior: liga o pendente e para
-            Operand op = operands.get(id);
-            if (op != null) {
-                if (pending != null) op.getElements().add(pending);
-                break;
-            }
-
-            // criar o operando deste nível
-            op = new Operand();
-            op.setId(id);
-            ModelElement guard = (ModelElement) current.getRefAttribute("guard");
-            if (guard != null) op.setGuard(guard.getPlainAttribute("value"));
-            operands.put(id, op);
-            if (deepest == null) deepest = op;           // o 1º criado = o da mensagem
-
-            // ligar o fragmento do nível de baixo dentro deste operando
-            if (pending != null) op.getElements().add(pending);
-
-            // fragmento pai deste operando
-            ModelElement fragElem = current.getOwner();
-            Fragment frag = fragments.get(fragElem.getXMIID());
-            if (frag != null) {
-                // fragmento já existe (logo já está ligado acima): só encaixa o operando e para
-                frag.getOperands().add(op);
-                break;
-            }
-            frag = new Fragment();
-            frag.setId(fragElem.getXMIID());
-            frag.setOperator(fragElem.getPlainAttribute("operator"));
-            fragments.put(fragElem.getXMIID(), frag);
-            frag.getOperands().add(op);
-
-            pending = frag;                 // fica pendente para o nível de cima
-            current = fragElem.getOwner();  // sobe: dono do fragmento = operando pai ou raiz
-        }
-        // a mensagem vai sempre para o operando mais fundo (o container direto dela)
-        deepest.getElements().add(msg);
     }
 }

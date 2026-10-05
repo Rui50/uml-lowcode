@@ -67,6 +67,7 @@ public class OCLtoSpringAnnot {
             List<String[]> mapped = mapInvariant(inv, cls, associations);   // null = nao dá para mapear
             if (mapped == null) continue;   // fica no validate()
             for (String[] fa : mapped) {
+                // fa = {campo, anotação}: cria a lista do campo se ainda não existir e junta a anotação
                 result.annotationsByAttribute.computeIfAbsent(fa[0], k -> new ArrayList<>()).add(fa[1]);
             }
             result.consumed.add(inv);
@@ -86,43 +87,14 @@ public class OCLtoSpringAnnot {
         return mapped;
     }
 
-    // tira o "self." , para reconhecer o campo (senao passava o self. para o regex no caso de se escrever)
-    private static String normalize(String ocl) {
-        return ocl.trim()
-                .replace("self.", "")        // "self.points >= 0" -> "points >= 0"
-                .replaceAll("\\s+", " ");     // limpar espaços
-    }
-
-    // tipo de um ATRIBUTO próprio, ou null se não existir / for herdado / for relação
-    // se for herdado fica null de propósito prorque a anotação no campo do pai aplicaria-se a todos os filhos
-    // relação também fica null: a Bean Validation só corre quando a linha deta entidade é escrita, e mexer
-    // numa relação escreve o outro lado, por isso a anotação nunca dispara. Fica no validate(), que corre sempre.
-    private static String getAttributeType(Class cls, String attribute, List<Association> associations) {
-        for (Attribute a : cls.getAttributes()) {
-            if (a.getName().equals(attribute)) return a.getType();
-        }
-        /* as relações também devolviam tipo, e a invariante saía do validate() para uma anotação
-           que nunca dispara.
-        // relações desta classe (thisClass == cls)
-        for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
-            if (rel.attributeName().equals(attribute) && rel.thisClass().equals(cls.getName())) {
-                if (rel.assoc.isMapEnd(rel.isSource))
-                    return "Map<" + rel.assoc.getQualifierType() + ", " + rel.otherClass + ">";
-                if (rel.isCollection())
-                    return "List<" + rel.otherClass + ">";
-                return rel.otherClass;
-            }
-        }
-        */
-        return null;
-    }
-
     private static final Pattern MATCHES = Pattern.compile("(\\w+)\\.matches\\('([^']*)'\\)");
 
     // recebe uma parte da invariante  ("points >= 0") e devolve
     // {campo, anotação} se for reconhecida, ou null se não for.
     private static String[] annotationFor(String part, Class cls, List<Association> associations) {
-        // caso especial @Pattern: matches('regex')
+
+        // caso especial: a regex entra numa String Java e não se pode meter "\d" diretamente (tinha de ser "\\d");
+        // as RULES só colam o valor tal e qual, por isso trata-se o @Pattern aqui à parte
         Matcher m = MATCHES.matcher(part);
         if (m.matches()) {
             String type = getAttributeType(cls, m.group(1), associations); // grupo 1 = campo
@@ -149,7 +121,7 @@ public class OCLtoSpringAnnot {
             if (type == null) continue;   // campo não existe / herdado
             boolean ok;
             if (rule.types == null) {
-                ok = !PRIMITIVES.contains(type);   // qualquer referência (rejeita primitivos)
+                ok = !PRIMITIVES.contains(type);   // qualquer referência (rejeita primitivos porque nem podem ser null)
             } else {
                 ok = rule.types.contains(type);    // tipo específico da lista
             }
@@ -164,6 +136,30 @@ public class OCLtoSpringAnnot {
         }
 
         return null; // naofoi reconhecida
+    }
+
+    // tira o "self." , para reconhecer o campo (senao passava o self. para o regex no caso de se escrever)
+    private static String normalize(String ocl) {
+        return ocl.trim()
+                .replace("self.", "")        // "self.points >= 0" -> "points >= 0"
+                .replaceAll("\\s+", " ");     // limpar espaços
+    }
+
+    // tipo de um ATRIBUTO próprio, ou de uma relação single do lado dono (so serve para @NotNull)
+    // null se não existir, for herdado, coleção ou lado inverso -> esses ficam no validate()
+    private static String getAttributeType(Class cls, String attribute, List<Association> associations) {
+        for (Attribute a : cls.getAttributes()) {
+            if (a.getName().equals(attribute)) return a.getType();
+        }
+        // relação: só o lado dono e single (ManyToOne / OneToOne dono) pode virar anotação,
+        // a @NotNull ée so ao gravar a entidade, por isso so importa do lado dono
+        for (RelationshipInfo rel : RelationshipInfo.collect(cls, associations)) {
+            if (!rel.attributeName().equals(attribute)) continue;
+            if (!rel.thisClass().equals(cls.getName())) return null;         // herdado -> validate()
+            if (!rel.isCollection() && rel.isOwner()) return rel.otherClass; // owning single -> @NotNull
+            return null;                                                     // coleção / inverso -> validate()
+        }
+        return null;
     }
 
 }

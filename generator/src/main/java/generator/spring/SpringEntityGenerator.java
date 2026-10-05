@@ -215,13 +215,6 @@ public class SpringEntityGenerator {
         // @Entity
         writer.println("@Entity");
 
-
-        // if (strategy.equals("SINGLE_TABLE") && cls.getParentClass() != null) {
-        //     return;
-        // } else {
-        //     writer.println("@Table(name = \"" + GeneratorUtils.tableName(cls) + "\")");
-        // }
-
         // filho SINGLE_TABLE partilha a tabela do pai -> sem @Table; os outros levam @Table
         boolean singleTableChild = strategy.equals("SINGLE_TABLE") && cls.getParentClass() != null;
         if (!singleTableChild) {
@@ -299,7 +292,7 @@ public class SpringEntityGenerator {
     }
 
     /**
-     * Intera as associações navegáveis e emite o campo de relação.
+     * Itera as associações navegáveis e emite o campo de relação.
      */
     private void generateRelationships(PrintWriter writer, Class cls, List<Association> associations, List<Class> allClasses,
                                        Map<String, List<String>> annsByAttribute) {

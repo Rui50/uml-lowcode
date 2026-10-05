@@ -149,7 +149,7 @@ public class JavaMenuGenerator {
      * crud (create, view all , view by id, update, delete)
      * depois as de associação
      *   - Multiplicidade * (OneToMany/ManyToMany): Add + Remove
-     *   - Multiplicidade 1 (ManyToOne): Assign + Remove
+     *   - Multiplicidade 1 (ManyToOne/OneToOne): Assign + Remove
      */
     private void generateRunMethod(PrintWriter w, Class cls, List<Association> associations) {
         // menu options
@@ -171,7 +171,7 @@ public class JavaMenuGenerator {
                 options.add(new String[]{"Add " + attributeName, "add" + cap}); //  { "Add turmas , "addTurmas" }
                 options.add(new String[]{"Remove " + attributeName, "remove" + cap});
             } else {
-                // ManyToOne: Assign e Remove
+                // ManyToOne/OneToOne: Assign e Remove
                 options.add(new String[]{"Assign " + attributeName, "assign" + cap});
                 options.add(new String[]{"Remove " + attributeName, "remove" + cap});
             }
@@ -263,6 +263,7 @@ public class JavaMenuGenerator {
         }
         w.println(");");
 
+        // liga as relações single no novo objeto: set do lado owner (+ inverso se bidirecional)
         for (RelationshipInfo rel : singleRels) {
             String var = rel.attributeName();
             w.println("        entity.set" + GeneratorUtils.capitalizeFirst(var) + "(" + var + ");");
@@ -410,7 +411,7 @@ public class JavaMenuGenerator {
 
     /**
      * Metodos de relações
-     * - Multiplicidade 1 (ManyToOne): assign e remove
+     * - Multiplicidade 1 (ManyToOne/OneToOne): assign e remove
      * - Multiplicidade * (OneToMany/ManyToMany): add  e remove
      */
 
@@ -455,7 +456,7 @@ public class JavaMenuGenerator {
         }
     }
 
-    // Assign method (ManyToOne): entity.setOther(other)
+    // Assign method (ManyToOne/OneToOne): entity.setOther(other)
     private void generateAssignMethod(PrintWriter w, String ownerClass, RelationshipInfo rel) {
         String otherClass = rel.otherClass;
         String capitalized = GeneratorUtils.capitalizeFirst(rel.attributeName());

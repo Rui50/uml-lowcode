@@ -14,11 +14,11 @@ import java.util.Set;
 
 /**
  * Representa uma classe UML.
- * Identificador JPA (id) — sempre auto-gerado:
+ * (id):
  *  - idAttributeName == null  -> id por defeito: @Id @GeneratedValue Long id
- *  - idAttributeName != null  -> @Id @GeneratedValue no atributo escolhido
- *  - idAttributeType          -> tipo Java do id (default Long)
- *  A anotação vive na RAIZ da hierarquia uma classe filha pega no o id com getRoot().
+ *  - idAttributeName != null  -> @Id no atributo escolhido (@GeneratedValue exceto se for chave natural String)
+ *  - idAttributeType          -> tipo Java do id (default Long); String = chave natural atribuída pelo cliente
+ *  A anotação vive na RAIZ da hierarquia; uma classe filha pega no id com getRoot().
  */
 public class Class {
 
@@ -50,9 +50,9 @@ public class Class {
     // transformar invariantes OCL simples em anotações de Validation em spring
     private boolean beanValidation = true;
 
-    // identificador JPA (sempre auto-gerado)
-    // nao indicado entao usa id auto (@Id @GeneratedValue Long id) cpmmo default
-    // caso contrário usa esse atributo como @Id @GeneratedValue
+    // identificador JPA
+    // não indicado -> id auto (@Id @GeneratedValue Long id) como default
+    // indicado -> esse atributo como @Id (@GeneratedValue, exceto String que o cliente atribui)
     private String idAttributeName;          // null = id autogerado
     private String idAttributeType = "Long"; // tipo Java do id (default Long)
 

@@ -64,17 +64,13 @@ public class AnnotationParser {
     }
 
 
-    // Trata as referências @pre de uma pós-condição antes de passar a expressão ao ANTLR.
-    // O @pre não faz parte da gramática OCL, por isso resolvemos aqui fora
+    // Trata as referências @pre de uma pós condição antes de passar a expressão ao ANTLR
     // por cada self.x@pre (ou x@pre), regista um snapshot do estado anterior numa variável x_pre e
-    // substitui o @pre por essa variável, deixando uma expressão que o ANTLR já aceita.
-    // Devolve a expressão com os @pre substituídos.
+    // substitui o @pre por essa variável
     private static String processPreReferences(String ocl, Class cls, List<Association> associations,
                                                List<PreSnapshot> snapshots) {
         // apanha self.x@pre ou x@pre
-        // so suporta @pre sobre um atributo simples (self.x@pre).
-        // @pre sobre navegação aninhada (self.a.b@pre) ou expressões (self.alunos->size()@pre)
-        // se nao for reconhecido, fica como literal no OCL.
+        // so suporta @pre sobre um atributo simples (self.x@pre)
         Pattern p = Pattern.compile("(self\\.)?([a-zA-Z_][a-zA-Z0-9_]*)@pre");
         Matcher m = p.matcher(ocl);
 
@@ -107,20 +103,8 @@ public class AnnotationParser {
 
     private static PreSnapshot buildSnapshot(String attrName, String varName,
                                              Class cls, List<Association> associations) {
-        // o snapshot @pre é raso o u seja guarda o valor (primitivos/String/enum) ou os elementos que a
-        // coleção tinha nesse momento, mas não o estado interno de cada objeto. Serve para
-        // comparar valores ou tamanhos antes/depois, não o conteúdo profundo dos objetos.
-        // ver se é atributo — snapshot é cópia por valor
-
-        /*
-        for (Attribute a : cls.getAttributes()) {
-            if (a.getName().equals(attrName)) {
-                return new PreSnapshot(varName, "this.get" + GeneratorUtils.capitalizeFirst(attrName) + "()", a.getType());
-            }
-        }
-        */
-
-        // atributo próprio ou herdado; coleção de tipos básicos leva cópia (senão apontava para a mesma lista)
+        // snapshot @pre guarda só o valor (primitivos/String/enum) ou os elementos que a coleção tinha nesse momento
+        // atributo próprio ou herdado, coleção faz cópia
         for (Attribute a : cls.getAllAttributes()) {
             if (!a.getName().equals(attrName)) continue;
             String getter = "this.get" + GeneratorUtils.capitalizeFirst(attrName) + "()";
@@ -130,33 +114,8 @@ public class AnnotationParser {
             }
             return new PreSnapshot(varName, getter, a.getType());
         }
-        // associação (multiplicidade *) ou referência única
-        /*
-        for (Association assoc : associations) {
-            String otherClass, mult;
-            if (cls.getName().equals(assoc.getSourceClass()) && attrName.equals(assoc.getTargetRole())) {
-                otherClass = assoc.getTargetClass();
-                mult = assoc.getTargetMultiplicity();
-            } else if (cls.getName().equals(assoc.getTargetClass()) && attrName.equals(assoc.getSourceRole()))
-            {
-                otherClass = assoc.getSourceClass();
-                mult = assoc.getSourceMultiplicity();
-            } else {
-                continue;
-            }
-            if (assoc.hasQualifier()) {
-                // associação qualifier ->  é Map<QualifierType, OtherClass>
-                return new PreSnapshot(varName,
-                        "new HashMap<>(this.get" + GeneratorUtils.capitalizeFirst(attrName) + "())",
-                        "Map<" + assoc.getQualifierType() + ", " + otherClass + ">");
-            }
-            if (mult != null && mult.contains("*")) {
-                return new PreSnapshot(varName, "new ArrayList<>(this.get" + GeneratorUtils.capitalizeFirst(attrName) + "())", "List<" + otherClass + ">");
-            }
-            return new PreSnapshot(varName, "this.get" + GeneratorUtils.capitalizeFirst(attrName) + "()", otherClass);
-        }
-        */
-        // relação própria ou herdada, pelo nome do campo gerado; só a ponta do qualifier é que é Map
+        // relação própria ou herdada, pelo nome do campo gerado
+        // só a ponta do qualifier é que é Map
         for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {
             if (!rel.attributeName().equals(attrName)) continue;
             String getter = "this.get" + GeneratorUtils.capitalizeFirst(attrName) + "()";

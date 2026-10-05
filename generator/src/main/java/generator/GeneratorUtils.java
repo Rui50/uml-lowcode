@@ -342,23 +342,12 @@ public class GeneratorUtils {
         List<String> mapAttributes = new ArrayList<>();
         for (Association assoc : associations) {
             // o Map fica só na ponta que é owner do qualifier (isMapEnd), não nas duas
+            // usa o mesmo nome de campo que o gerador de entidades (makeAttributeName) para o fixMapAccess bater certo
             if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable() && assoc.isMapEnd(true)) {
-                String role = assoc.getTargetRole();
-                if (role != null && !role.trim().isEmpty()) {
-                    mapAttributes.add(role.trim());
-                } else {
-                    String base = lowercaseFirst(assoc.getTargetClass());
-                    mapAttributes.add(base + "s");
-                }
+                mapAttributes.add(makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity()));
             }
             if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable() && assoc.isMapEnd(false)) {
-                String role = assoc.getSourceRole();
-                if (role != null && !role.trim().isEmpty()) {
-                    mapAttributes.add(role.trim());
-                } else {
-                    String base = lowercaseFirst(assoc.getSourceClass());
-                    mapAttributes.add(base + "s");
-                }
+                mapAttributes.add(makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity()));
             }
         }
         return mapAttributes;

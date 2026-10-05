@@ -44,9 +44,8 @@ public class ClassDiagramParser {
         this.derivesCache = derivesCache;
     }
 
-    // getSetAttribute(...) devolve um Set nao deterministico e gera coisas diferentes de cada vez
-    // para resolver ordenar pelo comparador do SDMetrics (runningID = ordem do documento XMI)
-    // torna a geração determinística.
+    // a func getSetAttribute(...) devolve ordens diferentes de cada vez
+    // por isso ordenar pelo comparador do SDMetrics para tornar a geração determinística
     private static List<ModelElement> ordered(Collection<?> set) {
         List<ModelElement> list = new ArrayList<>();
         if (set != null) for (Object o : set) list.add((ModelElement) o);
@@ -107,7 +106,7 @@ public class ClassDiagramParser {
             cl.addOperation(operation);
         }
 
-        List<Invariant> invariants = invariantsCache.get(classId);
+        /*List<Invariant> invariants = invariantsCache.get(classId);
 
 
         // daqui para baixo era quando as anotações eram feitas nos comments do modelo
@@ -169,7 +168,7 @@ public class ClassDiagramParser {
                     }
                 }
             }
-        }
+        }*/
 
         return cl;
     }
@@ -214,7 +213,10 @@ public class ClassDiagramParser {
         String generic = null;
         for (Object o : element.getSetAttribute("generictype")) {
             String v = String.valueOf(o);
-            if (v.contains("<")) { generic = v; break; }
+            if (v.contains("<")) {
+                generic = v;
+                break;
+            }
         }
         if (generic != null) {
             String kind = generic.substring(0, generic.indexOf('<')).trim(); // List / Set
@@ -529,8 +531,8 @@ public class ClassDiagramParser {
         }
     }
 
-    // copia para cada classe as ops das interfaces que realiza e que ela ainda não tem (por
-    // nome) — sem isto, "implements X" sem o metodo não compila. Op já existente (própria/herdada) ganha.
+    // garante que a classe tem as ops das interfaces que realiza, evitar que n compile
+    // verifica por nome as que falta
     private void mergeInterfaceOperations(List<Class> classes) {
         for (Class cls : classes) {
             for (Interface iface : cls.getRealizations()) {
@@ -543,9 +545,8 @@ public class ClassDiagramParser {
         }
     }
 
-    // clone por classe (id ifaceOpId@Classe) para não partilhar o objeto entre classes que a realizam,
-    // para terem ids diferentes e as anotações da frontend (com chaves por id) sobrevivem a re-uploads sem colisão
-    // senao nao podiamos ter 2 implementações diferentes em 2 classes diferentes
+    // clone por classe (id ifaceOpId@Classe) para cada classe ter a sua op, com id próprio porque as anotações
+    // da frontend usam chaves por id
     private static Operation cloneOperation(Operation src, Class cls) {
         Operation copy = new Operation(src.getId() + "@" + cls.getName(),
                 src.getName(), src.getReturnType(), src.getVisibility());

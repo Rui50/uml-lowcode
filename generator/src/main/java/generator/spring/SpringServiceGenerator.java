@@ -27,8 +27,6 @@ public class SpringServiceGenerator {
     private String baseOutputPath;
     private String basePackage;
 
-    // vars ja declaradads pela preconditions, para evitar redeclaração no corpo do método
-
     // nome -> Class, para resolver o tipo de id de outra classe nas relações
     private final Map<String, Class> classMap = new HashMap<>();
 
@@ -851,20 +849,23 @@ public class SpringServiceGenerator {
             writer.println();
         }
 
-        //  1. singulares dos dois lados, ANTES do INSERT: a Bean Validation corre lá dentro e estaria null;
-        //  2. save() = INSERT, que gera o id desta entidade;
-        //  3. coleções, que precisam desse id (a FK está nos filhos)
-        //  4. 2º save só quando esta entidade é owner de coleção (M:N) porque aí a ligação só persiste ao gravr
-        //     Se a FK está no outro já se gravou lá -> nada a gravar outra vez aqui.
+        // 1. singulares (dos dois lados) ANTES do INSERT: a Bean Validation corre no save e um @NotNull veria null
         linkOwnedSingles(writer, cls, associations, varName, true, false);
         // clearSingleOnNull = false porque numa entidade nova não há par anterior para desligar
         boolean inverseModified = linkInverseSingles(writer, cls, associations, varName, false, false);
+
+        // 2. save() = INSERT, que gera o id desta entidade
         writer.println("        " + className + " saved = " + repoName + ".save(" + varName + ");");
         writer.println();
+
+        // 3. coleções, que precisam do id gerado acima (a FK está nos filhos / tabela de junção)
         boolean collectionsModified = linkCollections(writer, cls, associations, "saved");
 
         // valida com tudo ligado e se rebentar, o @Transactional faz rollback do INSERT
         generateValidation(writer, cls.getName(), "saved");
+
+        // 4. 2º save só se a ligação vive deste lado (owner de coleção / inverso mexido);
+        //    se a FK está no outro, já foi gravada lá
         if (inverseModified || collectionsModified) {
             writer.println("        saved = " + repoName + ".save(saved);");
         }
@@ -899,6 +900,12 @@ public class SpringServiceGenerator {
             writer.println("        if (dto.get" + capAttribute + "Id() != null) {");
             writer.println("            " + otherClass + " " + otherVar + " = " + otherRepo + ".findById(dto.get" + capAttribute + "Id())");
             writer.println("                .orElseThrow(() -> new NotFoundException(\"" + otherClass + " not found: \" + dto.get" + capAttribute + "Id()));");
+            // 1:1 exclusivo: recusa se o alvo já estiver ligado a terceiro.
+            if (!rel.inverseIsCollection() && rel.isBidirectional()) {
+                String capInv = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(rel.thisClass(), rel.thisRole(), rel.thisMul()));
+                writer.println("            if (" + otherVar + ".get" + capInv + "() != null && !" + otherVar + ".get" + capInv + "()." + idGetterOf(cls.getName()) + "().equals(" + entityVar + "." + idGetterOf(cls.getName()) + "()))");
+                writer.println("                throw new ConflictException(\"" + otherClass + " \" + " + otherVar + "." + idGetterOf(otherClass) + "() + \" already linked to another " + cls.getName() + "\");");
+            }
             // recusa reassign para outro id (no create é null)
             writer.println("            if (" + entityVar + ".get" + capAttribute + "() != null && !" + entityVar + ".get" + capAttribute + "()." + idGetterOf(otherClass) + "().equals(dto.get" + capAttribute + "Id()))");
             writer.println("                throw new ConflictException(\"" + cls.getName() + " \" + " + entityVar + "." + idGetterOf(cls.getName()) + "() + \" already linked to another " + otherClass + "\");");

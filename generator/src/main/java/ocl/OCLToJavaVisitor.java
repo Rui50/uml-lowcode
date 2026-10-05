@@ -14,7 +14,7 @@ import java.util.Map;
  *
  * existe um metodo visit para cada regra da gramática, e a tradução é feita recursivamente
  *
- * assume sempre sempre listas ou sets na tradução, se for maps o ValidationGenerator da fix a isso
+ * assume sempre sempre listas ou sets na tradução, se for maps o ValidationGenerator da fix a isso com o fixmapaccess
  *
  * OCL NÃO SUPORTADO lançam IllegalArgumentException ("Operação OCL não suportada")
  *
@@ -208,15 +208,6 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         // ctx.basicExpression() = o lado esquerdo (self) e  ctx.ID() = o nome (alunos)
         if (ctx.ID() != null && ctx.basicExpression() != null) {
             String base = visit(ctx.basicExpression()); // traduz o lado esquerdo
-
-            /* nem chega aqui
-            if (ctx.getChildCount() > 2 && ctx.getChild(ctx.getChildCount() - 1).getText().equals(")")) {
-                return base + "." + ctx.ID().getText() + "()";
-            }
-            // acesso por índice: self.alunos[0] -> this.alunos.get(0)
-            if (ctx.expression() != null) {
-                return base + ".get(" + visit(ctx.expression()) + ")";
-            }*/
 
             // propriedade -> getter (this.getX()), não o campo
             // (campo herdado é private e getter herda-se e cobre também os derivados)
@@ -550,6 +541,8 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
         // ->first() -> .get(0)
         //if (text.equals("->first()")) return base + ".get(0)";
+
+        // tem de ser stream para dar em Set
 
         // ->first() -> .stream().findFirst().orElse(null)
         // ->first().nome -> .stream().findFirst().orElse(null).getNome()

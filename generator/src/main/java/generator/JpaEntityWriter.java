@@ -62,21 +62,11 @@ public final class JpaEntityWriter {
         // numa auto associação as duas colunas seriam iguais ("employee_id") entao usa-se o campo na inversa
         String invJoinCol = (thisClass.equals(otherClass) ? attributeName.toLowerCase() : otherClass.toLowerCase()) + "_id";
 
-        if (isBidirectional) {
-            // decide se o campo gerado é @JoinTable (dono) ou mappedBy (inverso)
-            boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
-
-            if (isOwner) {
-                writer.println("    @ManyToMany");
-                writer.println("    @JoinTable(");
-                writer.println("        name = \"" + thisClass.toLowerCase() + "_" + attributeName.toLowerCase() + "\",");
-                writer.println("        joinColumns = @JoinColumn(name = \"" + thisClass.toLowerCase() + "_id\"),");
-                writer.println("        inverseJoinColumns = @JoinColumn(name = \"" + invJoinCol + "\")");
-                writer.println("    )");
-            } else {
-                writer.println("    @ManyToMany(mappedBy = \"" +
-                        GeneratorUtils.getOtherSideAttributeName(assoc, isSource) + "\")");
-            }
+        // só o lado inverso (bidirecional não-dono) leva mappedBy; tudo o resto (dono ou unidirecional) leva @JoinTable
+        boolean mappedBy = isBidirectional && !GeneratorUtils.isOwningSide(assoc, isSource);
+        if (mappedBy) {
+            writer.println("    @ManyToMany(mappedBy = \"" +
+                    GeneratorUtils.getOtherSideAttributeName(assoc, isSource) + "\")");
         } else {
             writer.println("    @ManyToMany");
             writer.println("    @JoinTable(");
@@ -194,14 +184,14 @@ public final class JpaEntityWriter {
                 boolean isOwner = GeneratorUtils.isOwningSide(assoc, isSource);
 
                 if (isOwner) {
-                    writer.println("    @OneToOne(fetch = FetchType." + fetch + (cascadeHere ? ", cascade = CascadeType.ALL, orphanRemoval = true" : "") + ")");
+                    writer.println("    @OneToOne(fetch = FetchType." + fetch + cascade + ")");
                     writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
                 } else {
                     writer.println("    @OneToOne(mappedBy = \"" +
                             GeneratorUtils.getOtherSideAttributeName(assoc, isSource) + "\", fetch = FetchType." + fetch + cascade + ")");
                 }
             } else {
-                writer.println("    @OneToOne(fetch = FetchType." + fetch + (cascadeHere ? ", cascade = CascadeType.ALL, orphanRemoval = true" : "") + ")");
+                writer.println("    @OneToOne(fetch = FetchType." + fetch + cascade + ")");
                 writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
             }
 

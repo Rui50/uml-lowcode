@@ -199,7 +199,7 @@ public class CLIEntityGenerator {
             String type = name.equals(cls.getIdAttributeName())
                     ? cls.getRoot().getIdAttributeType()
                     : attr.getAttributeType();
-            String cap  = capitalize(name);
+            String cap  = GeneratorUtils.capitalizeFirst(name);
             writer.println();
             writer.println("    public " + type + " get" + cap + "() { return " + name + "; }");
             writer.println("    public void set" + cap + "(" + type + " " + name + ") { this." + name + " = " + name + "; }");
@@ -234,7 +234,7 @@ public class CLIEntityGenerator {
         for (Attribute attr : cls.getAllAttributes()) {
             if (attr.hasDerive()) continue;
             String sep = first ? "" : ", ";
-            sb.append(" + \"").append(sep).append(attr.getName()).append("=\" + get").append(capitalize(attr.getName())).append("()");
+            sb.append(" + \"").append(sep).append(attr.getName()).append("=\" + get").append(GeneratorUtils.capitalizeFirst(attr.getName())).append("()");
             first = false;
         }
         sb.append(" + \"}\";");
@@ -264,7 +264,7 @@ public class CLIEntityGenerator {
         else if (GeneratorUtils.checkMultiplicity(otherMult)) {   // multi side
             type = "List<" + otherClass + ">";
         }
-        String cap  = capitalize(attributeName);
+        String cap  = GeneratorUtils.capitalizeFirst(attributeName);
 
         writer.println();
         writer.println("    public " + type + " get" + cap + "() { return " + attributeName + "; }");
@@ -410,9 +410,5 @@ public class CLIEntityGenerator {
         }
     }
 
-
-    private static String capitalize(String s) {
-        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
-    }
 
 }

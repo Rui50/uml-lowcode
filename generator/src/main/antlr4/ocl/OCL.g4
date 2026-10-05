@@ -17,7 +17,7 @@
 
 grammar OCL;
 
-// Entry point for bare expressions (e.g., from UML annotations)
+// so it doesnt need context etc etc
 mainOclExpression
     : expression EOF
     ;

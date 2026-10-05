@@ -217,7 +217,7 @@ public class CLIMenuGenerator {
      * crud (create, view all , view by id, update, delete)
      * depois as de associação
      *   - Multiplicidade * (OneToMany/ManyToMany): Add + Remove
-     *   - Multiplicidade 1 (ManyToOne): Assign + Remove
+     *   - Multiplicidade 1 (ManyToOne/OneToOne): Assign + Remove
      */
     private void generateRunMethod(PrintWriter w, Class cls, List<Association> associations) {
         // menu options
@@ -238,7 +238,7 @@ public class CLIMenuGenerator {
                 options.add(new String[]{"Add " + attributeName, "add" + cap});
                 options.add(new String[]{"Remove " + attributeName, "remove" + cap});
             } else {
-                // ManyToOne: Assign e Remove
+                // ManyToOne/OneToOne: Assign e Remove
                 options.add(new String[]{"Assign " + attributeName, "assign" + cap});
                 options.add(new String[]{"Remove " + attributeName, "remove" + cap});
             }
@@ -489,7 +489,7 @@ public class CLIMenuGenerator {
 
     /**
      * Metodos de relações
-     * - Multiplicidade 1 (ManyToOne): assign e remove
+     * - Multiplicidade 1 (ManyToOne/OneToOne): assign e remove
      * - Multiplicidade * (OneToMany/ManyToMany): add  e remove
      */
 
@@ -534,7 +534,7 @@ public class CLIMenuGenerator {
         w.println();
     }
 
-    // Assign method (ManyToOne): entity.setOther(other)
+    // Assign method (ManyToOne/OneToOne): entity.setOther(other)
     private void generateAssignMethod(PrintWriter w, String ownerClass, String otherClass, String attributeName, Association assoc, boolean isSource) {
         String capitalized = GeneratorUtils.capitalizeFirst(attributeName);
         boolean bidir = assoc.isSourceNavigable() && assoc.isTargetNavigable();

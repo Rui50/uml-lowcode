@@ -25,12 +25,14 @@ import java.util.Set;
  *   - findById(id) : Tipo -> Tipo var = repo.findById(id).orElseThrow(NotFoundException);
  *   - tipos explícitos nos args/return.
  *
- * generateMessageCode — só as mensagens enviadas pelo service (replies ignoradas)
+ * generateMessageCode — só as mensagens enviadas pelo service
  *   - create
  *   - declaração (x : Tipo)
  *   - atribuição simples (x = expr)
  *   - <campo>.add/remove/get numa entidade -> getter (put/remove por chave se Map)
  *   - self-message
+ *   - reply -> return (+ checkInvariants antes)
+ *   - break / continue
  *   - chamada com retorno (findById -> orElseThrow);
  *   - chamada sem retorno
  *

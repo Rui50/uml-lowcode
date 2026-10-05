@@ -112,12 +112,12 @@ public class Attribute {
     public void setPrecision(Integer precision) { this.precision = precision; }
 
     public Integer getScale() { return scale; }
+    public void setScale(Integer scale) { this.scale = scale; }
 
     public String getColumnName() { return columnName; }
     public void setColumnName(String columnName) {
         this.columnName = (columnName != null && !columnName.isBlank()) ? columnName.trim() : null;
     }
-    public void setScale(Integer scale) { this.scale = scale; }
 
     public boolean hasColumnConfig() {
         return unique || precision != null || scale != null;

@@ -368,8 +368,6 @@ public class CLIProjectGenerator {
             w.println("import jakarta.persistence.EntityManagerFactory;");
             w.println("import jakarta.persistence.Persistence;");
             w.println("import java.io.InputStream;");
-            w.println("import java.util.HashMap;");
-            w.println("import java.util.Map;");
             w.println("import java.util.Properties;");
             w.println();
             w.println("public class Main {");
@@ -391,11 +389,7 @@ public class CLIProjectGenerator {
             w.println("        try (InputStream in = Main.class.getResourceAsStream(\"/config.properties\")) {");
             w.println("            props.load(in);");
             w.println("        }");
-            w.println("        Map<String, Object> overrides = new HashMap<>();");
-            w.println("        for (String name : props.stringPropertyNames()) {");
-            w.println("            overrides.put(name, props.getProperty(name));");
-            w.println("        }");
-            w.println("        return Persistence.createEntityManagerFactory(\"app-pu\", overrides);");
+            w.println("        return Persistence.createEntityManagerFactory(\"app-pu\", props);");
             w.println("    }");
             w.println("}");
         }

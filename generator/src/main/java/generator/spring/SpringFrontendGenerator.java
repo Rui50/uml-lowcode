@@ -473,6 +473,8 @@ public class SpringFrontendGenerator {
                         : isBoolean(a.getType()) ? "form." + field + ".checked"
                         // data vazia -> null
                         : isDate(a.getType()) ? "form." + field + ".value || null"
+                        // enum "-- none --" ("") -> null
+                        : enumLiterals.containsKey(a.getType()) ? "form." + field + ".value || null"
                         : "form." + field + ".value";
                 w.println("    " + field + ": " + value + ",");
             }
