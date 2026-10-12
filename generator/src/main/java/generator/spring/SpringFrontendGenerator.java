@@ -373,7 +373,7 @@ public class SpringFrontendGenerator {
                     w.println("    <form class=\"op\" data-path=\"" + opPath(op) + "\" data-method=\""
                             + opMethod(op) + "\" onsubmit=\"runOp(event)\">");
                     for (MessageArgument arg : opArgs(cls, op)) {
-                        String type = GeneratorUtils.removePackageNames(arg.getType() != null ? arg.getType() : "Object");
+                        String type = arg.getType() != null ? arg.getType() : "Object";
                         w.println("      <label>" + arg.getName());
                         w.println("        <input name=\"" + arg.getName() + "\" type=\"" + inputType(type) + "\">");
                         w.println("      </label>");

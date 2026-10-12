@@ -1115,13 +1115,13 @@ public class SpringServiceGenerator {
                 throw new IllegalArgumentException("Operação '" + operName
                         + "' tem pré/pós-condições mas não tem diagrama de sequência associado.");
             }
-            String returnType = op.getReturnType() != null ? GeneratorUtils.removePackageNames(op.getReturnType()) : "void";
+            String returnType = op.getReturnType() != null ? op.getReturnType() : "void";
             writer.println();
             writer.print("    public " + returnType + " " + operName + "(");
             List<Parameter> params = op.getParameters();
             for (int i = 0; i < params.size(); i++) {
                 if (i > 0) writer.print(", ");
-                writer.print(GeneratorUtils.removePackageNames(params.get(i).getType()) + " " + params.get(i).getName());
+                writer.print(params.get(i).getType() + " " + params.get(i).getName());
             }
             writer.println(") {");
             writer.println("        throw new UnsupportedOperationException(");
@@ -1149,9 +1149,9 @@ public class SpringServiceGenerator {
         // tipo de retorno: da mensagem de entrada se especificado | senão da operação | senão void
         String returnType;
         if (entryMessage.getReturnType() != null && !entryMessage.getReturnType().isBlank()) {
-            returnType = GeneratorUtils.removePackageNames(entryMessage.getReturnType());
+            returnType = entryMessage.getReturnType();
         } else if (op.getReturnType() != null) {
-            returnType = GeneratorUtils.removePackageNames(op.getReturnType());
+            returnType = op.getReturnType();
         } else {
             returnType = "void";
         }
@@ -1168,7 +1168,7 @@ public class SpringServiceGenerator {
                             "Diagrama da operação '" + operName + "': o argumento '"
                             + arg.getName() + "' não tem tipo (ex: '" + arg.getName() + " : Tipo').");
                 }
-                writer.print(GeneratorUtils.removePackageNames(arg.getType()) + " " + arg.getName());
+                writer.print(arg.getType() + " " + arg.getName());
             }
         }
         writer.println(") {");

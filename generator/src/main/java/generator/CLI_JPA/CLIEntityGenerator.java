@@ -136,7 +136,7 @@ public class CLIEntityGenerator {
 
             validationGenerator.generateValidateMethod(writer, cls);
 
-            OperationGenerator.generateOperations(writer, cls, associations);
+            OperationGenerator.generateOperations(writer, cls, associations, true);
 
             writer.println("}");
 

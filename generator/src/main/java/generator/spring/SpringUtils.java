@@ -52,7 +52,7 @@ public class SpringUtils {
      */
     public static String ownerClassOf(String typeName, Set<String> knownClasses, Map<String, String> DTO_ToClass) {
         if (typeName == null || typeName.isBlank()) return null;
-        String base = GeneratorUtils.extractBaseType(GeneratorUtils.removePackageNames(typeName));
+        String base = GeneratorUtils.extractBaseType(typeName);
         if (knownClasses.contains(base)) return base;   // é uma classe (param/retorno entidade)
         return DTO_ToClass.get(base);                      // é um DTO -> a sua classe dona
     }

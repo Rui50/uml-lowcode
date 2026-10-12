@@ -222,7 +222,7 @@ public class ClassDiagramParser {
             String kind = generic.substring(0, generic.indexOf('<')).trim(); // List / Set
             String elem = generic.substring(generic.indexOf('<') + 1, generic.lastIndexOf('>')).trim();
             if ((kind.equals("List") || kind.equals("Set")) && GeneratorUtils.isSimpleParamType(elem)) {
-                attribute.setType(GeneratorUtils.fixType(elem)); // tipo do elemento,
+                attribute.setType(GeneratorUtils.fixType(GeneratorUtils.removePackageNames(elem))); // tipo do elemento,
                 attribute.setCollectionType(kind);  // "List" / "Set"
                 return attribute;
             }
@@ -269,7 +269,8 @@ public class ClassDiagramParser {
                 // genericType é como o VP da handle a Lists etc
                 String genericType = paramElement.getPlainAttribute("generictype");
                 if (genericType != null && !genericType.trim().isEmpty()) {
-                    operation.setReturnType(genericType);
+                    //  (List<model.Aluno>)
+                    operation.setReturnType(GeneratorUtils.removePackageNames(genericType));
                 }
                 // se não tiver genericType, tenta o tipo normal
                 else {
@@ -308,7 +309,8 @@ public class ClassDiagramParser {
         String genericType = element.getPlainAttribute("generictype");
 
         if (genericType != null && !genericType.trim().isEmpty()) {
-            parameter.setType(genericType);
+            //  (List<model.Aluno>)
+            parameter.setType(GeneratorUtils.removePackageNames(genericType));
         } else {
             // tipos "normais"
             ModelElement type = (ModelElement) element.getRefAttribute("parametertype");
@@ -537,6 +539,7 @@ public class ClassDiagramParser {
         for (Class cls : classes) {
             for (Interface iface : cls.getRealizations()) {
                 for (Operation op : iface.getOperations()) {
+                    // se a classe já tiver uma op com o mesmo nome, não clona
                     boolean alreadyHas = cls.getAllOperations().stream()
                             .anyMatch(o -> o.getName().equals(op.getName()));
                     if (!alreadyHas) cls.addOperation(cloneOperation(op, cls));

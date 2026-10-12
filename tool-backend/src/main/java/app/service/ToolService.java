@@ -107,7 +107,7 @@ public class ToolService {
                 .toList();
 
         List<OperationDTO> ops = c.getOperations().stream()
-                .map(o -> toOperationDTO(c.getName(), o))
+                .map(this::toOperationDTO)
                 .toList();
 
         List<String> realizations = c.getRealizations().stream()
@@ -136,7 +136,7 @@ public class ToolService {
         try { return Integer.parseInt(lower) >= 1; } catch (NumberFormatException e) { return false; }
     }
 
-    private OperationDTO toOperationDTO(String className, Operation o) {
+    private OperationDTO toOperationDTO(Operation o) {
         List<Parameter> raw = o.getParameters() != null ? o.getParameters() : List.of();
         List<ParameterDTO> params = raw.stream()
                 .map(p -> new ParameterDTO(p.getName(), GeneratorUtils.removePackageNames(p.getType())))
@@ -147,7 +147,8 @@ public class ToolService {
                 o.getName(),
                 GeneratorUtils.removePackageNames(o.getReturnType()),
                 o.getVisibility(),
-                params
+                params,
+                o.isAbstract()
         );
     }
 
@@ -170,7 +171,7 @@ public class ToolService {
 
     private InterfaceDTO toInterfaceDto(Interface i) {
         List<OperationDTO> ops = i.getOperations().stream()
-                .map(o -> toOperationDTO(i.getName(), o)).toList();
+                .map(this::toOperationDTO).toList();
         return new InterfaceDTO(i.getId(), i.getName(), ops);
     }
 

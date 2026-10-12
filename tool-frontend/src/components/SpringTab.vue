@@ -172,7 +172,7 @@ watch(operations, (ops) => {
 
 // controller REST por classe (Spring); abstratas/interfaces não têm controller
 const controllerEligible = computed(() =>
-  !isInterface.value && !!model.selectedClass && !model.selectedClass.isAbstract
+  !isInterface.value && !!model.selectedClass && !model.selectedClass.abstract
 )
 
 // garante a entrada do controller (default true) para a classe selecionada

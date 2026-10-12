@@ -316,6 +316,7 @@ public class GeneratorUtils {
             java = java.replace(access + ".containsAll(", access + ".values().containsAll(");
             java = java.replace("frequency(" + access + ",", "frequency(" + access + ".values(),");
             java = java.replace("new HashSet<>(" + access + ")", "new HashSet<>(" + access + ".values())");
+            java = java.replace("new ArrayList<>(" + access + ")", "new ArrayList<>(" + access + ".values())");
         }
         return java;
     }
@@ -343,10 +344,11 @@ public class GeneratorUtils {
         for (Association assoc : associations) {
             // o Map fica só na ponta que é owner do qualifier (isMapEnd), não nas duas
             // usa o mesmo nome de campo que o gerador de entidades (makeAttributeName) para o fixMapAccess bater certo
-            if (assoc.getSourceClass().equals(cls.getName()) && assoc.isTargetNavigable() && assoc.isMapEnd(true)) {
+            // a associação qualificada pode estar declarada num pai
+            if (cls.isOrInheritsFrom(assoc.getSourceClass()) && assoc.isTargetNavigable() && assoc.isMapEnd(true)) {
                 mapAttributes.add(makeAttributeName(assoc.getTargetClass(), assoc.getTargetRole(), assoc.getTargetMultiplicity()));
             }
-            if (assoc.getTargetClass().equals(cls.getName()) && assoc.isSourceNavigable() && assoc.isMapEnd(false)) {
+            if (cls.isOrInheritsFrom(assoc.getTargetClass()) && assoc.isSourceNavigable() && assoc.isMapEnd(false)) {
                 mapAttributes.add(makeAttributeName(assoc.getSourceClass(), assoc.getSourceRole(), assoc.getSourceMultiplicity()));
             }
         }

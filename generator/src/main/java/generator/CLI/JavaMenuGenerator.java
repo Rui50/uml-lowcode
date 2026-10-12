@@ -612,7 +612,16 @@ public class JavaMenuGenerator {
             String rt = (entry.getReturnType() != null && !entry.getReturnType().isBlank())
                     ? entry.getReturnType() : (op.getReturnType() != null ? op.getReturnType() : "void");
             boolean voidReturn = rt.isBlank() || "void".equals(rt);
-            w.println("            " + (voidReturn ? "" : GeneratorUtils.removePackageNames(rt) + " ret = ") + call + ";");
+            w.println("            " + (voidReturn ? "" : rt + " ret = ") + call + ";");
+            // invariantes da classe depois da op
+            if (cls.hasAnyInvariants()) {
+                w.println("            List<String> errors = owner.validate();");
+                w.println("            if (!errors.isEmpty()) {");
+                w.println("                System.out.println(\"Validation errors:\");");
+                w.println("                errors.forEach(e -> System.out.println(\"  - \" + e));");
+                w.println("                return;");
+                w.println("            }");
+            }
             w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".save(owner);");
             w.println("            System.out.println(\"" + op.getName() + " executed.\");");
             if (!voidReturn) w.println("            System.out.println(\"Result: \" + ret);");

@@ -44,8 +44,8 @@ function opAnnotated(opId: string): boolean {
 
       <div class="header">
         <div class="title">
-          <div v-if="data.isAbstract" class="stereotype">«abstract»</div>
-          <div class="class-name" :class="{ abstract: data.isAbstract }">
+          <div v-if="data.abstract" class="stereotype">«abstract»</div>
+          <div class="class-name" :class="{ abstract: data.abstract }">
             <span v-if="classAnnotated" class="dot" />{{ data.name }}
           </div>
         </div>

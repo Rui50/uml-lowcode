@@ -73,7 +73,11 @@ import java.util.Map;
  */
 public class OperationGenerator {
 
-    public static void generateOperations(PrintWriter writer, Class cls, List<Association> associations) {
+    // o Db só é gerado no cli-jpa, nos outros alvos não existe
+    private static boolean hasDb;
+
+    public static void generateOperations(PrintWriter writer, Class cls, List<Association> associations, boolean hasDb) {
+        OperationGenerator.hasDb = hasDb;
         if (cls.getOperations().isEmpty()) {
             return;
         }
@@ -83,13 +87,12 @@ public class OperationGenerator {
         for (Operation op : cls.getOperations()) {
             // op abstrata só a assinatura abstract
             if (op.isAbstract()) {
-                String absReturn = GeneratorUtils.removePackageNames(op.getReturnType());
-                writer.print("    " + op.getVisibility() + " abstract " + absReturn + " " + op.getName() + "(");
+                writer.print("    " + op.getVisibility() + " abstract " + op.getReturnType() + " " + op.getName() + "(");
                 List<Parameter> absParams = op.getParameters();
                 for (int i = 0; i < absParams.size(); i++) {
                     Parameter p = absParams.get(i);
                     if (i > 0) writer.print(", ");
-                    writer.print(GeneratorUtils.removePackageNames(p.getType()) + " " + p.getName());
+                    writer.print(p.getType() + " " + p.getName());
                 }
                 writer.println(");");
                 continue;
@@ -101,14 +104,14 @@ public class OperationGenerator {
             } else {
                 // sem diagrama assinatura + nada dentro so que lança UnsupportedOperationException
                 String visibility = op.getVisibility();
-                String returnType = GeneratorUtils.removePackageNames(op.getReturnType());
+                String returnType = op.getReturnType();
                 String name = op.getName();
                 writer.println("    " + visibility + " " + returnType + " " + name + "(");
 
                 List<Parameter> parameters = op.getParameters();
                 for (int i = 0; i < parameters.size(); i++) {
                     Parameter param = parameters.get(i);
-                    String paramType = GeneratorUtils.removePackageNames(param.getType());
+                    String paramType = param.getType();
                     String paramName = param.getName();
                     writer.print("        " + paramType + " " + paramName);
                     writer.println(i < parameters.size() - 1 ? "," : "");
@@ -160,7 +163,7 @@ public class OperationGenerator {
                         "Diagrama da operação '" + operation.getName() + "': o argumento '"
                         + arg.getName() + "' não tem tipo (ex: '" + arg.getName() + " : Tipo').");
             }
-            writer.print(GeneratorUtils.removePackageNames(arg.getType()) + " " + arg.getName());
+            writer.print(arg.getType() + " " + arg.getName());
         }
         writer.println(") {");
 
@@ -303,7 +306,8 @@ public class OperationGenerator {
 
         // save/delete sao mensagens reservadas
         //  do owner para a entidade a gravar, so faz sentido nos alvos com BD
-        if (("save".equals(n) || "delete".equals(n)) && msg.getArguments() != null && msg.getArguments().size() == 1) {
+        // sem BD sai como chamada normal (this.save(x)), que é o que foi desenhado
+        if (hasDb && ("save".equals(n) || "delete".equals(n)) && msg.getArguments() != null && msg.getArguments().size() == 1) {
             String arg = msg.getArguments().get(0).getName().replace("self.", "this.");
             writer.println(indent + "Db." + n + "(" + arg + ");");
             return;
@@ -593,6 +597,8 @@ public class OperationGenerator {
                 generateElements(writer, operand.getElements(), entry, cls, associations, indent + 1, operation, returnType, selfVar);
             }
             writer.println(indentStr + "}");
+        } else {
+            throw new IllegalArgumentException("Fragmento '" + op + "' não é suportado.");
         }
     }
 

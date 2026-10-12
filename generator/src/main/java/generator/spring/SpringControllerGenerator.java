@@ -596,7 +596,7 @@ public class SpringControllerGenerator {
             for (int i = 0; i < entryArgs.size(); i++) {
                 if (i > 0) writer.print(",");
                 MessageArgument arg = entryArgs.get(i);
-                String argType = arg.getType() != null ? GeneratorUtils.removePackageNames(arg.getType()) : "Object";
+                String argType = arg.getType() != null ? arg.getType() : "Object";
                 String binding;
                 if (classMap.containsKey(argType)) {
                     // param do tipo entidade para ja nao aceita
@@ -666,9 +666,9 @@ public class SpringControllerGenerator {
     // tipo de retorno do endpoint custom: mensagem de entrada ":Type" | senão operação | senão void
     private String customOpReturnType(Class cls, Operation op, Message entryMessage) {
         if (entryMessage != null && entryMessage.getReturnType() != null && !entryMessage.getReturnType().isBlank()) {
-            return GeneratorUtils.removePackageNames(entryMessage.getReturnType());
+            return entryMessage.getReturnType();
         }
-        return op.getReturnType() != null ? GeneratorUtils.removePackageNames(op.getReturnType()) : "void";
+        return op.getReturnType() != null ? op.getReturnType() : "void";
     }
 
     //  HTTP -> anotação de mapping do Spring, o post fica como default

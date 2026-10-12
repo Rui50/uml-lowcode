@@ -4,6 +4,7 @@ import java.util.*;
 
 import com.sdmetrics.model.*;
 
+import generator.GeneratorUtils;
 import model.sequence.*;
 
 /**
@@ -50,7 +51,7 @@ public class SequenceDiagramParser {
      * 2 - depos parse das mensagens (criamos os objetos Message e criamos 2 maps,
      *   um de messageId -> Message e outro de
      *   messageId -> sendEvent, para depois construir a hierarquia dos fragments
-     * 3 - construir a a interaction em si
+     * 3 - construir a interaction em si
      */
     private Interaction parseInteraction(ModelElement element) {
         Interaction interaction = new Interaction();
@@ -111,7 +112,6 @@ public class SequenceDiagramParser {
      *
      * Com o container da mensagem, ele chama getOrCreateContainerElements que é recursiva e sobe a arvore de fragments até chegar à raiz (interação)
      */
-
     private void buildFromMessages(ModelElement interactionElement, Interaction interaction,
                                    Map<String, Message> messagesById,
                                    Map<String, ModelElement> sendEventsByMessageId) {
@@ -285,6 +285,9 @@ public class SequenceDiagramParser {
             }
         }
 
+        // (model.Turma)
+        lifeline.setType(GeneratorUtils.removePackageNames(lifeline.getType()));
+
         return lifeline;
     }
 
@@ -372,7 +375,7 @@ public class SequenceDiagramParser {
                 if (colon != -1) {
                     // pega no tipo
                     String type = expr.substring(colon + 1).trim();
-                    if (!type.isEmpty()) message.setReturnType(type);
+                    if (!type.isEmpty()) message.setReturnType(GeneratorUtils.removePackageNames(type));
                     // o resto é a expressão ex "getUser()"
                     expr = expr.substring(0, colon).trim();
                 }
@@ -388,7 +391,7 @@ public class SequenceDiagramParser {
                     String type    = signaturePart.substring(colon + 1).trim();
                     if (!varName.isEmpty() && !type.isEmpty()) {
                         message.setAssignVariable(varName);
-                        message.setReturnType(type);   // assignExpression fica null -> declaração sem valor
+                        message.setReturnType(GeneratorUtils.removePackageNames(type));   // assignExpression fica null -> declaração sem valor
                         return;
                     }
                 }
@@ -428,7 +431,7 @@ public class SequenceDiagramParser {
         if (afterParen.startsWith(":")) {
             String returnType = afterParen.substring(1).trim();
             if (!returnType.isEmpty()) {
-                message.setReturnType(returnType);
+                message.setReturnType(GeneratorUtils.removePackageNames(returnType));
             }
         }
 
@@ -450,7 +453,7 @@ public class SequenceDiagramParser {
         if (colonIndex != -1) {
             // name: Type
             arg.setName(argString.substring(0, colonIndex).trim());
-            arg.setType(argString.substring(colonIndex + 1).trim());
+            arg.setType(GeneratorUtils.removePackageNames(argString.substring(colonIndex + 1).trim()));
         } else {
             // só nome
             arg.setName(argString.trim());

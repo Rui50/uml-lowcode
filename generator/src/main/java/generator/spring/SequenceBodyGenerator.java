@@ -343,6 +343,9 @@ public class SequenceBodyGenerator {
             }
             writer.println(indentStr + "}");
         }
+        else {
+            throw new IllegalArgumentException("Fragmento '" + operator + "' não é suportado.");
+        }
     }
 
     // ownerType está numa ponta desta associação diretamente, ou por herança de um pai

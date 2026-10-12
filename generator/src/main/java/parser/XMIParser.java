@@ -69,7 +69,7 @@ public class XMIParser {
         XMIReader xmiReader = new XMIReader(trans, model);
         parser.parse(xmiFile, xmiReader);
 
-        System.out.println("Model loaded successfully!");
+        System.out.println("Model loaded");
 
         System.out.println();
 
@@ -109,7 +109,7 @@ public class XMIParser {
     * notas sao carregadas ao inicializar o parser para poder associar as invariantes às classes certas
      */
     private void loadAnnotationsFromComments(){
-        System.out.println("loading ocl annotation");
+        System.out.println("Loading ocl annotation");
 
         List<ModelElement> comments = model.getAcceptedElements(
                 metaModel.getType("comment")

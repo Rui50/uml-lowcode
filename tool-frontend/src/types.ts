@@ -29,7 +29,7 @@ export interface ClassDTO {
   parent: string | null
   attributes: AttributeDTO[]
   operations: OperationDTO[]
-  isAbstract: boolean
+  abstract: boolean
   realizations: string[]
   endpoints: Endpoint[]
   relations: RelationField[]
@@ -67,6 +67,7 @@ export interface OperationDTO {
   returnType: string
   visibility: string
   parameters: ParameterDTO[]
+  abstract: boolean
 }
 
 ////////////////////////

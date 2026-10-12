@@ -24,8 +24,6 @@ import java.util.stream.Collectors;
  *  - invariantes validadas antes do save
  *  - relações bidirecionais validam os dois lados
  *
- * Limitações:
- *  - operações custom não validam invariantes (só as suas pré/pós OCL);
  */
 public class CLIMenuGenerator {
 
@@ -803,7 +801,15 @@ public class CLIMenuGenerator {
             String rt = (entry.getReturnType() != null && !entry.getReturnType().isBlank())
                     ? entry.getReturnType() : (op.getReturnType() != null ? op.getReturnType() : "void");
             boolean voidReturn = rt.isBlank() || "void".equals(rt);
-            w.println("            " + (voidReturn ? "" : GeneratorUtils.removePackageNames(rt) + " ret = ") + call + ";");
+            w.println("            " + (voidReturn ? "" : rt + " ret = ") + call + ";");
+            // a transação está aberta, logo o rollback desfaz de facto o que a op mudou
+            if (hasInvariants(cls.getName())) {
+                w.println("            if (InputUtils.printErrors(owner.validate())) {");
+                w.println("                em.getTransaction().rollback();");
+                w.println("                em.clear();");
+                w.println("                return;");
+                w.println("            }");
+            }
             w.println("            " + GeneratorUtils.repoVariable(cls.getName()) + ".save(owner);");
             w.println("            em.getTransaction().commit();");
             w.println("            System.out.println(\"" + op.getName() + " executed.\");");

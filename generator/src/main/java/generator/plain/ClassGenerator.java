@@ -161,7 +161,7 @@ public class ClassGenerator {
             writer.println();
 
             // generate operations
-            OperationGenerator.generateOperations(writer, cls, associations);
+            OperationGenerator.generateOperations(writer, cls, associations, false);
             writer.println();
 
             // validation (OCL invariants)

@@ -48,7 +48,7 @@ public class VpParser {
         //  XMI ID -> Qualifier
         Map<String, Qualifier> elementsById = new HashMap<>();
 
-        // começa entao por criar todos os possiveis qualifiers
+        // cria todos os possiveis qualifiers (chaves)
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -72,7 +72,8 @@ public class VpParser {
         // aparece nos dois mas so um tem info
         Pattern ownedEndPattern = Pattern.compile("<(?:ownedEnd|ownedAttribute)[^>]+xmi:id=\"([^\"]+)\"");
 
-        // agora percorre as pontas desses qualifiers
+        // agora percorre as pontas desses qualifiers e ve se tem <qualifier>
+        // se sim pega o <modelRef> e ve se é um dos ids obtidos em cima, se sim é um qualifier real
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String line;
             String currentOwnedEndId = null;

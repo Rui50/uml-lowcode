@@ -13,5 +13,7 @@ public class OperationDTO {
     private String returnType;
     private String visibility;
     private List<ParameterDTO> parameters;
+    // o Jackson mete isto como "abstract": tira o "is" do getter
+    private boolean isAbstract;
 
 }

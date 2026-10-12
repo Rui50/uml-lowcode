@@ -417,8 +417,8 @@ public class CLIProjectGenerator {
             w.println("    public static void init(EntityManager entityManager) { em = entityManager; }");
             w.println();
             w.println("    public static <T> T save(T entity) {");
-            w.println("        if (em.contains(entity)) return entity;   // ja gerido: o dirty checking grava");
-            w.println("        em.persist(entity);                        // entidade nova criada no corpo");
+            w.println("        if (em.contains(entity)) return entity;");
+            w.println("        em.persist(entity);");
             w.println("        return entity;");
             w.println("    }");
             w.println();

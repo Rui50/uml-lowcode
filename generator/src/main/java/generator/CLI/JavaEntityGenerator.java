@@ -181,7 +181,7 @@ public class JavaEntityGenerator {
             // validation
             validationGenerator.generateValidateMethod(writer, cls);
 
-            OperationGenerator.generateOperations(writer, cls, associations);
+            OperationGenerator.generateOperations(writer, cls, associations, false);
 
             writer.println("}");
         }
@@ -315,7 +315,7 @@ public class JavaEntityGenerator {
     private void generateDerivedGetter(PrintWriter writer, Attribute attr) {
         String name = attr.getName();
         String capitalized = GeneratorUtils.capitalizeFirst(name);
-        writer.println("    public " + attr.getType() + " get" + capitalized + "() {");
+        writer.println("    public " + attr.getAttributeType() + " get" + capitalized + "() {");
         writer.println("        return " + attr.getJavaDeriveExpression() + ";");
         writer.println("    }");
         writer.println();

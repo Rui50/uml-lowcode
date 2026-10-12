@@ -39,7 +39,7 @@ public final class JpaEntityWriter {
         for (Attribute atr : cls.getAttributes()) {
             if (!atr.hasDerive()) continue;
             String cap = GeneratorUtils.capitalizeFirst(atr.getName());
-            writer.println("    public " + atr.getType() + " get" + cap + "() {");
+            writer.println("    public " + atr.getAttributeType() + " get" + cap + "() {");
             writer.println("        return " + atr.getJavaDeriveExpression() + ";");
             writer.println("    }");
             writer.println();

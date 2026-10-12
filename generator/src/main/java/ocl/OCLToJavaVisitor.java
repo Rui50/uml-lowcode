@@ -18,8 +18,6 @@ import java.util.Map;
  *
  * OCL NÃO SUPORTADO lançam IllegalArgumentException ("Operação OCL não suportada")
  *
- * no fim de visitPostfixTranslate e o erro chega à frontend pelo AnnotationService.
- *
  *  - tipos: oclIsKindOf, oclIsTypeOf, oclAsType, oclType, oclAsSet,
  *           oclIsUndefined, oclIsInvalid, oclIsNew
  *  - coleções: union, intersection, symmetricDifference, excludesAll, prepend,
@@ -66,7 +64,8 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
                 // throw new IllegalArgumentException("Expressão OCL inválida: \"" + oclExpression + "\"");
             }
         };
-        lexer.removeErrorListeners();   // remove o listener por defeito (imprime + recupera)
+        // remove default error listener
+        lexer.removeErrorListeners();
         lexer.addErrorListener(throwing);
         parser.removeErrorListeners();
         parser.addErrorListener(throwing);
@@ -91,7 +90,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         if (ctx.logicalExpression() != null) return visit(ctx.logicalExpression());
         if (ctx.conditionalExpression() != null) return visit(ctx.conditionalExpression());
         if (ctx.letExpression() != null) return visit(ctx.letExpression());
-        return ctx.getText();
+        throw new IllegalArgumentException("Expressão OCL não suportada: " + ctx.getText());
     }
 
     /*
@@ -112,7 +111,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
         String body = visit(ctx.expression());   // o corpo (depois do 'in') ja ve os bindings
 
-        for (String n : names) letScope.remove(n);   // limpar no fim do let
+        for (String n : names) letScope.remove(n);
         return body;
     }
 
@@ -179,7 +178,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
         // basicExpression '(' expressionList? ')'
 
         // chamada de metodo com argumentos do tipo self.owner.matches("x")
-        // a gramatica mete o nome do metodo (matches) no no da esqueda, e ctx.ID() null
+        // a gramatica mete o nome do metodo (matches) no da esquerda, e ctx.ID() null
         if (ctx.ID() == null && ctx.basicExpression() != null && ctx.getChildCount() > 1 && ctx.getChild(1).getText().equals("(")) {
             // 'left' é tudo menos os (args) em self.owner.matches('x') é self.owner.matches
             OCLParser.BasicExpressionContext left = ctx.basicExpression();
@@ -225,7 +224,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             }
         }
 
-        return ctx.getText();
+        throw new IllegalArgumentException("Expressão OCL não suportada: " + ctx.getText());
     }
 
     /*
@@ -443,7 +442,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
     public String visitPrimaryFactor(OCLParser.PrimaryFactorContext ctx) {
         if (ctx.basicExpression() != null) return visit(ctx.basicExpression());
         if (ctx.setExpression() != null) return visit(ctx.setExpression());
-        return ctx.getText();
+        throw new IllegalArgumentException("Expressão OCL não suportada: " + ctx.getText());
     }
 
 
