@@ -20,12 +20,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * UI simples (HTML + JS vanilla) servida pelo Spring a partir de resources/static/ que tem uma página CRUD
- * por entidade, a falar com os endpoints REST gerados. Sidebar para as páginas
- * (correr a app e abrir localhost:8080/).
- *
- * Relações single (ManyToOne) -> <select> (o id vai no <campo>Id do CreateDTO);
- * coleções -> secção add/remove que chama /api/<plural>/{id}/<campo>.
+ * Frontend para demo simples (HTML + JS) servida pelo Spring a partir de resources/static/ que tem uma página CRUD
+ * por entidade, a falar com os endpoints REST gerados. Sidebar para as páginas (correr a app e abrir localhost:8080/)
  */
 
 public class SpringFrontendGenerator {
@@ -63,7 +59,7 @@ public class SpringFrontendGenerator {
         System.out.println("UI generation completed.");
     }
 
-    // mesma pluralização do controller: /api/<lowercase>(s)
+    // api/<lowercase>(s)
     private String plural(String className) {
         String p = className.toLowerCase();
         return p.endsWith("s") ? p : p + "s";
@@ -177,6 +173,7 @@ public class SpringFrontendGenerator {
         return (op.getHttpMethod() == null || op.getHttpMethod().isBlank())
                 ? "POST" : op.getHttpMethod().trim().toUpperCase();
     }
+    // path do endpoint custom: o endpointName se definido, senão o nome da operação (igual ao controller)
     private String opPath(Operation op) {
         return (op.getEndpointName() != null && !op.getEndpointName().isBlank())
                 ? op.getEndpointName() : op.getName();
@@ -239,6 +236,7 @@ public class SpringFrontendGenerator {
         }
     }
 
+    // gera a página de uma entidade:
     private void generatePage(Class cls, List<Association> associations, String staticDir,
                               List<Class> pages) throws IOException {
         String name = cls.getName();
@@ -252,7 +250,7 @@ public class SpringFrontendGenerator {
                 .filter(a -> !a.hasDerive())
                 .filter(a -> !(cls.isHiddenInCreate(a.getName()) && cls.isHiddenInUpdate(a.getName())))
                 .filter(a -> cls.isIdAssigned() || !a.getName().equals(idName))
-                .collect(Collectors.toList());
+                .toList();
 
         // colunas da tabela = id (se gerado) + atributos não derivados visíveis
         List<String> columns = new ArrayList<>();
@@ -469,13 +467,18 @@ public class SpringFrontendGenerator {
             w.println("  const body = {");
             for (Attribute a : formFields) {
                 String field = a.getName();
-                String value = isNumeric(a.getType()) ? "Number(form." + field + ".value)"
-                        : isBoolean(a.getType()) ? "form." + field + ".checked"
-                        // data vazia -> null
-                        : isDate(a.getType()) ? "form." + field + ".value || null"
-                        // enum "-- none --" ("") -> null
-                        : enumLiterals.containsKey(a.getType()) ? "form." + field + ".value || null"
-                        : "form." + field + ".value";
+                String value;
+                if (isNumeric(a.getType())) {
+                    value = "Number(form." + field + ".value)";
+                } else if (isBoolean(a.getType())) {
+                    value = "form." + field + ".checked";
+                } else if (isDate(a.getType())) {
+                    value = "form." + field + ".value || null";        // data vazia -> null
+                } else if (enumLiterals.containsKey(a.getType())) {
+                    value = "form." + field + ".value || null";        // enum "-- none --" ("") -> null
+                } else {
+                    value = "form." + field + ".value";
+                }
                 w.println("    " + field + ": " + value + ",");
             }
             for (RelationshipInfo rel : rels) {
@@ -578,7 +581,7 @@ public class SpringFrontendGenerator {
 
             // coleções add/remove — o endpoint vem do data-path do form.
             //  - ADD (POST): manda [childId] no body;
-            //  - REMOVE (DELETE): manda os ids na query (?ids=), porque um body em DELETE pode ser ignorado.
+            //  - REMOVE (DELETE): manda os ids na query (?ids=)
             if (!colls.isEmpty()) {
                 w.println("async function addItem(event) {");
                 w.println("  event.preventDefault();");

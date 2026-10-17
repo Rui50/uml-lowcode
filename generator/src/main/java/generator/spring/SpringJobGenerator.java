@@ -75,7 +75,12 @@ public class SpringJobGenerator {
         }
         // prefixo da classe para evitar colisão entre jobs de classes diferentes
         String jobName = cls.getName() + GeneratorUtils.capitalizeFirst(op.getName()) + "Job";
-        String cron = (op.getCron() != null && !op.getCron().isBlank()) ? op.getCron() : "0 * * * * *";
+        String cron;
+        if (op.getCron() != null && !op.getCron().isBlank()) {
+            cron = op.getCron();
+        } else {
+            cron = "0 * * * * *";   // default: a cada minuto
+        }
 
         // repos = lifelines do tipo *Repository desenhadas no diagrama do job
         Set<String> repoTypes = new LinkedHashSet<>();

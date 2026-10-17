@@ -6,8 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *  Interface UML.
- *  apenas operations  sem atributos  sem herança de classes.
+ *  Interface UML
  */
 public class Interface {
     private String id; // xmi:id

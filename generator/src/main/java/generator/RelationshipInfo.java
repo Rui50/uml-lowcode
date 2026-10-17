@@ -69,8 +69,7 @@ public class RelationshipInfo {
     }
 
     /**
-     * Relações navegáveis de uma classe, uma por associação, vistas do lado da própria classe.
-     * incluii as herdadas de um pai abstrato
+     * Relações navegáveis de uma classe, uma por associação, vistas do lado da própria classe
      */
     public static List<RelationshipInfo> collect(Class cls, List<Association> associations) {
         List<RelationshipInfo> rels = new ArrayList<>();

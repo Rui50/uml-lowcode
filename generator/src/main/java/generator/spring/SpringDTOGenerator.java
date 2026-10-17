@@ -15,9 +15,8 @@ import java.util.*;
 /**
  * gerar os dtos, por classe
  * - CreateDTO: para POST, tem ids de relação (single e coleção)
- * - UpdateDTO: para PATCH  só ids de relação SINGULARES
+ * - UpdateDTO: para PATCH e PUT só ids de relação SINGULARES
  * - ResponseDTO: para GET, relacionamento IDs
- *
  */
 public class SpringDTOGenerator {
     private String baseOutputPath;
@@ -298,7 +297,10 @@ public class SpringDTOGenerator {
     static String responseDTOName(Class cls, String endpointType) {
         if (!cls.hasResponseOverride(endpointType)) return cls.getName() + "ResponseDTO";
         String custom = cls.responseOverrideName(endpointType);
-        return !custom.isBlank() ? custom : cls.getName() + endpointType + "ResponseDTO";
+        // se o override do endpointType tiver nome custom, usa esse nome
+        if (!custom.isBlank()) return custom;
+        // senão usa o padrão <Class><endpointType>ResponseDTO
+        return cls.getName() + endpointType + "ResponseDTO";
     }
 
     private void generateResponseDTOFile(Class cls, String dtoDir, String dtoName,
@@ -394,7 +396,7 @@ public class SpringDTOGenerator {
                 String cap = GeneratorUtils.capitalizeFirst(attr.getName());
                 if (attr.isCollection()) {
                     String container = attr.getCollectionType().equals("List") ? "ArrayList" : "HashSet";
-                    w.println("        dto.set" + cap + "(new " + container + "<>(" + varName + ".get" + cap + "()));");
+                    w.println("        dto.set" + cap + "(" + varName + ".get" + cap + "() != null ? new " + container + "<>(" + varName + ".get" + cap + "()) : new " + container + "<>());");
                 } else {
                     w.println("        dto.set" + cap + "(" + varName + ".get" + cap + "());");
                 }

@@ -28,10 +28,11 @@ public class GeneratorUtils {
     }
 
     /**
-     * operações "efetivas" de uma classe próprias + herdadas,
-     * com o override a "ganhar" no caso de dar override a uma do pai
+     * operações "efetivas" de uma classe
+     * proprias + herdadas
      */
     public static List<Operation> effectiveOperations(Class cls) {
+        // dedup and ordem
         Map<String, Operation> byName = new LinkedHashMap<>();
         for (Operation op : cls.getAllOperations()) {
             byName.putIfAbsent(op.getName(), op);
@@ -43,9 +44,6 @@ public class GeneratorUtils {
      * Classe que declara a operação
      * ex é uma op herdada por StudentMember -> devolve Member
      *
-     * O código de uma op herdada é emitido na subclasse (StudentMember), mas o
-     * diagrama de sequência dessa op foi desenhado no pai (Member) e refere-se a ela
-     * (lifeline :Member, MemberService...)
      */
     public static Class declaringClassOf(Class cls, Operation op) {
         for (Class c = cls; c != null; c = c.getParentClass()) {
@@ -100,6 +98,7 @@ public class GeneratorUtils {
     public static String findReplyToActor(List<Object> elements) {
         String last = null;
         for (Object el : elements) {
+            // reply cujo target é lifeline sem tipo = autor
             if (el instanceof Message m && "reply".equals(m.getMessageSort()) && m.getTarget() != null
                     && m.getTarget().getType() == null) {
                 String expr;
@@ -110,6 +109,7 @@ public class GeneratorUtils {
                 }
                 if (expr != null && !expr.isBlank()) last = expr.trim();
             } else if (el instanceof Fragment f) {
+                // pode tar dentro dos operandos
                 for (Operand op : f.getOperands()) {
                     String inner = findReplyToActor(op.getElements());
                     if (inner != null) last = inner;
@@ -142,7 +142,10 @@ public class GeneratorUtils {
 
     // gera o @Column: sempre com o name (nome do atributo) unique/precision/scale só se definidos
     public static String columnAnnotation(Attribute atr) {
+        // nome da coluna
         String colName = (atr.getColumnName() != null) ? atr.getColumnName() : atr.getName();
+
+        // anotacao @Column
         StringBuilder sb = new StringBuilder("@Column(name = \"").append(colName).append("\"");
         if (atr.isUnique()) sb.append(", unique = true");
         if (atr.getPrecision() != null) sb.append(", precision = ").append(atr.getPrecision());
@@ -225,8 +228,9 @@ public class GeneratorUtils {
         return null;
     }
 
-    // "endName" (o lado da associação) é na propria cls ou um dos pais?
-    // devolv se for o próprio/pai abstrato
+    // onde a assoc ta declarada /
+    // na propria classe ou pai abstrato (que nao tem service) devolve o nome
+    // se nao null
     private static String ownOrAbstract(Class cls, String endName) {
         for (Class c = cls; c != null; c = c.getParentClass()) {
             if (c.getName().equals(endName))
@@ -268,6 +272,7 @@ public class GeneratorUtils {
             }
             for (Parameter param : op.getParameters()) {
                 String baseType = extractBaseType(param.getType());
+                // se param for uma entidade e nao a propria classe
                 if (baseType != null && entityNames.contains(baseType) && !baseType.equals(cls.getName())) {
                     entitiesToImport.add(baseType);
                 }

@@ -18,7 +18,7 @@ import java.util.Set;
  *  - idAttributeName == null  -> id por defeito: @Id @GeneratedValue Long id
  *  - idAttributeName != null  -> @Id no atributo escolhido (@GeneratedValue exceto se for chave natural String)
  *  - idAttributeType          -> tipo Java do id (default Long); String = chave natural atribuída pelo cliente
- *  A anotação vive na RAIZ da hierarquia; uma classe filha pega no id com getRoot().
+*   - id na classe pai
  */
 public class Class {
 
@@ -189,7 +189,6 @@ public class Class {
         this.idAttributeType = fixIdType(idAttributeType);
     }
 
-    // realizations são por classe e não são herdadas (o extends/super.validate já trata a herança)
     public List<Interface> getRealizations() {
         return realizations;
     }

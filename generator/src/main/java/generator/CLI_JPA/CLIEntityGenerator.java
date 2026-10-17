@@ -175,10 +175,7 @@ public class CLIEntityGenerator {
                 writer.println("@Inheritance(strategy = InheritanceType.JOINED)");
             }
         } else if (cls.getParentClass() != null) {
-            // filho
-            if (strategy.equals("SINGLE_TABLE")) {
-                writer.println("@DiscriminatorValue(\"" + cls.getName() + "\")");
-            } else if (strategy.equals("JOINED")) {
+            if (strategy.equals("JOINED")) {
                 writer.println("@PrimaryKeyJoinColumn(name = \"" + cls.getParentClass().getName().toLowerCase() + "_id\")");
             }
         }
@@ -339,7 +336,6 @@ public class CLIEntityGenerator {
                                                      String multiplicity, Association assoc,
                                                      boolean isSource, List<Class> allClasses){
         writer.println("    // relationship: " + thisClass + " -> " + otherClass);
-
         // thisMultiplicity = multiplicidade do atributo desta classe
         // otherMultiplicity = quantos desta classe é que o outro lado vê
         String thisMultiplicity  = isSource ? assoc.getTargetMultiplicity() : assoc.getSourceMultiplicity();

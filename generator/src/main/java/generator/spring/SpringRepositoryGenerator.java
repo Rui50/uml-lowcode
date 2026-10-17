@@ -11,13 +11,9 @@ import java.io.PrintWriter;
 import java.util.List;
 
 /**
- * Gera os repositórios Spring com @Repository na classe  estender JpaRepository<Entity, IdType>.
+ * Gera os repositórios Spring com @Repository na classe
+ * JpaRepository<Entity, IdType>.
  * (save/findById/findAll/deleteById/count/existsById) é fornecido pelo Spring Data.
- *
- * - um repo por classe, mesmo com herança o JPA resolve a hierarquia pelo discriminador que ta na entidade,
- * findAll do pai traz também os filhos;
- * - IdType = tipo do id da raiz (cls.getRoot().getIdAttributeType()), import de UUID só quando é UUID;
-
  */
 // id: JpaRepository<Entity, T>, em que T = tipo do id (cls.getRoot().getIdAttributeType())
 public class SpringRepositoryGenerator {

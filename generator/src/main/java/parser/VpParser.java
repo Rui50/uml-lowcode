@@ -129,7 +129,7 @@ public class VpParser {
 
     /**
      * extrai o numero de visualização do VP (<number xmi:value="1.1.2"/>) de cada mensagem.
-     * SDMetrics nao consegue extrair direito porque ha varios xmi:value irmaos dentro de <xmi:Extension>.
+     * SDMetrics nao consegue extrair direito porque ha varios xmi:value diferentes dentro de <xmi:Extension>.
      */
     public static Map<String, String> extractMessageNumbers(String filePath) throws IOException {
         Map<String, String> idToNumber = new HashMap<>();

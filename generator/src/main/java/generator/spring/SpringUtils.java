@@ -74,8 +74,12 @@ public class SpringUtils {
             // 3. tipo de return, da mensagem de entrada se especificado, senão o declarado na operação
             Class owner = GeneratorUtils.declaringClassOf(cls, op);
             Message entry = findEntryMessage(op.getSequenceDiagram(), owner, op);
-            String rt = (entry != null && entry.getReturnType() != null && !entry.getReturnType().isBlank())
-                    ? entry.getReturnType() : op.getReturnType();
+            String rt;
+            if (entry != null && entry.getReturnType() != null && !entry.getReturnType().isBlank()) {
+                rt = entry.getReturnType();
+            } else {
+                rt = op.getReturnType();
+            }
             String returnOwner = ownerClassOf(rt, knownClasses, DTO_ToClass);   // resolve o retorno -> classe dona
             if (returnOwner != null) needed.add(returnOwner);                   // junta a folder dessa classe
 

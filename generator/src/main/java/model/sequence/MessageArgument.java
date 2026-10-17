@@ -1,8 +1,11 @@
 package model.sequence;
 
+
+// reservar(livro : Livro)
+// name: livro
+// type: Livro
 public class MessageArgument {
     private String name;
-    private String value;
     private String type;
 
     public String getName() {
@@ -11,14 +14,6 @@ public class MessageArgument {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    public void setValue(String value) {
-        this.value = value;
     }
 
     public String getType() {

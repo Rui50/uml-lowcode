@@ -33,7 +33,7 @@ public class ModelValidator {
             if (srcMissing || tgtMissing || sameRole) {
                 messages.add("Self association on '" + a.getSourceClass() + "': each navigable end needs a "
                         + "distinct role (name). Without distinct roles the generated "
-                        + "fields and parameters collide (the class is both ends of the association).");
+                        + "fields and parameters collide.");
             }
         }
         return messages;
@@ -45,7 +45,8 @@ public class ModelValidator {
     public static List<String> findRelationFieldCollisions(List<Association> associations) {
         List<String> messages = new ArrayList<>();
         if (associations == null) return messages;
-        List<String> seen = new ArrayList<>();   // campos já gerados, no formato "Classe.campo"
+        // campos já gerados, no formato "Classe.campo"
+        List<String> seen = new ArrayList<>();
         for (Association a : associations) {
             // o campo vive na classe do lado OPOSTO à ponta navegável
             if (a.isTargetNavigable() && a.getSourceClass() != null) {
@@ -117,7 +118,7 @@ public class ModelValidator {
             for (Operation op : c.getOperations())
                 if (GENERATED_METHOD_NAMES.contains(op.getName()))
                     warnings.add("Operation '" + c.getName() + "." + op.getName()
-                            + "' has the same name as a generated method; rename it (may fail to compile).");
+                            + "' has the same name as a generated method. Rename it (may fail to compile).");
         return warnings;
     }
 }

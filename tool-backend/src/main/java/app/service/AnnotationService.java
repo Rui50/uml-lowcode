@@ -109,6 +109,7 @@ public class AnnotationService {
             if (op == null || cfg == null) return;
             op.setJob(cfg.isJob());
             op.setEndpointName(cfg.getEndpointName());
+            // apply if overriden, ou post
             op.setHttpMethod(cfg.getHttpMethod() != null && !cfg.getHttpMethod().isBlank()
                     ? cfg.getHttpMethod() : "POST");
             op.setCron(cfg.getCron());
@@ -139,6 +140,7 @@ public class AnnotationService {
                                  Map<String, List<OclDTO>> map,
                                     List<Interface> interfaces
     ) {
+        if (map == null) return;
         map.forEach((className, list) -> {
             Class c = findClass(classes, className);
             Interface iface = (c == null) ? findInterface(interfaces, className) : null;
@@ -344,7 +346,8 @@ public class AnnotationService {
         return null;
     }
 
-    private void clearAnnotations(List<Class> classes, List<Interface> interfaces) {        for (Class c : classes) {
+    private void clearAnnotations(List<Class> classes, List<Interface> interfaces) {
+        for (Class c : classes) {
             c.getInvariants().clear();
 
             for (Operation op : c.getOperations()) {

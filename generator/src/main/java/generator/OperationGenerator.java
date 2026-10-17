@@ -15,61 +15,28 @@ import java.util.List;
 import java.util.Map;
 
 /*
- * ========
- * OperationGenerator
- * ==========
- *
- *
- * REGRAS PARA DESENHAR O DIAGRAMA
- *   - Um actor (lifeline sem tipo) chama a operação, essa 1ª mensagem é a "entry message".
- *   - O nome da entry message === nome da operação.
- *   - Todos os argumentos e o return tem os seus tipos explicitamente (a: Aluno; ... : boolean).
- *   - O nome de uma lifeline === o parâmetro/variável que representa (para chamadas cross-lifeline).
- *   - As lifelines do dono tem o tipo (turma: Turma).
- *   - Uma reply para o actor dá o valor de retorno; sem reply => void.
- *   - Mensagens «create» sem argumentos, pôr os valores com setters a seguir.
- *
  * passo a passo
  *   1. encontra a entry message (primeira mensagem, actor->dono)
  *   2. valida que o nome da entry === nome da operação
- *   3. ve o tipo do return (entry -> class diagram -> void)
- *   4. gera a assinatura a partir dos argumentos da entry (não do class diagram), cada arg tem de ter tipo
- *   5. preconds OCL -> if (!(expr)) throw IllegalStateException(msg).
- *   6. snaptchots @pre (para pós condições que referem x@pre) declarados antes do corpo.
- *   7. Corpo -> generateElements.
- *   8. expressao de retorno -> findReplyToActor (última reply para o actor), nonvoid sem reply -> erro.
- *   9. "result" (se uma pós-condição o referir) declarado depois do corpo.
- *   10. pos condições OCL -> mesma forma if (!(...)) throw.
- *   11. return result / return <expr>.
+ *   3. ve o tipo do return
+ *   4. gera a assinatura a partir dos argumentos da entry
+ *   5. gera as pré conds
+ *   6. snaptchots @pre declarados antes do corpo.
+ *   7. expressao de retorno -> findReplyToActor (última reply para o actor), nonvoid sem reply -> erro
+ *   8. gera o corpo, no reply vai o return (result + post conds)
+ *   9. se for void, pos conds no fim.
  *
  * generateElements
  *   Só emite uma Message se a sua source for o DONO (entry.getTarget()) e não for reply
  *
- * generateMessage — os cinco casos
- *   1. «create» -> Type var = new Type(args);
- *   2. declaração x : Tipo (sem valor) -> Tipo x;
- *   3. atribuição simples (isPlainAssignment, points = points - amount) -> [Type] x = expr;
- *   4. campo Map (associação qualificada): add/remove viram put/remove
- *      <campo>.add(x)    -> <campo>.put(x.getChave(), x)
- *      <campo>.remove(x) -> <campo>.remove(x.getChave())
- *   5. numa mensagem normal, ou seja cahmar um metodo, se for self cal mete o this, senao o nome da lifeline
- *
- * generateFragment
- *    Coleções Map levam .values() (adaptCollectionAccess).
- *
- * parte do ocl
- *   pre e pos condições -> if (!(javaExpr)) throw IllegalStateException(msg), @pre precisa de um snapshot
- *   antes do corpo, o "result" precisa de um alias depois do corpo (por isso um vai acima e o outro abaixo).
- *
- *  uma pós-condição que falha faz throw. no Spring/CLI-JPA (com BD) o throw dá rollback
- *   por causa da anot @transaction
- *
- *
- *   - findEntryMessage/firstMessage — primeira mensagem, descendo em fragments.
- *   - participates — ownerType é (ou herda de) a classe desta ponta da associação (subclasse reconhece
- *     associação do pai).
- *   - findAssoc/findAssocByAttribute/attributeNameFor — a que associação um add/remove se refere e o campo.
- *   - adaptCollectionAccess — acrescenta .values() ao iterar uma associação Map (qualificada).
+ * generateMessage — por tipo de mensagem:
+ *   - «create»                  -> Type var = new Type(args)
+ *   - "x : Tipo" (sem valor)    -> Tipo x;
+ *   - atribuição simples        -> [Type] x = expr
+ *   - add/remove numa coleção   -> getX().add/remove(x)  (Map: put/remove pela chave)
+ *   - break / continue          -> break; / continue;
+ *   - save / delete (só com BD) -> Db.save/delete(x)
+ *   - geral (chamada)           -> receiver.metodo(args)  (receiver = this se for o dono, senão o nome da lifeline)
  */
 public class OperationGenerator {
 
@@ -167,6 +134,7 @@ public class OperationGenerator {
         }
         writer.println(") {");
 
+        // as pre conds
         for (Precondition pre : operation.getPreconditions()){
             writer.println("        if (!(" + pre.getJavaExpression() + ")) {");
             writer.println("            throw new IllegalStateException(\"" + GeneratorUtils.fixErrorMessage(pre.getMessage()) + "\");");
@@ -174,7 +142,7 @@ public class OperationGenerator {
         }
 
         // @pre snapshots para capturar o estado antes de executar
-        // dedup por varName: várias postconditions na mesma op podem mencionar o mesmo @pre
+        // dedup por varName so para evitar varias postconditions na mesma op com o mesmo @pre
         Map<String, PreSnapshot> snapshots = new LinkedHashMap<>();
         for (Postcondition post : operation.getPostconditions()) {
             for (PreSnapshot snap : post.getPreSnapshots()) {
@@ -197,12 +165,8 @@ public class OperationGenerator {
         writer.println("    }");
     }
 
-    // Fim de uma op com contedo, escreve o 'result' (se uma pos cond o usar), as pos conds OCL e o return.
-    //
-    // selfVar = como o OCL escreve o "self":
-    //   - entity -> "this"  (o corpo corre na própria entidade)
-    //   - Spring -> a var carregada do repo (e "member")
-    //   getJavaExpression(selfVar) troca o alvo:  "this.getX()" -> "member.getX()"
+
+    // Fim de uma op com contedo, escreve o 'result' (se uma pos cond o usar), as pos conds OCL e o return
     public static void generateReturnAndPostconditions(PrintWriter writer, Operation op, String returnType,
                                                        String returnExpr, String selfVar) {
         validateReturn(op, returnType, returnExpr, selfVar);
@@ -272,7 +236,9 @@ public class OperationGenerator {
         for (Object el : elements) {
             if (el instanceof Message) {
                 Message msg = (Message) el;
+                // skip actor msg ou null
                 if (msg.getSource() == null || msg.getSource().getType() == null) continue;
+                // skips meng que nao sao do owner
                 if (!msg.getSource().getId().equals(entry.getTarget().getId())) continue;
                 if ("reply".equals(msg.getMessageSort())) {
                     // reply = return
@@ -291,9 +257,7 @@ public class OperationGenerator {
 
     /**
      * Gera o código de uma mensagem
-     * - target igual ao entry -> "this", senão o nome da lifeline (erro se não tiver nome)
-     * - campo Map (<campo>.add/remove) -> put/remove pela chave do qualifier
-     * - caso geral: receiver.name(args), com assign se tiver variável de atribuição
+     * receiver = "this" se o target for o dono, senão o nome da lifeline (erro se não tiver nome).
      */
     private static void generateMessage(PrintWriter writer, Message msg, Message entry,
                                         Class cls, List<Association> associations, String indent) {
@@ -318,10 +282,13 @@ public class OperationGenerator {
         // mensagem «create»: gera "Type var = new Type(args)".
         if ("createMessage".equals(msg.getMessageSort())) {
             String type = msg.getTarget().getType();
-            String var = msg.getAssignVariable() != null ? msg.getAssignVariable()
-                    : (msg.getTarget().getRepresents() != null && !msg.getTarget().getRepresents().isBlank()
-                        ? msg.getTarget().getRepresents()
-                        : GeneratorUtils.lowercaseFirst(type));
+            // nome da var: o que a lifeline representa (o objeto criado é a lifeline), senão a var de atribuição
+            String var;
+            if (msg.getTarget().getRepresents() != null && !msg.getTarget().getRepresents().isBlank()) {
+                var = msg.getTarget().getRepresents();
+            } else {
+                var = msg.getAssignVariable();
+            }
             StringBuilder a = new StringBuilder();
             if (msg.getArguments() != null) {
                 for (int i = 0; i < msg.getArguments().size(); i++) {
@@ -346,9 +313,11 @@ public class OperationGenerator {
         // atribuição simples (quando nao tem chamadas a metodos): "x = expr" ou "x = expr : Type"
         // se tem ": Type"  declara (Type x = expr) senao -> reatribui (x = expr)
         if (msg.isPlainAssignment()) {
-            String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
-                    ? msg.getReturnType() + " " : "";
-            writer.println(indent + declType + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
+            if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
+                writer.println(indent + msg.getReturnType() + " " + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
+            } else {
+                writer.println(indent + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
+            }
             return;
         }
 
@@ -422,102 +391,11 @@ public class OperationGenerator {
 
         if (msg.getAssignVariable() != null) {
             // se ": Type" presente -> declara, se ausente -> reatribui a variável porque já tem de ser existente
-            String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
-                    ? msg.getReturnType() + " " : "";
-            writer.println(indent + declType + msg.getAssignVariable() + " = " + call + ";");
-        } else {
-            writer.println(indent + call + ";");
-        }
-    }
-
-    /**
-     * So dif no add/remove
-     * um campo Map qualificado (<campo>.add/remove) vira put/remove, tudo o resto é literal.
-     */
-    private static void generateMessage2(PrintWriter writer, Message msg, Message entry,
-                                        Class cls, List<Association> associations, String indent) {
-        // mensagem «create»: gera "Type var = new Type(args)".
-        if ("createMessage".equals(msg.getMessageSort())) {
-            String type = msg.getTarget().getType();
-            String var = msg.getAssignVariable() != null ? msg.getAssignVariable()
-                    : (msg.getTarget().getRepresents() != null && !msg.getTarget().getRepresents().isBlank()
-                        ? msg.getTarget().getRepresents()
-                        : GeneratorUtils.lowercaseFirst(type));
-            StringBuilder a = new StringBuilder();
-            if (msg.getArguments() != null) {
-                for (int i = 0; i < msg.getArguments().size(); i++) {
-                    if (i > 0) a.append(", ");
-                    a.append(msg.getArguments().get(i).getName());
-                }
+            if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
+                writer.println(indent + msg.getReturnType() + " " + msg.getAssignVariable() + " = " + call + ";");
+            } else {
+                writer.println(indent + msg.getAssignVariable() + " = " + call + ";");
             }
-            writer.println(indent + type + " " + var + " = new " + type + "(" + a + ");");
-            return;
-        }
-
-        // atribuição simples: "x = expr" ou "x = expr : Type"
-        if (msg.isPlainAssignment()) {
-            String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
-                    ? msg.getReturnType() + " " : "";
-            writer.println(indent + declType + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
-            return;
-        }
-
-        String receiver;
-        if (msg.getTarget().getId().equals(entry.getTarget().getId())) {
-            receiver = "this";
-        } else {
-            receiver = msg.getTarget().getName();
-            if (receiver == null || receiver.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Diagrama de sequência: a lifeline do tipo '" + msg.getTarget().getType()
-                        + "' não tem nome — o nome tem de ser igual ao parâmetro/variável que está a ser chamado.");
-            }
-        }
-
-        String name = msg.getName();
-        List<MessageArgument> args = msg.getArguments();
-
-        // "alunos.add(a)" -> attrName="alunos", op="add"
-        String attrName = null;
-        String op = name;
-        int sep = name.indexOf(".");
-        if (sep > 0) {
-            attrName = name.substring(0, sep);
-            op = name.substring(sep + 1);
-        }
-
-        // só o caso Map: <campo>.add(x)/.remove(x) sobre um campo map -> put/remove por chave.
-        // listas normais e chamadas normais caem no fallback (transcrição literal).
-        if (args != null && args.size() == 1 && attrName != null
-                && ("add".equals(op) || "remove".equals(op))) {
-            Association assoc = findAssocByAttribute(associations, cls, msg.getTarget().getType(), attrName);
-            if (assoc != null && assoc.hasQualifier()) {
-                MessageArgument arg = args.get(0);
-                String q = assoc.getQualifierName();
-                String getter = "get" + Character.toUpperCase(q.charAt(0)) + q.substring(1) + "()";
-                String base = receiver + "." + attrName;
-                writer.println(indent + ("add".equals(op)
-                        ? base + ".put(" + arg.getName() + "." + getter + ", " + arg.getName() + ");"
-                        : base + ".remove(" + arg.getName() + "." + getter + ");"));
-                return;
-            }
-        }
-
-        // fallback: chamada literal receiver.name(args)
-        StringBuilder call = new StringBuilder();
-        call.append(receiver).append(".").append(name).append("(");
-        if (args != null) {
-            for (int i = 0; i < args.size(); i++) {
-                if (i > 0) call.append(", ");
-                call.append(args.get(i).getName());
-            }
-        }
-        call.append(")");
-
-        if (msg.getAssignVariable() != null) {
-            String declType = (msg.getReturnType() != null && !msg.getReturnType().isEmpty())
-                    ? msg.getReturnType() + " " : "";
-            writer.println(indent + declType + msg.getAssignVariable() + " = " + call + ";");
         } else {
             writer.println(indent + call + ";");
         }
@@ -541,7 +419,7 @@ public class OperationGenerator {
             Operand operand = frag.getOperands().get(0);
             String guard = operand.getGuard() != null ? operand.getGuard().trim() : "";
 
-            // o guard escreve o loop: "for (Type var : toiter)" ou "while (cond)"
+            // o guard escreve o loop: "for (Type var : colecao)" ou "while (cond)"
             if (guard.startsWith("for")) {
                 String inner = GeneratorUtils.extractParen(guard);                 // "Aluno a : alunos" ou "int i = 0; i < n; i++"
                 if (inner.contains(";")) {
@@ -632,29 +510,22 @@ public class OperationGenerator {
         return getter;
     }
 
-    // ownerType é a classe desta ponta da associação?
+    // ownerType é a classe desta ponta da associação
     // "herda de" para uma subclasse reconhecer associações declaradas no pai
     private static boolean participates(Class cls, String ownerType, String assocEndClass) {
+
         if (ownerType != null && ownerType.equals(assocEndClass)) return true;
         return cls != null && cls.getName().equals(ownerType) && cls.isOrInheritsFrom(assocEndClass);
     }
 
-    // procura a associação entre ownerType e otherType, navegável do lado do owner
-    private static Association findAssoc(List<Association> assocs, Class cls, String ownerType, String otherType) {
-        for (Association a : assocs){
-            if (participates(cls, ownerType, a.getSourceClass()) && a.getTargetClass().equals(otherType) && a.isTargetNavigable())
-                return a;
-            if (participates(cls, ownerType, a.getTargetClass()) && a.getSourceClass().equals(otherType) && a.isSourceNavigable())
-                return a;
-        }
-        return null;
-    }
-
+    // nome do campo que owner (a classe que tem o campo) usa para esta associação
+    // para ligar um "campo.add/remove" à sua associação
     private static String attributeNameFor(Association a, Class cls, String ownerType) {
-        // lado a partir do owner, se owner é (ou herda) o source, o campo refere o target, e vice-versa
+        // se ownerType é (ou herda) o source da assoc, o campo aponta o target -> nome do target
         if (participates(cls, ownerType, a.getSourceClass())) {
             return GeneratorUtils.makeAttributeName(a.getTargetClass(), a.getTargetRole(), a.getTargetMultiplicity());
         }
+        // senão -> do source
         return GeneratorUtils.makeAttributeName(a.getSourceClass(), a.getSourceRole(), a.getSourceMultiplicity());
     }
 

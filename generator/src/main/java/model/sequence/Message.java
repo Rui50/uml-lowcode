@@ -14,7 +14,6 @@ public class Message {
     private Lifeline source;
     private Lifeline target;
     private List<MessageArgument> arguments;
-    private int sequenceNumber;             // ordem das msgs
     private String vpNumber;
 
 
@@ -105,14 +104,6 @@ public class Message {
 
     public void setArguments(List<MessageArgument> arguments) {
         this.arguments = arguments;
-    }
-
-    public int getSequenceNumber() {
-        return sequenceNumber;
-    }
-
-    public void setSequenceNumber(int sequenceNumber) {
-        this.sequenceNumber = sequenceNumber;
     }
 
     public String getVpNumber() {

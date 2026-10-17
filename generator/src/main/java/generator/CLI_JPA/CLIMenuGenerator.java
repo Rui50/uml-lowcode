@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * gera os menus com (EntityManager/JPA).
+ * gera os menus com (EntityManager /JPA).
  *
  * Notas:
  *  - toda as mudanças são transacionais (begin, commit, rollback,  em.clear() no erro);
@@ -751,9 +751,6 @@ public class CLIMenuGenerator {
      * opções para operações custom
      * pede owner por ID, lê cada parâmetro
      * invoca owner.op(args) e grava.
-     *
-     *  não valida invariantes (validate()) aqui, a op só corre as suas pré/pós-condições
-     * OCL. Só o CRUD gerado valida. A rever quando se rever o OperationGenerator.
      */
     private void generateCustomOperationMethods(PrintWriter w, Class cls, List<Class> allClasses) {
         Set<String> classNames = new HashSet<>();
@@ -798,8 +795,14 @@ public class CLIMenuGenerator {
             // retorno da operação usado com base na entry message e mostrado
             // se não for void. Só owner é persistido, um return entidade não é guardado
             String call = "owner." + op.getName() + "(" + String.join(", ", argNames) + ")";
-            String rt = (entry.getReturnType() != null && !entry.getReturnType().isBlank())
-                    ? entry.getReturnType() : (op.getReturnType() != null ? op.getReturnType() : "void");
+            String rt;
+            if (entry.getReturnType() != null && !entry.getReturnType().isBlank()) {
+                rt = entry.getReturnType();   // o tipo do entry message tem prioridade
+            } else if (op.getReturnType() != null) {
+                rt = op.getReturnType();      // senão o declarado na operação
+            } else {
+                rt = "void";
+            }
             boolean voidReturn = rt.isBlank() || "void".equals(rt);
             w.println("            " + (voidReturn ? "" : rt + " ret = ") + call + ";");
             // a transação está aberta, logo o rollback desfaz de facto o que a op mudou

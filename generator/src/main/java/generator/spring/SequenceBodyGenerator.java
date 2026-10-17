@@ -16,14 +16,11 @@ import java.util.Set;
 
 
 /*
- * SequenceBodyGenerato
- *
- * REGRAS DO DIAGRAMA
+ * diagrama
  *   - lifeline "<Classe>Service" (o dono) obrigatória, sem ela -> erro
  *   - lifelines "<Classe>Repository" -> os campos de repo injetados
  *   - o self é carregado antes do corpo (por um param "<var>Id"), registado em preDeclaredVars
  *   - findById(id) : Tipo -> Tipo var = repo.findById(id).orElseThrow(NotFoundException);
- *   - tipos explícitos nos args/return.
  *
  * generateMessageCode — só as mensagens enviadas pelo service
  *   - create
@@ -88,7 +85,7 @@ public class SequenceBodyGenerator {
                     + serviceName + "' (o owner do método). Sem ela não é possível gerar o corpo.");
         }
 
-        // mapear lifeline ID -> nome da variável java para os repositories
+        // mapear lifeline ID -> nome da variável java para os repos e servicos injetados
         // TurmaRepository -> turmaRepository, AlunoRepository -> alunoRepository
         Map<String, String> lifelineVarMap = new HashMap<>();
         for (Lifeline ll : interaction.getLifelines()) {
@@ -96,9 +93,6 @@ public class SequenceBodyGenerator {
                 String repoVar = GeneratorUtils.lowercaseFirst(ll.getType());
                 lifelineVarMap.put(ll.getId(), repoVar);
             }
-            // if (ll.getType() != null && ll.getType().endsWith("Service")) {
-            //     lifelineVarMap.put(ll.getId(), "self");
-            // }
             if (ll.getType() != null && ll.getType().endsWith("Service") && !ll.getId().equals(serviceLifeline.getId())) {
                 lifelineVarMap.put(ll.getId(), GeneratorUtils.lowercaseFirst(ll.getType()));   // outro service -> campo injetado
             }

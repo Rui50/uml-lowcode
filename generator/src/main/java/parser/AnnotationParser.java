@@ -90,11 +90,11 @@ public class AnnotationParser {
         m.appendTail(sb);
 
         String result = sb.toString();
-        // qualquer @pre que sobrou é uma forma não suportada como self.alunos->size()@pre)
+        // se ainda tem @pre é porque esse nao é suportado
         // falha aqui em vez de deixar o ANTLR rebentar
         if (result.contains("@pre")) {
             throw new IllegalArgumentException(
-                    "@pre só é suportado sobre um atributo simples (self.x@pre); forma não suportada em: " + ocl);
+                    "@pre só é suportado sobre um atributo simples (self.x@pre). Não suporta: " + ocl);
         }
 
         snapshots.addAll(snapshotsmap.values());
@@ -104,6 +104,7 @@ public class AnnotationParser {
     private static PreSnapshot buildSnapshot(String attrName, String varName,
                                              Class cls, List<Association> associations) {
         // snapshot @pre guarda só o valor (primitivos/String/enum) ou os elementos que a coleção tinha nesse momento
+
         // atributo próprio ou herdado, coleção faz cópia
         for (Attribute a : cls.getAllAttributes()) {
             if (!a.getName().equals(attrName)) continue;
@@ -114,6 +115,7 @@ public class AnnotationParser {
             }
             return new PreSnapshot(varName, getter, a.getType());
         }
+
         // relação própria ou herdada, pelo nome do campo gerado
         // só a ponta do qualifier é que é Map
         for (RelationshipInfo rel : RelationshipInfo.collectForMenus(cls, associations)) {

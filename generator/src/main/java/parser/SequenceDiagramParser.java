@@ -8,7 +8,6 @@ import generator.GeneratorUtils;
 import model.sequence.*;
 
 /**
- * coisas principais
  * interaction = diagrama de sequência
  * message = signature é a mensagem em si, sort é o tipo (sync etc) e send/receive events para associar às lifelines
  * sendEvent / receiveEvent = mensagem aponta para estes dois, de onde sai, onde chega
@@ -48,8 +47,7 @@ public class SequenceDiagramParser {
     /**
      * faz um objeto Interaction que basicamente é o diagrama.
      * 1 - faz parse das lifelines (para depois associar às mensagens)
-     * 2 - depos parse das mensagens (criamos os objetos Message e criamos 2 maps,
-     *   um de messageId -> Message e outro de
+     * 2 - depos parse das mensagens
      *   messageId -> sendEvent, para depois construir a hierarquia dos fragments
      * 3 - construir a interaction em si
      */
@@ -102,7 +100,6 @@ public class SequenceDiagramParser {
      * temos de usar a ordem do VP number para garantir que ordem "visual" é a certa
      *
      *  mapas helpers:
-     * - messageId -> Message (para obter o Message a partir do id da mensagem)
      * - messageId -> sendEvent (para obter o sendEvent associado a cada mensagem)
      * - operandId -> Operand (para obter o Operand a partir do id do operand)
      * - fragmentId -> Fragment (para obter o Fragment a partir do id do fragmento
@@ -161,8 +158,6 @@ public class SequenceDiagramParser {
         }
     }
 
-    // devolve a lista de elementos do "container" cria operand/fragments pelo caminho acima
-
     /**
      * Dado um container, devolve a lista de elementos onde deve inserir
      *
@@ -175,9 +170,8 @@ public class SequenceDiagramParser {
      *     cria entao o operand, e regista-o no mapa respetivo
      *     Depois trata do seu CombinedFragment pai:
      *      - se ja existir em fragments, apenas adiciona o novo operand a lista desse fragment
-     *      - não existe -> cria-o e chama-se recursivamente sobre o owner do fragment
-     *        para descobrir ONDE inseri-lo. A recursão sobe o nesting, criando os pais
-     *        que faltam, até à raiz (ou a um nó já criado).
+     *      - não existe -> cria-o e chama-se recursivamente sobre o owner do fragment para saber onde meter.
+     *      Chama-se recursivamente até raiz ou nodo ja criado
      */
     private List<Object> getOrCreateContainerElements(ModelElement container, Interaction interaction, String rootId,
                                               Map<String, Operand> operands, Map<String, Fragment> fragments) {
@@ -509,7 +503,7 @@ public class SequenceDiagramParser {
         return null;
     }
     
-    // comprar tendo em conta os numeros do vp que sao 1 1.1 1.1.1 1.2...
+    // comparar tendo em conta os numeros do vp que sao 1 1.1 1.1.1 1.2...
     private int compareWithTheDot(String a, String b) {
         String[] ap = a.split("\\.");
         String[] bp = b.split("\\.");

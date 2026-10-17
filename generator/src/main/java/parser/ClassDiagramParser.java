@@ -21,27 +21,27 @@ public class ClassDiagramParser {
     // estes sao temps porque depois passa a ser na "app" e nao no xmi parsing
     // deixa-se para testar depois sem frontend
     private Map<String, Qualifier> qualifiers;
-    private Map<String, List<Invariant>> invariantsCache;
-    private Map<String, List<String[]>> initsCache;
-    private Map<String, List<String[]>> preconditionsCache;
-    private Map<String, List<String[]>> derivesCache;
+    //private Map<String, List<Invariant>> invariantsCache;
+    //private Map<String, List<String[]>> initsCache;
+    //private Map<String, List<String[]>> preconditionsCache;
+    //private Map<String, List<String[]>> derivesCache;
 
     public ClassDiagramParser(
             Model model,
             MetaModel metaModel,
-            Map<String, Qualifier> qualifiers,
-            Map<String, List<Invariant>> invariantsCache,
-            Map<String, List<String[]>> initsCache,
-            Map<String, List<String[]>> preconditionsCache,
-            Map<String, List<String[]>> derivesCache
+            Map<String, Qualifier> qualifiers
+            //Map<String, List<Invariant>> invariantsCache,
+            //Map<String, List<String[]>> initsCache,
+            //Map<String, List<String[]>> preconditionsCache,
+            //Map<String, List<String[]>> derivesCache
     ){
         this.model = model;
         this.metaModel = metaModel;
         this.qualifiers = qualifiers;
-        this.invariantsCache = invariantsCache;
-        this.initsCache = initsCache;
-        this.preconditionsCache = preconditionsCache;
-        this.derivesCache = derivesCache;
+        //this.invariantsCache = invariantsCache;
+        //this.initsCache = initsCache;
+        //this.preconditionsCache = preconditionsCache;
+        //this.derivesCache = derivesCache;
     }
 
     // a func getSetAttribute(...) devolve ordens diferentes de cada vez
@@ -67,7 +67,7 @@ public class ClassDiagramParser {
             classes.add(cl);
         }
         return classes;
-    }// parsing de todas as infos de uma classe
+    }
 
     /**
      * fazer o parsing de todas as infos de uma classe
@@ -221,13 +221,14 @@ public class ClassDiagramParser {
         if (generic != null) {
             String kind = generic.substring(0, generic.indexOf('<')).trim(); // List / Set
             String elem = generic.substring(generic.indexOf('<') + 1, generic.lastIndexOf('>')).trim();
+            // so suporta List/Set e tipos basicos
             if ((kind.equals("List") || kind.equals("Set")) && GeneratorUtils.isSimpleParamType(elem)) {
                 attribute.setType(GeneratorUtils.fixType(GeneratorUtils.removePackageNames(elem))); // tipo do elemento,
                 attribute.setCollectionType(kind);  // "List" / "Set"
                 return attribute;
             }
             throw new RuntimeException("Atributo '" + element.getName() + "' tem tipo generico '" + generic
-                    + "' nao suportado (só List/Set de tipos basicos por agora; Map ou coleção de entidades ainda não).");
+                    + "' nao suportado (só List/Set de tipos basicos).");
         }
 
         ModelElement type = (ModelElement) element.getRefAttribute("propertytype");
@@ -368,6 +369,7 @@ public class ClassDiagramParser {
                     String sourceAgg = sourceEnd.getPlainAttribute("aggregation");
                     String targetAgg = targetEnd.getPlainAttribute("aggregation");
                     String aggregation;
+                    // none  = no type of agg
                     if (!"none".equals(sourceAgg)) {
                         aggregation = sourceAgg;
                     } else {

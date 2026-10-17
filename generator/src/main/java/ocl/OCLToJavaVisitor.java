@@ -16,16 +16,7 @@ import java.util.Map;
  *
  * assume sempre sempre listas ou sets na tradução, se for maps o ValidationGenerator da fix a isso com o fixmapaccess
  *
- * OCL NÃO SUPORTADO lançam IllegalArgumentException ("Operação OCL não suportada")
- *
- *  - tipos: oclIsKindOf, oclIsTypeOf, oclAsType, oclType, oclAsSet,
- *           oclIsUndefined, oclIsInvalid, oclIsNew
- *  - coleções: union, intersection, symmetricDifference, excludesAll, prepend,
- *              append, one, closure, sortedBy, asBag, asOrderedSet, reverse, at, indexOf
- *
- * (não dá para suportar no validate() de uma entidade):
- *  - allInstances()  — todas as instâncias
- *  - @pre / oclIsNew / oclIsInvalid — pós-condição (estado antes/depois)
+ * OCL que nao consiga traduzir -> IllegalArgumentException ("Operação OCL não suportada")
  *
  * problemas (traduz, mas com problemas):
  *  - sum() assume lista de Integer (não double/float)
@@ -373,6 +364,10 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             // expr, op, expr ,op
             String op = ctx.getChild(2 * i - 1).getText();
 
+            if (!op.equals("+") && !op.equals("-")) {
+                throw new IllegalArgumentException("Operação OCL não suportada: " + op);
+            }
+
             // aqui é os + - entao adiciona direto
             sb.append(" " + op + " ");
             sb.append(visit(ctx.multiplicativeExpression(i)));
@@ -631,7 +626,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
 
         if (first.equals("Map{")) {
             if (ctx.expressionList() == null) return "new HashMap<>()";
-            // IllegalArgumentException para ser apanhada pelo pipeline de erros (AnnotationService)
+            // map n pode ter conteudo
             throw new IllegalArgumentException("Literais Map com entradas não são suportados");
         }
 

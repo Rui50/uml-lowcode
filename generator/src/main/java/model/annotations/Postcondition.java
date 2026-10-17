@@ -29,6 +29,7 @@ public class Postcondition {
     public String getJavaExpression() { return javaExpression; }
     public void setJavaExpression(String javaExpression) { this.javaExpression = javaExpression; }
 
+    // diferencia quando ta a ser chamado na classe em si (this) ou fora (troca o this. pela variável da entidade)
     public String getJavaExpression(String selfVar) {
         if (javaExpression == null || selfVar == null || selfVar.equals("this")) {
             return javaExpression;

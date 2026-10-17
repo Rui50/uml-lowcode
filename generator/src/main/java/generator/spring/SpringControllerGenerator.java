@@ -385,10 +385,6 @@ public class SpringControllerGenerator {
             }
         }
 
-        for (String extra : getExtraServices(cls, allClasses)) {
-            writer.println("import " + basePackage + ".service." + extra + "Service;");
-        }
-
         // Collectors para endpoints custom que devolvem List<entidade>
         boolean needsCollectors = false;
         for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
@@ -407,32 +403,10 @@ public class SpringControllerGenerator {
         writer.println();
     }
 
-    // entidades referenciadas em parametros de operações (excluindo a propria classe)
-    private Set<String> getExtraServices(Class cls, List<Class> allClasses) {
-        Set<String> extraServices = new HashSet<>();
-        for (Operation op : GeneratorUtils.effectiveOperations(cls)) {
-            for (Parameter param : op.getParameters()) {
-                for (Class c : allClasses) {
-                    // classes abstratas não têm service gerado -> não importar/injetar <Abstract>Service
-                    if (c.getName().equals(param.getType()) && !c.getName().equals(cls.getName())
-                            && !c.isAbstract()) {
-                        extraServices.add(c.getName());
-                    }
-                }
-            }
-        }
-        return extraServices;
-    }
-
     private void generateDependencies(PrintWriter writer, Class cls, List<Class> allClasses) {
         String className = cls.getName();
         writer.println("    private final " + className + "Service " +
                 GeneratorUtils.lowercaseFirst(className) + "Service;");
-
-        // para cada param de cada operação, se for uma entidade, adicionar como dependência
-        for (String extra : getExtraServices(cls, allClasses)) {
-            writer.println("    private final " + extra + "Service " + GeneratorUtils.lowercaseFirst(extra) + "Service;");
-        }
 
         // jobs desta classe: injeta o @Component para o trigger manual
         for (Operation op : cls.getOperations()) {
@@ -588,22 +562,22 @@ public class SpringControllerGenerator {
 
             // parâmetros do endpoint = args da mensagem de entrada, o endpoint so chama o service com eles
             // binding por tipo do arg       DTO -> @RequestBody, simples -> @RequestParam
-            writer.println();
-            String path = (op.getEndpointName() != null && !op.getEndpointName().isBlank())
-                    ? op.getEndpointName() : op.getName();
+
+            String path;
+            if (op.getEndpointName() != null && !op.getEndpointName().isBlank()) {
+                path = op.getEndpointName();
+            } else {
+                path = op.getName();
+            }
+
             writer.println("    " + mappingAnnotation(op.getHttpMethod()) + "(\"/" + path + "\")");
+
             writer.print("    public ResponseEntity<?> " + op.getName() + "(");
             for (int i = 0; i < entryArgs.size(); i++) {
                 if (i > 0) writer.print(",");
                 MessageArgument arg = entryArgs.get(i);
-                String argType = arg.getType() != null ? arg.getType() : "Object";
                 String binding;
-                if (classMap.containsKey(argType)) {
-                    // param do tipo entidade para ja nao aceita
-                    throw new IllegalArgumentException("Operação '" + op.getName() + "': o parâmetro '"
-                            + arg.getName() + "' é do tipo-entidade '" + argType + "', ainda não suportado como "
-                            + "parâmetro de operação custom. Usa um DTO ou o id (ex: " + arg.getName() + "Id).");
-                } else if (GeneratorUtils.isSimpleParamType(argType)) {
+                if (GeneratorUtils.isSimpleParamType(arg.getType())) {
                     binding = "@RequestParam";   // primitivo / String / data
                 } else {
                     // assume-se um DTO
@@ -611,7 +585,7 @@ public class SpringControllerGenerator {
                     // lançar erro claro se o DTO não existir, em vez de deixar falhar na compilação da app gerada.
                     binding = "@RequestBody";
                 }
-                writer.print("\n            " + binding + " " + argType + " " + arg.getName());
+                writer.print("\n            " + binding + " " + arg.getType() + " " + arg.getName());
             }
             writer.println(") {");
 
@@ -630,15 +604,17 @@ public class SpringControllerGenerator {
             } else {
                 String base = GeneratorUtils.extractBaseType(returnType);
                 writer.println("        " + returnType + " result = " + call + ";");
+                // List<Entidade> -> mapeia cada um para o seu ResponseDTO
                 if (classMap.containsKey(base) && returnType.startsWith("List<")) {
-                    // List<Entidade> -> mapeia cada um para o seu ResponseDTO
                     writer.println("        return ResponseEntity.ok(result.stream().map("
                             + base + "ResponseDTO::fromEntity).collect(Collectors.toList()));");
-                } else if (classMap.containsKey(base)) {
-                    // Entidade -> ResponseDTO
+                }
+                // Entidade -> ResponseDTO
+                else if (classMap.containsKey(base)) {
                     writer.println("        return ResponseEntity.ok(" + base + "ResponseDTO.fromEntity(result));");
-                } else {
-                    // primitivo / String / outro -> devolve diretamente
+                }
+                // primitivo / String / outro -> devolve diretamente
+                else {
                     writer.println("        return ResponseEntity.ok(result);");
                 }
             }
@@ -652,8 +628,12 @@ public class SpringControllerGenerator {
         for (Operation op : cls.getOperations()) {
             if (!op.isJob()) continue;
             String jobField = GeneratorUtils.lowercaseFirst(cls.getName() + GeneratorUtils.capitalizeFirst(op.getName()) + "Job");
-            String path = (op.getEndpointName() != null && !op.getEndpointName().isBlank())
-                    ? op.getEndpointName() : op.getName();
+            String path;
+            if (op.getEndpointName() != null && !op.getEndpointName().isBlank()) {
+                path = op.getEndpointName();
+            } else {
+                path = op.getName();
+            }
             writer.println();
             writer.println("    @PostMapping(\"/" + path + "\")");
             writer.println("    public ResponseEntity<?> " + op.getName() + "() {");

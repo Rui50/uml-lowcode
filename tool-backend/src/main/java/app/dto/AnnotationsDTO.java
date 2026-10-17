@@ -12,52 +12,52 @@ import java.util.Map;
 @Setter
 @NoArgsConstructor
 public class AnnotationsDTO {
-    // key classId (xmi:id)
+    // classId (xmi:id)
     private Map<String, List<OclDTO>> invariantsByClass = new HashMap<>();
 
-    // key classId -> (attrName -> expressão)
+    // classId -> (attrName -> expressão)
     private Map<String, Map<String, String>> initByAttribute = new HashMap<>();
     private Map<String, Map<String, String>> deriveByAttribute = new HashMap<>();
 
-    // key operationId
+    // operationId
     private Map<String, String> operationToSeqDiagram = new HashMap<>();
 
-    // key operationId
+    // operationId
     private Map<String, List<OclDTO>> preconditionsByOperation = new HashMap<>();
 
     private Map<String, List<OclDTO>> postconditionsByOperation = new HashMap<>();
 
-    // key classId (xmi:id, superclasse/raiz da hierarquia) -> "SINGLE_TABLE" | "JOINED"
+    // classId (xmi:id, superclasse/raiz da hierarquia) -> "SINGLE_TABLE" | "JOINED"
     private Map<String, String> inheritanceStrategyByClass = new HashMap<>();
 
-    // key classId (xmi:id, raiz da hierarquia) -> config do @Id
+    // classId (xmi:id, raiz da hierarquia) -> config do @Id
     private Map<String, CustomIdDTO> idByClass = new HashMap<>();
 
-    // key operationId -> config do endpoint REST / job
+    // operationId -> config do endpoint REST / job
     private Map<String, EndpointConfigDTO> endpointByOperation = new HashMap<>();
 
-    // key classId (xmi:id) -> gerar controller REST? (Spring; default true)
+    // classId (xmi:id) -> gerar controller REST? (Spring; default true)
     private Map<String, Boolean> generateControllerByClass = new HashMap<>();
 
-    // key classId (xmi:id) -> invariantes OCL viram anotações Bean Validation? (Spring; default true)
+    // classId (xmi:id) -> invariantes OCL viram anotações Bean Validation? (Spring; default true)
     private Map<String, Boolean> beanValidationByClass = new HashMap<>();
 
-    // key classId (xmi:id) -> override do nome da tabela JPA (vazio = nome derivado da classe)
+    // classId (xmi:id) -> override do nome da tabela JPA (vazio = nome derivado da classe)
     private Map<String, String> tableNameByClass = new HashMap<>();
 
-    // key classId (xmi:id) -> atributos escondidos por DTO (ausente = DTOs completos)
+    // classId (xmi:id) -> atributos escondidos por DTO (ausente = DTOs completos)
     private Map<String, HiddenFieldsDTO> dtoHiddenByClass = new HashMap<>();
 
-    // key classId (xmi:id) -> endpointType ("List"|"Get"|"Create"|"Update") -> override do response DESSE
+    // classId (xmi:id) -> endpointType ("List"|"Get"|"Create"|"Update") -> override do response DESSE
     // endpoint (nome + escondidos, entrada presente = override ativo, ausente = ResponseDTO da classe)
     private Map<String, Map<String, ResponseOverrideDTO>> responseOverrideByClass = new HashMap<>();
 
-    // key classId -> (attrName -> config de coluna JPA), sem nada = @Column só com name-default
+    // classId -> (attrName -> config de coluna JPA), sem nada = @Column só com name-default
     private Map<String, Map<String, ColumnConfigDTO>> columnByAttribute = new HashMap<>();
 
-    // key classId -> (relationName -> @OrderBy da coleção), ausente = sem ordenação
+    // classId -> (relationName -> @OrderBy da coleção), ausente = sem ordenação
     private Map<String, Map<String, OrderByDTO>> orderByCollection = new HashMap<>();
 
-    // key classId -> (relationName -> fetch de uma rel singular "LAZY"|"EAGER"), ausente = LAZY
+    // classId -> (relationName -> fetch de uma rel singular "LAZY"|"EAGER"), ausente = LAZY
     private Map<String, Map<String, String>> fetchByRelation = new HashMap<>();
 }

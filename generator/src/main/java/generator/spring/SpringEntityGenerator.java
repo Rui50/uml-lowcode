@@ -215,7 +215,8 @@ public class SpringEntityGenerator {
         // @Entity
         writer.println("@Entity");
 
-        // filho SINGLE_TABLE partilha a tabela do pai -> sem @Table; os outros levam @Table
+        // filho SINGLE_TABLE partilha a tabela do pai -> sem @Table
+        // os outros levam @Table
         boolean singleTableChild = strategy.equals("SINGLE_TABLE") && cls.getParentClass() != null;
         if (!singleTableChild) {
             // nome derivado (minúsculas) ou override do painel Persistence (GeneratorUtils.tableName)
@@ -324,8 +325,11 @@ public class SpringEntityGenerator {
         String otherMultiplicity = isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity();
 
         // ponta com o Map conta como coleção
-        boolean isCollection = GeneratorUtils.checkMultiplicity(thisMultiplicity) || assoc.isMapEnd(isSource);          // o MEU atributo é coleção
-        boolean inverseIsCollection = GeneratorUtils.checkMultiplicity(otherMultiplicity) || assoc.isMapEnd(!isSource); // o do outro lado
+
+        // atributo deste lado
+        boolean isCollection = GeneratorUtils.checkMultiplicity(thisMultiplicity) || assoc.isMapEnd(isSource);
+        // o atributo do outro lado
+        boolean inverseIsCollection = GeneratorUtils.checkMultiplicity(otherMultiplicity) || assoc.isMapEnd(!isSource);
         boolean isBidirectional = assoc.isSourceNavigable() && assoc.isTargetNavigable();
 
         // is bidirectional, gerar @JsonIgnoreProperties para evitar loop infinito na serialização JSON

@@ -2,6 +2,7 @@ package service;
 
 import generator.CLI_JPA.*;
 import java.util.List;
+import java.util.Map;
 import model.ParsedModel;
 import model.ProjectSettings;
 import model.Class;
@@ -18,6 +19,7 @@ import generator.spring.*;
 
 public class GenerationService {
     public void generate(ParsedModel model, String target, String outputDir, ProjectSettings opts) throws Exception {
+        // erros que iam impedir compilação
         validateSelfAssociations(model);
         validateRelationFieldCollisions(model);
         switch (target) {
@@ -59,7 +61,6 @@ public class GenerationService {
                 m.getEnumerations(),
                 outputDir,
                 basePackage,
-                //m.getPimInteractions()
                 m.getAllInteractions()
         ).generate();
         new ClassGenerator(outputDir, basePackage, m.getAllInteractions())
@@ -77,7 +78,6 @@ public class GenerationService {
                 m.getClasses(),
                 m.getAssociations(),
                 m.getEnumerations(),
-                //m.getPimInteractions()
                 m.getAllInteractions()
         );
         new JavaEntityGenerator(outputDir, basePackage, m.getAllInteractions())
@@ -157,18 +157,19 @@ public class GenerationService {
                 .generateDTOs(m.getClasses(), m.getAssociations(), m.getEnumerations());
         new SpringRepositoryGenerator(outputDir, basePackage)
                 .generateRepositories(m.getClasses());
+
         // mapa nome deDTO -> classe owner: cada service/controller importa só os folders de DTO que usa
-        java.util.Map<String, String> DTO_ToClass = SpringUtils.buildDTOOwnerMap(m.getClasses());
+        Map<String, String> DTO_ToClass = SpringUtils.buildDTOOwnerMap(m.getClasses());
         new SpringServiceGenerator(outputDir, basePackage, DTO_ToClass)
-                .generateServices(m.getClasses(), m.getAssociations(), /*m.getPsmInteractions()*/m.getAllInteractions(), m.getEnumerations());
+                .generateServices(m.getClasses(), m.getAssociations(), m.getAllInteractions(), m.getEnumerations());
         new SpringControllerGenerator(outputDir, basePackage, DTO_ToClass)
-                .generateControllers(m.getClasses(), m.getAssociations(), m.getAllInteractions());//m.getPsmInteractions());
+                .generateControllers(m.getClasses(), m.getAssociations(), m.getAllInteractions());
         new SpringJobGenerator(outputDir, basePackage)
                 .generateJobs(m.getClasses(), m.getAssociations(), m.getEnumerations());
 
         // demo é opt (default false)
         if (settings.isDemoFrontend()) {
-            new generator.spring.SpringFrontendGenerator(outputDir)
+            new SpringFrontendGenerator(outputDir)
                     .generateFrontend(m.getClasses(), m.getAssociations(), m.getEnumerations());
         }
     }

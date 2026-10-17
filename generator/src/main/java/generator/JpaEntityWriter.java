@@ -62,7 +62,8 @@ public final class JpaEntityWriter {
         // numa auto associação as duas colunas seriam iguais ("employee_id") entao usa-se o campo na inversa
         String invJoinCol = (thisClass.equals(otherClass) ? attributeName.toLowerCase() : otherClass.toLowerCase()) + "_id";
 
-        // só o lado inverso (bidirecional não-dono) leva mappedBy; tudo o resto (dono ou unidirecional) leva @JoinTable
+        // só o lado inverso (bidirecional não dono) leva mappedBy
+        // tudo o resto (dono ou unidirecional) leva @JoinTable
         boolean mappedBy = isBidirectional && !GeneratorUtils.isOwningSide(assoc, isSource);
         if (mappedBy) {
             writer.println("    @ManyToMany(mappedBy = \"" +
@@ -113,7 +114,8 @@ public final class JpaEntityWriter {
             } else {
                 writer.println("    @OneToMany");
             }
-            // @OneToMany unidirecional: a FK fica na tabela do outro lado e aponta para esta classe.
+
+            // @OneToMany unidirecional: a FK fica na tabela do outro lado e aponta para esta classe
             writer.println("    @JoinColumn(name = \"" + thisClass.toLowerCase() + "_" + attributeName.toLowerCase() + "_id\")");
         }
 
@@ -137,9 +139,8 @@ public final class JpaEntityWriter {
                                          String attributeName,
                                          Association assoc,
                                          String fetch) {
-
         // Ponta sing = referência única. O Map pertence só ao lado da coleção
-        // aqui ignora-se, senão saía @ManyToOne sobre um Map (inválido).
+        // aqui ignora-se, senão saía @ManyToOne sobre um Map (inválido)
         writer.println("    @ManyToOne(fetch = FetchType." + fetch + ")");
         writer.println("    @JoinColumn(name = \"" + attributeName.toLowerCase() + "_id\")");
         writer.println("    private " + otherClass + " " + attributeName + ";");
@@ -158,8 +159,7 @@ public final class JpaEntityWriter {
                                         boolean isSource,
                                         boolean isBidirectional,
                                         String fetch) {
-
-        // tem qualifier meste ponta, é OneToMany.
+        // tem qualifier meste ponta, é OneToMany
         // Map como coleção, nunca no ramo 1:1
         if (assoc.isMapEnd(isSource)) {
             if (isBidirectional) {

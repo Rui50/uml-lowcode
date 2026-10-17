@@ -27,15 +27,14 @@ public class XMIParser {
     private Map<String, Qualifier> qualifiers;
 
     // elementId da classe -> lista de invariantes
-    private Map<String, List<Invariant>> invariantsCache = new HashMap<>();
+    //private Map<String, List<Invariant>> invariantsCache = new HashMap<>();
     // lista de [atributo, expression]
-    private Map<String, List<String[]>> initsCache = new HashMap<>();
+    //private Map<String, List<String[]>> initsCache = new HashMap<>();
     // pre cond
-    private Map<String, List<String[]>> preconditionsCache = new HashMap<>();
+    //private Map<String, List<String[]>> preconditionsCache = new HashMap<>();
     // derives
-    private Map<String, List<String[]>> derivesCache = new HashMap<>();
+    //private Map<String, List<String[]>> derivesCache = new HashMap<>();
 
-    // resultados parseados — populados em loadMode
     private List<Class> classes;
     private List<Association> associations;
     private List<Generalization> generalizations;
@@ -46,7 +45,7 @@ public class XMIParser {
     public void loadModel(String xmiFile) throws Exception{
 
         // caminhos dos ficheiros de configuração do SDMetrics (para uml 2.0)
-        // carregados dos resources
+        // carregados do /resources
         String metaModelURL  = getClass().getResource("/metamodel2.xml").toString();
         String xmiTransURL = getClass().getResource("/xmiTrans2_0.xml").toString();
 
@@ -71,8 +70,7 @@ public class XMIParser {
 
         System.out.println("Model loaded");
 
-        System.out.println();
-
+        // parsing manual dos qualifiers ( mapas)
         qualifiers = VpParser.parseQualifiers(xmiFile);
 
         // this was for testing, ocl came from notes in vp xmi
@@ -80,8 +78,8 @@ public class XMIParser {
 
         // class diagram
         ClassDiagramParser cdp = new ClassDiagramParser(
-                model, metaModel, qualifiers,
-                invariantsCache, initsCache, preconditionsCache, derivesCache
+                model, metaModel, qualifiers
+                //invariantsCache, initsCache, preconditionsCache, derivesCache
         );
         classes = cdp.parseClasses();
         associations = cdp.parseAssociations();
@@ -107,7 +105,6 @@ public class XMIParser {
     /*
     * Enquanto nao se faz na ferramenta, o OCL vem em notas
     * notas sao carregadas ao inicializar o parser para poder associar as invariantes às classes certas
-     */
     private void loadAnnotationsFromComments(){
         System.out.println("Loading ocl annotation");
 
@@ -192,5 +189,6 @@ public class XMIParser {
 
         }
     }
+    */
 
 }

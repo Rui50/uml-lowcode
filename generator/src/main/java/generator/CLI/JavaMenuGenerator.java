@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
  *
  * limitações:
  *  - sem transações logo se uma op falha a meio, as mudanças à entidade não são revertidas
- *  - operação custom não valida invariantes
  */
 public class JavaMenuGenerator {
 
@@ -609,8 +608,14 @@ public class JavaMenuGenerator {
             // guarda o retorno numa variável (com o tipo de retorno da op) e mostra-o se não for void.
             // grava só o owner
             String call = "owner." + op.getName() + "(" + String.join(", ", argNames) + ")";
-            String rt = (entry.getReturnType() != null && !entry.getReturnType().isBlank())
-                    ? entry.getReturnType() : (op.getReturnType() != null ? op.getReturnType() : "void");
+            String rt;
+            if (entry.getReturnType() != null && !entry.getReturnType().isBlank()) {
+                rt = entry.getReturnType();   // o tipo do entry message tem prioridade
+            } else if (op.getReturnType() != null) {
+                rt = op.getReturnType();      // senão o declarado na operação
+            } else {
+                rt = "void";
+            }
             boolean voidReturn = rt.isBlank() || "void".equals(rt);
             w.println("            " + (voidReturn ? "" : rt + " ret = ") + call + ";");
             // invariantes da classe depois da op
@@ -670,7 +675,7 @@ public class JavaMenuGenerator {
             w.println();
 
             // só classes concretas têm menu próprio (abstratas não)
-            List<Class> concrete = classes.stream().filter(c -> !c.isAbstract()).collect(Collectors.toList());
+            List<Class> concrete = classes.stream().filter(c -> !c.isAbstract()).toList();
 
             // run
             w.println("    public void run() {");

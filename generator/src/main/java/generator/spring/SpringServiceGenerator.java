@@ -291,8 +291,8 @@ public class SpringServiceGenerator {
     // Gera os métodos de relação para um lado da associação.
     private boolean generateRelationMethodsForSide(PrintWriter writer, Class cls, RelationshipInfo rel,
                                                    boolean hasRelationships) {
-        boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem muitos de mim
-        boolean isCollection = rel.isCollection();                 // eu tenho muitos deles
+        boolean inverseIsCollection = rel.inverseIsCollection();   // o outro lado tem * desta classe
+        boolean isCollection = rel.isCollection();                 // este classe tem * da outra classe
         String otherClass = rel.otherClass;
         String attributeName = rel.attributeName();
         // passam para os métodos chamados a seguir (que ainda recebem os params soltos)
@@ -746,19 +746,27 @@ public class SpringServiceGenerator {
         writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(ids);");
         writer.println();
 
+        // auto associação (otherClass == className): a var do loop seria igual à do owner, por isso usa-se "other"
+        String elementVar = className.equals(otherClass) ? "other" : otherVar;
+
         if (assoc.hasQualifier()) {
             String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
-            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
+            writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedAttribute + "().put(" +
-                    otherVar + "." + qualifierGetter + "(), " + otherVar + ");");
+                    elementVar + "." + qualifierGetter + "(), " + elementVar + ");");
             if (isBidirectional) {
                 // o Map é o lado mappedBy quem grava a ligação é o outro, que tem a FK
-                writer.println("            " + otherVar + ".set" + inverseCap + "(" + varName + ");");
-                writer.println("            " + otherRepoName + ".save(" + otherVar + ");");
+                writer.println("            " + elementVar + ".set" + inverseCap + "(" + varName + ");");
+                writer.println("            " + otherRepoName + ".save(" + elementVar + ");");
             }
             writer.println("        }");
         } else {
-            writer.println("        " + varName + ".get" + capitalizedAttribute + "().addAll(" + otherPlural + ");");
+            // sem o contains a mesma ligação duplicava na lista em memória (a resposta do POST mostrava o id repetido)
+            writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
+            writer.println("            if (!" + varName + ".get" + capitalizedAttribute + "().contains(" + elementVar + ")) {");
+            writer.println("                " + varName + ".get" + capitalizedAttribute + "().add(" + elementVar + ");");
+            writer.println("            }");
+            writer.println("        }");
         }
 
         writer.println();
@@ -783,6 +791,8 @@ public class SpringServiceGenerator {
         String otherRepoName = otherVar + "Repository";
         String capitalizedAttribute = GeneratorUtils.capitalizeFirst(attributeName);
         String otherPlural = otherVar + "s";
+        // auto associação (otherClass == className): a var do loop seria igual à do owner, por isso usa-se "other"
+        String elementVar = className.equals(otherClass) ? "other" : otherVar;
         String inverseCap = GeneratorUtils.capitalizeFirst(GeneratorUtils.makeAttributeName(declarer,
                 isSource ? assoc.getSourceRole() : assoc.getTargetRole(),
                 isSource ? assoc.getSourceMultiplicity() : assoc.getTargetMultiplicity()));
@@ -803,18 +813,18 @@ public class SpringServiceGenerator {
         if (assoc.hasQualifier()) {
             String qualifierGetter = "get" + GeneratorUtils.capitalizeFirst(assoc.getQualifierName());
             writer.println("        List<" + otherClass + "> " + otherPlural + " = " + otherRepoName + ".findAllById(ids);");
-            writer.println("        for (" + otherClass + " " + otherVar + " : " + otherPlural + ") {");
+            writer.println("        for (" + otherClass + " " + elementVar + " : " + otherPlural + ") {");
             writer.println("            " + varName + ".get" + capitalizedAttribute + "().remove(" +
-                    otherVar + "." + qualifierGetter + "());");
+                    elementVar + "." + qualifierGetter + "());");
             if (isBidirectional) {
                 // desligar é limpar a FK no outro lado, o Map é só a vista
-                writer.println("            " + otherVar + ".set" + inverseCap + "(null);");
-                writer.println("            " + otherRepoName + ".save(" + otherVar + ");");
+                writer.println("            " + elementVar + ".set" + inverseCap + "(null);");
+                writer.println("            " + otherRepoName + ".save(" + elementVar + ");");
             }
             writer.println("        }");
         } else {
             writer.println("        " + varName + ".get" + capitalizedAttribute + "().removeIf(" +
-                    otherVar + " -> ids.contains(" + otherVar + "." + idGetterOf(otherClass) + "()));");
+                    elementVar + " -> ids.contains(" + elementVar + "." + idGetterOf(otherClass) + "()));");
         }
 
         writer.println();
@@ -849,9 +859,9 @@ public class SpringServiceGenerator {
             writer.println();
         }
 
-        // 1. singulares (dos dois lados) ANTES do INSERT: a Bean Validation corre no save e um @NotNull veria null
-        linkOwnedSingles(writer, cls, associations, varName, true, false);
-        // clearSingleOnNull = false porque numa entidade nova não há par anterior para desligar
+        // 1. singulares (dos dois lados) ANTES do INSERT: a Bean Validation corre no save e um @NotNull veria null.
+        // clearSingleOnNull = false nos dois: numa entidade nova não há par anterior para desligar.
+        linkOwnedSingles(writer, cls, associations, varName, false, false);
         boolean inverseModified = linkInverseSingles(writer, cls, associations, varName, false, false);
 
         // 2. save() = INSERT, que gera o id desta entidade

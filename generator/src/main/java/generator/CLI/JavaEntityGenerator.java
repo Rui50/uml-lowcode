@@ -188,7 +188,6 @@ public class JavaEntityGenerator {
     }
 
     // gera os atributos nao derivados
-    // para atributos de tipo enum, prefixa com o nome do enum
     private void generateAttributes(PrintWriter writer, Class cls) {
         for (Attribute attr : cls.getAttributes()) {
             if (attr.hasDerive()) continue;

@@ -82,11 +82,7 @@ public class ToolService {
                 .map(this::toAssociationDto)
                 .toList();
 
-        List<Interaction> allInteractions = new ArrayList<>();
-        //allInteractions.addAll(model.getPimInteractions());
-       // allInteractions.addAll(model.getPsmInteractions());
-        allInteractions.addAll(model.getAllInteractions());
-        List<InteractionDTO> interactions = allInteractions.stream()
+        List<InteractionDTO> interactions = model.getAllInteractions().stream()
                 .map(this::toInteractionDTO)
                 .toList();
 
@@ -119,8 +115,7 @@ public class ToolService {
         // relações próprias (declaradas nesta classe)
         List<RelationFieldDTO> relations = RelationshipInfo.collect(c, associations).stream()
                 .filter(rel -> rel.thisClass().equals(c.getName()))
-                .map(rel -> new RelationFieldDTO(rel.attributeName(), rel.isCollection(), rel.otherClass,
-                        !rel.isCollection() && isMandatory(rel.otherMultiplicity)))
+                .map(this::toRelationFieldDto)
                 .toList();
 
         return new ClassDTO(c.getId(), c.getName(), parent, attrs, ops, c.isAbstract(), realizations, endpoints, relations);
@@ -134,6 +129,12 @@ public class ToolService {
         lower = lower.trim();
         if (lower.equals("*")) return false;
         try { return Integer.parseInt(lower) >= 1; } catch (NumberFormatException e) { return false; }
+    }
+
+    // relação -> DTO: nome do campo, se é coleção, a outra classe, e se é obrigatória (singular + outro lado >= 1)
+    private RelationFieldDTO toRelationFieldDto(RelationshipInfo rel) {
+        boolean mandatory = !rel.isCollection() && isMandatory(rel.otherMultiplicity);
+        return new RelationFieldDTO(rel.attributeName(), rel.isCollection(), rel.otherClass, mandatory);
     }
 
     private OperationDTO toOperationDTO(Operation o) {
@@ -214,10 +215,6 @@ public class ToolService {
             m.getSource() != null ? m.getSource().getId() : null,
             m.getTarget() != null ? m.getTarget().getId() : null
         );
-    }
-
-    private MessageArgumentDTO toMessageArgumentDTO(MessageArgument a) {
-        return new MessageArgumentDTO(a.getName(), a.getValue(), a.getType());
     }
 
     /**

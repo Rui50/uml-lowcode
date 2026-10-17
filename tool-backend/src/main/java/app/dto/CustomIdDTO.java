@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// configuração do @Id de uma classe (sempre auto-gerado pela BD)
+// configuração do @Id de uma classe: atributo a usar como id (null/vazio = id Long automático)
 @Getter
 @Setter
 @NoArgsConstructor

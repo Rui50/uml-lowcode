@@ -7,6 +7,5 @@ import lombok.Getter;
 @AllArgsConstructor
 public class MessageArgumentDTO {
     private String name;
-    private String value;
     private String type;
 }
