@@ -146,13 +146,13 @@ public class SequenceBodyGenerator {
         // mensagem «create»: gera "Type var = new Type(args)".
         if ("createMessage".equals(msg.getMessageSort())) {
             String type = msg.getTarget().getType();
-            // nome da variável: o "x =" do diagrama, senão o nome da lifeline, senão o tipo em minuscula
+            // nome da variável: o que a lifeline representa (o objeto criado é a lifeline)
             String var;
             String represents = msg.getTarget().getRepresents();
-            if (msg.getAssignVariable() != null) {
-                var = msg.getAssignVariable();
-            } else if (represents != null && !represents.isBlank()) {
+            if (represents != null && !represents.isBlank()) {
                 var = represents;
+            } else if (msg.getAssignVariable() != null) {
+                var = msg.getAssignVariable();
             } else {
                 var = GeneratorUtils.lowercaseFirst(type);
             }
@@ -166,9 +166,8 @@ public class SequenceBodyGenerator {
         }
 
         // declaração: "text : String" -> "String text;" (assignVariable + returnType, sem valor).
-        // name==null distingue de "x = foo() : Type", que é chamada
         if (msg.getAssignVariable() != null && msg.getAssignExpression() == null
-                && msg.getName() == null
+                && msg.getExpression() == null
                 && msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
             writer.println(ind + msg.getReturnType() + " " + msg.getAssignVariable() + ";");
             return;
@@ -198,17 +197,11 @@ public class SequenceBodyGenerator {
             }
         }
 
-        // construir lista dos argumentos
-        StringBuilder args = new StringBuilder();
-        for (int i = 0; i < msg.getArguments().size(); i++) {
-            if (i > 0) args.append(", ");
-            args.append(msg.getArguments().get(i).getName());
-        }
-
         String methodName = msg.getName();
         boolean isSelfMessage = msg.getSource().getId().equals(msg.getTarget().getId());
 
         // para as coleções: <campo>.add/remove/get numa entidade carregada acesso com getter
+        // so para prevenir problemas de acesso direto a atributos privados
         if (methodName != null && msg.getArguments().size() == 1) {
             int sep = methodName.indexOf('.');
             if (sep > 0) {
@@ -217,6 +210,7 @@ public class SequenceBodyGenerator {
                 Association assoc = findAssocByAttribute(msg.getTarget().getType(), attrName);
                 if (assoc != null) {
                     String argName = msg.getArguments().get(0).getName();
+                    // transforma o acesso ao atributo numa chamada ao getter para evitar problemas
                     String base = targetVar + ".get" + GeneratorUtils.capitalizeFirst(attrName) + "()";
 
                     // get(chave)  leitura, é uma atribuição (Tipo var = ...)
@@ -253,8 +247,13 @@ public class SequenceBodyGenerator {
         if (!isSelfMessage) {
             receiver = targetVar + ".";
         }
-        // a chamada já escrita, com receiver e argumentos: "turmaRepository.findById(id)"
-        String call = receiver + methodName + "(" + args + ")";
+        // expression (chamada/chain) transcrita tal e qual, com o receiver à frent;
+        String call;
+        if (msg.getExpression() != null) {
+            call = receiver + msg.getExpression();
+        } else {
+            call = receiver + methodName;
+        }
 
         // tem ": Tipo" no diagrama ent o resultado é para guardar numa variável
         if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
@@ -271,7 +270,7 @@ public class SequenceBodyGenerator {
              if (preDeclaredVars.contains(varName)) return;
 
             // findById do repositório devolve Optional -> precisa do orElseThrow (self-message nunca é repo)
-            if (!isSelfMessage && methodName.equals("findById")) {
+            if (!isSelfMessage && "findById".equals(methodName)) {
                 writer.println(ind + returnType + " " + varName + " = " + call);
                 writer.println(ind + "    .orElseThrow(() -> new NotFoundException(\"" + returnType + " not found\"));");
             } else {

@@ -36,7 +36,7 @@ import java.util.Map;
  *   - add/remove numa coleção   -> getX().add/remove(x)  (Map: put/remove pela chave)
  *   - break / continue          -> break; / continue;
  *   - save / delete (só com BD) -> Db.save/delete(x)
- *   - geral (chamada)           -> receiver.metodo(args)  (receiver = this se for o dono, senão o nome da lifeline)
+ *   - geral (chamada/chain)     -> receiver + expression  (receiver = vazio se for o dono, senão "<var>.")
  */
 public class OperationGenerator {
 
@@ -257,7 +257,7 @@ public class OperationGenerator {
 
     /**
      * Gera o código de uma mensagem
-     * receiver = "this" se o target for o dono, senão o nome da lifeline (erro se não tiver nome).
+     * receiver: vazio se o target for o dono (chama direto), senão "<var da lifeline>." (erro se não tiver nome).
      */
     private static void generateMessage(PrintWriter writer, Message msg, Message entry,
                                         Class cls, List<Association> associations, String indent) {
@@ -270,7 +270,7 @@ public class OperationGenerator {
 
         // save/delete sao mensagens reservadas
         //  do owner para a entidade a gravar, so faz sentido nos alvos com BD
-        // sem BD sai como chamada normal (this.save(x)), que é o que foi desenhado
+        // sem BD sai como chamada normal (save(x)), que é o que foi desenhado
         if (hasDb && ("save".equals(n) || "delete".equals(n)) && msg.getArguments() != null && msg.getArguments().size() == 1) {
             String arg = msg.getArguments().get(0).getName().replace("self.", "this.");
             writer.println(indent + "Db." + n + "(" + arg + ");");
@@ -282,12 +282,15 @@ public class OperationGenerator {
         // mensagem «create»: gera "Type var = new Type(args)".
         if ("createMessage".equals(msg.getMessageSort())) {
             String type = msg.getTarget().getType();
-            // nome da var: o que a lifeline representa (o objeto criado é a lifeline), senão a var de atribuição
+            // nome da var: o que a lifeline representa (o objeto criado é a lifeline), senão o "x =" da mensagem, senão o tipo em minuscula
             String var;
-            if (msg.getTarget().getRepresents() != null && !msg.getTarget().getRepresents().isBlank()) {
-                var = msg.getTarget().getRepresents();
-            } else {
+            String represents = msg.getTarget().getRepresents();
+            if (represents != null && !represents.isBlank()) {
+                var = represents;
+            } else if (msg.getAssignVariable() != null) {
                 var = msg.getAssignVariable();
+            } else {
+                var = GeneratorUtils.lowercaseFirst(type);
             }
             StringBuilder a = new StringBuilder();
             if (msg.getArguments() != null) {
@@ -304,7 +307,7 @@ public class OperationGenerator {
 
         // declaração: "text : String" -> "String text;"
         if (msg.getAssignVariable() != null && msg.getAssignExpression() == null
-                && msg.getName() == null
+                && msg.getExpression() == null
                 && msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
             writer.println(indent + msg.getReturnType() + " " + msg.getAssignVariable() + ";");
             return;
@@ -323,74 +326,72 @@ public class OperationGenerator {
 
         ///////////// calls
 
-        String receiver;
-        if (msg.getTarget().getId().equals(entry.getTarget().getId())) {
-            receiver = "this";
-        } else {
-            receiver = msg.getTarget().getName();
-            if (receiver == null || receiver.isEmpty()) {
+        // receiver: self chama direto (sem prefixo), as outras levam a var da lifeline à frente
+        boolean isSelf = msg.getTarget().getId().equals(entry.getTarget().getId());
+        String receiver = "";
+        if (!isSelf) {
+            String targetVar = msg.getTarget().getName();
+            if (targetVar == null || targetVar.isEmpty()) {
                 throw new IllegalArgumentException(
                         "Diagrama de sequência: a lifeline do tipo '" + msg.getTarget().getType()
                         + "' não tem nome — o nome tem de ser igual ao parâmetro/variável que está a ser chamado.");
             }
+            receiver = targetVar + ".";
         }
 
         String name = msg.getName();
         List<MessageArgument> args = msg.getArguments();
 
-        // "alunos.add(a)" -> attrName="alunos", op="add"
-        String attrName = null;
-        String op = name;
-        int sep = name.indexOf(".");
-        if (sep > 0) {
-            attrName = name.substring(0, sep);
-            op = name.substring(sep + 1);
-        }
-
-        if (args != null && args.size() == 1 && ("add".equals(op) || "remove".equals(op))) {
-            MessageArgument arg = args.get(0);
-            String ownerType = msg.getTarget().getType();
-
-            // se a mensagem for "alunos.add(a)", procura a associação com esse campo (alunos).
-            // se for só "add(a)", sem campo à frente, trata como uma chamada normal (fallback).
-            Association assoc = null;
-            if (attrName != null) {
-                assoc = findAssocByAttribute(associations, cls, ownerType, attrName);
+        // collection lowering (só chamadas planas): "alunos.add(a)" -> attrName="alunos", op="add"
+        if (name != null) {
+            String attrName = null;
+            String op = name;
+            int sep = name.indexOf(".");
+            if (sep > 0) {
+                attrName = name.substring(0, sep);
+                op = name.substring(sep + 1);
             }
 
-            if (assoc != null) {
-                // pelo getter: o campo é private e num pai ou noutra classe não se lhe chega diretamente
-                String base = receiver + ".get" + GeneratorUtils.capitalizeFirst(attrName) + "()";
-                String code;
-                if (assoc.hasQualifier()) {
-                    // map com PUT(key, value) ou remove(key)
-                    String q = assoc.getQualifierName();
-                    String getter = "get" + Character.toUpperCase(q.charAt(0)) + q.substring(1) + "()";
-                    code = "add".equals(op)
-                            ? base + ".put(" + arg.getName() + "." + getter + ", " + arg.getName() + ");"
-                            : base + ".remove(" + arg.getName() + "." + getter + ");";
-                } else {
-                    // coleção simples: ADD/REMOVE
-                    code = base + "." + op + "(" + arg.getName() + ");";
+            if (args != null && args.size() == 1 && ("add".equals(op) || "remove".equals(op))) {
+                MessageArgument arg = args.get(0);
+                String ownerType = msg.getTarget().getType();
+
+                // se a mensagem for "alunos.add(a)", procura a associação com esse campo (alunos).
+                // se for só "add(a)", sem campo à frente, trata como uma chamada normal (fallback).
+                Association assoc = null;
+                if (attrName != null) {
+                    assoc = findAssocByAttribute(associations, cls, ownerType, attrName);
                 }
-                writer.println(indent + code);
-                return;
+
+                // transforma a chamada em getter, so para o caso do user nao o ter feito
+                if (assoc != null) {
+                    // pelo getter: o campo é private e num pai ou noutra classe não se lhe chega diretamente
+                    String base = receiver + "get" + GeneratorUtils.capitalizeFirst(attrName) + "()";
+                    String code;
+                    if (assoc.hasQualifier()) {
+                        // map com PUT(key, value) ou remove(key)
+                        String q = assoc.getQualifierName();
+                        String getter = "get" + Character.toUpperCase(q.charAt(0)) + q.substring(1) + "()";
+                        code = "add".equals(op)
+                                ? base + ".put(" + arg.getName() + "." + getter + ", " + arg.getName() + ");"
+                                : base + ".remove(" + arg.getName() + "." + getter + ");";
+                    } else {
+                        // coleção simples: ADD/REMOVE
+                        code = base + "." + op + "(" + arg.getName() + ");";
+                    }
+                    writer.println(indent + code);
+                    return;
+                }
             }
         }
 
-        // fallback: chamada literal receiver.name(args)
-        StringBuilder call = new StringBuilder();
-        call.append(receiver).append(".").append(name).append("(");
-        if (args != null) {
-            for (int i = 0; i < args.size(); i++) {
-                if (i > 0) call.append(", ");
-                call.append(args.get(i).getName());
-            }
-        }
-        call.append(")");
+        // transcreve a expression tal e qual
+        String call = (msg.getExpression() != null)
+                ? receiver + msg.getExpression()
+                : receiver + name;
 
         if (msg.getAssignVariable() != null) {
-            // se ": Type" presente -> declara, se ausente -> reatribui a variável porque já tem de ser existente
+            // com ": Tipo" declara; sem ele só reatribui (a variável já tem de existir)
             if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
                 writer.println(indent + msg.getReturnType() + " " + msg.getAssignVariable() + " = " + call + ";");
             } else {

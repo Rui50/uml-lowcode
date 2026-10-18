@@ -5,12 +5,13 @@ import java.util.List;
 
 public class Message {
     private String id;
-    private String name;                    // getTurma, setTurma (nome do metood)
+    private String name;                    // só o nome do metodo: "getTurma" (null se chain)
     private String rawName;                 // full  "getTurma(a: Aluno) : Turma"
     private String messageSort;             // synchCall, asynchCall, reply
     private String returnType;              // return type if specified ("User")
     private String assignVariable;          // variable name for assignment ( "turma" in "turma = findById(id) : Turma")
     private String assignExpression;        // "u" in "var = u" ou null
+    private String expression;              // a chamada/chain inteira ("findById(id)"), ao contrário de 'name' que é só o metodo ("findById")
     private Lifeline source;
     private Lifeline target;
     private List<MessageArgument> arguments;
@@ -68,6 +69,10 @@ public class Message {
     public void setAssignExpression(String assignExpression) {
         this.assignExpression = assignExpression;
     }
+
+    public String getExpression() { return expression; }
+
+    public void setExpression(String expression) { this.expression = expression; }
 
     // true se a mensagem é uma atribuição simples
     public boolean isPlainAssignment() {

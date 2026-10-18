@@ -398,24 +398,36 @@ public class SequenceDiagramParser {
         // 3
         // se chegar aqui é porque é chamada de um metodo
 
-        // nome do metodo é tudo antes do '('
-        message.setName(signaturePart.substring(0, parenOpen).trim());
+        // a expressão tal e qual, sem o ": Tipo" no fim
+        int typeSep = findTypeSeparator(signaturePart);   // onde começa o ": Tipo", ou -1 se não houver
+        String expr = signaturePart;
+        if (typeSep != -1) {
+            expr = signaturePart.substring(0, typeSep);   // corta o ": Tipo"
+        }
+        message.setExpression(expr.trim());
 
         int parenClose = signaturePart.lastIndexOf(')'); // nao foi fechado ent ignora
         if (parenClose == -1 || parenClose <= parenOpen) {
             return;
         }
 
-        // argumentos entre '(' e ')'
-        String argsString = signaturePart.substring(parenOpen + 1, parenClose).trim();
-        if (!argsString.isEmpty()) {
-            // split por ',' mas respeitando generics como ArrayList<User>
-            List<String> argParts = splitArguments(argsString);
+        // chamada plana (o 1º '(' fecha no último ')') -> guarda name + args;
+        // chain (a().b()) -> guarda só a expression, para escrever direto
+        if (matchingClose(signaturePart, parenOpen) == parenClose) {
+            // nome do metodo é tudo antes do '('
+            message.setName(signaturePart.substring(0, parenOpen).trim());
 
-            for (String argPart : argParts) {
-                MessageArgument arg = parseArgument(argPart.trim());
-                if (arg != null) {
-                    message.getArguments().add(arg);
+            // argumentos entre '(' e ')'
+            String argsString = signaturePart.substring(parenOpen + 1, parenClose).trim();
+            if (!argsString.isEmpty()) {
+                // split por ',' mas respeitando generics como ArrayList<User>
+                List<String> argParts = splitArguments(argsString);
+
+                for (String argPart : argParts) {
+                    MessageArgument arg = parseArgument(argPart.trim());
+                    if (arg != null) {
+                        message.getArguments().add(arg);
+                    }
                 }
             }
         }
@@ -477,6 +489,17 @@ public class SequenceDiagramParser {
         parts.add(input.substring(start));
 
         return parts;
+    }
+
+    // dado um '(', o índice do ')' que o fecha
+    private int matchingClose(String s, int openIdx) {
+        int depth = 0;
+        for (int i = openIdx; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '(') depth++;
+            else if (c == ')' && --depth == 0) return i;
+        }
+        return -1;
     }
 
     /**
