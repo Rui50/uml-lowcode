@@ -85,7 +85,7 @@ public class CLIProjectGenerator {
     // docker-compose tem app + container de BD (Postgres/MySQL)
     // para correr -> docker compose run --rm app
     private void generateDockerCompose() throws IOException {
-        String dbName = settings.getApplicationName();
+        String dbName = GeneratorUtils.dbName(settings.getApplicationName());
         boolean postgres = settings.getDatabaseType() == DatabaseType.POSTGRESQL;
         try (PrintWriter w = new PrintWriter(new FileWriter(outputDirectory + "/docker-compose.yml"))) {
             w.println("# App CLI interativa — correr com:  docker compose run --rm app");
@@ -225,7 +225,7 @@ public class CLIProjectGenerator {
     private void generateConfigProperties() throws IOException {
         String filename = outputDirectory + "/src/main/resources/config.properties";
         try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
-            String dbName = settings.getApplicationName();
+            String dbName = GeneratorUtils.dbName(settings.getApplicationName());
             // com Docker a BD esta num container -> host = "db" (nome do serviço no compose)
             // "localhost" nao da porque apontaria para o próprio container da app.
             String dbHost = settings.isDockerfile() ? "db" : "localhost";

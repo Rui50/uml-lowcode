@@ -88,7 +88,7 @@ public class SpringProjectGenerator {
 
     // docker-compose: app + container de BD (Postgres/MySQL)
     private void generateDockerCompose() throws IOException {
-        String dbName = settings.getApplicationName();
+        String dbName = GeneratorUtils.dbName(settings.getApplicationName());
         boolean postgres = settings.getDatabaseType() == DatabaseType.POSTGRESQL;
         int port = settings.getServerPort();
         try (PrintWriter w = new PrintWriter(new FileWriter(outputDirectory + "/docker-compose.yml"))) {
@@ -349,14 +349,14 @@ public class SpringProjectGenerator {
                     w.println("spring.jpa.hibernate.ddl-auto=create-drop");
                     break;
                 case POSTGRESQL:
-                    w.println("spring.datasource.url=jdbc:postgresql://localhost:5432/" + settings.getApplicationName());
+                    w.println("spring.datasource.url=jdbc:postgresql://localhost:5432/" + GeneratorUtils.dbName(settings.getApplicationName()));
                     w.println("spring.datasource.driver-class-name=org.postgresql.Driver");
                     w.println("spring.datasource.username=postgres");
                     w.println("spring.datasource.password=postgres");
                     w.println("spring.jpa.hibernate.ddl-auto=update");
                     break;
                 case MYSQL:
-                    w.println("spring.datasource.url=jdbc:mysql://localhost:3306/" + settings.getApplicationName());
+                    w.println("spring.datasource.url=jdbc:mysql://localhost:3306/" + GeneratorUtils.dbName(settings.getApplicationName()));
                     w.println("spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver");
                     w.println("spring.datasource.username=root");
                     w.println("spring.datasource.password=root");

@@ -88,6 +88,16 @@ public class GeneratorUtils {
         return Character.toLowerCase(s.charAt(0)) + s.substring(1);
     }
 
+    // gera um nome para a db valido a partir do nome da app. "My Library App" -> "my_library_app"
+    public static String dbName(String appName) {
+        String slug = appName.toLowerCase()
+                .replaceAll("[^a-z0-9]+", "_")  // espacos/simbolos -> '_'
+                .replaceAll("^_+|_+$", ""); // tira '_' do início/fim
+        if (slug.isEmpty()) slug = "app"; // nome só com símbolos -> evita nome vazio
+        if (Character.isDigit(slug.charAt(0))) slug = "db_" + slug;  // identificador SQL não pode começar por dígito
+        return slug;
+    }
+
     // List<Teste.Aluno> -> List<Aluno>
     public static String removePackageNames(String type) {
         if (type == null) return null;
