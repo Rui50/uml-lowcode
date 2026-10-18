@@ -43,7 +43,6 @@ export const useModelStore = defineStore('model', () => {
       model.value = await parseModel(file);
       fileName.value = file.name;
       selectedDiagram.value = { type: 'class' }
-      console.log('Parsed model:', model.value);
     } catch (err) {
       error.value = (err as Error).message;
     } finally {

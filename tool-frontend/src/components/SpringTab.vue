@@ -85,10 +85,8 @@ function removeOverride(endpointType: EndpointType) {
   expandedEndpointType.value = null
 }
 
-// Linhas da tabela "Base DTO fields": uma por atributo e relação (da classe E dos pais — os DTOs
-// gerados também incluem os campos herdados). Cada linha tem 3 toggles, Create/Update/Response:
-// marcado = o campo entra nesse DTO. O id custom (vive na raiz) não é campo de DTO -> não aparece.
-// init/derive procuram-se pela chave da classe que DECLARA o atributo.
+// Linhas da matriz "Base DTO fields": um atributo/relação por linha (inclui os herdados dos pais).
+// 3 toggles Create/Update/Response (marcado = entra nesse DTO; o id custom não é campo de DTO).
 //
 // 'locked' = toggle que o user não pode desmarcar porque a semântica já o decide:
 //   - init   -> o campo nunca entra no Create (o valor é obrigado na criação);
@@ -99,7 +97,7 @@ const fieldRows = computed(() => {
   const classes = model.model?.classes ?? []
   const byName = new Map(classes.map(c => [c.name, c]))
 
-  // classe selecionada + antepassados, de baixo para cima (topo = raiz)
+  // classe selecionada + pais
   const hierarchyList: NonNullable<typeof model.selectedClass>[] = []
   for (let c = model.selectedClass; c; c = c.parent ? byName.get(c.parent) ?? null : null) {
     hierarchyList.push(c)
@@ -290,7 +288,7 @@ watch(classKey, (id) => {
     </div>
   </section>
 
-  <!-- Endpoint / Job por operação (mapeamento PSM) -->
+  <!-- Endpoint / Job por operação -->
   <section v-if="!isInterface" class="block">
     <header class="block-head">
       <h4>Operation endpoints</h4>
@@ -326,8 +324,6 @@ watch(classKey, (id) => {
 </template>
 
 <style scoped>
-/* --- estrutura partilhada com o painel de anotações (duplicada por causa do scoped;
-   consolidar num stylesheet comum se os outros tabs também forem extraídos) --- */
 .block {
   padding: 16px 0;
 }
@@ -379,22 +375,12 @@ watch(classKey, (id) => {
   font-size: 12px;
   text-align: center;
 }
-.hint {
-  font-size: 11px;
-  opacity: 0.65;
-  margin: 0;
-  line-height: 1.4;
-}
 .tip {
   font-size: 13px;
   opacity: 0.5;
   cursor: help;
   margin-left: 4px;
   font-weight: normal;
-}
-.hint.warn {
-  opacity: 1;
-  color: var(--p-orange-600, #c2410c);
 }
 
 /* --- específico do Spring --- */

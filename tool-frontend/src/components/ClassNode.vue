@@ -10,13 +10,6 @@ const props = defineProps<{
   data: ClassDTO
 }>()
 
-/*
-function splitOp(op: string) {
-  const i = op.lastIndexOf('): ')
-  if (i === -1) return { sig: op, ret: '' }
-  return { sig: op.slice(0, i + 1), ret: op.slice(i + 3) }
-}
-*/
 const annotations = useAnnotationsStore()
 
 const classAnnotated = computed(() => {

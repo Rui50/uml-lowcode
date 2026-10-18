@@ -26,8 +26,6 @@
 <template>
   <main class="page">
     <header class="masthead">
-      <!--<span class="kicker">UML&nbsp;->&nbsp;Code</span>-->
-      <!--<h1 class="title">UML-LowCode</h1>-->
       <p class="lede">Upload a UML model to begin.</p>
       <p class="accepts">
         accepts <strong>Visual&nbsp;Paradigm</strong> <code>XMI</code> exports
@@ -46,7 +44,6 @@
       <ol class="steps">
         <li><code>Project -> Export -> XMI…</code></li>
         <li>Select <code>Export for UML2</code></li>
-        <li>Include both the <strong>class</strong> and <strong>sequence</strong> diagrams.</li>
       </ol>
     </details>
 
@@ -81,16 +78,6 @@
 }
 
 .masthead { text-align: center; display: flex; flex-direction: column; gap: 0.35rem; }
-.kicker {
-  align-self: center;
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--accent);
-  opacity: 0.9;
-}
-.title { margin: 0; font-weight: 700; font-size: 2rem; letter-spacing: -0.02em; }
 .lede { margin: 0; color: var(--muted); }
 
 .accepts {
@@ -201,8 +188,6 @@
 }
 .export[open] .steps li:nth-child(1) { animation-delay: 0.02s; }
 .export[open] .steps li:nth-child(2) { animation-delay: 0.07s; }
-.export[open] .steps li:nth-child(3) { animation-delay: 0.12s; }
-.export[open] .steps li:nth-child(4) { animation-delay: 0.17s; }
 
 @keyframes step-rise {
   from { opacity: 0; transform: translateY(5px); }

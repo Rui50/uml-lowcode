@@ -17,7 +17,7 @@ const props = defineProps<{
     targetLabel?: string 
   }
 
-  // typescript tava a teimar por nao tarem definidos, os abaixo nao sao usados para naada
+  // typescript tava a queixar por nao tarem definidos, os abaixo nao sao usados para naada
   sourceNode?: any
   targetNode?: any
   source?: string

@@ -8,6 +8,7 @@ import { SQL_RESERVED } from '@/constants/sqlReserved'
 
 import Select from 'primevue/select'
 import Button from 'primevue/button'
+import Menu from 'primevue/menu'
 import Dialog from 'primevue/dialog'
 import DiagramList from '@/components/DiagramList.vue'
 import DiagramCanvas from '@/components/DiagramCanvas.vue'
@@ -55,7 +56,7 @@ function warnReservedNames() {
   if (target.value !== 'spring' && target.value !== 'cli-jpa') return  // só targets com BD
   const offending = (modelStore.model?.classes ?? [])
     .filter(c => SQL_RESERVED.has(c.name.toLowerCase()))
-    .filter(c => !annotations.tableNameByClass[c.id]?.trim())         // resolvido = tem Table name (por id, nota #32)
+    .filter(c => !annotations.tableNameByClass[c.id]?.trim())         // resolvido = tem Table name
     .map(c => c.name)
   if (offending.length) {
     toast.add({
@@ -105,6 +106,14 @@ function onConfirm() {
 
 const importInput = ref<HTMLInputElement | null>(null)
 
+const annMenu = ref()
+const annItems = computed(() => [
+  { label: 'Export annotations (JSON)', icon: 'pi pi-download',
+    command: () => annotations.exportToFile(modelStore.fileName) },
+  { label: 'Import annotations (JSON)', icon: 'pi pi-upload',
+    command: () => importInput.value?.click() },
+])
+
 async function onImport(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
@@ -112,16 +121,16 @@ async function onImport(e: Event) {
   try {
     const importedModel = await annotations.importFromFile(file, modelStore.fileName)
     if (importedModel && modelStore.fileName && importedModel !== modelStore.fileName) {
-      toast.add({ severity: 'warn', summary: 'Modelo diferente',
-        detail: `As anotações eram do modelo "${importedModel}", não de "${modelStore.fileName}". Importadas na mesma — confirma se encaixam.`,
+      toast.add({ severity: 'warn', summary: 'Different model',
+        detail: `These annotations were from model "${importedModel}", not "${modelStore.fileName}". Imported anyway — check they fit.`,
         life: 8000 })
     } else {
-      toast.add({ severity: 'success', summary: 'Anotações importadas', life: 3000 })
+      toast.add({ severity: 'success', summary: 'Annotations imported', life: 3000 })
     }
   } catch (err) {
-    toast.add({ severity: 'error', summary: 'Falha ao importar', detail: String(err), life: 6000 })
+    toast.add({ severity: 'error', summary: 'Import failed', detail: String(err), life: 6000 })
   } finally {
-    input.value = ''   // permite reimportar o mesmo ficheiro
+    input.value = ''   // allow re-importing the same file
   }
 }
 
@@ -170,19 +179,13 @@ async function onImport(e: Event) {
           class="target-select"
         />
         <Button
-          label="Export"
+          label="Annotations" icon="pi pi-file-export"
           size="small" text severity="secondary"
-          title="Export annotations (+ settings) as JSON"
           :disabled="!modelStore.fileName"
-          @click="annotations.exportToFile(modelStore.fileName)"
+          aria-haspopup="true" aria-controls="ann_menu"
+          @click="annMenu.toggle($event)"
         />
-        <Button
-          label="Import"
-          size="small" text severity="secondary"
-          title="Import annotations (+ settings) from JSON"
-          :disabled="!modelStore.fileName"
-          @click="importInput?.click()"
-        />
+        <Menu ref="annMenu" id="ann_menu" :model="annItems" :popup="true" />
         <input ref="importInput" type="file" accept="application/json" hidden @change="onImport" />
         <Button label="Generate" size="small" @click="startGenerate" />
         <SettingsModal v-model:open="showSettings" :target="target" @confirm="onConfirm" />

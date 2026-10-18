@@ -105,22 +105,6 @@ const edges = computed(() =>
     }
   })
 )
-/*
-const edges = computed(() =>
-	associations.value.map((a, i) => ({
-		id: `e${i}`,
-    type: 'smoothstep',
-		source: a.source,
-		target: a.target,
-		label: `${a.source} ${a.sourceMultiplicity ?? ''}  ──  ${a.targetMultiplicity ?? ''} ${a.target}`,
-    markerEnd: a.targetNavigable
-      ? { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#53fc18' }
-      : undefined,
-    markerStart: a.sourceNavigable
-      ? { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#53fc18' }
-      : undefined,
-  }))
-)*/
 
 const inheritanceEdges = computed(() =>
   classes.value

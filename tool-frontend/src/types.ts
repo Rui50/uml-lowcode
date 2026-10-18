@@ -113,30 +113,6 @@ export interface InteractionDTO {
 // Annotations
 //////////
 
-export interface Invariant {
-  id: string
-  class: string
-  expression: string
-}
-
-export interface Init {
-  id: string;
-  attribute: string;
-  expression: string
-}
-
-export interface Derived {
-  id: string;
-  attribute: string;
-  expression: string;
-}
-
-export interface ClassAnnotations {
-  invariants: Invariant[]
-  inits: Init[]
-  derived: Derived[]
-}
-
 export interface ResponseDTOoverride {
   name: string // vazio nome "automatico"
   hidden: string[]
