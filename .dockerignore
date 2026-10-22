@@ -1,0 +1,13 @@
+# build outputs / dependencies
+**/target
+**/node_modules
+**/dist
+generator/output
+
+SDMetricsOpenCore
+
+# vcs / ide / wsl
+.git
+.idea
+.vscode
+**/*:Zone.Identifier
