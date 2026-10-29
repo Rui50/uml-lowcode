@@ -201,7 +201,7 @@ watch(classKey, (id) => {
       <div class="job-toggle">
         <Checkbox v-model="annotations.generateControllerByClass[classKey!]" :binary="true" inputId="gen-controller" />
         <label for="gen-controller">Generate REST controller</label>
-        <span class="tip" v-tooltip.top="'Se desativado, esta classe não expõe endpoints REST. A entidade, repositório e serviço continuam a ser gerados.'"><i class="pi pi-info-circle"></i></span>
+        <span class="tip" v-tooltip.top="'If disabled, this class exposes no REST endpoints. The entity, repository and service are still generated.'"><i class="pi pi-info-circle"></i></span>
       </div>
     </div>
   </section>
@@ -210,7 +210,7 @@ watch(classKey, (id) => {
   <section v-if="!isInterface && allEndpoints.length && annotations.generateControllerByClass[classKey!] !== false" class="block">
     <header class="block-head">
       <h4>Available endpoints
-        <span class="tip" v-tooltip.top="`'customize' molda só a RESPOSTA de cada endpoint CRUD (ResponseDTO próprio). O corpo de Create/Update define-se em 'Base DTO fields'.`"><i class="pi pi-info-circle"></i></span>
+        <span class="tip" v-tooltip.top="`'customize' only affects the RESPONSE of each CRUD endpoint (a dedicated ResponseDTO). The Create/Update request body is configured under 'Base DTO fields'.`"><i class="pi pi-info-circle"></i></span>
       </h4>
     </header>
     <ul class="endpoint-list">
@@ -283,7 +283,7 @@ watch(classKey, (id) => {
       <div class="job-toggle">
         <Checkbox v-model="annotations.beanValidationByClass[classKey!]" :binary="true" inputId="bean-validation" />
         <label for="bean-validation">Invariantes OCL como anotações</label>
-        <span class="tip" v-tooltip.top="'Invariantes simples (ex: points >= 0) viram anotações Bean Validation no campo; as restantes continuam no método validate().'"><i class="pi pi-info-circle"></i></span>
+        <span class="tip" v-tooltip.top="'Simple invariants (e.g. points >= 0) become Bean Validation annotations on the field; the rest stay in the validate() method.'"><i class="pi pi-info-circle"></i></span>
       </div>
     </div>
   </section>

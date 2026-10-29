@@ -121,7 +121,7 @@ function pickId(value: string | null) {
   <section v-if="ownsTable" class="block">
     <header class="block-head">
       <h4>Table name
-        <span class="tip" v-tooltip.top="'Override do nome da tabela. Vazio = nome da classe em minúsculas. Útil para evitar palavras reservadas em SQL (ex: Order, User).'"><i class="pi pi-info-circle"></i></span>
+        <span class="tip" v-tooltip.top="'Table name override. Empty = class name in lowercase. Useful to avoid SQL reserved words (e.g. Order, User).'"><i class="pi pi-info-circle"></i></span>
       </h4>
     </header>
     <div class="entry">
@@ -160,7 +160,7 @@ function pickId(value: string | null) {
   <section v-if="isSuperclass" class="block">
     <header class="block-head">
       <h4>Inheritance strategy
-        <span class="tip" v-tooltip.top="'Mapeamento JPA da hierarquia (alvos Spring e CLI-JPA).'"><i class="pi pi-info-circle"></i></span>
+        <span class="tip" v-tooltip.top="'JPA mapping of the hierarchy (Spring and CLI-JPA targets).'"><i class="pi pi-info-circle"></i></span>
       </h4>
     </header>
     <div class="entry">
@@ -178,7 +178,7 @@ function pickId(value: string | null) {
   <section v-if="attributes.length" class="block">
     <header class="block-head">
       <h4>Column mapping
-        <span class="tip" v-tooltip.top="'Config de coluna JPA: nome da coluna (vazio = nome do atributo), unique e precisão/escala (só em decimais).'"><i class="pi pi-info-circle"></i></span>
+        <span class="tip" v-tooltip.top="'JPA column config: column name (empty = attribute name), unique, and precision/scale (decimals only).'"><i class="pi pi-info-circle"></i></span>
       </h4>
     </header>
     <table class="col-map">
@@ -186,8 +186,8 @@ function pickId(value: string | null) {
         <tr>
           <th>Attribute</th>
           <th class="c">Unique</th>
-          <th class="c">Precision <span class="tip" v-tooltip.top="'Só em BigDecimal/BigInteger (total de dígitos).'"><i class="pi pi-info-circle"></i></span></th>
-          <th class="c">Scale <span class="tip" v-tooltip.top="'Só em BigDecimal (casas decimais).'"><i class="pi pi-info-circle"></i></span></th>
+          <th class="c">Precision <span class="tip" v-tooltip.top="'BigDecimal/BigInteger only (total number of digits).'"><i class="pi pi-info-circle"></i></span></th>
+          <th class="c">Scale <span class="tip" v-tooltip.top="'BigDecimal only (decimal places).'"><i class="pi pi-info-circle"></i></span></th>
         </tr>
       </thead>
       <tbody>
@@ -217,7 +217,7 @@ function pickId(value: string | null) {
   <section v-if="attributes.length" class="block">
     <header class="block-head">
       <h4>Column names
-        <span class="tip" v-tooltip.top="'Nome da coluna na base de dados por atributo. Vazio = nome do atributo.'"><i class="pi pi-info-circle"></i></span>
+        <span class="tip" v-tooltip.top="'Database column name per attribute. Empty = attribute name.'"><i class="pi pi-info-circle"></i></span>
       </h4>
     </header>
     <div v-for="attr in attributes" :key="attr.name" class="order-row">
@@ -233,7 +233,7 @@ function pickId(value: string | null) {
   <section v-if="collectionRelations.length" class="block">
     <header class="block-head">
       <h4>Collection ordering
-        <span class="tip" v-tooltip.top="'@OrderBy — ordena os itens de uma coleção. Vazio = ordem indefinida.'"><i class="pi pi-info-circle"></i></span>
+        <span class="tip" v-tooltip.top="'@OrderBy — orders the items of a collection. Empty = undefined order.'"><i class="pi pi-info-circle"></i></span>
       </h4>
     </header>
     <div v-for="rel in collectionRelations" :key="rel.name" class="order-row">
@@ -257,7 +257,7 @@ function pickId(value: string | null) {
   <section v-if="singularRelations.length" class="block">
     <header class="block-head">
       <h4>Fetch strategy
-        <span class="tip" v-tooltip.top="'LAZY (recomendado) carrega a relação só quando é usada | EAGER carrega sempre com a entidade.'"><i class="pi pi-info-circle"></i></span>
+        <span class="tip" v-tooltip.top="'LAZY (recommended) loads the relation only when used | EAGER always loads it with the entity.'"><i class="pi pi-info-circle"></i></span>
       </h4>
     </header>
     <div v-for="rel in singularRelations" :key="rel.name" class="order-row">
