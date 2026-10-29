@@ -18,30 +18,16 @@ public class ClassDiagramParser {
     private Model model;
     private MetaModel metaModel;
 
-    // estes sao temps porque depois passa a ser na "app" e nao no xmi parsing
-    // deixa-se para testar depois sem frontend
     private Map<String, Qualifier> qualifiers;
-    //private Map<String, List<Invariant>> invariantsCache;
-    //private Map<String, List<String[]>> initsCache;
-    //private Map<String, List<String[]>> preconditionsCache;
-    //private Map<String, List<String[]>> derivesCache;
 
     public ClassDiagramParser(
             Model model,
             MetaModel metaModel,
             Map<String, Qualifier> qualifiers
-            //Map<String, List<Invariant>> invariantsCache,
-            //Map<String, List<String[]>> initsCache,
-            //Map<String, List<String[]>> preconditionsCache,
-            //Map<String, List<String[]>> derivesCache
     ){
         this.model = model;
         this.metaModel = metaModel;
         this.qualifiers = qualifiers;
-        //this.invariantsCache = invariantsCache;
-        //this.initsCache = initsCache;
-        //this.preconditionsCache = preconditionsCache;
-        //this.derivesCache = derivesCache;
     }
 
     // a func getSetAttribute(...) devolve ordens diferentes de cada vez
@@ -105,70 +91,6 @@ public class ClassDiagramParser {
             Operation operation = parseOperation(operationElement);
             cl.addOperation(operation);
         }
-
-        /*List<Invariant> invariants = invariantsCache.get(classId);
-
-
-        // daqui para baixo era quando as anotações eram feitas nos comments do modelo
-        if (invariants != null) {
-            for (Invariant invariant : invariants) {
-                cl.addInvariant(invariant);
-            }
-        }
-
-        // aplicar inits aos atributos
-        List<String[]> inits = initsCache.get(classId);
-        if (inits != null) {
-            for (String[] init : inits) {
-                String attrName = init[0];
-                String expression = init[1];
-
-                // encontrar o atributo correspondente
-                for (Attribute attr : cl.getAttributes()) {
-                    if (attr.getName().equals(attrName)) {
-                        attr.setInitExpression(expression);
-                        attr.setJavaInitExpression(OCLToJavaVisitor.toJava(expression));
-                        break;
-                    }
-                }
-            }
-        }
-
-        // aplicar precondições as operações
-        List<String[]> preconditions = preconditionsCache.get(classId);
-        if (preconditions != null) {
-            for (String[] pre : preconditions) {
-                String operationName = pre[0];
-                String preName = pre[1];
-                String expression = pre[2];
-
-                // encontrar a operação correspondente
-                for (Operation op : cl.getOperations()) {
-                    if (op.getName().equals(operationName)) {
-                        Precondition precondition = new Precondition(preName, expression, "Precondition '" + preName + "' violated.");
-                        precondition.setJavaExpression(OCLToJavaVisitor.toJava(expression));
-                        op.addPrecondition(precondition);
-                        break;
-                    }
-                }
-            }
-        }
-
-        // derive part
-        List<String[]> derives = derivesCache.get(classId);
-        if (derives != null) {
-            for (String[] derive : derives) {
-                String attrName = derive[0];
-                String expression = derive[1];
-                for (Attribute attr : cl.getAttributes()) {
-                    if (attr.getName().equals(attrName)) {
-                        attr.setDeriveExpression(expression);
-                        attr.setJavaDeriveExpression(OCLToJavaVisitor.toJava(expression));
-                        break;
-                    }
-                }
-            }
-        }*/
 
         return cl;
     }

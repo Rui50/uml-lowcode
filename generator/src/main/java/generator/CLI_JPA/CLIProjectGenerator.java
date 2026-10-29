@@ -79,7 +79,6 @@ public class CLIProjectGenerator {
             w.println("RUN mvn -q clean compile");
             w.println("CMD [\"mvn\",\"-q\",\"exec:java\"]");
         }
-        System.out.println("Generated: Dockerfile");
     }
 
     // docker-compose tem app + container de BD (Postgres/MySQL)
@@ -120,7 +119,6 @@ public class CLIProjectGenerator {
             w.println("    stdin_open: true");
             w.println("    tty: true");
         }
-        System.out.println("Generated: docker-compose.yml");
     }
 
     private void generatePomXml() throws IOException {
@@ -128,6 +126,7 @@ public class CLIProjectGenerator {
         try (PrintWriter w = new PrintWriter(new FileWriter(filename))) {
 
             String basePackage = settings.getBasePackage();
+            // com.example.app -> groupId com.example, artifactId app
             int lastDot = basePackage.lastIndexOf('.');
             String groupId    = lastDot > 0 ? basePackage.substring(0, lastDot) : basePackage;
             String artifactId = lastDot > 0 ? basePackage.substring(lastDot + 1) : basePackage;
@@ -197,7 +196,6 @@ public class CLIProjectGenerator {
             w.println("    </build>");
             w.println("</project>");
         }
-        System.out.println("Generated: pom.xml");
     }
 
     private void generatePersistenceXml() throws IOException {
@@ -219,7 +217,6 @@ public class CLIProjectGenerator {
             w.println("    </persistence-unit>");
             w.println("</persistence>");
         }
-        System.out.println("Generated: persistence.xml");
     }
 
     private void generateConfigProperties() throws IOException {
@@ -247,7 +244,6 @@ public class CLIProjectGenerator {
                 }
             }
         }
-        System.out.println("Generated: config.properties");
     }
 
     private void generateInputUtils() throws IOException {
@@ -351,7 +347,6 @@ public class CLIProjectGenerator {
             w.println("    }");
             w.println("}");
         }
-        System.out.println("Generated: InputUtils.java");
     }
 
     private void generateMainClass() throws IOException {
@@ -393,7 +388,6 @@ public class CLIProjectGenerator {
             w.println("    }");
             w.println("}");
         }
-        System.out.println("Generated: Main.java");
     }
 
     // persistencia para os corpos de operacao que correm NA entidade
@@ -427,8 +421,5 @@ public class CLIProjectGenerator {
             w.println("    }");
             w.println("}");
         }
-        System.out.println("Generated: Db.java");
     }
-
-
 }

@@ -5,12 +5,6 @@ import java.util.List;
 import java.util.Map;
 import model.ParsedModel;
 import model.ProjectSettings;
-import model.Class;
-import model.Attribute;
-import model.Operation;
-import model.annotations.Invariant;
-import model.annotations.Precondition;
-import model.annotations.Postcondition;
 import generator.CLI.JavaProjectGenerator;
 import generator.CLI.JavaEntityGenerator;
 import generator.plain.CodeGenerator;
@@ -60,10 +54,9 @@ public class GenerationService {
                 m.getAssociations(),
                 m.getEnumerations(),
                 outputDir,
-                basePackage,
-                m.getAllInteractions()
+                basePackage
         ).generate();
-        new ClassGenerator(outputDir, basePackage, m.getAllInteractions())
+        new ClassGenerator(outputDir, basePackage)
                 .generateInterfaces(m.getInterfaces());
     }
 
@@ -77,10 +70,9 @@ public class GenerationService {
         new JavaProjectGenerator(outputDir, basePackage).generate(
                 m.getClasses(),
                 m.getAssociations(),
-                m.getEnumerations(),
-                m.getAllInteractions()
+                m.getEnumerations()
         );
-        new JavaEntityGenerator(outputDir, basePackage, m.getAllInteractions())
+        new JavaEntityGenerator(outputDir, basePackage)
                 .generateInterfaces(m.getInterfaces());
     }
 
@@ -111,7 +103,7 @@ public class GenerationService {
                 .generateInterfaces(m.getInterfaces());
         new CLIRepositoryGenerator(outputDir, basePackage)
                 .generateRepositories(m.getClasses());
-        new CLIMenuGenerator(outputDir, basePackage, m.getAllInteractions())
+        new CLIMenuGenerator(outputDir, basePackage)
                 .generateMenus(m.getClasses(), m.getAssociations(), m.getEnumerations());
     }
 
@@ -161,9 +153,9 @@ public class GenerationService {
         // mapa nome deDTO -> classe owner: cada service/controller importa só os folders de DTO que usa
         Map<String, String> DTO_ToClass = SpringUtils.buildDTOOwnerMap(m.getClasses());
         new SpringServiceGenerator(outputDir, basePackage, DTO_ToClass)
-                .generateServices(m.getClasses(), m.getAssociations(), m.getAllInteractions(), m.getEnumerations());
+                .generateServices(m.getClasses(), m.getAssociations(), m.getEnumerations());
         new SpringControllerGenerator(outputDir, basePackage, DTO_ToClass)
-                .generateControllers(m.getClasses(), m.getAssociations(), m.getAllInteractions());
+                .generateControllers(m.getClasses(), m.getAssociations());
         new SpringJobGenerator(outputDir, basePackage)
                 .generateJobs(m.getClasses(), m.getAssociations(), m.getEnumerations());
 

@@ -5,6 +5,7 @@ import generator.OperationGenerator;
 import generator.RelationshipInfo;
 import model.*;
 import model.Class;
+import model.Enumeration;
 import model.annotations.Postcondition;
 import model.annotations.PreSnapshot;
 import model.annotations.Precondition;
@@ -45,9 +46,7 @@ public class SpringServiceGenerator {
     /**
     * Gera os ficheiros dos services (CRUD)
     * */
-    public void generateServices(List<Class> classes, List<Association> associations, List<Interaction> interactions, List<model.Enumeration> enumerations) throws IOException {
-        System.out.println("Generating Spring services...");
-
+    public void generateServices(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
         // criar dir
         String serviceDir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/service";
         new java.io.File(serviceDir).mkdirs();
@@ -58,14 +57,12 @@ public class SpringServiceGenerator {
 
         for (Class cls : classes){
             if (cls.isAbstract()) continue;
-            generateService(cls, classes, associations, serviceDir, interactions, enumerations);
+            generateService(cls, classes, associations, serviceDir, enumerations);
         }
-
-        System.out.println("Generation of services completed.");
     }
 
     // gerar um service
-    private void generateService(Class cls, List<Class> classes, List<Association> associations, String serviceDir, List<Interaction> interactions, List<model.Enumeration> enumerations) throws IOException {
+    private void generateService(Class cls, List<Class> classes, List<Association> associations, String serviceDir, List<Enumeration> enumerations) throws IOException {
         String className = cls.getName();
         String filename = serviceDir + "/" + className + "Service.java";
 
@@ -115,7 +112,7 @@ public class SpringServiceGenerator {
      *  - seu modelo, repo, dtos, e coisas do spring
      *  - add imports de classes refs em operações e entidades associadas
      */
-    private void generateImports(PrintWriter writer, Class cls, List<Class> classes, List<Association> associations, List<model.Enumeration> enumerations) {
+    private void generateImports(PrintWriter writer, Class cls, List<Class> classes, List<Association> associations, List<Enumeration> enumerations) {
         // importar a classe do modelo
         writer.println("import " + basePackage + ".models." + cls.getName() + ";");
         writer.println("import " + basePackage + ".repository." + cls.getName() + "Repository;");
@@ -160,7 +157,7 @@ public class SpringServiceGenerator {
         // importar todas as enumerações
         if (enumerations != null && !enumerations.isEmpty()) {
             writer.println();
-            for (model.Enumeration en : enumerations) {
+            for (Enumeration en : enumerations) {
                 writer.println("import " + basePackage + ".models." + en.getName() + ";");
             }
         }

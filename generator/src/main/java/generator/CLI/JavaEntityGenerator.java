@@ -5,9 +5,8 @@ import model.Association;
 import model.Attribute;
 import model.Class;
 import model.Enumeration;
-import model.sequence.Interaction;
 import model.Operation;
-import model.Parameter;
+import model.Interface;
 import generator.OperationGenerator;
 import generator.GeneratorUtils;
 import generator.RelationshipInfo;
@@ -24,7 +23,6 @@ import java.util.List;
 public class JavaEntityGenerator {
     private String baseOutputPath;
     private ValidationGenerator validationGenerator;
-    private List<Interaction> interactions;
     private String basePackage;
 
 
@@ -35,10 +33,9 @@ public class JavaEntityGenerator {
      *  - gera construtores
      *  - gera toString()
      */
-    public JavaEntityGenerator(String baseOutputPath, String basePackage, List<Interaction> interactions) {
+    public JavaEntityGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
-        this.interactions = interactions;
     }
 
     public void generateEntities(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
@@ -63,13 +60,13 @@ public class JavaEntityGenerator {
     /**
      * gera um ficheiro Java por interface UML (só assinaturas).
      */
-    public void generateInterfaces(List<model.Interface> interfaces) throws IOException {
+    public void generateInterfaces(List<Interface> interfaces) throws IOException {
         if (interfaces == null || interfaces.isEmpty()) return;
 
         String modelsPath = baseOutputPath + "/src/" + basePackage.replace('.', '/') + "/models";
         new File(modelsPath).mkdirs();
 
-        for (model.Interface iface : interfaces) {
+        for (Interface iface : interfaces) {
             String filename = modelsPath + "/" + iface.getName() + ".java";
             try (PrintWriter w = new PrintWriter(filename)) {
                 w.println("package " + basePackage + ".models;");

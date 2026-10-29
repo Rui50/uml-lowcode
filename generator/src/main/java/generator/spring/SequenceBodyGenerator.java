@@ -78,7 +78,6 @@ public class SequenceBodyGenerator {
         }
 
         // todos os diagramas precisam de service,
-        // Os jobs tecnicamente nao mas falta ver isso
         if (serviceLifeline == null) {
             throw new IllegalArgumentException(
                     "Operação '" + op.getName() + "': o diagrama de sequência não tem uma lifeline do tipo '"

@@ -7,7 +7,6 @@ import generator.ValidationGenerator;
 import model.Class;
 import model.Enumeration;
 import model.*;
-import model.sequence.Interaction;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -36,12 +35,10 @@ public class ClassGenerator {
     private String outputDirectory;
     private String basePackage;
     private ValidationGenerator validationGenerator;
-    private List<Interaction> interactions;
 
-    public ClassGenerator(String outputDirectory, String basePackage, List<Interaction> interactions) {
+    public ClassGenerator(String outputDirectory, String basePackage) {
         this.outputDirectory = outputDirectory;
         this.basePackage = basePackage;
-        this.interactions = interactions;
     }
 
     // diretoria onde os ficheiros são escritos: <output>/<package como caminho>

@@ -34,14 +34,12 @@ public class JavaMenuGenerator {
 
     private String baseOutputPath;
     private Set<String> enumNames = new HashSet<>();
-    private List<Interaction> interactions;
 
     private String basePackage;
 
-    public JavaMenuGenerator(String baseOutputPath, String basePackage, List<Interaction> interactions) {
+    public JavaMenuGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
-        this.interactions = interactions;
     }
 
     /**

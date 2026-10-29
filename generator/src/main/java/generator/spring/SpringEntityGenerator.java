@@ -342,7 +342,7 @@ public class SpringEntityGenerator {
             writer.println("    " + ann);
         }
 
-        // the class being being generated
+        // the class being generated
         Class self = allClasses.stream().filter(c -> c.getName().equals(thisClass)).findFirst().orElseThrow();
 
         // @OrderBy da coleção (persistence tab) só em campos de coleção

@@ -44,8 +44,6 @@ public class SpringDTOGenerator {
     }
 
     public void generateDTOs(List<Class> classes, List<Association> associations, List<Enumeration> enumerations) throws IOException {
-        System.out.println("Generating Spring DTOs...");
-
         String dtoDir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/dto";
         new File(dtoDir).mkdirs();
 
@@ -68,8 +66,6 @@ public class SpringDTOGenerator {
             }
             generateResponseDTO(cls, associations, classDTODirectory);
         }
-
-        System.out.println("DTO generation completed.");
     }
 
     /**

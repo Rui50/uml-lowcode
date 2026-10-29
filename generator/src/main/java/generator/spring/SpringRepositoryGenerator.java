@@ -29,16 +29,12 @@ public class SpringRepositoryGenerator {
      * Gera os repositórios para as classes de modelo.
      * */
     public void generateRepositories(List<Class> classes) throws IOException {
-        System.out.println("Generating Spring Data JPA repositories...");
-
         String repositoryDir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/repository";
         new File(repositoryDir).mkdirs();
 
         for (Class cls : classes){
             generateRepository(cls, repositoryDir);
         }
-
-        System.out.println("Generation of repositories completed.");
     }
 
     // gerar um repositorio
@@ -71,8 +67,6 @@ public class SpringRepositoryGenerator {
 
             writer.println("}");
         }
-
-        System.out.println("Generated repository: " + filename);
     }
 
     private void generateQueryMethods(PrintWriter writer, Class cls) {

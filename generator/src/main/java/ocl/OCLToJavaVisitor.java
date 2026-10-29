@@ -317,6 +317,7 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
                 continue;
             }
 
+            // <,>,<=,>= so valid para numbers
             switch (op) {
                 case "<":  sb.append(" < "); break;
                 case ">":  sb.append(" > "); break;
@@ -597,8 +598,8 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
                     ")).collect(java.util.stream.Collectors.toList())";
         }
 
-        // operação aceite pela gramática mas não suportada na tradução — falhar já,
-        // em vez de gerar Java inválido que só rebenta ao compilar o projeto gerado
+        // operação aceite pela gramática mas não suportada na tradução
+        // falhar já, em vez de gerar Java inválido que só rebenta ao compilar o projeto gerado
         throw new IllegalArgumentException("Operação OCL não suportada: " + text);
     }
 

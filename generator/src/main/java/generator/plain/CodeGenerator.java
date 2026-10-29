@@ -3,7 +3,6 @@ package generator.plain;
 import model.Class;
 import model.Enumeration;
 import model.*;
-import model.sequence.Interaction;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,22 +14,20 @@ public class CodeGenerator {
     private List<Class> classes;
     private List <Association> associations;
     private List<Enumeration> enumerations;
-    private List<Interaction> interactions;
 
     private String outputDirectory;
     private String basePackage;
 
     private ClassGenerator classGenerator;
 
-    public CodeGenerator(List<Class> classes, List<Association> associations, List<Enumeration> enumerations, String outputDirectory, String basePackage, List<Interaction> interactions) {
+    public CodeGenerator(List<Class> classes, List<Association> associations, List<Enumeration> enumerations, String outputDirectory, String basePackage) {
         this.classes = classes;
         this.associations = associations;
         this.enumerations = enumerations;
         this.outputDirectory = outputDirectory;
         this.basePackage = basePackage;
-        this.interactions = interactions;
 
-        this.classGenerator = new ClassGenerator(outputDirectory, basePackage, interactions);
+        this.classGenerator = new ClassGenerator(outputDirectory, basePackage);
     }
 
     public void generate() throws IOException{

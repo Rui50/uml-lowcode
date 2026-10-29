@@ -30,15 +30,13 @@ public class CLIMenuGenerator {
     private final String baseOutputPath;
     private final String basePackage;
     private final Set<String> enumNames = new HashSet<>();
-    private final List<Interaction> interactions;
 
     // nome -> Class, para resolver o tipo do id de outra classe nas relações
     private final Map<String, Class> classMap = new HashMap<>();
 
-    public CLIMenuGenerator(String baseOutputPath, String basePackage, List<Interaction> interactions) {
+    public CLIMenuGenerator(String baseOutputPath, String basePackage) {
         this.baseOutputPath = baseOutputPath;
         this.basePackage = basePackage;
-        this.interactions = interactions;
     }
 
     // tipo do id de uma classe (pelo nome)

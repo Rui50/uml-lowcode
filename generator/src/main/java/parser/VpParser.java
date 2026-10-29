@@ -36,7 +36,6 @@ public class VpParser {
      * <ownedEnd> -> <qualifier> -> <modelRef value="id"/> -> <packagedElement xmi:id="id">
      * Entao faz se "manual" a leitura
      */
-
     public static Map<String, Qualifier> parseQualifiers(String filePath) throws Exception {
         Map<String, Qualifier> qualifiers = new HashMap<>();
 
@@ -67,7 +66,8 @@ public class VpParser {
         }
 
         Pattern modelRefPattern = Pattern.compile("<modelRef value=\"([^\"]+)\"/>");
-        // se não-navegável aparece como <ownedEnd> (pertence à associação).
+
+        // se não navegável aparece como <ownedEnd> (pertence à associação)
         // se a ponta é navegável aparece como <ownedAttribute> (pertence à classe)
         // aparece nos dois mas so um tem info
         Pattern ownedEndPattern = Pattern.compile("<(?:ownedEnd|ownedAttribute)[^>]+xmi:id=\"([^\"]+)\"");
@@ -125,7 +125,6 @@ public class VpParser {
 
         return typeId != null ? typeId : "Object";
     }
-
 
     /**
      * extrai o numero de visualização do VP (<number xmi:value="1.1.2"/>) de cada mensagem.

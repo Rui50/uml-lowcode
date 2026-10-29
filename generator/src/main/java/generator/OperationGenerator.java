@@ -232,23 +232,9 @@ public class OperationGenerator {
     private static void generateElements(PrintWriter writer, List<Object> elements,
                                          Message entry, Class cls, List<Association> associations, int indent,
                                          Operation op, String returnType, String selfVar) {
-        String indentStr = "    ".repeat(indent);
         for (Object el : elements) {
             if (el instanceof Message) {
-                Message msg = (Message) el;
-                // skip actor msg ou null
-                if (msg.getSource() == null || msg.getSource().getType() == null) continue;
-                // skips meng que nao sao do owner
-                if (!msg.getSource().getId().equals(entry.getTarget().getId())) continue;
-                if ("reply".equals(msg.getMessageSort())) {
-                    // reply = return
-                    String expr = msg.getRawName() != null ? msg.getRawName() : msg.getName();
-                    if (expr != null && !expr.isBlank()) {
-                        writeReturn(writer, op, returnType, expr.trim(), selfVar, indent);
-                    }
-                    continue;
-                }
-                generateMessage(writer, msg, entry, cls, associations, indentStr);
+                generateMessage(writer, (Message) el, entry, cls, associations, indent, op, returnType, selfVar);
             } else if (el instanceof Fragment) {
                 generateFragment(writer, (Fragment) el, entry, cls, associations, indent, op, returnType, selfVar);
             }
@@ -260,11 +246,27 @@ public class OperationGenerator {
      * receiver: vazio se o target for o dono (chama direto), senão "<var da lifeline>." (erro se não tiver nome).
      */
     private static void generateMessage(PrintWriter writer, Message msg, Message entry,
-                                        Class cls, List<Association> associations, String indent) {
+                                        Class cls, List<Association> associations, int indent,
+                                        Operation operation, String returnType, String selfVar) {
+        String ind = "    ".repeat(indent);
+
+        // skip actor msg ou null + mensagens que nao sao do owner (antes em generateElements)
+        if (msg.getSource() == null || msg.getSource().getType() == null) return;
+        if (!msg.getSource().getId().equals(entry.getTarget().getId())) return;
+
+        // reply = return
+        if ("reply".equals(msg.getMessageSort())) {
+            String expr = msg.getRawName() != null ? msg.getRawName() : msg.getName();
+            if (expr != null && !expr.isBlank()) {
+                writeReturn(writer, operation, returnType, expr.trim(), selfVar, indent);
+            }
+            return;
+        }
+
         // break/continue sao mensagens reservadas (self sempre e se nao tiverem argumentos ou seja n sao metodos)
         String n = msg.getName();
         if (("break".equals(n) || "continue".equals(n)) && msg.getArguments().isEmpty()) {
-            writer.println(indent + n + ";");
+            writer.println(ind + n + ";");
             return;
         }
 
@@ -273,7 +275,7 @@ public class OperationGenerator {
         // sem BD sai como chamada normal (save(x)), que é o que foi desenhado
         if (hasDb && ("save".equals(n) || "delete".equals(n)) && msg.getArguments() != null && msg.getArguments().size() == 1) {
             String arg = msg.getArguments().get(0).getName().replace("self.", "this.");
-            writer.println(indent + "Db." + n + "(" + arg + ");");
+            writer.println(ind + "Db." + n + "(" + arg + ");");
             return;
         }
 
@@ -299,7 +301,7 @@ public class OperationGenerator {
                     a.append(msg.getArguments().get(i).getName());
                 }
             }
-            writer.println(indent + type + " " + var + " = new " + type + "(" + a + ");");
+            writer.println(ind + type + " " + var + " = new " + type + "(" + a + ");");
             return;
         }
 
@@ -309,7 +311,7 @@ public class OperationGenerator {
         if (msg.getAssignVariable() != null && msg.getAssignExpression() == null
                 && msg.getExpression() == null
                 && msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
-            writer.println(indent + msg.getReturnType() + " " + msg.getAssignVariable() + ";");
+            writer.println(ind + msg.getReturnType() + " " + msg.getAssignVariable() + ";");
             return;
         }
 
@@ -317,9 +319,9 @@ public class OperationGenerator {
         // se tem ": Type"  declara (Type x = expr) senao -> reatribui (x = expr)
         if (msg.isPlainAssignment()) {
             if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
-                writer.println(indent + msg.getReturnType() + " " + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
+                writer.println(ind + msg.getReturnType() + " " + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
             } else {
-                writer.println(indent + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
+                writer.println(ind + msg.getAssignVariable() + " = " + msg.getAssignExpression() + ";");
             }
             return;
         }
@@ -379,7 +381,7 @@ public class OperationGenerator {
                         // coleção simples: ADD/REMOVE
                         code = base + "." + op + "(" + arg.getName() + ");";
                     }
-                    writer.println(indent + code);
+                    writer.println(ind + code);
                     return;
                 }
             }
@@ -393,12 +395,12 @@ public class OperationGenerator {
         if (msg.getAssignVariable() != null) {
             // com ": Tipo" declara; sem ele só reatribui (a variável já tem de existir)
             if (msg.getReturnType() != null && !msg.getReturnType().isEmpty()) {
-                writer.println(indent + msg.getReturnType() + " " + msg.getAssignVariable() + " = " + call + ";");
+                writer.println(ind + msg.getReturnType() + " " + msg.getAssignVariable() + " = " + call + ";");
             } else {
-                writer.println(indent + msg.getAssignVariable() + " = " + call + ";");
+                writer.println(ind + msg.getAssignVariable() + " = " + call + ";");
             }
         } else {
-            writer.println(indent + call + ";");
+            writer.println(ind + call + ";");
         }
     }
 

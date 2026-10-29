@@ -194,8 +194,7 @@ public class SequenceDiagramParser {
         // anexar ao fragmento pai (criar se preciso e recursivo até a raiz)
 
         // liga o operand ao seu CombinedFragment (o pai).
-        // se o fragment ainda não exist cria-o e liga o PRÓPRIO fragment ao dono
-        // dele recursivamente
+        // se o fragment ainda não exist cria-o e liga o PRÓPRIO fragment ao dono dele recursivamente
         // sobe a cadeia de pais até à raiz ou a um nó já criado.
 
         // operandos pertencem a CombinedFragments (os pais)

@@ -3,6 +3,7 @@ package generator.spring;
 import generator.GeneratorUtils;
 import model.Association;
 import model.Class;
+import model.Enumeration;
 import model.Operation;
 import model.sequence.Interaction;
 import model.sequence.Lifeline;
@@ -29,13 +30,12 @@ public class SpringJobGenerator {
     }
 
     public void generateJobs(List<Class> classes, List<Association> associations,
-                             List<model.Enumeration> enumerations) throws IOException {
+                             List<Enumeration> enumerations) throws IOException {
         boolean anyJob = classes.stream()
                 .flatMap(c -> c.getOperations().stream())
                 .anyMatch(Operation::isJob);
         if (!anyJob) return;
 
-        System.out.println("Generating Spring jobs...");
         String jobsDir = baseOutputPath + "/src/main/java/" + basePackage.replace('.', '/') + "/jobs";
         new java.io.File(jobsDir).mkdirs();
 
@@ -45,7 +45,6 @@ public class SpringJobGenerator {
                 if (op.isJob()) generateJobClass(cls, op, classes, associations, enumerations, jobsDir);
             }
         }
-        System.out.println("Job generation completed.");
     }
 
     // @Configuration @EnableScheduling, "Ligar" o scheduler do Spring
@@ -66,7 +65,7 @@ public class SpringJobGenerator {
 
     // classe de job, @Component com os repos do diagrama + metodo @Scheduled
     private void generateJobClass(Class cls, Operation op, List<Class> classes, List<Association> associations,
-                                  List<model.Enumeration> enumerations, String jobsDir) throws IOException {
+                                  List<Enumeration> enumerations, String jobsDir) throws IOException {
         Interaction interaction = op.getSequenceDiagram();
 
         if (interaction == null) {
@@ -97,7 +96,8 @@ public class SpringJobGenerator {
             repoTypes.add(ll.getType());
         }
 
-        // update to check if service actually exists later
+        // add verificar lifelines de serviços tambem depois
+
         // services de outras classes desenhados no diagrama
         Set<String> serviceTypes = new LinkedHashSet<>();
         for (Lifeline ll : interaction.getLifelines())

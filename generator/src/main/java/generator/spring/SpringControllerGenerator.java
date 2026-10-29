@@ -50,7 +50,7 @@ public class SpringControllerGenerator {
     }
 
     // gera todos os controladores
-    public void generateControllers(List<Class> classes, List<Association> associations, List<Interaction> interactions) throws IOException {
+    public void generateControllers(List<Class> classes, List<Association> associations) throws IOException {
         System.out.println("Generating Spring REST controllers...");
 
         String controllerDir = outputDirectory + "/src/main/java/" + basePackage.replace('.', '/') + "/controllers";
@@ -62,7 +62,7 @@ public class SpringControllerGenerator {
         for (Class cls : classes) {
             if (cls.isAbstract()) continue;
             if (!cls.isGenerateController()) continue;   // controller suprimido para esta classe
-            generateController(cls, classes, associations, controllerDir, interactions);
+            generateController(cls, classes, associations, controllerDir);
         }
 
         generateExceptionHandler(controllerDir);
@@ -72,7 +72,7 @@ public class SpringControllerGenerator {
         System.out.println("Generation of controllers completed.");
     }
 
-    private void generateController(Class cls, List<Class> allClasses, List<Association> associations, String outputDir, List<Interaction> interactions) throws IOException {
+    private void generateController(Class cls, List<Class> allClasses, List<Association> associations, String outputDir) throws IOException {
         String className = cls.getName();
         String filename = outputDir + "/" + className + "Controller.java";
 
@@ -106,7 +106,7 @@ public class SpringControllerGenerator {
             generateRelationEndpoints(writer, cls, associations);
 
             // custom operation endpoints (sequence diag)
-            generateCustomOperationEndpoints(writer, cls, interactions, allClasses);
+            generateCustomOperationEndpoints(writer, cls, allClasses);
 
             // trigger manual dos jobs desta classe
             generateJobTriggerEndpoints(writer, cls);
@@ -539,8 +539,7 @@ public class SpringControllerGenerator {
      * Diagramas sequencia
      */
 
-    private void generateCustomOperationEndpoints(PrintWriter writer, Class cls, List<Interaction>
-            interactions, List<Class> allClasses) {
+    private void generateCustomOperationEndpoints(PrintWriter writer, Class cls, List<Class> allClasses) {
         if (GeneratorUtils.effectiveOperations(cls).isEmpty()) return;
 
         String className = cls.getName();
