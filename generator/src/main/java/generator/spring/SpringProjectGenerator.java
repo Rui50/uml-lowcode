@@ -57,6 +57,7 @@ public class SpringProjectGenerator {
         }
         if (settings.isDockerfile()) {
             generateDockerfile();
+            generateDockerignore();
             // H2 nao precisa mas Postgres/MySQL precisam de um container de BD -> docker-compose
             if (settings.getDatabaseType() != DatabaseType.H2) {
                 generateDockerCompose();
@@ -72,8 +73,7 @@ public class SpringProjectGenerator {
             w.println("# build stage");
             w.println("FROM maven:3.9-eclipse-temurin-17 AS build");
             w.println("WORKDIR /app");
-            w.println("COPY pom.xml .");
-            w.println("COPY src ./src");
+            w.println("COPY . .");
             w.println("RUN mvn -q clean package -DskipTests");
             w.println();
             w.println("# run stage");
@@ -84,6 +84,16 @@ public class SpringProjectGenerator {
             w.println("ENTRYPOINT [\"java\",\"-jar\",\"app.jar\"]");
         }
         System.out.println("Generated: Dockerfile");
+    }
+
+    private void generateDockerignore() throws IOException {
+        try (PrintWriter w = new PrintWriter(new FileWriter(outputDirectory + "/.dockerignore"))) {
+            w.println("target");
+            w.println(".git");
+            w.println(".idea");
+            w.println(".vscode");
+            w.println("*.iml");
+        }
     }
 
     // docker-compose: app + container de BD (Postgres/MySQL)

@@ -57,6 +57,7 @@ public class CLIProjectGenerator {
         generateInputUtils();
         if (settings.isDockerfile()) {
             generateDockerfile();
+            generateDockerignore();
             // H2 não precisa de container mas Postgres/MySQL precisam -> docker-compose
             if (settings.getDatabaseType() != DatabaseType.H2) {
                 generateDockerCompose();
@@ -74,10 +75,20 @@ public class CLIProjectGenerator {
             w.println("# App CLI interativa — correr com:  docker run -it <image>");
             w.println("FROM maven:3.9-eclipse-temurin-17");
             w.println("WORKDIR /app");
-            w.println("COPY pom.xml .");
-            w.println("COPY src ./src");
+            w.println("COPY . .");
             w.println("RUN mvn -q clean compile");
             w.println("CMD [\"mvn\",\"-q\",\"exec:java\"]");
+        }
+    }
+
+    private void generateDockerignore() throws IOException {
+        try (PrintWriter w = new PrintWriter(new FileWriter(outputDirectory + "/.dockerignore"))) {
+            w.println("target");
+            w.println("data");   // BD H2 em ficheiro
+            w.println(".git");
+            w.println(".idea");
+            w.println(".vscode");
+            w.println("*.iml");
         }
     }
 
