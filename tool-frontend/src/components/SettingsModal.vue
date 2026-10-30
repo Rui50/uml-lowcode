@@ -42,11 +42,11 @@
           modal header="Project settings" :style="{ width: '420px' }">
     <div class="field">
       <label>Base package</label>
-      <InputText v-model="settings.basePackage" />
+      <InputText v-model="settings.basePackage" placeholder="com.example.app" />
     </div>
     <div v-if="showAppName" class="field">
       <label>Application name</label>
-      <InputText v-model="settings.applicationName" />
+      <InputText v-model="settings.applicationName" placeholder="my-app" />
     </div>
     <div v-if="showDB" class="field">
       <label>Database</label>
