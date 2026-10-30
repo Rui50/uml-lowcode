@@ -493,6 +493,27 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             return base + ".stream().anyMatch(" + var + " -> " + condition + ")";
         }
 
+        // ->any(a | a.idade > 18) -> .stream().filter(a -> a.idade > 18).findFirst().orElse(null)
+        // devolve um elemento (ou null se nenhum
+        if (text.startsWith("->any(") && !text.startsWith("->any()")) {
+            String var = ctx.identOptType().ID().getText();
+            String condition = visit(ctx.expression(0));
+            String result = base + ".stream().filter(" + var + " -> " + condition + ").findFirst().orElse(null)";
+            // há um ".propriedade" a seguir ao any()? (como no ->first())
+            if (!ctx.ID().isEmpty()) {
+                String prop = ctx.ID(0).getText();
+                result = result + ".get" + prop.substring(0, 1).toUpperCase() + prop.substring(1) + "()";
+            }
+            return result;
+        }
+
+        // ->one(a | a.idade > 18) -> .stream().filter(a -> a.idade > 18).count() == 1 (exatamente um)
+        if (text.startsWith("->one(")) {
+            String var = ctx.identOptType().ID().getText();
+            String condition = visit(ctx.expression(0));
+            return base + ".stream().filter(" + var + " -> " + condition + ").count() == 1";
+        }
+
         // ->collect(a | a.nome) -> .stream().map(a -> a.nome).collect(Collectors.toList())
         if (text.startsWith("->collect(")) {
             String var = ctx.identOptType().ID().getText();
@@ -596,6 +617,17 @@ public class OCLToJavaVisitor extends OCLBaseVisitor<String> {
             String item = visit(ctx.expression(0));
             return base + ".stream().filter(elemToCheck -> !Objects.equals(elemToCheck, " + item +
                     ")).collect(java.util.stream.Collectors.toList())";
+        }
+
+        // if (text.startsWith(".oclIsTypeOf(")) {
+        //     String type = visit(ctx.expression(0));
+        //     return base + ".getClass() == " + type + ".class";
+        // }
+
+        // .oclIsKindOf(T) -> base instanceof T (tipo ou subtipo)
+        if (text.startsWith(".oclIsKindOf(")) {
+            String type = visit(ctx.expression(0));
+            return base + " instanceof " + type;
         }
 
         // operação aceite pela gramática mas não suportada na tradução
