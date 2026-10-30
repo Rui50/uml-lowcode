@@ -777,19 +777,22 @@ public class JavaMenuGenerator {
             default:
                 if (enumNames.contains(attr.getType())) {
                     w.println("        " + attr.getType() + " " + name + " = null;");
-                    w.println("        while (" + name + " == null) {");
-                    w.println("            System.out.print(\"" + name + " \" + java.util.Arrays.toString(" + attr.getType() + ".values()) + \": \");");
-                    // w.println("            try { " + name + " = " + attr.getType() + ".valueOf(scanner.nextLine().trim().toUpperCase()); }");
-                    w.println("            try { " + name + " = " + attr.getType() + ".valueOf(scanner.nextLine().trim()); }");
+                    w.println("        while (true) {");
+                    w.println("            System.out.print(\"" + name + " \" + java.util.Arrays.toString(" + attr.getType() + ".values()) + \" (enter = nenhum): \");");
+                    w.println("            String " + name + "In = scanner.nextLine().trim();");
+                    w.println("            if (" + name + "In.isEmpty()) break;");
+                    w.println("            try { " + name + " = " + attr.getType() + ".valueOf(" + name + "In); break; }");
                     w.println("            catch (IllegalArgumentException ex) { System.out.println(\"Invalid value. Try again.\"); }");
                     w.println("        }");
                 } else if (isTimeType(attr.getType())) {
                     // mesmo padrão de retry do enum, com parse de data
                     String type = attr.getType();
                     w.println("        " + type + " " + name + " = null;");
-                    w.println("        while (" + name + " == null) {");
-                    w.println("            System.out.print(\"" + name + " (ex: " + timeHint(type) + "): \");");
-                    w.println("            try { " + name + " = " + type + ".parse(scanner.nextLine().trim()); }");
+                    w.println("        while (true) {");
+                    w.println("            System.out.print(\"" + name + " (ex: " + timeHint(type) + ", enter = nenhum): \");");
+                    w.println("            String " + name + "In = scanner.nextLine().trim();");
+                    w.println("            if (" + name + "In.isEmpty()) break;");
+                    w.println("            try { " + name + " = " + type + ".parse(" + name + "In); break; }");
                     w.println("            catch (Exception ex) { System.out.println(\"Invalid value. Try again.\"); }");
                     w.println("        }");
                 } else {
